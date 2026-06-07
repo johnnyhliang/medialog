@@ -142,3 +142,42 @@ Revisit feed, magic-link auth, iOS Shortcut capture, static PWA deploy.
 ### Out of scope (v1)
 Subtopics/nesting, offline write queue, push notifications, multiple links per
 entry, sharing/collaboration, long-form/structured notes (those stay on iPad).
+
+## North Star — note to future me
+
+V1 is intentionally small, but the long-term intent is bigger: MediaLog grows
+into **my own personal system app** — a "Notion on steroids with the soul of
+org-mode," fully native and tailored to how I actually work.
+
+**The pillar is the buckets** — the notes/media-log itself (topics + entries) is
+the core trunk of the whole system. Everything else — contact notes (networking),
+calendar, health tracker, etc. — is **auxiliary**: modules that orbit and feed the
+buckets, not co-equal pillars. Design decisions favor the buckets first; auxiliary
+modules earn their place by serving them.
+
+Guiding qualities, roughly in priority order:
+
+- **Fast interfacing** — instant capture and navigation, no app lag, keyboard-
+  and gesture-first. Speed is the whole point; if it's slow I won't use it.
+- **Plain text underneath** — data stays in an open, portable, plaintext-friendly
+  format I own and can grep/script/export. Never locked in a proprietary blob.
+- **Fast fuzzy find** — one search box that fuzzy-matches across everything
+  (notes, tasks, people, events) and jumps me there.
+- **Built-in AI agent** — keeps persistent memory of my context, can execute
+  tasks on my behalf, but **non-destructive by design** (no silent deletes/
+  overwrites; mutations require confirmation or are reversible).
+- **Unified dashboard** — one view that pulls together the buckets instead of me
+  context-switching across apps.
+- **People** — lightweight CRM / "people to talk to" layer (who to follow up
+  with, context per person).
+- **Calendar integration** — Google Calendar two-way or at least feed-in, so time
+  lives next to tasks and notes.
+- **Custom modules** — health tracker (absorb the self-built one), and room to
+  bolt on bespoke tools as needs arise.
+- **Native** — eventually a real native app, not just a PWA, for OS integration
+  and speed.
+
+The discipline that keeps this from becoming the mess it's meant to replace:
+**source ≠ system**, flat over nested, one fixed shape per data type, and an
+anti-rot resurfacing sweep baked into every module. Grow modules one at a time,
+each earning its place — never a big-bang rebuild.
