@@ -37,6 +37,23 @@ The Obsidian mess came from four things; each maps to a design decision:
 | Friction to capture | ≤3-tap quick-add; iOS Shortcut for capture from any app; auto-fetched titles. |
 | Stale & never revisited | "Revisit" feed surfaces least-recently-seen entries (anti-rot sweep). |
 
+### Migration / onboarding (the existing backlog)
+
+Getting the current pile (Chrome tabs, loose notes, YouTube links, articles) in
+must be near-frictionless or the app dies on day one. Strategy, following
+*source ≠ system*: **dump first, sort later.**
+
+- **Track A — firehose dump:** bulk-paste a newline list of URLs (e.g. exported
+  via the OneTab extension or "Copy All URLs") into a bulk-import box → one entry
+  per line in the `Inbox` topic, titles auto-fetched in the background. Closes the
+  tabs immediately.
+- **Track B — incremental triage:** a "Sort Inbox" view presents untriaged entries
+  one at a time to assign a topic / tag / note, or delete. Low-dose habit, same
+  anti-rot muscle as the Revisit feed.
+
+An entry is "untriaged" purely by virtue of living in the `Inbox` topic — no extra
+column needed.
+
 ## Org model — flat topics + tags
 
 - **Topics are flat.** No parent/child nesting (nesting is what created the
@@ -104,6 +121,13 @@ All tables protected by Row Level Security tied to the authenticated user.
    `{ title, site }`. Called on entry create/update. Also the POST target for the
    iOS Shortcut.
 6. **Auth gate** — magic-link login; session persisted per device.
+7. **Bulk import** — a textarea that splits input on newlines; each non-empty line
+   becomes an `Inbox` entry (URL if it parses as one, else note text). Titles
+   enrich in the background. The day-one migration tool.
+8. **Sort Inbox** — lists entries in the `Inbox` topic one at a time; for each,
+   assign topic / add tags / edit note, or delete. Triage flow for the backlog.
+9. **`Inbox`** — a default/system topic that holds untriaged and quick-captured
+   entries (also the iOS Shortcut's default landing topic).
 
 ## Data flow
 
@@ -137,7 +161,8 @@ All tables protected by Row Level Security tied to the authenticated user.
 
 ### In scope (v1)
 Flat topics + tags, quick-add, card browse + search, auto-fetched link titles,
-Revisit feed, magic-link auth, iOS Shortcut capture, static PWA deploy.
+Revisit feed, magic-link auth, iOS Shortcut capture, static PWA deploy, `Inbox`
+topic, bulk-paste import, Sort Inbox triage view.
 
 ### Out of scope (v1)
 Subtopics/nesting, offline write queue, push notifications, multiple links per
