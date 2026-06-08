@@ -59,7 +59,22 @@ column needed.
 - **Topics are flat.** No parent/child nesting (nesting is what created the
   Obsidian mess). Examples: `AI`, `Fitness`, `Film`.
 - Each entry belongs to **exactly one topic**.
-- **Tags** are optional, cross-cutting labels for retrieval across topics.
+- **Tags** are optional, cross-cutting labels for retrieval across topics. Tags
+  also carry **media kind** (`#book`, `#video`, `#course`, `#article`) — no fixed
+  taxonomy field, so it stays flat and self-managing.
+
+### Progress tracking (the "log" in MediaLog)
+
+Tracking consumed media is the app's core purpose, not an add-on. Each entry has
+an optional **consumption status** — `Backlog` (want to) → `Active` (consuming) →
+`Done` (consumed, takeaways logged). This is distinct from task management
+(TickTick's job): a `Done` entry is a **permanent record/achievement** kept with
+its takeaways, not a chore that disappears. `status` also subsumes "archive" —
+`Done` is the meaningful retire state.
+
+A **topic progress view** groups a topic's entries by status with simple counts
+(*"Done: 12 · Active: 3 · Backlog: 27"*). "Books read" = `Done` + `#book` in that
+topic. No streaks/gamification — an honest tally of what was consumed and learned.
 
 ## Stack
 
@@ -90,7 +105,8 @@ entries
   topic_id         uuid fk -> topics.id
   url              text null
   title            text null         -- auto-fetched from url
-  note             text not null default ''
+  note             text not null default ''  -- markdown; holds takeaways
+  status           text null  -- null | 'backlog' | 'active' | 'done' (consumption lifecycle)
   created_at       timestamptz default now()
   last_surfaced_at timestamptz null  -- drives the Revisit feed
 
@@ -128,6 +144,17 @@ All tables protected by Row Level Security tied to the authenticated user.
    assign topic / add tags / edit note, or delete. Triage flow for the backlog.
 9. **`Inbox`** — a default/system topic that holds untriaged and quick-captured
    entries (also the iOS Shortcut's default landing topic).
+10. **Markdown note body** — entry notes are markdown, rendered prettily on cards
+    and the entry view (headings, bold, lists, links, **checkboxes**). Editing is a
+    textarea with a live-preview toggle (functionality over WYSIWYG). Checkboxes
+    cover lightweight project scoping without a parallel task system.
+11. **Plain-text export** — an "Export" button downloads a `.zip` of markdown,
+    **one `.md` per topic**, each entry a section with YAML frontmatter (url, tags,
+    status, dates). Universal format, importable into any Windows editor
+    (Obsidian/VS Code/Typora). On-demand download (a static PWA cannot write to
+    disk on a schedule); a weekly in-app reminder nudges the export habit.
+12. **Topic progress view** — per topic, groups entries by consumption `status`
+    with counts; "books read" etc. = `Done` filtered by media-kind tag.
 
 ## Data flow
 
@@ -162,11 +189,14 @@ All tables protected by Row Level Security tied to the authenticated user.
 ### In scope (v1)
 Flat topics + tags, quick-add, card browse + search, auto-fetched link titles,
 Revisit feed, magic-link auth, iOS Shortcut capture, static PWA deploy, `Inbox`
-topic, bulk-paste import, Sort Inbox triage view.
+topic, bulk-paste import, Sort Inbox triage view, markdown note bodies +
+checkboxes, consumption `status` + topic progress view, plain-text markdown export.
 
 ### Out of scope (v1)
 Subtopics/nesting, offline write queue, push notifications, multiple links per
-entry, sharing/collaboration, long-form/structured notes (those stay on iPad).
+entry, sharing/collaboration, long-form/structured notes (those stay on iPad),
+TODO/DONE task states (TickTick's job), priorities, backlinks, automated/scheduled
+export, two-way TickTick/calendar integration (auxiliary roadmap).
 
 ## North Star — note to future me
 
