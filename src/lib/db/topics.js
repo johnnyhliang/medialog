@@ -1,0 +1,18 @@
+export async function listTopics(supabase) {
+  const { data, error } = await supabase
+    .from('topics')
+    .select('*')
+    .order('name', { ascending: true })
+  if (error) throw new Error(error.message)
+  return data
+}
+
+export async function createTopic(supabase, name) {
+  const { data, error } = await supabase
+    .from('topics')
+    .insert({ name })
+    .select()
+    .single()
+  if (error) throw new Error(error.message)
+  return data
+}
