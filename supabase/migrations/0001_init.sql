@@ -54,12 +54,19 @@ create policy "own entry_tags" on entry_tags
   );
 
 -- Seed the Inbox topic for each new user via trigger.
-create function seed_inbox() returns trigger as $$
+-- SECURITY DEFINER runs in the auth-admin session, whose search_path does not
+-- include `public`; pin search_path and fully-qualify the table so the insert
+-- resolves. Otherwise signup fails with "Database error saving new user".
+create function seed_inbox() returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
 begin
-  insert into topics (user_id, name) values (new.id, 'Inbox');
+  insert into public.topics (user_id, name) values (new.id, 'Inbox');
   return new;
 end;
-$$ language plpgsql security definer;
+$$;
 
 create trigger on_auth_user_created
   after insert on auth.users
