@@ -1,11 +1,19 @@
+const TAG_SELECT = '*, entry_tags(tags(name))'
+
+function flattenTags(row) {
+  const tags = (row.entry_tags || []).map((et) => et.tags?.name).filter(Boolean)
+  const { entry_tags, ...rest } = row
+  return { ...rest, tags }
+}
+
 export async function listEntriesByTopic(supabase, topicId) {
   const { data, error } = await supabase
     .from('entries')
-    .select('*')
+    .select(TAG_SELECT)
     .eq('topic_id', topicId)
     .order('created_at', { ascending: false })
   if (error) throw new Error(error.message)
-  return data
+  return data.map(flattenTags)
 }
 
 export async function createEntry(supabase, { topicId, url = null, title = null, note = '' }) {
@@ -44,9 +52,27 @@ export async function bulkCreateEntries(supabase, topicId, items) {
 export async function searchEntries(supabase, query) {
   const { data, error } = await supabase
     .from('entries')
-    .select('*')
+    .select(TAG_SELECT)
     .or(`note.ilike.%${query}%,title.ilike.%${query}%`)
     .order('created_at', { ascending: false })
   if (error) throw new Error(error.message)
-  return data
+  return data.map(flattenTags)
+}
+
+export async function listForRevisit(supabase, limit) {
+  const { data, error } = await supabase
+    .from('entries')
+    .select(TAG_SELECT)
+    .order('last_surfaced_at', { ascending: true, nullsFirst: true })
+    .limit(limit)
+  if (error) throw new Error(error.message)
+  return data.map(flattenTags)
+}
+
+export async function markSurfaced(supabase, id) {
+  const { error } = await supabase
+    .from('entries')
+    .update({ last_surfaced_at: new Date().toISOString() })
+    .eq('id', id)
+  if (error) throw new Error(error.message)
 }

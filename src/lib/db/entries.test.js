@@ -6,6 +6,8 @@ import {
   deleteEntry,
   searchEntries,
   bulkCreateEntries,
+  listForRevisit,
+  markSurfaced,
 } from './entries.js'
 
 function mockClient(result) {
@@ -14,23 +16,24 @@ function mockClient(result) {
     insert: vi.fn(() => chain),
     update: vi.fn(() => chain),
     delete: vi.fn(() => chain),
-    eq: vi.fn(() => chain),
+    eq: vi.fn(() => Object.assign(Promise.resolve(result), chain)),
     or: vi.fn(() => chain),
-    order: vi.fn(() => Promise.resolve(result)),
+    order: vi.fn(() => Object.assign(Promise.resolve(result), chain)),
+    limit: vi.fn(() => Promise.resolve(result)),
     single: vi.fn(() => Promise.resolve(result)),
   }
   return { from: vi.fn(() => chain), _chain: chain }
 }
 
 describe('entries db', () => {
-  test('listEntriesByTopic filters by topic, newest first', async () => {
-    const rows = [{ id: 'a', note: 'hi' }]
-    const client = mockClient({ data: rows, error: null })
+  test('listEntriesByTopic selects nested tags and flattens them', async () => {
+    const raw = [{ id: 'a', note: 'hi', entry_tags: [{ tags: { name: 'book' } }] }]
+    const client = mockClient({ data: raw, error: null })
     const result = await listEntriesByTopic(client, 'topic-1')
     expect(client.from).toHaveBeenCalledWith('entries')
+    expect(client._chain.select).toHaveBeenCalledWith('*, entry_tags(tags(name))')
     expect(client._chain.eq).toHaveBeenCalledWith('topic_id', 'topic-1')
-    expect(client._chain.order).toHaveBeenCalledWith('created_at', { ascending: false })
-    expect(result).toEqual(rows)
+    expect(result).toEqual([{ id: 'a', note: 'hi', tags: ['book'] }])
   })
 
   test('createEntry inserts provided fields', async () => {
@@ -60,11 +63,12 @@ describe('entries db', () => {
   })
 
   test('searchEntries matches note or title', async () => {
-    const rows = [{ id: 'a', note: 'react' }]
+    const rows = [{ id: 'a', note: 'react', entry_tags: [] }]
     const client = mockClient({ data: rows, error: null })
     const result = await searchEntries(client, 'react')
+    expect(client._chain.select).toHaveBeenCalledWith('*, entry_tags(tags(name))')
     expect(client._chain.or).toHaveBeenCalledWith('note.ilike.%react%,title.ilike.%react%')
-    expect(result).toEqual(rows)
+    expect(result).toEqual([{ id: 'a', note: 'react', tags: [] }])
   })
 
   test('bulkCreateEntries inserts all items under a topic', async () => {
@@ -77,5 +81,23 @@ describe('entries db', () => {
       { topic_id: 'inbox-id', url: null, note: 'idea' },
     ])
     expect(result).toEqual(rows)
+  })
+
+  test('listForRevisit orders by last_surfaced_at nulls first', async () => {
+    const raw = [{ id: 'a', note: 'x', entry_tags: [] }]
+    const client = mockClient({ data: raw, error: null })
+    const result = await listForRevisit(client, 5)
+    expect(client._chain.order).toHaveBeenCalledWith('last_surfaced_at', {
+      ascending: true, nullsFirst: true,
+    })
+    expect(client._chain.limit).toHaveBeenCalledWith(5)
+    expect(result).toEqual([{ id: 'a', note: 'x', tags: [] }])
+  })
+
+  test('markSurfaced sets last_surfaced_at on the entry', async () => {
+    const client = mockClient({ data: null, error: null })
+    await markSurfaced(client, 'e1')
+    expect(client._chain.update).toHaveBeenCalled()
+    expect(client._chain.eq).toHaveBeenCalledWith('id', 'e1')
   })
 })
