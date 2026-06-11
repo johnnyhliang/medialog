@@ -7,6 +7,16 @@ export async function listTopics(supabase) {
   return data
 }
 
+export async function getTopicByName(supabase, name) {
+  const { data, error } = await supabase
+    .from('topics')
+    .select('*')
+    .eq('name', name)
+    .single()
+  if (error) throw new Error(error.message)
+  return data
+}
+
 export async function createTopic(supabase, name) {
   const { data, error } = await supabase
     .from('topics')

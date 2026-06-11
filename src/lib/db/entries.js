@@ -34,6 +34,13 @@ export async function deleteEntry(supabase, id) {
   if (error) throw new Error(error.message)
 }
 
+export async function bulkCreateEntries(supabase, topicId, items) {
+  const rows = items.map((it) => ({ topic_id: topicId, url: it.url ?? null, note: it.note ?? '' }))
+  const { data, error } = await supabase.from('entries').insert(rows).select()
+  if (error) throw new Error(error.message)
+  return data
+}
+
 export async function searchEntries(supabase, query) {
   const { data, error } = await supabase
     .from('entries')

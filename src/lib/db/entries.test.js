@@ -5,11 +5,12 @@ import {
   updateEntry,
   deleteEntry,
   searchEntries,
+  bulkCreateEntries,
 } from './entries.js'
 
 function mockClient(result) {
   const chain = {
-    select: vi.fn(() => chain),
+    select: vi.fn(() => Object.assign(Promise.resolve(result), chain)),
     insert: vi.fn(() => chain),
     update: vi.fn(() => chain),
     delete: vi.fn(() => chain),
@@ -63,6 +64,18 @@ describe('entries db', () => {
     const client = mockClient({ data: rows, error: null })
     const result = await searchEntries(client, 'react')
     expect(client._chain.or).toHaveBeenCalledWith('note.ilike.%react%,title.ilike.%react%')
+    expect(result).toEqual(rows)
+  })
+
+  test('bulkCreateEntries inserts all items under a topic', async () => {
+    const rows = [{ id: '1' }, { id: '2' }]
+    const client = mockClient({ data: rows, error: null })
+    const items = [{ url: 'http://a', note: '' }, { url: null, note: 'idea' }]
+    const result = await bulkCreateEntries(client, 'inbox-id', items)
+    expect(client._chain.insert).toHaveBeenCalledWith([
+      { topic_id: 'inbox-id', url: 'http://a', note: '' },
+      { topic_id: 'inbox-id', url: null, note: 'idea' },
+    ])
     expect(result).toEqual(rows)
   })
 })
