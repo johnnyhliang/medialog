@@ -1,9 +1,10 @@
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import TagInput from './TagInput.jsx'
 
 const STATUSES = ['', 'backlog', 'active', 'done']
 
-export default function EntryCard({ entry, onDelete, onStatusChange }) {
+export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChange }) {
   return (
     <div style={{ border: '1px solid #ccc', borderRadius: 8, padding: 12, marginBottom: 8 }}>
       {entry.url && (
@@ -16,13 +17,10 @@ export default function EntryCard({ entry, onDelete, onStatusChange }) {
           <ReactMarkdown remarkPlugins={[remarkGfm]}>{entry.note}</ReactMarkdown>
         </div>
       )}
-      {entry.tags && entry.tags.length > 0 && (
-        <div>
-          {entry.tags.map((t) => (
-            <span key={t} style={{ marginRight: 6, fontSize: 12, opacity: 0.7 }}>#{t}</span>
-          ))}
-        </div>
-      )}
+      <TagInput
+        value={entry.tags || []}
+        onChange={(next) => onTagsChange(entry.id, next)}
+      />
       <select
         value={entry.status || ''}
         onChange={(e) => onStatusChange(entry.id, e.target.value || null)}
