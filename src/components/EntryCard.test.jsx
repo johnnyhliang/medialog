@@ -36,7 +36,7 @@ test('edits the note and saves on Done', async () => {
   const onNoteSave = vi.fn()
   render(<EntryCard entry={base} {...handlers} onNoteSave={onNoteSave} />)
   await userEvent.click(screen.getByRole('button', { name: /edit/i }))
-  const editor = screen.getByLabelText('note editor')
+  const editor = await screen.findByLabelText('note editor')
   await userEvent.clear(editor)
   await userEvent.type(editor, 'updated note')
   await userEvent.click(screen.getByRole('button', { name: /done/i }))

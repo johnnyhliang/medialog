@@ -16,8 +16,8 @@ export default function QuickAdd({ onAdd, disabled }) {
 
   return (
     <form className="quickadd" onSubmit={handleSubmit}>
-      <input placeholder="link (optional)" value={url} onChange={(e) => setUrl(e.target.value)} />
-      <textarea placeholder="note / takeaway" value={note} onChange={(e) => setNote(e.target.value)} />
+      <input placeholder="link (optional)" maxLength={2000} value={url} onChange={(e) => setUrl(e.target.value)} />
+      <textarea placeholder="note / takeaway" maxLength={10000} value={note} onChange={(e) => setNote(e.target.value)} />
       <div className="quickadd-row">
         <button type="submit" disabled={disabled}>Save</button>
       </div>

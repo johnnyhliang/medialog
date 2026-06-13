@@ -1,8 +1,10 @@
-import { useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import TagInput from './TagInput.jsx'
-import NoteEditor from './NoteEditor.jsx'
+
+// CodeMirror is heavy and only needed while editing — load it on demand.
+const NoteEditor = lazy(() => import('./NoteEditor.jsx'))
 
 const STATUSES = ['', 'backlog', 'active', 'done']
 const mdComponents = {
@@ -38,7 +40,9 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
       )}
 
       {editing ? (
-        <NoteEditor value={draft} onChange={setDraft} />
+        <Suspense fallback={<p className="muted">Loading editor…</p>}>
+          <NoteEditor value={draft} onChange={setDraft} />
+        </Suspense>
       ) : (
         entry.note && (
           <div className="note">

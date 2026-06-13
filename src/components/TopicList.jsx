@@ -29,6 +29,7 @@ export default function TopicList({ topics, selectedId, onSelect, onAdd }) {
       <form className="topic-add" onSubmit={handleAdd}>
         <input
           placeholder="new topic"
+          maxLength={120}
           value={name}
           onChange={(e) => setName(e.target.value)}
         />

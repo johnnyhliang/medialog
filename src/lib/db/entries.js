@@ -1,6 +1,11 @@
 import { buildSearchFilter } from '../searchFilter.js'
 
 const TAG_SELECT = '*, entry_tags(tags(name))'
+const MAX_NOTE = 10000
+const MAX_URL = 2000
+
+const clampUrl = (u) => (u ? String(u).slice(0, MAX_URL) : null)
+const clampNote = (n) => String(n ?? '').slice(0, MAX_NOTE)
 
 function flattenTags(row) {
   const tags = (row.entry_tags || []).map((et) => et.tags?.name).filter(Boolean)
@@ -22,7 +27,7 @@ export async function listEntriesByTopic(supabase, topicId) {
 export async function createEntry(supabase, { topicId, url = null, title = null, note = '' }) {
   const { data, error } = await supabase
     .from('entries')
-    .insert({ topic_id: topicId, url, title, note })
+    .insert({ topic_id: topicId, url: clampUrl(url), title, note: clampNote(note) })
     .select()
     .single()
   if (error) throw new Error(error.message)
@@ -46,7 +51,7 @@ export async function deleteEntry(supabase, id) {
 }
 
 export async function bulkCreateEntries(supabase, topicId, items) {
-  const rows = items.map((it) => ({ topic_id: topicId, url: it.url ?? null, note: it.note ?? '' }))
+  const rows = items.map((it) => ({ topic_id: topicId, url: clampUrl(it.url), note: clampNote(it.note) }))
   const { data, error } = await supabase.from('entries').insert(rows).select()
   if (error) throw new Error(error.message)
   return data

@@ -20,7 +20,7 @@ export async function getTopicByName(supabase, name) {
 export async function createTopic(supabase, name) {
   const { data, error } = await supabase
     .from('topics')
-    .insert({ name })
+    .insert({ name: String(name).slice(0, 120) })
     .select()
     .single()
   if (error) throw new Error(error.message)
