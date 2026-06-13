@@ -1,3 +1,5 @@
+import { buildSearchFilter } from '../searchFilter.js'
+
 const TAG_SELECT = '*, entry_tags(tags(name))'
 
 function flattenTags(row) {
@@ -54,7 +56,7 @@ export async function searchEntries(supabase, query) {
   const { data, error } = await supabase
     .from('entries')
     .select(TAG_SELECT)
-    .or(`note.ilike.%${query}%,title.ilike.%${query}%`)
+    .or(buildSearchFilter(query))
     .order('created_at', { ascending: false })
   if (error) throw new Error(error.message)
   return data.map(flattenTags)
