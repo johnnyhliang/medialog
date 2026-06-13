@@ -11,6 +11,7 @@ export async function listEntriesByTopic(supabase, topicId) {
     .from('entries')
     .select(TAG_SELECT)
     .eq('topic_id', topicId)
+    .order('pinned', { ascending: false })
     .order('created_at', { ascending: false })
   if (error) throw new Error(error.message)
   return data.map(flattenTags)

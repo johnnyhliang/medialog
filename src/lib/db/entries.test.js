@@ -26,14 +26,16 @@ function mockClient(result) {
 }
 
 describe('entries db', () => {
-  test('listEntriesByTopic selects nested tags and flattens them', async () => {
-    const raw = [{ id: 'a', note: 'hi', entry_tags: [{ tags: { name: 'book' } }] }]
+  test('listEntriesByTopic orders pinned first then newest, flattening tags', async () => {
+    const raw = [{ id: 'a', note: 'hi', pinned: true, entry_tags: [{ tags: { name: 'book' } }] }]
     const client = mockClient({ data: raw, error: null })
     const result = await listEntriesByTopic(client, 'topic-1')
     expect(client.from).toHaveBeenCalledWith('entries')
     expect(client._chain.select).toHaveBeenCalledWith('*, entry_tags(tags(name))')
     expect(client._chain.eq).toHaveBeenCalledWith('topic_id', 'topic-1')
-    expect(result).toEqual([{ id: 'a', note: 'hi', tags: ['book'] }])
+    expect(client._chain.order).toHaveBeenCalledWith('pinned', { ascending: false })
+    expect(client._chain.order).toHaveBeenCalledWith('created_at', { ascending: false })
+    expect(result).toEqual([{ id: 'a', note: 'hi', pinned: true, tags: ['book'] }])
   })
 
   test('createEntry inserts provided fields', async () => {
