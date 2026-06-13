@@ -259,3 +259,15 @@ them as context, and mutations stay non-destructive (it maintains the doc, never
 silently rewrites your entries). Likely implementation later: a Supabase table
 `topic_docs` (topic_id, generated_markdown, updated_at) refreshed on entry change
 or on demand, plus a chat panel scoped to the selected topic.
+
+**The agent can act, not just chat (tool use).** Beyond answering questions, the
+LLM should *interface with the app's own features* through a defined tool layer —
+e.g. sort the Inbox (assign entries to topics), set/clear consumption status,
+add/remove tags, pin entries, and **flag backlog items as deletable** (mark
+candidates for removal). Strict guardrail from the North Star: **non-destructive
+by design** — the agent proposes destructive actions (delete, bulk reassign) and
+the user confirms; only clearly reversible/safe actions (tagging, status, pinning,
+surfacing) may run directly. Implementation later: expose the existing data-layer
+functions (`updateEntry`, `setEntryTags`, `deleteEntry`, assign/pin) as agent
+tools with a confirm gate on the destructive ones, so "clean up my AI backlog and
+mark stale links for deletion" becomes a reviewable agent action.
