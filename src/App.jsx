@@ -16,6 +16,7 @@ import QuickAdd from './components/QuickAdd.jsx'
 import SearchBar from './components/SearchBar.jsx'
 import BulkImport from './components/BulkImport.jsx'
 import SortInbox from './components/SortInbox.jsx'
+import StatusFilter from './components/StatusFilter.jsx'
 import ProgressView from './components/ProgressView.jsx'
 import Revisit from './components/Revisit.jsx'
 
@@ -25,6 +26,7 @@ function Workspace() {
   const [entries, setEntries] = useState([])
   const [query, setQuery] = useState('')
   const [view, setView] = useState('browse') // 'browse' | 'bulk' | 'sort' | 'progress' | 'revisit'
+  const [statusFilter, setStatusFilter] = useState('') // '' | 'backlog' | 'active' | 'done'
   const [inboxEntries, setInboxEntries] = useState([])
   const [revisitEntries, setRevisitEntries] = useState([])
 
@@ -149,8 +151,9 @@ function Workspace() {
             {!query && selectedId && (
               <QuickAdd onAdd={handleAddEntry} disabled={!selectedId} />
             )}
+            <StatusFilter value={statusFilter} onChange={setStatusFilter} />
             <EntryList
-              entries={entries}
+              entries={statusFilter ? entries.filter((e) => e.status === statusFilter) : entries}
               onDelete={handleDelete}
               onStatusChange={handleStatusChange}
               onTagsChange={handleTagsChange}

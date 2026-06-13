@@ -147,6 +147,18 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .searchbar { width: 100%; }
 
+/* Status filter */
+.status-filter { display: flex; gap: 4px; }
+.status-filter button {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  padding: 4px 12px;
+  font-size: 12px;
+}
+.status-filter button:hover { background: var(--surface-2); color: var(--text); }
+.status-filter button.active { background: var(--accent-weak); color: var(--accent); border-color: var(--accent); }
+
 /* Entry cards */
 .card {
   background: var(--surface);
