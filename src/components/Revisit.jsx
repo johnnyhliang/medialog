@@ -13,9 +13,9 @@ export default function Revisit({ entries, onSeen }) {
 
   return (
     <div>
-      <div style={{ border: '1px solid #ccc', borderRadius: 8, padding: 12 }}>
+      <div className="card">
         {current.url && <a href={current.url} target="_blank" rel="noreferrer">{current.title || current.url}</a>}
-        {current.note && <p style={{ whiteSpace: 'pre-wrap' }}>{current.note}</p>}
+        {current.note && <p style={{ whiteSpace: 'pre-wrap', margin: 0 }}>{current.note}</p>}
       </div>
       <button onClick={handleSeen}>Seen — next</button>
     </div>

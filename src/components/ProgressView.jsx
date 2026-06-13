@@ -3,7 +3,11 @@ export default function ProgressView({ topicName, entries }) {
   return (
     <div>
       <h2>{topicName} — progress</h2>
-      <p>Done: {count('done')} · Active: {count('active')} · Backlog: {count('backlog')}</p>
+      <p className="progress-stats">
+        <span className="pill" style={{ color: 'var(--done)' }}>Done: {count('done')}</span>
+        <span className="pill" style={{ color: 'var(--active)' }}>Active: {count('active')}</span>
+        <span className="pill" style={{ color: 'var(--backlog)' }}>Backlog: {count('backlog')}</span>
+      </p>
     </div>
   )
 }

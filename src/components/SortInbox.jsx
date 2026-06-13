@@ -23,19 +23,21 @@ export default function SortInbox({ entries, topics, onAssign, onDelete }) {
 
   return (
     <div>
-      <p>{entries.length - index} left in Inbox</p>
-      <div style={{ border: '1px solid #ccc', borderRadius: 8, padding: 12 }}>
+      <p className="section-label">{entries.length - index} left in Inbox</p>
+      <div className="card">
         {current.url && <a href={current.url} target="_blank" rel="noreferrer">{current.title || current.url}</a>}
-        {current.note && <p style={{ whiteSpace: 'pre-wrap' }}>{current.note}</p>}
+        {current.note && <p style={{ whiteSpace: 'pre-wrap', margin: 0 }}>{current.note}</p>}
+        <div className="card-meta">
+          <select value={target} onChange={(e) => setTarget(e.target.value)}>
+            <option value="">Choose topic…</option>
+            {destinations.map((t) => (
+              <option key={t.id} value={t.id}>{t.name}</option>
+            ))}
+          </select>
+          <button onClick={handleAssign}>Assign</button>
+          <button className="icon-btn" onClick={handleDelete} aria-label="delete">Delete</button>
+        </div>
       </div>
-      <select value={target} onChange={(e) => setTarget(e.target.value)}>
-        <option value="">Choose topic…</option>
-        {destinations.map((t) => (
-          <option key={t.id} value={t.id}>{t.name}</option>
-        ))}
-      </select>
-      <button onClick={handleAssign}>Assign</button>
-      <button onClick={handleDelete} aria-label="delete">Delete</button>
     </div>
   )
 }

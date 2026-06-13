@@ -15,10 +15,12 @@ export default function QuickAdd({ onAdd, disabled }) {
   }
 
   return (
-    <form onSubmit={handleSubmit}>
+    <form className="quickadd" onSubmit={handleSubmit}>
       <input placeholder="link (optional)" value={url} onChange={(e) => setUrl(e.target.value)} />
       <textarea placeholder="note / takeaway" value={note} onChange={(e) => setNote(e.target.value)} />
-      <button type="submit" disabled={disabled}>Save</button>
+      <div className="quickadd-row">
+        <button type="submit" disabled={disabled}>Save</button>
+      </div>
     </form>
   )
 }

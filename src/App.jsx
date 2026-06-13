@@ -121,16 +121,18 @@ function Workspace() {
   }
 
   return (
-    <div style={{ display: 'flex', gap: 24, padding: 16 }}>
-      <aside style={{ minWidth: 160 }}>
-        <h1>MediaLog</h1>
-        <button onClick={() => supabase.auth.signOut()}>Sign out</button>
-        <ul style={{ listStyle: 'none', padding: 0, marginBottom: 16 }}>
-          <li><button onClick={() => setView('browse')}>Browse</button></li>
-          <li><button onClick={() => setView('bulk')}>Bulk Import</button></li>
-          <li><button onClick={() => { setView('sort'); loadInbox() }}>Sort Inbox</button></li>
-          <li><button onClick={() => { setView('revisit'); loadRevisit() }}>Revisit</button></li>
-          <li><button onClick={() => setView('progress')}>Progress</button></li>
+    <div className="app">
+      <aside className="sidebar">
+        <div className="brand-row">
+          <h1>MediaLog</h1>
+          <button className="signout" onClick={() => supabase.auth.signOut()}>Sign out</button>
+        </div>
+        <ul className="nav">
+          <li><button className={view === 'browse' ? 'active' : ''} onClick={() => setView('browse')}>Browse</button></li>
+          <li><button className={view === 'bulk' ? 'active' : ''} onClick={() => setView('bulk')}>Bulk Import</button></li>
+          <li><button className={view === 'sort' ? 'active' : ''} onClick={() => { setView('sort'); loadInbox() }}>Sort Inbox</button></li>
+          <li><button className={view === 'revisit' ? 'active' : ''} onClick={() => { setView('revisit'); loadRevisit() }}>Revisit</button></li>
+          <li><button className={view === 'progress' ? 'active' : ''} onClick={() => setView('progress')}>Progress</button></li>
           <li><button onClick={handleExport}>Export</button></li>
         </ul>
         <TopicList
@@ -140,7 +142,7 @@ function Workspace() {
           onAdd={handleAddTopic}
         />
       </aside>
-      <main style={{ flex: 1 }}>
+      <main className="main">
         {view === 'browse' && (
           <>
             <SearchBar value={query} onChange={setQuery} />

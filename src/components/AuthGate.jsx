@@ -23,10 +23,10 @@ export default function AuthGate({ children }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} style={{ maxWidth: 320, margin: '4rem auto' }}>
+    <form className="auth" onSubmit={handleSubmit}>
       <h1>MediaLog</h1>
       {sent ? (
-        <p>Check your email for a login link.</p>
+        <p className="muted">Check your email for a login link.</p>
       ) : (
         <>
           <input
@@ -37,7 +37,7 @@ export default function AuthGate({ children }) {
             required
           />
           <button type="submit">Send magic link</button>
-          {error && <p style={{ color: 'crimson' }}>{error}</p>}
+          {error && <p style={{ color: 'var(--danger)' }}>{error}</p>}
         </>
       )}
     </form>

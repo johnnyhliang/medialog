@@ -16,14 +16,14 @@ export default function TagInput({ value, onChange }) {
   }
 
   return (
-    <div>
+    <div className="tags">
       {value.map((t) => (
-        <button key={t} type="button" aria-label={`remove ${t}`} onClick={() => removeTag(t)}>
+        <button key={t} type="button" className="tag-chip" aria-label={`remove ${t}`} onClick={() => removeTag(t)}>
           #{t} ✕
         </button>
       ))}
       <form onSubmit={addTag} style={{ display: 'inline' }}>
-        <input placeholder="add tag" value={text} onChange={(e) => setText(e.target.value)} />
+        <input className="tag-add" placeholder="add tag" value={text} onChange={(e) => setText(e.target.value)} />
       </form>
     </div>
   )

@@ -16,15 +16,15 @@ export default function BulkImport({ onImport }) {
 
   return (
     <div>
+      <p className="section-label">Bulk import to Inbox</p>
       <textarea
         placeholder="Paste links or notes, one per line"
         value={text}
         onChange={(e) => setText(e.target.value)}
         rows={10}
-        style={{ width: '100%' }}
       />
       <button onClick={handleImport}>Import to Inbox</button>
-      {status && <p>{status}</p>}
+      {status && <p className="muted">{status}</p>}
     </div>
   )
 }
