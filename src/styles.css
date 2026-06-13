@@ -147,6 +147,14 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .searchbar { width: 100%; }
 
+/* Table of contents */
+.toc { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 14px; }
+.toc ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 2px; }
+.toc a { color: var(--text); }
+.toc a:hover { color: var(--accent); }
+.card.pinned { border-color: var(--accent); }
+.card .cm-editor { border: 1px solid var(--border); border-radius: 7px; }
+
 /* Status filter */
 .status-filter { display: flex; gap: 4px; }
 .status-filter button {

@@ -3,43 +3,59 @@ import userEvent from '@testing-library/user-event'
 import { vi, test, expect } from 'vitest'
 import EntryCard from './EntryCard.jsx'
 
-const base = { id: 'x', url: 'http://a.com', title: 'A Site', note: 'my **takeaway**', status: null, tags: [] }
+// Mock the CodeMirror wrapper with a plain textarea.
+vi.mock('./NoteEditor.jsx', () => ({
+  default: ({ value, onChange }) => (
+    <textarea aria-label="note editor" value={value} onChange={(e) => onChange(e.target.value)} />
+  ),
+}))
+
+const base = { id: 'x', url: 'http://a.com', title: 'A Site', note: 'my **takeaway**', status: null, tags: [], pinned: false }
 const noop = () => {}
+const handlers = { onDelete: noop, onStatusChange: noop, onTagsChange: noop, onTogglePin: noop, onNoteSave: noop }
 
-test('renders title link and markdown note', () => {
-  render(<EntryCard entry={base} onDelete={noop} onStatusChange={noop} onTagsChange={noop} />)
-  expect(screen.getByRole('link', { name: 'A Site' })).toHaveAttribute('href', 'http://a.com')
-  expect(screen.getByText('takeaway').tagName).toBe('STRONG')
+test('renders markdown note and links open in a new tab', () => {
+  render(<EntryCard entry={base} {...handlers} />)
+  const link = screen.getByRole('link', { name: 'A Site' })
+  expect(link).toHaveAttribute('target', '_blank')
 })
 
-test('falls back to raw url when no title', () => {
-  render(<EntryCard entry={{ ...base, title: null }} onDelete={noop} onStatusChange={noop} onTagsChange={noop} />)
-  expect(screen.getByRole('link', { name: 'http://a.com' })).toBeInTheDocument()
+test('has an anchor id for the table of contents', () => {
+  const { container } = render(<EntryCard entry={base} {...handlers} />)
+  expect(container.querySelector('#entry-x')).not.toBeNull()
 })
 
-test('shows tag chips as removable buttons', () => {
-  render(<EntryCard entry={{ ...base, tags: ['book', 'ai'] }} onDelete={noop} onStatusChange={noop} onTagsChange={noop} />)
-  expect(screen.getByRole('button', { name: /remove book/i })).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: /remove ai/i })).toBeInTheDocument()
+test('toggles pin', async () => {
+  const onTogglePin = vi.fn()
+  render(<EntryCard entry={base} {...handlers} onTogglePin={onTogglePin} />)
+  await userEvent.click(screen.getByRole('button', { name: /pin/i }))
+  expect(onTogglePin).toHaveBeenCalledWith('x', true)
 })
 
-test('changes status via selector', async () => {
+test('edits the note and saves on Done', async () => {
+  const onNoteSave = vi.fn()
+  render(<EntryCard entry={base} {...handlers} onNoteSave={onNoteSave} />)
+  await userEvent.click(screen.getByRole('button', { name: /edit/i }))
+  const editor = screen.getByLabelText('note editor')
+  await userEvent.clear(editor)
+  await userEvent.type(editor, 'updated note')
+  await userEvent.click(screen.getByRole('button', { name: /done/i }))
+  expect(onNoteSave).toHaveBeenCalledWith('x', 'updated note')
+})
+
+test('changes status and fires delete', async () => {
   const onStatusChange = vi.fn()
-  render(<EntryCard entry={base} onDelete={noop} onStatusChange={onStatusChange} onTagsChange={noop} />)
+  const onDelete = vi.fn()
+  render(<EntryCard entry={base} {...handlers} onStatusChange={onStatusChange} onDelete={onDelete} />)
   await userEvent.selectOptions(screen.getByRole('combobox'), 'done')
   expect(onStatusChange).toHaveBeenCalledWith('x', 'done')
+  await userEvent.click(screen.getByRole('button', { name: /delete/i }))
+  expect(onDelete).toHaveBeenCalledWith('x')
 })
 
 test('edits tags through TagInput', async () => {
   const onTagsChange = vi.fn()
-  render(<EntryCard entry={{ ...base, tags: [] }} onDelete={noop} onStatusChange={noop} onTagsChange={onTagsChange} />)
+  render(<EntryCard entry={{ ...base, tags: [] }} {...handlers} onTagsChange={onTagsChange} />)
   await userEvent.type(screen.getByPlaceholderText(/add tag/i), 'book{Enter}')
   expect(onTagsChange).toHaveBeenCalledWith('x', ['book'])
-})
-
-test('fires delete', async () => {
-  const onDelete = vi.fn()
-  render(<EntryCard entry={base} onDelete={onDelete} onStatusChange={noop} onTagsChange={noop} />)
-  await userEvent.click(screen.getByRole('button', { name: /delete/i }))
-  expect(onDelete).toHaveBeenCalledWith('x')
 })

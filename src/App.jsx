@@ -17,6 +17,7 @@ import SearchBar from './components/SearchBar.jsx'
 import BulkImport from './components/BulkImport.jsx'
 import SortInbox from './components/SortInbox.jsx'
 import StatusFilter from './components/StatusFilter.jsx'
+import TopicTOC from './components/TopicTOC.jsx'
 import ProgressView from './components/ProgressView.jsx'
 import Revisit from './components/Revisit.jsx'
 
@@ -80,6 +81,19 @@ function Workspace() {
   async function handleTagsChange(entryId, tags) {
     await setEntryTags(supabase, entryId, tags)
     setEntries((prev) => prev.map((e) => (e.id === entryId ? { ...e, tags } : e)))
+  }
+
+  async function handleTogglePin(entryId, pinned) {
+    const updated = await updateEntry(supabase, entryId, { pinned })
+    setEntries((prev) => {
+      const next = prev.map((e) => (e.id === entryId ? { ...updated, tags: e.tags } : e))
+      return [...next].sort((a, b) => (b.pinned === a.pinned ? 0 : b.pinned ? 1 : -1))
+    })
+  }
+
+  async function handleNoteSave(entryId, note) {
+    const updated = await updateEntry(supabase, entryId, { note })
+    setEntries((prev) => prev.map((e) => (e.id === entryId ? { ...updated, tags: e.tags } : e)))
   }
 
   async function loadInbox() {
@@ -152,11 +166,14 @@ function Workspace() {
               <QuickAdd onAdd={handleAddEntry} disabled={!selectedId} />
             )}
             <StatusFilter value={statusFilter} onChange={setStatusFilter} />
+            <TopicTOC entries={entries} />
             <EntryList
               entries={statusFilter ? entries.filter((e) => e.status === statusFilter) : entries}
               onDelete={handleDelete}
               onStatusChange={handleStatusChange}
               onTagsChange={handleTagsChange}
+              onTogglePin={handleTogglePin}
+              onNoteSave={handleNoteSave}
             />
           </>
         )}
