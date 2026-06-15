@@ -7,6 +7,7 @@ vi.mock('./hooks/useSession.js', () => ({
 vi.mock('./lib/supabaseClient.js', () => ({
   supabase: { auth: { signInWithOtp: vi.fn() } },
 }))
+vi.mock('./lib/enrich.js', () => ({ fetchTitle: vi.fn(() => Promise.resolve(null)) }))
 
 import App from './App.jsx'
 

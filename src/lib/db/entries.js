@@ -1,17 +1,33 @@
+import { buildSearchFilter } from '../searchFilter.js'
+
+const TAG_SELECT = '*, entry_tags(tags(name))'
+const MAX_NOTE = 10000
+const MAX_URL = 2000
+
+const clampUrl = (u) => (u ? String(u).slice(0, MAX_URL) : null)
+const clampNote = (n) => String(n ?? '').slice(0, MAX_NOTE)
+
+function flattenTags(row) {
+  const tags = (row.entry_tags || []).map((et) => et.tags?.name).filter(Boolean)
+  const { entry_tags, ...rest } = row
+  return { ...rest, tags }
+}
+
 export async function listEntriesByTopic(supabase, topicId) {
   const { data, error } = await supabase
     .from('entries')
-    .select('*')
+    .select(TAG_SELECT)
     .eq('topic_id', topicId)
+    .order('pinned', { ascending: false })
     .order('created_at', { ascending: false })
   if (error) throw new Error(error.message)
-  return data
+  return data.map(flattenTags)
 }
 
 export async function createEntry(supabase, { topicId, url = null, title = null, note = '' }) {
   const { data, error } = await supabase
     .from('entries')
-    .insert({ topic_id: topicId, url, title, note })
+    .insert({ topic_id: topicId, url: clampUrl(url), title, note: clampNote(note) })
     .select()
     .single()
   if (error) throw new Error(error.message)
@@ -34,12 +50,37 @@ export async function deleteEntry(supabase, id) {
   if (error) throw new Error(error.message)
 }
 
+export async function bulkCreateEntries(supabase, topicId, items) {
+  const rows = items.map((it) => ({ topic_id: topicId, url: clampUrl(it.url), note: clampNote(it.note) }))
+  const { data, error } = await supabase.from('entries').insert(rows).select()
+  if (error) throw new Error(error.message)
+  return data
+}
+
 export async function searchEntries(supabase, query) {
   const { data, error } = await supabase
     .from('entries')
-    .select('*')
-    .or(`note.ilike.%${query}%,title.ilike.%${query}%`)
+    .select(TAG_SELECT)
+    .or(buildSearchFilter(query))
     .order('created_at', { ascending: false })
   if (error) throw new Error(error.message)
-  return data
+  return data.map(flattenTags)
+}
+
+export async function listForRevisit(supabase, limit) {
+  const { data, error } = await supabase
+    .from('entries')
+    .select(TAG_SELECT)
+    .order('last_surfaced_at', { ascending: true, nullsFirst: true })
+    .limit(limit)
+  if (error) throw new Error(error.message)
+  return data.map(flattenTags)
+}
+
+export async function markSurfaced(supabase, id) {
+  const { error } = await supabase
+    .from('entries')
+    .update({ last_surfaced_at: new Date().toISOString() })
+    .eq('id', id)
+  if (error) throw new Error(error.message)
 }

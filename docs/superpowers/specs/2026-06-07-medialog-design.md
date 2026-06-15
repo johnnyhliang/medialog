@@ -236,3 +236,38 @@ The discipline that keeps this from becoming the mess it's meant to replace:
 **source ≠ system**, flat over nested, one fixed shape per data type, and an
 anti-rot resurfacing sweep baked into every module. Grow modules one at a time,
 each earning its place — never a big-bang rebuild.
+
+### Future feature idea — living topic documents (LLM interface)
+
+Each topic gets a **living, breathing context document**: an auto-maintained
+synthesis of everything in that bucket (its entries, links, takeaways, status).
+Key properties:
+
+- **Not user-edited** — it's maintained *for* you, regenerated/updated as the
+  topic's entries change. It is the topic's memory, not another note to tend.
+- **Tied to the topic** — one living doc per bucket, grounded only in that
+  bucket's contents (buckets stay the pillar; the doc is an auxiliary view of
+  them).
+- **An LLM interface** — the doc is the quick context you **chat with an LLM
+  about**. Ask "what have I concluded about X?", "what should I read next here?",
+  "summarize my takeaways" — the model answers grounded in that topic's living
+  document, not the open internet.
+
+This is the concrete first form of the North Star's "built-in AI agent with
+persistent memory": memory = the living docs (one per topic), the agent reads
+them as context, and mutations stay non-destructive (it maintains the doc, never
+silently rewrites your entries). Likely implementation later: a Supabase table
+`topic_docs` (topic_id, generated_markdown, updated_at) refreshed on entry change
+or on demand, plus a chat panel scoped to the selected topic.
+
+**The agent can act, not just chat (tool use).** Beyond answering questions, the
+LLM should *interface with the app's own features* through a defined tool layer —
+e.g. sort the Inbox (assign entries to topics), set/clear consumption status,
+add/remove tags, pin entries, and **flag backlog items as deletable** (mark
+candidates for removal). Strict guardrail from the North Star: **non-destructive
+by design** — the agent proposes destructive actions (delete, bulk reassign) and
+the user confirms; only clearly reversible/safe actions (tagging, status, pinning,
+surfacing) may run directly. Implementation later: expose the existing data-layer
+functions (`updateEntry`, `setEntryTags`, `deleteEntry`, assign/pin) as agent
+tools with a confirm gate on the destructive ones, so "clean up my AI backlog and
+mark stale links for deletion" becomes a reviewable agent action.

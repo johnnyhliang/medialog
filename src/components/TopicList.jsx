@@ -13,21 +13,23 @@ export default function TopicList({ topics, selectedId, onSelect, onAdd }) {
 
   return (
     <nav>
-      <ul style={{ listStyle: 'none', padding: 0 }}>
+      <p className="section-label">Topics</p>
+      <ul className="topics">
         {topics.map((t) => (
           <li key={t.id}>
             <button
+              className={t.id === selectedId ? 'selected' : ''}
               onClick={() => onSelect(t.id)}
-              style={{ fontWeight: t.id === selectedId ? 'bold' : 'normal' }}
             >
               {t.name}
             </button>
           </li>
         ))}
       </ul>
-      <form onSubmit={handleAdd}>
+      <form className="topic-add" onSubmit={handleAdd}>
         <input
           placeholder="new topic"
+          maxLength={120}
           value={name}
           onChange={(e) => setName(e.target.value)}
         />
