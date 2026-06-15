@@ -6,6 +6,7 @@ import {
   bulkCreateEntries, listForRevisit, markSurfaced,
 } from './lib/db/entries.js'
 import { setEntryTags } from './lib/db/tags.js'
+import { listVersions, createVersion } from './lib/db/versions.js'
 import { fetchTitle } from './lib/enrich.js'
 import { buildMarkdownFiles } from './lib/exportMarkdown.js'
 import { buildZip, downloadBlob } from './lib/buildZip.js'
@@ -20,6 +21,7 @@ import StatusFilter from './components/StatusFilter.jsx'
 import TopicTOC from './components/TopicTOC.jsx'
 import ProgressView from './components/ProgressView.jsx'
 import Revisit from './components/Revisit.jsx'
+import VersionHistory from './components/VersionHistory.jsx'
 
 function Workspace() {
   const [topics, setTopics] = useState([])
@@ -30,6 +32,8 @@ function Workspace() {
   const [statusFilter, setStatusFilter] = useState('') // '' | 'backlog' | 'active' | 'done'
   const [inboxEntries, setInboxEntries] = useState([])
   const [revisitEntries, setRevisitEntries] = useState([])
+  const [historyFor, setHistoryFor] = useState(null)
+  const [versions, setVersions] = useState([])
 
   const inboxTopic = topics.find((t) => t.name === 'Inbox')
 
@@ -94,6 +98,22 @@ function Workspace() {
   async function handleNoteSave(entryId, note) {
     const updated = await updateEntry(supabase, entryId, { note })
     setEntries((prev) => prev.map((e) => (e.id === entryId ? { ...updated, tags: e.tags } : e)))
+  }
+
+  async function handleNoteVersion(entryId, note) {
+    await createVersion(supabase, entryId, note)
+  }
+
+  async function handleShowHistory(entryId) {
+    setVersions(await listVersions(supabase, entryId))
+    setHistoryFor(entryId)
+  }
+
+  async function handleRestore(note) {
+    await updateEntry(supabase, historyFor, { note })
+    await createVersion(supabase, historyFor, note)
+    setEntries((prev) => prev.map((e) => (e.id === historyFor ? { ...e, note } : e)))
+    setHistoryFor(null)
   }
 
   async function loadInbox() {
@@ -174,6 +194,8 @@ function Workspace() {
               onTagsChange={handleTagsChange}
               onTogglePin={handleTogglePin}
               onNoteSave={handleNoteSave}
+              onNoteVersion={handleNoteVersion}
+              onShowHistory={handleShowHistory}
             />
           </>
         )}
@@ -194,6 +216,15 @@ function Workspace() {
         )}
         {view === 'revisit' && <Revisit entries={revisitEntries} onSeen={handleSeen} />}
       </main>
+      {historyFor && (
+        <div className="history-modal" onClick={() => setHistoryFor(null)}>
+          <div className="history-panel" onClick={(e) => e.stopPropagation()}>
+            <p className="section-label">Version history</p>
+            <VersionHistory versions={versions} onRestore={handleRestore} />
+            <button onClick={() => setHistoryFor(null)}>Close</button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

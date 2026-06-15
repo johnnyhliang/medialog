@@ -155,6 +155,19 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .card.pinned { border-color: var(--accent); }
 .card .cm-editor { border: 1px solid var(--border); border-radius: 7px; }
 
+/* Editor split + live preview */
+.editor-split { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.editor-split .preview { background: var(--surface-2); border-radius: 7px; padding: 8px 12px; overflow: auto; }
+@media (max-width: 680px) { .editor-split { grid-template-columns: 1fr; } }
+
+/* Version history */
+.versions { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; }
+.versions li { display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--border); padding: 6px 0; }
+.version-date { color: var(--muted); font-size: 12px; white-space: nowrap; }
+.version-preview { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.history-modal { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5); display: flex; align-items: center; justify-content: center; padding: 20px; }
+.history-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; max-width: 560px; width: 100%; max-height: 70vh; overflow: auto; display: flex; flex-direction: column; gap: 12px; }
+
 /* Status filter */
 .status-filter { display: flex; gap: 4px; }
 .status-filter button {
