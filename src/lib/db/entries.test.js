@@ -79,8 +79,8 @@ describe('entries db', () => {
     const items = [{ url: 'http://a', note: '' }, { url: null, note: 'idea' }]
     const result = await bulkCreateEntries(client, 'inbox-id', items)
     expect(client._chain.insert).toHaveBeenCalledWith([
-      { topic_id: 'inbox-id', url: 'http://a', note: '' },
-      { topic_id: 'inbox-id', url: null, note: 'idea' },
+      { topic_id: 'inbox-id', url: 'http://a', title: null, note: '' },
+      { topic_id: 'inbox-id', url: null, title: null, note: 'idea' },
     ])
     expect(result).toEqual(rows)
   })

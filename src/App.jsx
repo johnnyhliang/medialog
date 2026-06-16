@@ -106,6 +106,34 @@ function Workspace() {
     return created.length
   }
 
+  async function handleSmartImport(importedEntries) {
+    const byTopic = {}
+    for (const e of importedEntries) {
+      const t = e.suggested_topic || 'Inbox'
+      if (!byTopic[t]) byTopic[t] = []
+      byTopic[t].push(e)
+    }
+
+    let total = 0
+    const newTopics = []
+
+    for (const [topicName, items] of Object.entries(byTopic)) {
+      let topic = topics.find((t) => t.name === topicName)
+      if (!topic) {
+        topic = await createTopic(supabase, topicName)
+        newTopics.push(topic)
+      }
+      const created = await bulkCreateEntries(supabase, topic.id, items)
+      total += created.length
+    }
+
+    if (newTopics.length > 0) {
+      setTopics((prev) => [...prev, ...newTopics].sort((a, b) => a.name.localeCompare(b.name)))
+    }
+
+    return total
+  }
+
   async function handleAssign(entryId, topicId) {
     await updateEntry(supabase, entryId, { topic_id: topicId })
     setInboxEntries((prev) => prev.filter((e) => e.id !== entryId))
@@ -177,7 +205,13 @@ function Workspace() {
             />
           </>
         )}
-        {view === 'bulk' && <BulkImport onImport={handleBulkImport} />}
+        {view === 'bulk' && (
+          <BulkImport
+            onImport={handleBulkImport}
+            onSmartImport={handleSmartImport}
+            topics={topics}
+          />
+        )}
         {view === 'sort' && (
           <SortInbox
             entries={inboxEntries}

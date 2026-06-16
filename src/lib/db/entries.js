@@ -51,7 +51,12 @@ export async function deleteEntry(supabase, id) {
 }
 
 export async function bulkCreateEntries(supabase, topicId, items) {
-  const rows = items.map((it) => ({ topic_id: topicId, url: clampUrl(it.url), note: clampNote(it.note) }))
+  const rows = items.map((it) => ({
+    topic_id: topicId,
+    url: clampUrl(it.url),
+    title: it.title ? String(it.title).slice(0, 300) : null,
+    note: clampNote(it.note),
+  }))
   const { data, error } = await supabase.from('entries').insert(rows).select()
   if (error) throw new Error(error.message)
   return data
