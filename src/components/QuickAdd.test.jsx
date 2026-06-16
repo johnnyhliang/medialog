@@ -7,7 +7,7 @@ test('submits url + note and clears fields', async () => {
   const onAdd = vi.fn(() => Promise.resolve())
   render(<QuickAdd onAdd={onAdd} disabled={false} />)
   await userEvent.type(screen.getByPlaceholderText(/link/i), 'http://x.com')
-  await userEvent.type(screen.getByPlaceholderText(/note/i), 'thought')
+  await userEvent.type(screen.getByPlaceholderText(/worth remembering/i), 'thought')
   await userEvent.click(screen.getByRole('button', { name: /save/i }))
   expect(onAdd).toHaveBeenCalledWith({ url: 'http://x.com', note: 'thought' })
 })

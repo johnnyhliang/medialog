@@ -1,13 +1,17 @@
 #!/usr/bin/env node
 /**
  * Parse the import/ folder and output import-preview.json.
- * Usage: node scripts/parse-import.js
+ * Usage: node scripts/parse-import.cjs
  *
  * Handles:
  *   - sortingtabs_organized.md  (pre-categorized URL lists)
  *   - 08 - mocs/*.md            (topic maps of content)
  *   - *.html / *.htm            (Chrome/Firefox bookmark exports)
+ *   - *.txt                     (raw tab export, one URL per line)
  *   - other .md files           (imported as full-text note entries)
+ *
+ * Temporary/junk URLs (AI chats, searches, localhost, login pages) are
+ * separated into a `skipped` array — not imported, just reported.
  */
 
 const fs = require('fs')
@@ -122,6 +126,46 @@ function classifyByUrl(url, title) {
   if (/umich\.edu/.test(u)) return 'School'
   if (/jane\s*street|peak6|aquatic|citadel|hudson\s*river|quant/.test(title || '')) return 'Finance'
   return null
+}
+
+// ── Temporary URL detection ───────────────────────────────────────────────────
+
+const TEMP_PATTERNS = [
+  // AI chat sessions — saved tabs from conversations, not resources
+  /claude\.ai\/chat\//,
+  /chatgpt\.com\/c\//,
+  /perplexity\.ai\/search\//,
+  /gemini\.google\.com\/app\//,
+  // Search queries — one-time, no lasting value
+  /google\.com\/search\?/,
+  /bing\.com\/search\?/,
+  // Local / personal dashboards
+  /^https?:\/\/localhost/,
+  /supabase\.com\/dashboard\//,
+  /openrouter\.ai\/workspaces\//,
+  // Email / calendar — not resources
+  /mail\.google\.com\//,
+  /outlook\.office\.com\//,
+  /calendar\.google\.com\//,
+  // SSO / login pages
+  /login\.microsoftonline\.com\//,
+  /identity\.elluciancloud\.com\//,
+  /authenticationendpoint\/saml/,
+  // One-time form submissions / event RSVPs
+  /paxel\.ycombinator\.com\/(?:auth|results)/,
+  /forms\.zohopublic\.com\//,
+  // College LMS / portals — session-bound
+  /classes\.iwcc\.edu\//,
+  /iwcc-ss\.colleague\./,
+  /bibliu\.com\/app\//,
+  /csprod\.dsc\.umich\.edu\//,
+  // Drive files (personal, not reference links)
+  /drive\.google\.com\/(drive|file)\//,
+]
+
+function isTemporary(url) {
+  if (!url) return false
+  return TEMP_PATTERNS.some((re) => re.test(url))
 }
 
 // ── URL utilities ─────────────────────────────────────────────────────────────
@@ -285,6 +329,17 @@ function inferBookmarkTopic(url, title, folderStack) {
   return classifyByUrl(url, title) || 'Resources'
 }
 
+function parseTxtTabs(text, relPath) {
+  const entries = []
+  for (const raw of text.split('\n')) {
+    const url = raw.trim()
+    if (!isHttpUrl(url)) continue
+    const topic = classifyByUrl(url, '') || 'Resources'
+    entries.push({ url, title: null, note: '', suggested_topic: topic, source: relPath })
+  }
+  return entries
+}
+
 // ── Directory walker ──────────────────────────────────────────────────────────
 
 function topicForDir(relDir) {
@@ -336,6 +391,13 @@ function walkDir(dir, all = [], depth = 0) {
       continue
     }
 
+    // ── Plain-text tab exports ────────────────────────────────────────────────
+    if (ext === '.txt') {
+      const text = fs.readFileSync(fullPath, 'utf8')
+      all.push(...parseTxtTabs(text, relPath))
+      continue
+    }
+
     // ── HTML bookmarks ────────────────────────────────────────────────────────
     if (ext === '.html' || ext === '.htm') {
       process.stdout.write(`  Parsing ${name} (${Math.round(stat.size / 1024)}KB)… `)
@@ -357,16 +419,22 @@ console.log(`\nRaw entries: ${raw.length}`)
 
 const seen = new Set()
 const entries = []
+const skipped = []
 let dups = 0
 
 for (const e of raw) {
   if (e.url) {
-    const key = normalizeUrl(e.url)
-    if (seen.has(key)) { dups++; continue }
-    seen.add(key)
-    entries.push({ ...e, url: normalizeUrl(e.url) })
+    const norm = normalizeUrl(e.url)
+    if (seen.has(norm)) { dups++; continue }
+    seen.add(norm)
+
+    if (isTemporary(norm)) {
+      skipped.push({ url: norm, title: e.title, source: e.source })
+      continue
+    }
+
+    entries.push({ ...e, url: norm })
   } else {
-    // Documents (no URL) always keep — dedup by title
     const key = `doc:${e.title}`
     if (seen.has(key)) { dups++; continue }
     seen.add(key)
@@ -375,7 +443,6 @@ for (const e of raw) {
 }
 
 const topics = [...new Set(entries.map(e => e.suggested_topic))].sort()
-
 const byTopic = Object.fromEntries(topics.map(t => [t, entries.filter(e => e.suggested_topic === t).length]))
 
 const output = {
@@ -384,16 +451,19 @@ const output = {
     files_parsed: [...new Set(raw.map(e => e.source))].length,
     raw: raw.length,
     duplicates_removed: dups,
+    temp_skipped: skipped.length,
     total: entries.length,
     by_topic: byTopic,
   },
   suggested_topics: topics,
   entries,
+  skipped,
 }
 
 fs.writeFileSync(OUTPUT, JSON.stringify(output, null, 2))
 
 console.log(`Duplicates removed: ${dups}`)
+console.log(`Temp/junk skipped:  ${skipped.length}`)
 console.log(`\nFinal: ${entries.length} entries → import-preview.json`)
 console.log('\nBy topic:')
 for (const [t, n] of Object.entries(byTopic)) {

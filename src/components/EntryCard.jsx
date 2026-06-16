@@ -2,8 +2,8 @@ import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import TagInput from './TagInput.jsx'
+import { getYouTubeThumbnail } from '../lib/youtube.js'
 
-// CodeMirror is heavy and only needed while editing — load it on demand.
 const NoteEditor = lazy(() => import('./NoteEditor.jsx'))
 
 const STATUSES = ['', 'backlog', 'active', 'done']
@@ -11,13 +11,26 @@ const mdComponents = {
   a: ({ node, ...props }) => <a target="_blank" rel="noreferrer" {...props} />,
 }
 
+function relativeAge(dateStr) {
+  if (!dateStr) return null
+  const diff = Date.now() - new Date(dateStr).getTime()
+  const d = Math.floor(diff / 86400000)
+  if (d < 1) return 'today'
+  if (d === 1) return '1 day ago'
+  if (d < 7) return `${d} days ago`
+  if (d < 30) return `${Math.floor(d / 7)}w ago`
+  if (d < 365) return `${Math.floor(d / 30)}mo ago`
+  return `${Math.floor(d / 365)}y ago`
+}
+
 export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChange, onTogglePin, onNoteSave }) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(entry.note || '')
   const timer = useRef(null)
   const statusClass = entry.status ? `status-${entry.status}` : 'status-backlog'
+  const thumb = getYouTubeThumbnail(entry.url)
+  const age = relativeAge(entry.created_at)
 
-  // Debounced autosave while editing.
   useEffect(() => {
     if (!editing) return
     if (timer.current) clearTimeout(timer.current)
@@ -31,28 +44,53 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
     setEditing(false)
   }
 
+  function startEditing() {
+    setDraft(entry.note || '')
+    setEditing(true)
+  }
+
   return (
     <div className={`card${entry.pinned ? ' pinned' : ''}`} id={`entry-${entry.id}`}>
-      {entry.url && (
-        <a href={entry.url} target="_blank" rel="noreferrer">
+
+      {/* Title / URL */}
+      {entry.url ? (
+        <a href={entry.url} className="card-title" target="_blank" rel="noreferrer">
           {entry.title || entry.url}
         </a>
+      ) : entry.title ? (
+        <span className="card-title">{entry.title}</span>
+      ) : null}
+
+      {/* YouTube thumbnail */}
+      {thumb && !editing && (
+        <img
+          src={thumb}
+          alt=""
+          className="card-thumb"
+          loading="lazy"
+          onError={(e) => { e.target.style.display = 'none' }}
+        />
       )}
 
+      {/* Note or editor */}
       {editing ? (
         <Suspense fallback={<p className="muted">Loading editor…</p>}>
           <NoteEditor value={draft} onChange={setDraft} />
         </Suspense>
+      ) : entry.note ? (
+        <div className="note" onClick={startEditing} style={{ cursor: 'text' }}>
+          <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>{entry.note}</ReactMarkdown>
+        </div>
       ) : (
-        entry.note && (
-          <div className="note">
-            <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>{entry.note}</ReactMarkdown>
-          </div>
-        )
+        <span className="card-no-note" onClick={startEditing}>
+          Add a thought — why did you save this?
+        </span>
       )}
 
+      {/* Meta row */}
       <div className="card-meta">
         <TagInput value={entry.tags || []} onChange={(next) => onTagsChange(entry.id, next)} />
+        {age && <span className="card-age">{age}</span>}
         <div className="card-actions">
           <button className="icon-btn" aria-label={entry.pinned ? 'unpin' : 'pin'} onClick={() => onTogglePin(entry.id, !entry.pinned)}>
             {entry.pinned ? '★' : '☆'}
@@ -60,7 +98,7 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
           {editing ? (
             <button onClick={finishEditing}>Done</button>
           ) : (
-            <button className="icon-btn" aria-label="edit" onClick={() => { setDraft(entry.note || ''); setEditing(true) }}>✎</button>
+            <button className="icon-btn" aria-label="edit" onClick={startEditing}>✎</button>
           )}
           <select
             className={`status-select ${statusClass}`}
