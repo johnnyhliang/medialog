@@ -9,6 +9,7 @@ import {
   listForRevisit,
   markSurfaced,
 } from './entries.js'
+import { computeTitle } from '../entryTitle.js'
 
 function mockClient(result) {
   const chain = {
@@ -43,7 +44,7 @@ describe('entries db', () => {
     const client = mockClient({ data: row, error: null })
     const result = await createEntry(client, { topicId: 't', url: 'http://x', note: 'n' })
     expect(client._chain.insert).toHaveBeenCalledWith({
-      topic_id: 't', url: 'http://x', title: null, note: 'n',
+      topic_id: 't', url: 'http://x', title: 'n', note: 'n',
     })
     expect(result).toEqual(row)
   })
@@ -52,7 +53,7 @@ describe('entries db', () => {
     const row = { id: 'b', note: 'edited' }
     const client = mockClient({ data: row, error: null })
     const result = await updateEntry(client, 'b', { note: 'edited' })
-    expect(client._chain.update).toHaveBeenCalledWith({ note: 'edited' })
+    expect(client._chain.update).toHaveBeenCalledWith({ note: 'edited', title: 'edited' })
     expect(client._chain.eq).toHaveBeenCalledWith('id', 'b')
     expect(result).toEqual(row)
   })
@@ -101,5 +102,53 @@ describe('entries db', () => {
     await markSurfaced(client, 'e1')
     expect(client._chain.update).toHaveBeenCalled()
     expect(client._chain.eq).toHaveBeenCalledWith('id', 'e1')
+  })
+})
+
+describe('entry title persistence', () => {
+  test('createEntry stores computed title from note H1', async () => {
+    const single = vi.fn().mockResolvedValue({ data: { id: 'e1' }, error: null })
+    const select = vi.fn(() => ({ single }))
+    const insert = vi.fn(() => ({ select }))
+    const supabase = { from: vi.fn(() => ({ insert })) }
+
+    await createEntry(supabase, { topicId: 't1', note: '# Cool Note\nbody' })
+
+    expect(insert).toHaveBeenCalledWith(expect.objectContaining({ title: 'Cool Note' }))
+  })
+
+  test('createEntry keeps explicit title when note empty', async () => {
+    const single = vi.fn().mockResolvedValue({ data: { id: 'e1' }, error: null })
+    const select = vi.fn(() => ({ single }))
+    const insert = vi.fn(() => ({ select }))
+    const supabase = { from: vi.fn(() => ({ insert })) }
+
+    await createEntry(supabase, { topicId: 't1', note: '', title: 'Fetched Title', url: 'https://x.com' })
+
+    expect(insert).toHaveBeenCalledWith(expect.objectContaining({ title: 'Fetched Title' }))
+  })
+
+  test('updateEntry recomputes title when note updated', async () => {
+    const single = vi.fn().mockResolvedValue({ data: { id: 'e1' }, error: null })
+    const select = vi.fn(() => ({ single }))
+    const eq = vi.fn(() => ({ select }))
+    const update = vi.fn(() => ({ eq }))
+    const supabase = { from: vi.fn(() => ({ update })) }
+
+    await updateEntry(supabase, 'e1', { note: '# New Title\nx' })
+
+    expect(update).toHaveBeenCalledWith(expect.objectContaining({ title: 'New Title' }))
+  })
+
+  test('updateEntry leaves title alone when note not in patch', async () => {
+    const single = vi.fn().mockResolvedValue({ data: { id: 'e1' }, error: null })
+    const select = vi.fn(() => ({ single }))
+    const eq = vi.fn(() => ({ select }))
+    const update = vi.fn(() => ({ eq }))
+    const supabase = { from: vi.fn(() => ({ update })) }
+
+    await updateEntry(supabase, 'e1', { status: 'done' })
+
+    expect(update).toHaveBeenCalledWith({ status: 'done' })
   })
 })

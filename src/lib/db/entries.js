@@ -1,4 +1,5 @@
 import { buildSearchFilter } from '../searchFilter.js'
+import { computeTitle } from '../entryTitle.js'
 
 const TAG_SELECT = '*, entry_tags(tags(name))'
 const MAX_NOTE = 10000
@@ -26,9 +27,13 @@ export async function listEntriesByTopic(supabase, topicId) {
 }
 
 export async function createEntry(supabase, { topicId, url = null, title = null, note = '' }) {
+  const noteText = clampNote(note)
+  const finalTitle = noteText.trim()
+    ? computeTitle(noteText, url)
+    : (title || computeTitle('', url))
   const { data, error } = await supabase
     .from('entries')
-    .insert({ topic_id: topicId, url: clampUrl(url), title, note: clampNote(note) })
+    .insert({ topic_id: topicId, url: clampUrl(url), title: finalTitle, note: noteText })
     .select()
     .single()
   if (error) throw new Error(error.message)
@@ -36,9 +41,14 @@ export async function createEntry(supabase, { topicId, url = null, title = null,
 }
 
 export async function updateEntry(supabase, id, patch) {
+  const next = { ...patch }
+  if (typeof next.note === 'string') {
+    next.note = clampNote(next.note)
+    next.title = computeTitle(next.note, next.url ?? null)
+  }
   const { data, error } = await supabase
     .from('entries')
-    .update(patch)
+    .update(next)
     .eq('id', id)
     .select()
     .single()
