@@ -6,7 +6,7 @@
 
 **Architecture:** A `master_doc` column on `topics` holds the doc. Embed tokens are expanded into `entry:`-scheme markdown links so the existing `MarkdownView` `components.a` interceptor renders them as `<EntryEmbed>` — no custom remark plugin. Entry titles are always computed/stored from the note. A client-side in-memory entry index powers both the `[[` CodeMirror autocomplete and fuzzy search; nothing hits the network per keystroke.
 
-**Tech Stack:** React 18, CodeMirror 6 (`@codemirror/autocomplete`), react-markdown 10, Supabase, Vitest + React Testing Library.
+**Tech Stack:** React 18, CodeMirror 6 (`@codemirror/autocomplete`), react-markdown 10, `rehype-slug`, Supabase, Vitest + React Testing Library.
 
 ## Prerequisite
 
@@ -1620,4 +1620,245 @@ Verify on the deployed/local app:
 ```
 git add src/App.jsx
 git commit -m "feat: wire TopicView + candidate index into browse"
+```
+
+---
+
+### Task 14: `[[#` heading references + anchor navigation
+
+**Files:**
+- Create: `src/lib/headingSlug.js`
+- Create: `src/lib/headingSlug.test.js`
+- Modify: `src/lib/entryAutocomplete.js`
+- Modify: `src/components/MarkdownView.jsx`
+
+**Interfaces:**
+- Consumes: `fuzzyFind` from `./fuzzyFind.js`; `@codemirror/autocomplete`; `rehype-slug`
+- Produces:
+  - `slugify(text: string) → string` — GitHub-style slug (lowercase, strip punctuation, spaces→`-`)
+  - `parseHeadings(markdown: string) → { text, slug, level }[]` — ATX headings with de-duplicated slugs (`-1`, `-2` suffixes in document order, GitHub rule)
+  - `makeEntryCompletion(...)` (extended) — when the text before the cursor is `[[#…`, completes against headings parsed from the current doc and inserts `[Heading](#slug)`; otherwise unchanged (entry completion)
+  - `MarkdownView` renders heading `id`s via `rehype-slug`; `#`-anchor links smooth-scroll
+
+- [ ] **Step 1: Install rehype-slug**
+
+```
+npm install rehype-slug
+```
+
+- [ ] **Step 2: Write the failing tests for headingSlug**
+
+`src/lib/headingSlug.test.js`:
+```js
+import { describe, test, expect } from 'vitest'
+import { slugify, parseHeadings } from './headingSlug.js'
+
+describe('slugify', () => {
+  test('lowercases and hyphenates spaces', () => {
+    expect(slugify('Getting Started')).toBe('getting-started')
+  })
+  test('strips punctuation', () => {
+    expect(slugify('What is it? (v2)')).toBe('what-is-it-v2')
+  })
+  test('collapses multiple spaces/hyphens', () => {
+    expect(slugify('a   b --- c')).toBe('a-b-c')
+  })
+  test('trims leading/trailing hyphens', () => {
+    expect(slugify('  Hello!  ')).toBe('hello')
+  })
+})
+
+describe('parseHeadings', () => {
+  test('extracts ATX headings with level and slug', () => {
+    const md = '# Intro\n\ntext\n\n## Details\n### Deep'
+    expect(parseHeadings(md)).toEqual([
+      { text: 'Intro', slug: 'intro', level: 1 },
+      { text: 'Details', slug: 'details', level: 2 },
+      { text: 'Deep', slug: 'deep', level: 3 },
+    ])
+  })
+  test('ignores non-heading lines and # without space', () => {
+    expect(parseHeadings('#nospace\nplain text')).toEqual([])
+  })
+  test('de-duplicates repeated heading slugs in document order', () => {
+    const md = '# Notes\n## Notes\n## Notes'
+    expect(parseHeadings(md).map((h) => h.slug)).toEqual(['notes', 'notes-1', 'notes-2'])
+  })
+})
+```
+
+- [ ] **Step 3: Run test to verify it fails**
+
+```
+npm test -- --run src/lib/headingSlug.test.js
+```
+Expected: FAIL — functions not defined
+
+- [ ] **Step 4: Implement headingSlug.js**
+
+`src/lib/headingSlug.js`:
+```js
+// GitHub-style slug: lowercase, drop non-word chars (keep spaces/hyphens), spaces→-, collapse, trim.
+export function slugify(text) {
+  return String(text ?? '')
+    .toLowerCase()
+    .replace(/[^\w\s-]/g, '')   // drop punctuation
+    .trim()
+    .replace(/[\s-]+/g, '-')    // collapse whitespace/hyphen runs to single -
+    .replace(/^-+|-+$/g, '')    // trim leading/trailing -
+}
+
+// Parse ATX headings (# .. ######) into { text, slug, level } with GitHub-style
+// duplicate-slug suffixing (-1, -2, ...) in document order.
+export function parseHeadings(markdown) {
+  const out = []
+  const counts = new Map()
+  for (const line of String(markdown ?? '').split('\n')) {
+    const m = line.match(/^(#{1,6})\s+(.+?)\s*$/)
+    if (!m) continue
+    const level = m[1].length
+    const text = m[2]
+    const base = slugify(text)
+    const n = counts.get(base) ?? 0
+    counts.set(base, n + 1)
+    const slug = n === 0 ? base : `${base}-${n}`
+    out.push({ text, slug, level })
+  }
+  return out
+}
+```
+
+- [ ] **Step 5: Run test to verify it passes**
+
+```
+npm test -- --run src/lib/headingSlug.test.js
+```
+Expected: PASS
+
+- [ ] **Step 6: Extend makeEntryCompletion for `[[#` headings**
+
+In `src/lib/entryAutocomplete.js`, add the import at the top:
+```js
+import { parseHeadings } from './headingSlug.js'
+```
+
+Change `makeEntryCompletion` to accept a getter for the current doc text and branch on `[[#`. Replace the existing `makeEntryCompletion` with:
+```js
+// getCandidates(): entry candidate[]; getScopeCtx(): { scope, currentTopicId };
+// getDocText(): current editor doc string (for [[# heading completion).
+export function makeEntryCompletion(getCandidates, getScopeCtx, getDocText = () => '') {
+  function source(context) {
+    // Heading reference: [[#query
+    const headingBefore = context.matchBefore(/\[\[#([^\]]*)$/)
+    if (headingBefore) {
+      const query = headingBefore.text.slice(3) // strip "[[#"
+      const headings = parseHeadings(getDocText())
+      const matches = fuzzyFind(query, headings, ['text']).slice(0, 20)
+      return {
+        from: headingBefore.from,
+        options: matches.map((h) => ({
+          label: h.text,
+          detail: '#'.repeat(h.level),
+          apply: `[${h.text}](#${h.slug})`,
+        })),
+      }
+    }
+
+    // Entry embed: [[query  (but not [[# — handled above)
+    const before = context.matchBefore(/\[\[([^#\]][^\]]*|)$/)
+    if (!before) return null
+    const query = before.text.slice(2) // strip the "[["
+    if (!context.explicit && before.from === before.to) return null
+
+    const ctx = getScopeCtx()
+    const matches = filterCandidates(query, getCandidates(), ctx).slice(0, 20)
+    return {
+      from: before.from,
+      options: matches.map((c) => ({
+        label: c.title,
+        detail: ctx.scope === 'all' ? c.topicName : undefined,
+        apply: `[[entry:${c.id}]]`,
+      })),
+    }
+  }
+  return autocompletion({ override: [source] })
+}
+```
+
+(`filterCandidates` and the imports of `autocompletion`/`fuzzyFind` from Task 10 stay as-is.)
+
+- [ ] **Step 7: Pass the doc text getter from TopicDocEditor**
+
+In `src/components/TopicDocEditor.jsx`, the `makeEntryCompletion` call currently passes two args. Add a third that returns the live doc. Since `doc` is component state, use a ref to avoid stale closures — add near the other refs:
+```js
+const docRef = useRef(doc)
+docRef.current = doc
+```
+and update the `useMemo` that builds `completion`:
+```js
+const completion = useMemo(
+  () => makeEntryCompletion(
+    () => candidatesRef.current,
+    () => scopeCtxRef.current,
+    () => docRef.current,
+  ),
+  [scopeCtxRef],
+)
+```
+
+- [ ] **Step 8: Add rehype-slug + anchor smooth-scroll to MarkdownView**
+
+In `src/components/MarkdownView.jsx`:
+
+Add the import:
+```js
+import rehypeSlug from 'rehype-slug'
+```
+
+Add `rehypeSlug` to the `ReactMarkdown` rehype plugins. Find the `<ReactMarkdown remarkPlugins={[remarkGfm]} ...>` and add `rehypePlugins={[rehypeSlug]}`:
+```jsx
+<ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSlug]} components={components}>
+  {source}
+</ReactMarkdown>
+```
+
+In `buildMarkdownComponents`, update the `a` renderer so a `#`-anchor href smooth-scrolls. Add this branch FIRST inside the `a` renderer (before the `entry:` and file-chip branches):
+```jsx
+if (href && href.startsWith('#')) {
+  return (
+    <a
+      href={href}
+      onClick={(e) => {
+        const el = document.getElementById(href.slice(1))
+        if (el) { e.preventDefault(); el.scrollIntoView({ behavior: 'smooth' }) }
+      }}
+      {...props}
+    >
+      {children}
+    </a>
+  )
+}
+```
+
+- [ ] **Step 9: Run the full suite**
+
+```
+npm test -- --run
+```
+Expected: `headingSlug` tests pass; previously-passing tests still pass; the known pre-existing failures unchanged. No new failures.
+
+- [ ] **Step 10: Manual smoke test**
+
+```
+npm run dev
+```
+- In a master doc, write a couple of `# Headings`. Type `[[#` → autocomplete lists the headings → pick one → inserts `[Heading](#heading-slug)`.
+- Switch the doc to rendered → the inserted link is clickable and smooth-scrolls to that heading.
+- `[[` (no `#`) still completes entries as before.
+
+- [ ] **Step 11: Commit**
+
+```
+git add src/lib/headingSlug.js src/lib/headingSlug.test.js src/lib/entryAutocomplete.js src/components/TopicDocEditor.jsx src/components/MarkdownView.jsx package.json package-lock.json
+git commit -m "feat: [[# heading references with anchor navigation"
 ```
