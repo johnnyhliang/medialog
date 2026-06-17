@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import TagInput from './TagInput.jsx'
 import MarkdownView from './MarkdownView.jsx'
+import ConfirmModal from './ConfirmModal.jsx'
 import { supabase } from '../lib/supabaseClient.js'
 import { getYouTubeThumbnail } from '../lib/youtube.js'
 
@@ -23,6 +24,7 @@ function relativeAge(dateStr) {
 export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChange, onTogglePin, onNoteSave }) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(entry.note || '')
+  const [confirmDelete, setConfirmDelete] = useState(false)
   const timer = useRef(null)
   const statusClass = entry.status ? `status-${entry.status}` : 'status-backlog'
   const thumb = getYouTubeThumbnail(entry.url)
@@ -48,7 +50,6 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
 
   return (
     <div className={`card${entry.pinned ? ' pinned' : ''}`} id={`entry-${entry.id}`}>
-
       {/* Title / URL */}
       {entry.url ? (
         <a href={entry.url} className="card-title" target="_blank" rel="noreferrer">
@@ -106,9 +107,18 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
               <option key={s} value={s}>{s === '' ? 'no status' : s}</option>
             ))}
           </select>
-          <button className="icon-btn" onClick={() => onDelete(entry.id)} aria-label="delete">🗑</button>
+          <button className="icon-btn" onClick={() => setConfirmDelete(true)} aria-label="delete">🗑</button>
         </div>
       </div>
+
+      {confirmDelete && (
+        <ConfirmModal
+          message="Move this entry to trash?"
+          confirmLabel="Move to Trash"
+          onConfirm={() => { setConfirmDelete(false); onDelete(entry.id) }}
+          onCancel={() => setConfirmDelete(false)}
+        />
+      )}
     </div>
   )
 }
