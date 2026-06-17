@@ -4,7 +4,7 @@ import { markdown, markdownLanguage, insertNewlineContinueMarkup, deleteMarkupBa
 import { languages } from '@codemirror/language-data'
 import { keymap } from '@codemirror/view'
 import { indentWithTab } from '@codemirror/commands'
-import { Prec } from '@codemirror/state'
+import { Prec, EditorSelection } from '@codemirror/state'
 import MarkdownView from './MarkdownView.jsx'
 import { uploadAttachment, markdownForAttachment, isAllowedAttachment } from '../lib/storage.js'
 
@@ -15,6 +15,80 @@ const mdKeymap = Prec.high(
     indentWithTab,
   ]),
 )
+
+function makePairKeymap() {
+  function insertPair(open, close) {
+    return (view) => {
+      const { state, dispatch } = view
+      const sel = state.selection.main
+      // If text is selected, wrap it
+      if (sel.from !== sel.to) {
+        const selected = state.sliceDoc(sel.from, sel.to)
+        dispatch(state.update({
+          changes: { from: sel.from, to: sel.to, insert: `${open}${selected}${close}` },
+          selection: EditorSelection.cursor(sel.from + open.length + selected.length),
+        }))
+        return true
+      }
+      // Insert pair and place cursor inside
+      dispatch(state.update({
+        changes: { from: sel.from, to: sel.to, insert: `${open}${close}` },
+        selection: EditorSelection.cursor(sel.from + open.length),
+      }))
+      return true
+    }
+  }
+
+  function smartBackspace(view) {
+    const { state, dispatch } = view
+    const { from } = state.selection.main
+    if (from === 0) return false
+
+    // Check **|**
+    const b2 = state.sliceDoc(from - 2, from)
+    const a2 = state.sliceDoc(from, from + 2)
+    if (b2 === '**' && a2 === '**') {
+      dispatch(state.update({
+        changes: { from: from - 2, to: from + 2, insert: '' },
+        selection: EditorSelection.cursor(from - 2),
+      }))
+      return true
+    }
+
+    // Check *|* or _|_
+    const b1 = state.sliceDoc(from - 1, from)
+    const a1 = state.sliceDoc(from, from + 1)
+    if ((b1 === '*' && a1 === '*') || (b1 === '_' && a1 === '_')) {
+      dispatch(state.update({
+        changes: { from: from - 1, to: from + 1, insert: '' },
+        selection: EditorSelection.cursor(from - 1),
+      }))
+      return true
+    }
+
+    // Check [|]
+    if (b1 === '[' && a1 === ']') {
+      dispatch(state.update({
+        changes: { from: from - 1, to: from + 1, insert: '' },
+        selection: EditorSelection.cursor(from - 1),
+      }))
+      return true
+    }
+
+    return false
+  }
+
+  return Prec.high(
+    keymap.of([
+      { key: '*', run: insertPair('*', '*') },
+      { key: '_', run: insertPair('_', '_') },
+      { key: '[', run: insertPair('[', ']') },
+      { key: 'Backspace', run: smartBackspace },
+    ])
+  )
+}
+
+const pairKeymap = makePairKeymap()
 
 const MODES = ['write', 'preview', 'split']
 
@@ -120,7 +194,7 @@ export default function NoteEditor({ value, onChange, supabase }) {
             <CodeMirror
               value={value}
               theme="dark"
-              extensions={[markdown({ base: markdownLanguage, codeLanguages: languages }), mdKeymap]}
+              extensions={[markdown({ base: markdownLanguage, codeLanguages: languages }), mdKeymap, pairKeymap]}
               onChange={onChange}
               basicSetup={{ lineNumbers: false, foldGutter: false, highlightActiveLine: false }}
             />
