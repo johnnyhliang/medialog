@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { supabase } from './lib/supabaseClient.js'
 import { listTopics, createTopic, getTopicByName } from './lib/db/topics.js'
 import {
@@ -23,6 +23,8 @@ import ProgressView from './components/ProgressView.jsx'
 import Revisit from './components/Revisit.jsx'
 import SettingsView from './components/SettingsView.jsx'
 import TrashView from './components/TrashView.jsx'
+import { useFilePreview } from './hooks/useFilePreview.js'
+const FilePreviewModal = lazy(() => import('./components/FilePreviewModal.jsx'))
 
 function Workspace() {
   const [topics, setTopics] = useState([])
@@ -34,6 +36,8 @@ function Workspace() {
   const [inboxEntries, setInboxEntries] = useState([])
   const [revisitEntries, setRevisitEntries] = useState([])
   const [trashEntries, setTrashEntries] = useState([])
+
+  const { previewUrl, openPreview, closePreview } = useFilePreview()
 
   const inboxTopic = topics.find((t) => t.name === 'Inbox')
 
@@ -263,6 +267,7 @@ function Workspace() {
               onTagsChange={handleTagsChange}
               onTogglePin={handleTogglePin}
               onNoteSave={handleNoteSave}
+              onPreview={openPreview}
             />
           </>
         )}
@@ -297,6 +302,11 @@ function Workspace() {
           />
         )}
       </main>
+      {previewUrl && (
+        <Suspense fallback={null}>
+          <FilePreviewModal url={previewUrl} onClose={closePreview} />
+        </Suspense>
+      )}
     </div>
   )
 }
