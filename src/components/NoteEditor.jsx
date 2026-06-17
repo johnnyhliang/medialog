@@ -98,7 +98,7 @@ function insertAtCursor(value, snippet) {
   return trimmed ? `${trimmed}\n\n${snippet}` : snippet
 }
 
-export default function NoteEditor({ value, onChange, supabase }) {
+export default function NoteEditor({ value, onChange, supabase, extraExtensions = [] }) {
   const [mode, setMode] = useState('write')
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState(null)
@@ -209,7 +209,7 @@ export default function NoteEditor({ value, onChange, supabase }) {
             <CodeMirror
               value={value}
               theme="dark"
-              extensions={[markdown({ base: markdownLanguage, codeLanguages: languages }), mdKeymap, pairKeymap]}
+              extensions={[markdown({ base: markdownLanguage, codeLanguages: languages }), mdKeymap, pairKeymap, ...extraExtensions]}
               onChange={onChange}
               basicSetup={{ lineNumbers: false, foldGutter: false, highlightActiveLine: false }}
             />
