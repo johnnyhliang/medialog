@@ -78,7 +78,7 @@ function makePairKeymap() {
     return false
   }
 
-  return Prec.high(
+  return Prec.highest(
     keymap.of([
       { key: '*', run: insertPair('*', '*') },
       { key: '_', run: insertPair('_', '_') },
