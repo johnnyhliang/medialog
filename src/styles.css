@@ -237,6 +237,31 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
 .card .note h1,.card .note h2,.card .note h3 { font-family: var(--font-serif); }
 .card .cm-editor { border: 1px solid var(--border); border-radius: 7px; }
 
+/* CodeMirror — match the off-white UI (no dark theme) */
+.note-editor .cm-editor,
+.note-editor .cm-editor.cm-focused {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-family: var(--font-ui);
+  font-size: 13.5px;
+  outline: none;
+}
+.note-editor .cm-editor.cm-focused {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-weak);
+}
+.note-editor .cm-scroller { font-family: var(--font-ui); line-height: 1.6; }
+.note-editor .cm-content { padding: 10px 12px; caret-color: var(--accent); }
+.note-editor .cm-gutters { background: var(--surface); border: none; color: var(--muted); }
+.note-editor .cm-cursor { border-left-color: var(--accent); }
+.note-editor .cm-selectionBackground,
+.note-editor .cm-editor .cm-selectionBackground {
+  background: var(--accent-weak) !important;
+}
+.note-editor .cm-activeLine { background: transparent; }
+
 /* Note editor — write / preview / split */
 .note-editor { display: flex; flex-direction: column; gap: 8px; }
 .note-editor-toolbar {
@@ -716,3 +741,33 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
   font-style: normal;
   margin-left: 8px;
 }
+
+/* ── Confirm modal (trash / destructive actions) ─────────────────────────────── */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(28, 26, 21, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1200;
+  padding: 20px;
+}
+.modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px 22px;
+  max-width: 380px;
+  width: 100%;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.18);
+}
+.modal p { margin: 0 0 16px; color: var(--text); font-size: 14px; line-height: 1.5; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.btn-danger {
+  background: var(--danger);
+  color: #fff;
+  border: none;
+  font-weight: 500;
+}
+.btn-danger:hover { background: var(--danger); opacity: 0.9; }

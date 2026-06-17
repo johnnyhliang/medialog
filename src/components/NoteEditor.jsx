@@ -208,7 +208,6 @@ export default function NoteEditor({ value, onChange, supabase, extraExtensions 
           <div className="note-editor-pane" onPaste={onPaste}>
             <CodeMirror
               value={value}
-              theme="dark"
               extensions={[markdown({ base: markdownLanguage, codeLanguages: languages }), mdKeymap, pairKeymap, ...extraExtensions]}
               onChange={onChange}
               basicSetup={{ lineNumbers: false, foldGutter: false, highlightActiveLine: false }}
