@@ -43,13 +43,20 @@ test('edits the note and saves on Done', async () => {
   expect(onNoteSave).toHaveBeenCalledWith('x', 'updated note')
 })
 
-test('changes status and fires delete', async () => {
+test('changes status', async () => {
   const onStatusChange = vi.fn()
-  const onDelete = vi.fn()
-  render(<EntryCard entry={base} {...handlers} onStatusChange={onStatusChange} onDelete={onDelete} />)
+  render(<EntryCard entry={base} {...handlers} onStatusChange={onStatusChange} />)
   await userEvent.selectOptions(screen.getByRole('combobox'), 'done')
   expect(onStatusChange).toHaveBeenCalledWith('x', 'done')
+})
+
+test('delete asks for confirmation, then fires onDelete', async () => {
+  const onDelete = vi.fn()
+  render(<EntryCard entry={base} {...handlers} onDelete={onDelete} />)
   await userEvent.click(screen.getByRole('button', { name: /delete/i }))
+  // confirm modal — onDelete not called until confirmed
+  expect(onDelete).not.toHaveBeenCalled()
+  await userEvent.click(screen.getByRole('button', { name: /move to trash/i }))
   expect(onDelete).toHaveBeenCalledWith('x')
 })
 

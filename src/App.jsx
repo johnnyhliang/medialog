@@ -2,7 +2,7 @@ import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from './lib/supabaseClient.js'
 import { listTopics, createTopic, getTopicByName } from './lib/db/topics.js'
 import {
-  listEntriesByTopic, createEntry, updateEntry, deleteEntry, searchEntries,
+  listEntriesByTopic, createEntry, updateEntry, searchEntries,
   bulkCreateEntries, listForRevisit, markSurfaced,
   softDeleteEntry, listTrashedEntries, restoreEntry, emptyTrash,
 } from './lib/db/entries.js'

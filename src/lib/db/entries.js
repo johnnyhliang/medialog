@@ -56,11 +56,6 @@ export async function updateEntry(supabase, id, patch) {
   return data
 }
 
-export async function deleteEntry(supabase, id) {
-  const { error } = await supabase.from('entries').delete().eq('id', id)
-  if (error) throw new Error(error.message)
-}
-
 export async function bulkCreateEntries(supabase, topicId, items) {
   const rows = items.map((it) => ({
     topic_id: topicId,

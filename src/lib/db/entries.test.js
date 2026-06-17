@@ -3,7 +3,6 @@ import {
   listEntriesByTopic,
   createEntry,
   updateEntry,
-  deleteEntry,
   searchEntries,
   bulkCreateEntries,
   listForRevisit,
@@ -19,6 +18,8 @@ function mockClient(result) {
     delete: vi.fn(() => chain),
     eq: vi.fn(() => Object.assign(Promise.resolve(result), chain)),
     or: vi.fn(() => chain),
+    is: vi.fn(() => Object.assign(Promise.resolve(result), chain)),
+    not: vi.fn(() => Object.assign(Promise.resolve(result), chain)),
     order: vi.fn(() => Object.assign(Promise.resolve(result), chain)),
     limit: vi.fn(() => Promise.resolve(result)),
     single: vi.fn(() => Promise.resolve(result)),
@@ -56,13 +57,6 @@ describe('entries db', () => {
     expect(client._chain.update).toHaveBeenCalledWith({ note: 'edited', title: 'edited' })
     expect(client._chain.eq).toHaveBeenCalledWith('id', 'b')
     expect(result).toEqual(row)
-  })
-
-  test('deleteEntry removes by id', async () => {
-    const client = mockClient({ data: null, error: null })
-    await deleteEntry(client, 'b')
-    expect(client._chain.delete).toHaveBeenCalled()
-    expect(client._chain.eq).toHaveBeenCalledWith('id', 'b')
   })
 
   test('searchEntries matches note or title', async () => {
