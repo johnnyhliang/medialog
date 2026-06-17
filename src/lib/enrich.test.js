@@ -15,12 +15,12 @@ describe('fetchTitle', () => {
 
   test('returns null when the function errors (never throws)', async () => {
     const client = mockClient({ data: null, error: { message: 'boom' } })
-    const result = await fetchTitle(client, 'https://a.com')
+    const result = await fetchTitle(client, 'https://error.example')
     expect(result).toBeNull()
   })
 
   test('returns null when data has no title', async () => {
     const client = mockClient({ data: { title: null, site: 'a.com' }, error: null })
-    expect(await fetchTitle(client, 'https://a.com')).toBeNull()
+    expect(await fetchTitle(client, 'https://notitle.example')).toBeNull()
   })
 })

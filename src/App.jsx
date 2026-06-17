@@ -20,13 +20,14 @@ import StatusFilter from './components/StatusFilter.jsx'
 import TopicTOC from './components/TopicTOC.jsx'
 import ProgressView from './components/ProgressView.jsx'
 import Revisit from './components/Revisit.jsx'
+import SettingsView from './components/SettingsView.jsx'
 
 function Workspace() {
   const [topics, setTopics] = useState([])
   const [selectedId, setSelectedId] = useState(null)
   const [entries, setEntries] = useState([])
   const [query, setQuery] = useState('')
-  const [view, setView] = useState('browse') // 'browse' | 'bulk' | 'sort' | 'progress' | 'revisit'
+  const [view, setView] = useState('browse') // 'browse' | 'bulk' | 'sort' | 'progress' | 'revisit' | 'settings'
   const [statusFilter, setStatusFilter] = useState('') // '' | 'backlog' | 'active' | 'done'
   const [inboxEntries, setInboxEntries] = useState([])
   const [revisitEntries, setRevisitEntries] = useState([])
@@ -34,11 +35,42 @@ function Workspace() {
   const inboxTopic = topics.find((t) => t.name === 'Inbox')
 
   useEffect(() => {
-    listTopics(supabase).then((t) => {
-      setTopics(t)
-      if (t.length && !selectedId) setSelectedId(t[0].id)
-    })
+    refreshTopics()
+    
+    // Handle OAuth redirect from GitHub for backup linking
+    const params = new URLSearchParams(window.location.search)
+    const code = params.get('code')
+    if (code && window.location.pathname.includes('/settings')) {
+      handleGitHubCallback(code)
+    }
   }, [])
+
+  async function refreshTopics() {
+    const t = await listTopics(supabase)
+    setTopics(t)
+    if (t.length && !selectedId) setSelectedId(t[0].id)
+  }
+
+  async function handleGitHubCallback(code) {
+    setView('settings')
+    window.history.replaceState({}, document.title, window.location.pathname)
+    const { data, error } = await supabase.functions.invoke('github-token', {
+      body: { code }
+    })
+    if (error) alert(`GitHub Connection Failed: ${error.message}`)
+    else window.location.reload() // Refresh to load new config
+  }
+
+  // Auto-backup debouncer
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      const { data: config } = await supabase.from('user_configs').select('auto_backup').single()
+      if (config?.auto_backup) {
+        supabase.functions.invoke('github-backup', { body: { action: 'push' } })
+      }
+    }, 60000) // 1 minute debounce
+    return () => clearTimeout(timer)
+  }, [entries, topics])
 
   useEffect(() => {
     if (query.trim()) {
@@ -177,6 +209,7 @@ function Workspace() {
           <li><button className={view === 'sort' ? 'active' : ''} onClick={() => { setView('sort'); loadInbox() }}>Sort Inbox</button></li>
           <li><button className={view === 'revisit' ? 'active' : ''} onClick={() => { setView('revisit'); loadRevisit() }}>Revisit</button></li>
           <li><button className={view === 'progress' ? 'active' : ''} onClick={() => setView('progress')}>Progress</button></li>
+          <li><button className={view === 'settings' ? 'active' : ''} onClick={() => setView('settings')}>Settings</button></li>
           <li><button onClick={handleExport}>Export</button></li>
         </ul>
         <TopicList
@@ -227,6 +260,7 @@ function Workspace() {
           />
         )}
         {view === 'revisit' && <Revisit entries={revisitEntries} onSeen={handleSeen} />}
+        {view === 'settings' && <SettingsView topics={topics} onRefreshData={refreshTopics} />}
       </main>
     </div>
   )

@@ -1,4 +1,4 @@
-import { extractTitle } from '../_shared/extractTitle.ts'
+import { extractMetadata } from '../_shared/extractTitle.ts'
 import { isSafeUrl } from '../_shared/isSafeUrl.ts'
 
 const MAX_BYTES = 512 * 1024 // only need the <head>; cap the read at 512KB
@@ -43,14 +43,14 @@ Deno.serve(async (req) => {
     } finally {
       clearTimeout(timer)
     }
-    const result = extractTitle(html, url)
+    const result = extractMetadata(html, url)
     return new Response(JSON.stringify(result), {
       headers: { ...cors, 'Content-Type': 'application/json' },
     })
   } catch (_e) {
     let site = ''
     try { site = new URL(url).hostname } catch { /* ignore */ }
-    return new Response(JSON.stringify({ title: null, site }), {
+    return new Response(JSON.stringify({ title: null, site, image: null, description: null }), {
       headers: { ...cors, 'Content-Type': 'application/json' },
     })
   }

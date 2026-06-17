@@ -1,15 +1,12 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
 import TagInput from './TagInput.jsx'
+import MarkdownView from './MarkdownView.jsx'
+import { supabase } from '../lib/supabaseClient.js'
 import { getYouTubeThumbnail } from '../lib/youtube.js'
 
 const NoteEditor = lazy(() => import('./NoteEditor.jsx'))
 
 const STATUSES = ['', 'backlog', 'active', 'done']
-const mdComponents = {
-  a: ({ node, ...props }) => <a target="_blank" rel="noreferrer" {...props} />,
-}
 
 function relativeAge(dateStr) {
   if (!dateStr) return null
@@ -75,11 +72,11 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
       {/* Note or editor */}
       {editing ? (
         <Suspense fallback={<p className="muted">Loading editor…</p>}>
-          <NoteEditor value={draft} onChange={setDraft} />
+          <NoteEditor value={draft} onChange={setDraft} supabase={supabase} />
         </Suspense>
       ) : entry.note ? (
-        <div className="note" onClick={startEditing} style={{ cursor: 'text' }}>
-          <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>{entry.note}</ReactMarkdown>
+        <div onClick={startEditing} style={{ cursor: 'text' }}>
+          <MarkdownView>{entry.note}</MarkdownView>
         </div>
       ) : (
         <span className="card-no-note" onClick={startEditing}>

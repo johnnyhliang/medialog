@@ -1,0 +1,8 @@
+- Volleyball - Talk to Haeseon
+- When to workout
+- Getting to classes (do this beforehand)
+- Church groups - Life groups @ harvest
+- Peer mentorship (eng)
+- UROP
+- Work
+- 

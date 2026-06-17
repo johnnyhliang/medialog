@@ -1,0 +1,21 @@
+
+Shaving basics:
+
+(1) Wet hair is soft hair. Shave _after_ a shower to save time, or lather up with shaving cream or whatever and wait around 3-5 minutes for the hair to soften. This is the main reason dry shaving (even with an electric razor) sucks and will never end up as close and smooth as a proper wet shave. If you're dry shaving, that's the cause of your stubble problem right there.
+
+(2) Always use a shaving cream, foam, or gel. Soap works in a pinch, but avoid it as a general thing: it will dry your face and give you complexion issues. Shaving properly is dragging a sharp knife over your skin to cut off the hair right at the surface. That requires lubricant so the knife won't catch on your skin. A proper cream or gel will also soften the hairs (so they cut easier) and swell them a little (so they stick out farther and you can get a closer shave).
+
+(3) Get a double-edge safety razor. It's easier to learn basic shaving with some of the disposables, but ultimately better with your own razor. [r/wicked_edge](https://www.reddit.com/r/wicked_edge/) will have some good recommendations, but also lots of attitude. A solid, reliable safety razor will cost you about the same amount as a disposable cartridge setup and 10 cartridges, so it's not just cheaper "in the long run", DE shaving is cheaper "now" as well as just better. A nice midrange DE razor to try is the [Parker 99R](http://www.amazon.com/Parker-99R-Handle-HEAVYWEIGHT-Butterfly/dp/B003NTHWLU/ref=sr_1_13?ie=UTF8&qid=1435597047&sr=8-13&keywords=razor+double+edge) (about $33), which will last you for decades; or if you want cheap cheap, try [this cheapo one from Amazon, at $7](http://www.amazon.com/Parker-99R-Handle-HEAVYWEIGHT-Butterfly/dp/B003NTHWLU/ref=sr_1_13?ie=UTF8&qid=1435597047&sr=8-13&keywords=razor+double+edge). The razors require disposable double-edge blades, so they're really "razor holders" just like good ballpoint pens are really "pen refill holders". Astra is a good midrange blade - hard enough to last for 2-3 shaves per edge if you want to stretch them out, sharp enough to do a good job. You can buy [100 blades for $10](http://www.amazon.com/Astra-Platinum-Double-Safety-Blades/dp/B001QY8QXM/ref=sr_1_1?ie=UTF8&qid=1435597230&sr=8-1&keywords=astra+blades), which is enough for over a year's worth of daily shaving. But there are maybe half-a-dozen popular brands, and people tend to get loyal to their particular brand.
+
+(4) If you _must_ go fully disposable (sigh, you'll learn one day), use Gillette Good News razors or equivalent -- they're about the optimal performance/price ratio, and you can get a couple of good shaves out of each one. Fancier disposables don't really buy you much other than glitz, and cheap cheap disposables are a pain to use.
+
+(5) To remove stubble, and get the smoothest shave, shave three times: once DOWN, once UP, and once FORWARD. That is: fully lather and soften, shave with down strokes (thereby wiping the cream off), then lightly lather and shave with up strokes, then lightly lather and shave with forward strokes.
+
+(6) Aftershave is sort-of optional but very nice. It's alcohol that you splash on your face after you finish with the blade and rinse any remaining cream off. It typically has some scent in it. It helps retract the stubble, and sterilizes any nicks you may have made. I like bay rum styles, other people like others. Get the smallest bottle you can until you find a scent you like.
+
+(7) To shape your beard, decide how you want it and shave in the places it isn't: it's as simple as that at first. Until your beard comes in thick and scratchy all over your face, you probably won't get good results cultivating it (aka not shaving parts of your face). Once you let it grow in a bit, you want to get a fine comb and either SHARP scissors or a trimmer, to maintain it. A fine comb is like $1, a trimmer is like $15, and good scissors will set you back like $30. Playing with different beard/stache/sideburn styles and lengths is an important part of the process -- plan on trying 3-5 different styles over the course of a year, before you settle down. There are no rules, only fun.
+
+
+
+
+https://www.amazon.com/Parker-99R-Handle-HEAVYWEIGHT-Butterfly/dp/B003NTHWLU?ie=UTF8&qid=1435597047&sr=8-13&keywords=razor+double+edge

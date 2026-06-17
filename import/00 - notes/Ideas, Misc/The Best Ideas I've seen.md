@@ -1,0 +1,1 @@
+Here is a dump of lessons I've learned at college so far this month:
