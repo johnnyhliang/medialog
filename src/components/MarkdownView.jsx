@@ -1,5 +1,6 @@
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import rehypeSlug from 'rehype-slug'
 import LinkEmbed, { isPdfUrl } from './LinkEmbed.jsx'
 import EntryEmbed from './EntryEmbed.jsx'
 import { getYouTubeId } from '../lib/youtube.js'
@@ -29,6 +30,20 @@ export function buildMarkdownComponents({ onPreview, getEntry, onJump } = {}) {
   const FILE_ICONS = { pdf: '📄', image: '🖼', text: '📝', drive: '🔗' }
   return {
     a: ({ href, children, ...props }) => {
+      if (href && href.startsWith('#')) {
+        return (
+          <a
+            href={href}
+            {...props}
+            onClick={(e) => {
+              const el = document.getElementById(decodeURIComponent(href.slice(1)))
+              if (el) { e.preventDefault(); el.scrollIntoView({ behavior: 'smooth', block: 'start' }) }
+            }}
+          >
+            {children}
+          </a>
+        )
+      }
       if (href && href.startsWith('entry:') && getEntry) {
         const id = href.slice('entry:'.length)
         return <EntryEmbed entryId={id} label={children} getEntry={getEntry} onJump={onJump || (() => {})} />
@@ -79,7 +94,7 @@ export default function MarkdownView({ children, className = 'note', onPreview, 
   const components = buildMarkdownComponents({ onPreview, getEntry, onJump })
   return (
     <div className={className}>
-      <ReactMarkdown remarkPlugins={[remarkGfm]} components={components} urlTransform={urlTransform}>
+      <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSlug]} components={components} urlTransform={urlTransform}>
         {source}
       </ReactMarkdown>
     </div>

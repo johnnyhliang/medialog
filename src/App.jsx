@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from './lib/supabaseClient.js'
 import { listTopics, createTopic, getTopicByName } from './lib/db/topics.js'
 import {
@@ -17,12 +17,11 @@ import QuickAdd from './components/QuickAdd.jsx'
 import SearchBar from './components/SearchBar.jsx'
 import BulkImport from './components/BulkImport.jsx'
 import SortInbox from './components/SortInbox.jsx'
-import StatusFilter from './components/StatusFilter.jsx'
-import TopicTOC from './components/TopicTOC.jsx'
 import ProgressView from './components/ProgressView.jsx'
 import Revisit from './components/Revisit.jsx'
 import SettingsView from './components/SettingsView.jsx'
 import TrashView from './components/TrashView.jsx'
+import TopicView from './components/TopicView.jsx'
 import { useFilePreview } from './hooks/useFilePreview.js'
 const FilePreviewModal = lazy(() => import('./components/FilePreviewModal.jsx'))
 
@@ -32,7 +31,6 @@ function Workspace() {
   const [entries, setEntries] = useState([])
   const [query, setQuery] = useState('')
   const [view, setView] = useState('browse') // 'browse' | 'bulk' | 'sort' | 'progress' | 'revisit' | 'settings' | 'trash'
-  const [statusFilter, setStatusFilter] = useState('') // '' | 'backlog' | 'active' | 'done'
   const [inboxEntries, setInboxEntries] = useState([])
   const [revisitEntries, setRevisitEntries] = useState([])
   const [trashEntries, setTrashEntries] = useState([])
@@ -40,6 +38,22 @@ function Workspace() {
   const { previewUrl, openPreview, closePreview } = useFilePreview()
 
   const inboxTopic = topics.find((t) => t.name === 'Inbox')
+  const selectedTopic = topics.find((t) => t.id === selectedId) || null
+
+  // Candidate index for the [[ autocomplete (current topic's entries).
+  const candidateIndex = useMemo(() => {
+    const topicName = selectedTopic?.name || ''
+    return entries.map((e) => ({
+      id: e.id,
+      title: e.title || 'Untitled',
+      topicId: selectedId,
+      topicName,
+    }))
+  }, [entries, selectedId, selectedTopic])
+
+  function handleDocChange(topicId, doc) {
+    setTopics((prev) => prev.map((t) => (t.id === topicId ? { ...t, master_doc: doc } : t)))
+  }
 
   useEffect(() => {
     refreshTopics()
@@ -252,23 +266,35 @@ function Workspace() {
         />
       </aside>
       <main className="main">
-        {view === 'browse' && (
+        {view === 'browse' && selectedTopic && (
           <>
             <SearchBar value={query} onChange={setQuery} />
-            {!query && selectedId && (
-              <QuickAdd onAdd={handleAddEntry} disabled={!selectedId} />
+            {query ? (
+              <EntryList
+                entries={entries}
+                onDelete={handleDelete}
+                onStatusChange={handleStatusChange}
+                onTagsChange={handleTagsChange}
+                onTogglePin={handleTogglePin}
+                onNoteSave={handleNoteSave}
+                onPreview={openPreview}
+              />
+            ) : (
+              <TopicView
+                key={selectedTopic.id}
+                topic={selectedTopic}
+                entries={entries}
+                allCandidates={candidateIndex}
+                onAddEntry={handleAddEntry}
+                onDelete={handleDelete}
+                onStatusChange={handleStatusChange}
+                onTagsChange={handleTagsChange}
+                onTogglePin={handleTogglePin}
+                onNoteSave={handleNoteSave}
+                onPreview={openPreview}
+                onDocChange={(doc) => handleDocChange(selectedTopic.id, doc)}
+              />
             )}
-            <StatusFilter value={statusFilter} onChange={setStatusFilter} />
-            <TopicTOC entries={entries} />
-            <EntryList
-              entries={statusFilter ? entries.filter((e) => e.status === statusFilter) : entries}
-              onDelete={handleDelete}
-              onStatusChange={handleStatusChange}
-              onTagsChange={handleTagsChange}
-              onTogglePin={handleTogglePin}
-              onNoteSave={handleNoteSave}
-              onPreview={openPreview}
-            />
           </>
         )}
         {view === 'bulk' && (

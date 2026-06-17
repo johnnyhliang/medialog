@@ -9,6 +9,8 @@ export default function TopicDocEditor({ topicId, initialDoc, candidates, scopeC
   const saveTimer = useRef(null)
   const candidatesRef = useRef(candidates)
   candidatesRef.current = candidates
+  const docRef = useRef(doc)
+  docRef.current = doc
 
   useEffect(() => { setDoc(initialDoc || '') }, [topicId, initialDoc])
 
@@ -16,6 +18,7 @@ export default function TopicDocEditor({ topicId, initialDoc, candidates, scopeC
     () => makeEntryCompletion(
       () => candidatesRef.current,
       () => scopeCtxRef.current,
+      () => docRef.current,
     ),
     [scopeCtxRef],
   )
