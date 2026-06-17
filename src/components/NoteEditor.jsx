@@ -103,6 +103,14 @@ export default function NoteEditor({ value, onChange, supabase }) {
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState(null)
   const fileRef = useRef(null)
+  const [showTip, setShowTip] = useState(
+    () => !localStorage.getItem('medialog_preview_tip_dismissed')
+  )
+
+  function dismissTip() {
+    localStorage.setItem('medialog_preview_tip_dismissed', '1')
+    setShowTip(false)
+  }
 
   async function attachFiles(files) {
     if (!supabase || !files?.length) return
@@ -185,6 +193,13 @@ export default function NoteEditor({ value, onChange, supabase }) {
           </div>
         )}
       </div>
+
+      {showTip && (
+        <div className="note-editor-tip">
+          <span>💡 Paste a .pdf, .jpg or Google Drive link for rich inline preview</span>
+          <button onClick={dismissTip} aria-label="Dismiss tip">✕</button>
+        </div>
+      )}
 
       {uploadError && <p className="note-editor-error">{uploadError}</p>}
 
