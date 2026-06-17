@@ -4,6 +4,7 @@ import { listTopics, createTopic, getTopicByName } from './lib/db/topics.js'
 import {
   listEntriesByTopic, createEntry, updateEntry, deleteEntry, searchEntries,
   bulkCreateEntries, listForRevisit, markSurfaced,
+  softDeleteEntry, listTrashedEntries, restoreEntry, emptyTrash,
 } from './lib/db/entries.js'
 import { setEntryTags } from './lib/db/tags.js'
 import { fetchTitle } from './lib/enrich.js'
@@ -21,16 +22,18 @@ import TopicTOC from './components/TopicTOC.jsx'
 import ProgressView from './components/ProgressView.jsx'
 import Revisit from './components/Revisit.jsx'
 import SettingsView from './components/SettingsView.jsx'
+import TrashView from './components/TrashView.jsx'
 
 function Workspace() {
   const [topics, setTopics] = useState([])
   const [selectedId, setSelectedId] = useState(null)
   const [entries, setEntries] = useState([])
   const [query, setQuery] = useState('')
-  const [view, setView] = useState('browse') // 'browse' | 'bulk' | 'sort' | 'progress' | 'revisit' | 'settings'
+  const [view, setView] = useState('browse') // 'browse' | 'bulk' | 'sort' | 'progress' | 'revisit' | 'settings' | 'trash'
   const [statusFilter, setStatusFilter] = useState('') // '' | 'backlog' | 'active' | 'done'
   const [inboxEntries, setInboxEntries] = useState([])
   const [revisitEntries, setRevisitEntries] = useState([])
+  const [trashEntries, setTrashEntries] = useState([])
 
   const inboxTopic = topics.find((t) => t.name === 'Inbox')
 
@@ -101,7 +104,7 @@ function Workspace() {
   }
 
   async function handleDelete(id) {
-    await deleteEntry(supabase, id)
+    await softDeleteEntry(supabase, id)
     setEntries((prev) => prev.filter((e) => e.id !== id))
   }
 
@@ -172,8 +175,22 @@ function Workspace() {
   }
 
   async function handleSortDelete(entryId) {
-    await deleteEntry(supabase, entryId)
+    await softDeleteEntry(supabase, entryId)
     setInboxEntries((prev) => prev.filter((e) => e.id !== entryId))
+  }
+
+  async function loadTrash() {
+    setTrashEntries(await listTrashedEntries(supabase))
+  }
+
+  async function handleRestore(entryId) {
+    await restoreEntry(supabase, entryId)
+    setTrashEntries((prev) => prev.filter((e) => e.id !== entryId))
+  }
+
+  async function handleEmptyTrash() {
+    await emptyTrash(supabase)
+    setTrashEntries([])
   }
 
   async function loadRevisit() {
@@ -210,6 +227,7 @@ function Workspace() {
           <li><button className={view === 'revisit' ? 'active' : ''} onClick={() => { setView('revisit'); loadRevisit() }}>Revisit</button></li>
           <li><button className={view === 'progress' ? 'active' : ''} onClick={() => setView('progress')}>Progress</button></li>
           <li><button className={view === 'settings' ? 'active' : ''} onClick={() => setView('settings')}>Settings</button></li>
+          <li><button className={view === 'trash' ? 'active' : ''} onClick={() => { setView('trash'); loadTrash() }}>Trash</button></li>
           <li><button onClick={handleExport}>Export</button></li>
         </ul>
         <TopicList
@@ -261,6 +279,13 @@ function Workspace() {
         )}
         {view === 'revisit' && <Revisit entries={revisitEntries} onSeen={handleSeen} />}
         {view === 'settings' && <SettingsView topics={topics} onRefreshData={refreshTopics} />}
+        {view === 'trash' && (
+          <TrashView
+            entries={trashEntries}
+            onRestore={handleRestore}
+            onEmptyTrash={handleEmptyTrash}
+          />
+        )}
       </main>
     </div>
   )
