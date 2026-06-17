@@ -102,21 +102,23 @@ export default function PdfViewer({ url }) {
   return (
     <>
       {outline.length > 0 && (
-        <div className="file-preview-toc">
+        <aside className="file-preview-toc">
           <div className="toc-label">Contents</div>
           {outline.map((item, i) => (
             <button key={i} onClick={() => goToOutlineItem(item)} title={item.title}>
               {item.title}
             </button>
           ))}
-        </div>
+        </aside>
       )}
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, flex: 1, overflow: 'auto', padding: 16 }}>
-        <canvas ref={canvasRef} />
-        <div className="file-preview-footer">
-          <button className="icon-btn" onClick={() => setPageNum((p) => Math.max(p - 1, 1))} disabled={pageNum <= 1}>◀</button>
-          <span className="page-info">Page {pageNum} / {numPages}</span>
-          <button className="icon-btn" onClick={() => setPageNum((p) => Math.min(p + 1, numPages))} disabled={pageNum >= numPages}>▶</button>
+      <div className="file-preview-content">
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, flex: 1, overflow: 'auto', padding: 16 }}>
+          <canvas ref={canvasRef} />
+          <div className="file-preview-footer">
+            <button className="icon-btn" onClick={() => setPageNum((p) => Math.max(p - 1, 1))} disabled={pageNum <= 1}>◀</button>
+            <span className="page-info">Page {pageNum} / {numPages}</span>
+            <button className="icon-btn" onClick={() => setPageNum((p) => Math.min(p + 1, numPages))} disabled={pageNum >= numPages}>▶</button>
+          </div>
         </div>
       </div>
     </>

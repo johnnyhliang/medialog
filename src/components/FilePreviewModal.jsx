@@ -29,7 +29,13 @@ function normalizeDriveUrl(url) {
 }
 
 function ImageViewer({ url }) {
-  return <img src={url} alt={fileName(url)} />
+  return (
+    <img
+      src={url}
+      alt={fileName(url)}
+      onError={(e) => { e.currentTarget.style.display = 'none' }}
+    />
+  )
 }
 
 function TextViewer({ url }) {
@@ -50,12 +56,16 @@ function DriveViewer({ url }) {
   return <iframe src={normalizeDriveUrl(url)} title="Google Drive preview" allowFullScreen />
 }
 
+const KNOWN_TYPES = ['pdf', 'image', 'text', 'drive']
+
 export default function FilePreviewModal({ url, onClose }) {
   const overlayRef = useRef(null)
+  const closeBtnRef = useRef(null)
   const type = classifyUrl(url)
   const name = fileName(url)
   const icon = FILE_ICONS[type] || '📎'
 
+  // Escape key handler
   useEffect(() => {
     function onKey(e) {
       if (e.key === 'Escape') onClose()
@@ -63,6 +73,17 @@ export default function FilePreviewModal({ url, onClose }) {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
+
+  // Focus management: focus close button on open, restore on close
+  useEffect(() => {
+    const previousFocus = document.activeElement
+    closeBtnRef.current?.focus()
+    return () => {
+      if (previousFocus && typeof previousFocus.focus === 'function') {
+        previousFocus.focus()
+      }
+    }
+  }, [])
 
   return (
     <div
@@ -74,17 +95,26 @@ export default function FilePreviewModal({ url, onClose }) {
         <div className="file-preview-header">
           <span className="filename">{icon} {name}</span>
           <a href={url} target="_blank" rel="noreferrer" className="icon-btn" title="Open in new tab">↗</a>
-          <button className="icon-btn" onClick={onClose} aria-label="Close preview">✕</button>
+          <button ref={closeBtnRef} className="icon-btn" onClick={onClose} aria-label="Close preview">✕</button>
         </div>
         <div className="file-preview-body">
-          <div className="file-preview-content">
-            <Suspense fallback={<p className="muted">Loading…</p>}>
-              {type === 'pdf'   && <PdfViewer url={url} />}
-              {type === 'image' && <ImageViewer url={url} />}
-              {type === 'text'  && <TextViewer url={url} />}
-              {type === 'drive' && <DriveViewer url={url} />}
-            </Suspense>
-          </div>
+          <Suspense fallback={<p className="muted">Loading…</p>}>
+            {type === 'pdf' ? (
+              <PdfViewer url={url} />
+            ) : (
+              <div className="file-preview-content">
+                {type === 'image' && <ImageViewer url={url} />}
+                {type === 'text'  && <TextViewer url={url} />}
+                {type === 'drive' && <DriveViewer url={url} />}
+                {!KNOWN_TYPES.includes(type) && (
+                  <p className="muted">
+                    Preview not available.{' '}
+                    <a href={url} target="_blank" rel="noreferrer">Open in new tab ↗</a>
+                  </p>
+                )}
+              </div>
+            )}
+          </Suspense>
         </div>
       </div>
     </div>
