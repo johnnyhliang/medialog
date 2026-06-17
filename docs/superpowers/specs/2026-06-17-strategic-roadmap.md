@@ -1,0 +1,123 @@
+# MediaLog — Strategic Roadmap & Competitive Moat
+
+**Date:** 2026-06-17
+**Status:** Living strategy doc (update as direction shifts)
+**Companion to:** `2026-06-15-medialog-ultimate-vision.md`
+
+This doc exists so the small feature plans don't drift. Every plan should advance one
+of the loop stages below. If a feature doesn't, question whether to build it.
+
+---
+
+## The Loop (the actual product)
+
+The thing nobody else closes end-to-end. Each competitor owns 1-2 stages and drops the rest.
+
+```
+   CAPTURE  →  TRIAGE  →  CONSUME  →  RETAIN  →  SYNTHESIZE
+   (get in)   (place it)  (read it)  (remember) (connect it)
+      │          │           │          │            │
+   feeds,     Sort       Reader     SRS /        Living
+   shortcut,  Inbox      mode +     Revisit      Topic Docs
+   email,     (forced    highlights  2.0          + semantic
+   paste      gate)                               links
+```
+
+**Why the loop is the moat:** Readwise nails CAPTURE→RETAIN but has no SYNTHESIZE.
+Obsidian nails SYNTHESIZE but has no CAPTURE/CONSUME/RETAIN. Instapaper does CONSUME
+only. Inoreader does CAPTURE (feeds) only. Nobody connects all five. A note that
+flows capture→synthesize without leaving the app is the entire pitch.
+
+---
+
+## What people actually pay for (and our answer)
+
+| Tool | The paid feature | What MediaLog does |
+| :--- | :--- | :--- |
+| **Readwise** | Highlights → daily review email | SRS Revisit 2.0 (built-in, no email needed) |
+| **Readwise Sync** | Auto-export highlights → Notion/Obsidian/Anki | GitHub backup as Markdown (we already sync OUT); future: Anki export |
+| **Reader** | Distraction-free read + inline highlight | Reader mode + Highlight layer (Phase 2-3) |
+| **Instapaper** | Clean reading + offline | Full-text mirroring → offline + searchable |
+| **Obsidian** | Bidirectional links + graph | AI-automated links (no manual burden) |
+| **Notion** | Flexible docs + DB | Living Topic Docs (structured, auto-synthesized) |
+| **Inoreader** | Feed aggregation + filter rules | Feed Gathering (Phase A below) |
+
+**The Readwise Sync insight:** people pay $8/mo largely because Readwise is the
+*connective tissue* — highlights auto-flow into the tool they already use. MediaLog's
+equivalent is "Plain Text First": Markdown export/backup means we're never a silo.
+That's a retention feature (no lock-in fear) AND a moat (we can be the hub others sync from).
+
+---
+
+## What we were missing (the "what else?" list)
+
+Captured so we don't forget. Not all will be built — flagged by conviction.
+
+1. **Feed gathering / RSS** — *high conviction.* The CAPTURE stage is currently
+   manual (paste, shortcut). Following 20 sources via RSS turns MediaLog into the
+   front door, not just the filing cabinet. Inoreader's whole business.
+2. **Highlight layer** — *high conviction.* Readwise's core loop. Select text in
+   Reader → saves as a child entry linked to the source. Feeds SRS.
+3. **Reader mode** — *high conviction.* Prerequisite for highlights. Full-text
+   mirror already planned (enrich → body text).
+4. **SRS / spaced repetition** — *high conviction.* Revisit 2.0 with SM2. Converts
+   the graveyard into memory. This is "retention is the product."
+5. **Semantic search / RAG chat** — *medium.* "Ask my library" — chat over your own
+   notes via embeddings. The AI infra (Plan 7) is the foundation.
+6. **Browser extension** — *medium.* One-click capture from desktop (the iOS
+   Shortcut equivalent for laptop). Lowers CAPTURE friction.
+7. **Newsletter terminal** — *medium.* Private `@medialog` email → entries. From vision doc.
+8. **Anki / SRS export** — *low-medium.* For people already living in Anki.
+9. **Public sharing / digital garden** — *low.* Publish a topic as a read-only page.
+   Nice-to-have, not core to the loop.
+10. **Podcast / audio + transcript** — *low.* Expands ingestion to audio. Later.
+11. **OCR physical capture** — *low.* From vision doc. Cool, niche.
+
+---
+
+## Sequenced phases (what advances the loop fastest)
+
+Ordered by leverage, not difficulty. Each is its own brainstorm → spec → plan cycle.
+
+### Phase 0 — Stop the bleeding (NOW)
+The "skeleton UI" + "topics getting long, notes getting lost" problem. This is
+ACTIVE pain that contradicts the whole point. **→ Living Topic Docs** (master
+markdown doc per topic + grouping so notes don't get lost) + editor polish.
+*This is the next thing we scope.*
+
+### Phase A — Close the read→retain loop
+1. **Full-text mirror** — `enrich` fetches body text, stored + searchable offline.
+2. **Reader mode** — distraction-free view of mirrored text / PDFs.
+3. **Highlight layer** — select in Reader → child highlight entry.
+4. **SRS Revisit 2.0** — SM2 over highlights. The retention payoff.
+
+### Phase B — Become the front door
+5. **Feed gathering (RSS)** — follow sources, new items land in Inbox for triage.
+6. **Browser extension** — one-click desktop capture.
+
+### Phase C — The synthesis moat
+7. **Semantic links** — embeddings → "related entries across topics."
+8. **AI-synthesized topic docs** — the Living Topic Doc gets auto-drafted by AI.
+9. **RAG chat** — "ask my library."
+
+### Phase D — Reach
+10. Newsletter terminal, Anki export, public sharing, audio/OCR.
+
+---
+
+## Guardrails (from core philosophy — don't violate)
+
+- **Triage is mandatory.** Every new CAPTURE source (feeds, email) MUST dump into
+  the Inbox for the forced Sort gate. Never auto-file. The gate is the anti-graveyard.
+- **Retention is the product.** A feature that adds capture without adding retention
+  makes the graveyard worse. Weight retention work accordingly.
+- **Plain Text First.** Everything exportable as Markdown. No lock-in. This is both
+  philosophy and moat.
+- **Source ≠ System.** Feeds/inboxes are noise until triaged into a Topic.
+
+---
+
+## Next action
+
+Scope **Living Topic Docs** (Phase 0) — master document per topic + UI so notes
+stop getting lost. Separate brainstorm session.
