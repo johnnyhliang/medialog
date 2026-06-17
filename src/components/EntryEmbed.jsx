@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { classifyUrl } from '../lib/classifyUrl.js'
 import { getYouTubeThumbnail, isYouTubeUrl } from '../lib/youtube.js'
 
@@ -28,8 +28,16 @@ export default function EntryEmbed({ entryId, label, getEntry, onJump }) {
   const pressTimer = useRef(null)
   const chipRef = useRef(null)
 
+  useEffect(() => {
+    return () => { if (pressTimer.current) clearTimeout(pressTimer.current) }
+  }, [])
+
   if (!entry) {
     return <span className="entry-embed missing">⚠ missing entry</span>
+  }
+
+  function cancelPress() {
+    if (pressTimer.current) { clearTimeout(pressTimer.current); pressTimer.current = null }
   }
 
   function showPopover() {
@@ -45,9 +53,7 @@ export default function EntryEmbed({ entryId, label, getEntry, onJump }) {
   function onTouchStart() {
     pressTimer.current = setTimeout(showPopover, LONG_PRESS_MS)
   }
-  function onTouchEnd() {
-    if (pressTimer.current) clearTimeout(pressTimer.current)
-  }
+  function onTouchEnd() { cancelPress() }
 
   const media = popoverMedia(entry)
   const text = (entry.note || '').split('\n').filter(Boolean).slice(0, 4).join('\n').slice(0, 200)
@@ -62,6 +68,7 @@ export default function EntryEmbed({ entryId, label, getEntry, onJump }) {
         onMouseLeave={hidePopover}
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
+        onTouchCancel={cancelPress}
       >
         {iconFor(entry)} {label || entry.title}
       </button>
