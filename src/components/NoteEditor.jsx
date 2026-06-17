@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useMemo, useState, useRef } from 'react'
 import CodeMirror from '@uiw/react-codemirror'
 import { markdown, markdownLanguage, insertNewlineContinueMarkup, deleteMarkupBackward } from '@codemirror/lang-markdown'
 import { languages } from '@codemirror/language-data'
@@ -90,6 +90,11 @@ function makePairKeymap() {
 
 const pairKeymap = makePairKeymap()
 
+// Hoisted so the extension identity is stable across renders — rebuilding it
+// per render makes CodeMirror reconfigure the whole instance on every keystroke.
+const mdLang = markdown({ base: markdownLanguage, codeLanguages: languages })
+const NO_EXTENSIONS = []
+
 const MODES = ['write', 'preview', 'split']
 
 function insertAtCursor(value, snippet) {
@@ -98,7 +103,11 @@ function insertAtCursor(value, snippet) {
   return trimmed ? `${trimmed}\n\n${snippet}` : snippet
 }
 
-export default function NoteEditor({ value, onChange, supabase, extraExtensions = [] }) {
+export default function NoteEditor({ value, onChange, supabase, extraExtensions = NO_EXTENSIONS }) {
+  const extensions = useMemo(
+    () => [mdLang, mdKeymap, pairKeymap, ...extraExtensions],
+    [extraExtensions],
+  )
   const [mode, setMode] = useState('write')
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState(null)
@@ -208,7 +217,7 @@ export default function NoteEditor({ value, onChange, supabase, extraExtensions 
           <div className="note-editor-pane" onPaste={onPaste}>
             <CodeMirror
               value={value}
-              extensions={[markdown({ base: markdownLanguage, codeLanguages: languages }), mdKeymap, pairKeymap, ...extraExtensions]}
+              extensions={extensions}
               onChange={onChange}
               basicSetup={{ lineNumbers: false, foldGutter: false, highlightActiveLine: false }}
             />
