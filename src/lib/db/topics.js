@@ -26,3 +26,14 @@ export async function createTopic(supabase, name) {
   if (error) throw new Error(error.message)
   return data
 }
+
+export async function updateTopicDoc(supabase, topicId, masterDoc) {
+  const { data, error } = await supabase
+    .from('topics')
+    .update({ master_doc: String(masterDoc ?? '') })
+    .eq('id', topicId)
+    .select()
+    .single()
+  if (error) throw new Error(error.message)
+  return data
+}

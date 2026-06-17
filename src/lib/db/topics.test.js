@@ -42,3 +42,21 @@ describe('topics db', () => {
     expect(result).toEqual(row)
   })
 })
+
+describe('updateTopicDoc', () => {
+  test('updates master_doc and returns the row', async () => {
+    const single = vi.fn().mockResolvedValue({ data: { id: 't1', master_doc: '# Hello' }, error: null })
+    const select = vi.fn(() => ({ single }))
+    const eq = vi.fn(() => ({ select }))
+    const update = vi.fn(() => ({ eq }))
+    const supabase = { from: vi.fn(() => ({ update })) }
+
+    const { updateTopicDoc } = await import('./topics.js')
+    const row = await updateTopicDoc(supabase, 't1', '# Hello')
+
+    expect(supabase.from).toHaveBeenCalledWith('topics')
+    expect(update).toHaveBeenCalledWith({ master_doc: '# Hello' })
+    expect(eq).toHaveBeenCalledWith('id', 't1')
+    expect(row).toEqual({ id: 't1', master_doc: '# Hello' })
+  })
+})
