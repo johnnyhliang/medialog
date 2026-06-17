@@ -2,15 +2,10 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient.js'
 import { fetchLinkPreview } from '../lib/enrich.js'
 import { getYouTubeId } from '../lib/youtube.js'
+import { classifyUrl } from '../lib/classifyUrl.js'
 
 export function isPdfUrl(url) {
-  if (!url) return false
-  try {
-    const path = new URL(url).pathname.toLowerCase()
-    return path.endsWith('.pdf')
-  } catch {
-    return url.toLowerCase().includes('.pdf')
-  }
+  return classifyUrl(url) === 'pdf'
 }
 
 function YouTubeEmbed({ url }) {

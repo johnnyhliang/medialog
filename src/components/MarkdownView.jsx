@@ -2,6 +2,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import LinkEmbed, { isPdfUrl } from './LinkEmbed.jsx'
 import { getYouTubeId } from '../lib/youtube.js'
+import { classifyUrl } from '../lib/classifyUrl.js'
 
 function isParagraphOnlyLink(node) {
   if (!node?.children || node.children.length !== 1) return null
@@ -22,9 +23,19 @@ function shouldEmbedLink(href) {
   }
 }
 
-export function buildMarkdownComponents() {
+export function buildMarkdownComponents(onPreview) {
+  const FILE_ICONS = { pdf: '📄', image: '🖼', text: '📝', drive: '🔗' }
+
   return {
     a: ({ href, children, ...props }) => {
+      const fileType = href ? classifyUrl(href) : null
+      if (fileType && onPreview) {
+        return (
+          <button className="file-chip" onClick={() => onPreview(href)}>
+            {FILE_ICONS[fileType]} {children}
+          </button>
+        )
+      }
       if (href && isPdfUrl(href)) {
         return <LinkEmbed url={href} />
       }
@@ -49,9 +60,8 @@ export function buildMarkdownComponents() {
   }
 }
 
-const mdComponents = buildMarkdownComponents()
-
-export default function MarkdownView({ children, className = 'note' }) {
+export default function MarkdownView({ children, className = 'note', onPreview }) {
+  const mdComponents = buildMarkdownComponents(onPreview)
   return (
     <div className={className}>
       <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>

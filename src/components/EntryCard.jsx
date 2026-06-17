@@ -4,6 +4,7 @@ import MarkdownView from './MarkdownView.jsx'
 import ConfirmModal from './ConfirmModal.jsx'
 import { supabase } from '../lib/supabaseClient.js'
 import { getYouTubeThumbnail } from '../lib/youtube.js'
+import { classifyUrl } from '../lib/classifyUrl.js'
 
 const NoteEditor = lazy(() => import('./NoteEditor.jsx'))
 
@@ -21,13 +22,14 @@ function relativeAge(dateStr) {
   return `${Math.floor(d / 365)}y ago`
 }
 
-export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChange, onTogglePin, onNoteSave }) {
+export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChange, onTogglePin, onNoteSave, onPreview }) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(entry.note || '')
   const [confirmDelete, setConfirmDelete] = useState(false)
   const timer = useRef(null)
   const statusClass = entry.status ? `status-${entry.status}` : 'status-backlog'
   const thumb = getYouTubeThumbnail(entry.url)
+  const fileType = classifyUrl(entry.url)
   const age = relativeAge(entry.created_at)
 
   useEffect(() => {
@@ -52,9 +54,16 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
     <div className={`card${entry.pinned ? ' pinned' : ''}`} id={`entry-${entry.id}`}>
       {/* Title / URL */}
       {entry.url ? (
-        <a href={entry.url} className="card-title" target="_blank" rel="noreferrer">
-          {entry.title || entry.url}
-        </a>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
+          <a href={entry.url} className="card-title" target="_blank" rel="noreferrer">
+            {entry.title || entry.url}
+          </a>
+          {fileType && onPreview && (
+            <button className="preview-btn" onClick={() => onPreview(entry.url)}>
+              Preview
+            </button>
+          )}
+        </div>
       ) : entry.title ? (
         <span className="card-title">{entry.title}</span>
       ) : null}
@@ -77,7 +86,7 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
         </Suspense>
       ) : entry.note ? (
         <div onClick={startEditing} style={{ cursor: 'text' }}>
-          <MarkdownView>{entry.note}</MarkdownView>
+          <MarkdownView onPreview={onPreview}>{entry.note}</MarkdownView>
         </div>
       ) : (
         <span className="card-no-note" onClick={startEditing}>
