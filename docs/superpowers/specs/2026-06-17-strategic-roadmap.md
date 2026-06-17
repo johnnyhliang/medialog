@@ -72,6 +72,25 @@ Captured so we don't forget. Not all will be built — flagged by conviction.
    Nice-to-have, not core to the loop.
 10. **Podcast / audio + transcript** — *low.* Expands ingestion to audio. Later.
 11. **OCR physical capture** — *low.* From vision doc. Cool, niche.
+12. **Note-taking sync (Notion / Obsidian / Roam)** — *future consideration.* The actual
+    Readwise paid driver: highlights/entries auto-flow INTO the tool you already use, two-way
+    or one-way. We already sync OUT as Markdown via GitHub backup — this generalizes it to
+    named integrations. High moat potential; scope later as its own project.
+13. **Advanced / media parsing** — *future consideration.* Beyond full-text mirror (Phase A):
+    EPUBs, newsletters, and **YouTube transcript highlighting** (highlight straight from the
+    video's text), enhanced article/newsletter readability parsing. This is Readwise Reader's
+    "Media Parsing" feature. Builds on the Phase A full-text mirror; broaden later.
+14. **Top-level visual organization** — *near-term, scope after Phase 0.* A visual layer
+    ABOVE the flat topic list — e.g. a board/grid/grouped view, pinned/favorite topics,
+    color or icon per topic, collapsible topic groups. Directly addresses "topic list just
+    gets really long." Distinct from Living Topic Docs (which fixes *within*-topic loss);
+    this fixes *across*-topic navigation. Must not violate the flat-topics philosophy —
+    grouping is a visual/organizational overlay, not real nesting.
+15. **Archive for stale entries** — *near-term, scope after Phase 0.* A dedicated archive
+    state (distinct from Trash/soft-delete) for entries that are old, read, or no longer
+    relevant but worth keeping. Keeps active topic views clean without deletion. Pairs with
+    the age display already on cards and the SRS "done" concept. Anti-graveyard: archiving is
+    a triage outcome, not a dead end.
 
 ---
 
@@ -84,6 +103,11 @@ The "skeleton UI" + "topics getting long, notes getting lost" problem. This is
 ACTIVE pain that contradicts the whole point. **→ Living Topic Docs** (master
 markdown doc per topic + grouping so notes don't get lost) + editor polish.
 *This is the next thing we scope.*
+
+### Phase 0.5 — Organization & cleanup (right after Phase 0)
+Fixes navigation/clutter ACROSS topics, complementing Living Topic Docs' within-topic fix.
+- **Top-level visual organization** (#14) — board/grouped/pinned view above the topic list.
+- **Archive for stale entries** (#15) — archive state distinct from Trash; keeps views clean.
 
 ### Phase A — Close the read→retain loop
 1. **Full-text mirror** — `enrich` fetches body text, stored + searchable offline.
@@ -102,6 +126,8 @@ markdown doc per topic + grouping so notes don't get lost) + editor polish.
 
 ### Phase D — Reach
 10. Newsletter terminal, Anki export, public sharing, audio/OCR.
+11. **Note-taking sync** (#12) — Notion/Obsidian/Roam integrations. Generalizes GitHub backup.
+12. **Advanced/media parsing** (#13) — EPUB, newsletter, YouTube transcript highlighting.
 
 ---
 
