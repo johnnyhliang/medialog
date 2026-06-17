@@ -149,11 +149,15 @@ Shown once per browser session (dismissed with ×, stored in `localStorage` key 
 | `*` (single) | `**` | between the two `*` |
 | `**` (typed as second `*`) | `****` | between `**` and `**` |
 | `_` | `__` | between the two `_` |
-| `[` | `[]()` | inside `[` `]` |
+| `[` | `[]` | inside `[` `]` |
+
+> Note: `[` inserts a bare `[]` pair (cursor inside the brackets), not `[]()`. The
+> bracket pair is the start of a link; full link/heading-reference insertion is handled
+> by the `[[` autocomplete in the living-topic-docs feature, not by this auto-pair.
 
 ### Backspace rules
 
-- Cursor between empty pair (`*\|*`, `**\|**`, `_\|_`, `[\|]()`) → delete both sides
+- Cursor between empty pair (`*\|*`, `**\|**`, `_\|_`, `[\|]`) → delete both sides
 - Otherwise → default CodeMirror backspace
 
 ### Scope
