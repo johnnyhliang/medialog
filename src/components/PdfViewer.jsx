@@ -46,6 +46,7 @@ export default function PdfViewer({ url }) {
       }
       const page = await pdfDoc.getPage(pageNum)
       if (cancelled) return
+      if (!canvasRef.current) return
 
       const viewport = page.getViewport({ scale: 1.5 })
       const canvas = canvasRef.current
@@ -61,7 +62,10 @@ export default function PdfViewer({ url }) {
       }
     }
     render()
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+      renderTaskRef.current?.cancel()
+    }
   }, [pdfDoc, pageNum])
 
   // Arrow key navigation
