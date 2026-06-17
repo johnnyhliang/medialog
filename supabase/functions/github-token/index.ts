@@ -82,15 +82,18 @@ Deno.serve(async (req) => {
   }
 })
 
+async function deriveKey(keyStr: string, usage: KeyUsage[]) {
+  const enc = new TextEncoder()
+  const raw = enc.encode(keyStr)
+  // AES-GCM requires exactly 16, 24, or 32 bytes — pad/truncate to 32
+  const keyBytes = new Uint8Array(32)
+  keyBytes.set(raw.slice(0, 32))
+  return crypto.subtle.importKey('raw', keyBytes, { name: 'AES-GCM' }, false, usage)
+}
+
 async function encrypt(text: string, keyStr: string) {
   const enc = new TextEncoder()
-  const keyBuffer = await crypto.subtle.importKey(
-    'raw',
-    enc.encode(keyStr),
-    { name: 'AES-GCM' },
-    false,
-    ['encrypt']
-  )
+  const keyBuffer = await deriveKey(keyStr, ['encrypt'])
   const iv = crypto.getRandomValues(new Uint8Array(12))
   const encrypted = await crypto.subtle.encrypt(
     { name: 'AES-GCM', iv },

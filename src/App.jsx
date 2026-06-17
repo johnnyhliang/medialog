@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase } from './lib/supabaseClient.js'
 import { listTopics, createTopic, getTopicByName } from './lib/db/topics.js'
 import {
@@ -64,15 +64,25 @@ function Workspace() {
     else window.location.reload() // Refresh to load new config
   }
 
-  // Auto-backup debouncer
+  // Auto-backup: fires 60s after the last change, won't reset on every keystroke
+  const autoBackupTimer = useRef(null)
+  const pendingBackup = useRef(false)
   useEffect(() => {
-    const timer = setTimeout(async () => {
-      const { data: config } = await supabase.from('user_configs').select('auto_backup').single()
-      if (config?.auto_backup) {
-        supabase.functions.invoke('github-backup', { body: { action: 'push' } })
+    pendingBackup.current = true
+    if (autoBackupTimer.current) return // timer already running — let it fire
+    autoBackupTimer.current = setTimeout(async () => {
+      autoBackupTimer.current = null
+      if (!pendingBackup.current) return
+      pendingBackup.current = false
+      try {
+        const { data: config } = await supabase.from('user_configs').select('auto_backup').maybeSingle()
+        if (config?.auto_backup) {
+          await supabase.functions.invoke('github-backup', { body: { action: 'push' } })
+        }
+      } catch {
+        // auto-backup failures are silent — user can trigger manually in Settings
       }
-    }, 60000) // 1 minute debounce
-    return () => clearTimeout(timer)
+    }, 60000)
   }, [entries, topics])
 
   useEffect(() => {

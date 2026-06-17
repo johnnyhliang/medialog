@@ -84,7 +84,18 @@ Deno.serve(async (req) => {
           topicCache[topicName] = topic.id
         }
 
-        const { data: newEntry } = await supabaseClient
+        // Skip if an entry with the same URL already exists in this topic (dedup on restore)
+        if (entry.url) {
+          const { data: existing } = await supabaseClient
+            .from('entries')
+            .select('id')
+            .eq('user_id', user.id)
+            .eq('url', entry.url)
+            .maybeSingle()
+          if (existing) continue
+        }
+
+        const { data: newEntry, error: entryError } = await supabaseClient
           .from('entries')
           .insert({
             user_id: user.id,
@@ -99,7 +110,9 @@ Deno.serve(async (req) => {
           .select('id')
           .single()
 
-        if (newEntry && entry.tags) {
+        if (entryError || !newEntry) continue
+
+        if (entry.tags) {
           for (const tagName of entry.tags) {
             let { data: tag } = await supabaseClient
               .from('tags')
@@ -107,7 +120,7 @@ Deno.serve(async (req) => {
               .eq('user_id', user.id)
               .eq('name', tagName)
               .maybeSingle()
-            
+
             if (!tag) {
               const { data: newTag } = await supabaseClient
                 .from('tags')
@@ -117,10 +130,11 @@ Deno.serve(async (req) => {
               tag = newTag
             }
 
-            await supabaseClient
-              .from('entry_tags')
-              .insert({ entry_id: newEntry.id, tag_id: tag.id })
-              .maybeSingle()
+            if (tag) {
+              await supabaseClient
+                .from('entry_tags')
+                .insert({ entry_id: newEntry.id, tag_id: tag.id })
+            }
           }
         }
         importedCount++
@@ -142,7 +156,11 @@ Deno.serve(async (req) => {
 
 async function decrypt(encryptedBase64: string, keyStr: string) {
   const enc = new TextEncoder()
-  const keyBuffer = await crypto.subtle.importKey('raw', enc.encode(keyStr), { name: 'AES-GCM' }, false, ['decrypt'])
+  // AES-GCM requires exactly 16, 24, or 32 bytes — pad/truncate to 32
+  const raw = enc.encode(keyStr)
+  const keyBytes = new Uint8Array(32)
+  keyBytes.set(raw.slice(0, 32))
+  const keyBuffer = await crypto.subtle.importKey('raw', keyBytes, { name: 'AES-GCM' }, false, ['decrypt'])
   const combined = new Uint8Array(atob(encryptedBase64).split('').map(c => c.charCodeAt(0)))
   const iv = combined.slice(0, 12); const data = combined.slice(12)
   const decrypted = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, keyBuffer, data)
@@ -175,12 +193,16 @@ async function pushToGitHub(token: string, user: string, repo: string, files: an
   const parentSha = branchData.commit.sha
 
   const tree = files.map(f => ({ path: f.path, mode: '100644', type: 'blob', content: f.content }))
-  
+
   const treeRes = await fetch(`https://api.github.com/repos/${user}/${repo}/git/trees`, {
     method: 'POST',
     headers,
     body: JSON.stringify({ base_tree: baseTreeSha, tree })
   })
+  if (!treeRes.ok) {
+    const err = await treeRes.json()
+    throw new Error(`GitHub tree creation failed: ${err.message || treeRes.status}`)
+  }
   const treeData = await treeRes.json()
 
   const commitRes = await fetch(`https://api.github.com/repos/${user}/${repo}/git/commits`, {
@@ -188,13 +210,21 @@ async function pushToGitHub(token: string, user: string, repo: string, files: an
     headers,
     body: JSON.stringify({ message: 'MediaLog Sync', tree: treeData.sha, parents: [parentSha] })
   })
+  if (!commitRes.ok) {
+    const err = await commitRes.json()
+    throw new Error(`GitHub commit creation failed: ${err.message || commitRes.status}`)
+  }
   const commitData = await commitRes.json()
 
-  await fetch(`https://api.github.com/repos/${user}/${repo}/git/refs/heads/main`, {
+  const refRes = await fetch(`https://api.github.com/repos/${user}/${repo}/git/refs/heads/main`, {
     method: 'PATCH',
     headers,
     body: JSON.stringify({ sha: commitData.sha })
   })
+  if (!refRes.ok) {
+    const err = await refRes.json()
+    throw new Error(`GitHub ref update failed: ${err.message || refRes.status}`)
+  }
 
   return commitData.sha
 }

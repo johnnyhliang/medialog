@@ -1,10 +1,5 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient.js'
-import { ensureRepo, pushFiles, fetchRepoContent } from '../lib/github.js'
-import { buildGitHubFileMap, parseEntryMarkdown } from '../lib/github-export.js'
-import { listEntriesByTopic } from '../lib/db/entries.js'
-import { createTopic, getTopicByName } from '../lib/db/topics.js'
-import { bulkCreateEntries } from '../lib/db/entries.js'
 
 export default function SettingsView({ topics, onRefreshData }) {
   const [config, setConfig] = useState(null)
@@ -18,12 +13,12 @@ export default function SettingsView({ topics, onRefreshData }) {
 
   async function loadConfig() {
     const { data: { user } } = await supabase.auth.getUser()
-    const { data, error } = await supabase
+    if (!user) { setLoading(false); return }
+    const { data } = await supabase
       .from('user_configs')
       .select('*')
       .eq('user_id', user.id)
-      .single()
-    
+      .maybeSingle()
     if (data) setConfig(data)
     setLoading(false)
   }
