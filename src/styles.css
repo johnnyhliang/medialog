@@ -989,7 +989,32 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
 }
 .master-doc-empty:hover { color: var(--accent); }
 
-.search-scope { display: flex; gap: 6px; align-items: center; }
+.search-scope { display: flex; gap: 6px; align-items: center; position: relative; }
+.tag-search-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: var(--shadow-card-hover);
+  z-index: 50;
+  max-height: 240px;
+  overflow-y: auto;
+}
+.tag-search-item {
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.tag-search-item:hover { background: var(--surface-3); }
+.tag-search-item .tag-color-swatch {
+  width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0;
+}
 .search-scope select {
   font-size: 12px;
   padding: 4px 8px;

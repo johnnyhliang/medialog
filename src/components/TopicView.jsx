@@ -19,6 +19,7 @@ export default function TopicView({
   onNoteVersion, onShowHistory,
   onSearchAll, globalSearchResults,
   onTitleChange, onMove, tagColors,
+  allTags = [],
 }) {
   const storageKey = `medialog_topic_view_${topic.id}`
   const [mode, setMode] = useState(() => {
@@ -56,6 +57,24 @@ export default function TopicView({
     return () => clearTimeout(t)
   }, [inputVal])
 
+  // Tag search derived state (use inputVal for immediacy, not debounced query)
+  const isTagSearch = inputVal.toLowerCase().startsWith('tag:')
+  const tagSearchTerm = isTagSearch ? inputVal.slice(4).toLowerCase().trim() : ''
+
+  const [tagSuggestLimit, setTagSuggestLimit] = useState(20)
+
+  const tagSuggestions = useMemo(() => {
+    if (!isTagSearch) return []
+    return (allTags || [])
+      .filter(t => !tagSearchTerm || t.name.toLowerCase().includes(tagSearchTerm))
+      .slice(0, tagSuggestLimit)
+  }, [isTagSearch, tagSearchTerm, allTags, tagSuggestLimit])
+
+  const filteredByTag = useMemo(() => {
+    if (!isTagSearch || !tagSearchTerm) return null
+    return entries.filter(e => (e.tags || []).some(t => t.toLowerCase() === tagSearchTerm))
+  }, [isTagSearch, tagSearchTerm, entries])
+
   // Fire global search when scope='all' and query changes
   useEffect(() => {
     if (scope === 'all' && onSearchAll) {
@@ -76,12 +95,13 @@ export default function TopicView({
   const docEmbedIds = useMemo(() => new Set(extractEmbedIds(liveDoc)), [liveDoc])
 
   const filtered = useMemo(() => {
+    if (filteredByTag !== null) return filteredByTag
     if (scope === 'all') {
       return globalSearchResults ?? fuzzyFind(query, entries, ['title', 'url', 'note'])
     }
     let pool = scope === 'doc' ? entries.filter((e) => docEmbedIds.has(e.id)) : entries
     return fuzzyFind(query, pool, ['title', 'url', 'note'])
-  }, [entries, query, scope, docEmbedIds, globalSearchResults])
+  }, [entries, query, scope, docEmbedIds, globalSearchResults, filteredByTag])
 
   function handleJump(entryId) {
     setReturnY(window.scrollY)
@@ -175,13 +195,32 @@ export default function TopicView({
         <input
           className="searchbar"
           type="search"
-          placeholder="Search…"
+          placeholder="Search… (try tag:book)"
           value={inputVal}
           onChange={(e) => setInputVal(e.target.value)}
         />
         <select value={scope} onChange={(e) => setScope(e.target.value)}>
           {SCOPES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
         </select>
+        {isTagSearch && tagSuggestions.length > 0 && (
+          <div className="tag-search-dropdown">
+            {tagSuggestions.map(t => (
+              <div
+                key={t.id}
+                className="tag-search-item"
+                onClick={() => setInputVal(`tag:${t.name}`)}
+              >
+                {t.color && <span className="tag-color-swatch" style={{ background: t.color }} />}
+                #{t.name}
+              </div>
+            ))}
+            {(allTags || []).filter(t => !tagSearchTerm || t.name.toLowerCase().includes(tagSearchTerm)).length > tagSuggestions.length && (
+              <div className="tag-search-item" style={{ color: 'var(--muted)' }} onClick={() => setTagSuggestLimit(l => l + 20)}>
+                Load more…
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {!query && <QuickAdd onAdd={onAddEntry} disabled={false} />}

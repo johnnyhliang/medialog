@@ -424,6 +424,7 @@ function Workspace() {
             onTitleChange={handleTitleChange}
             onMove={handleMove}
             tagColors={tagColors}
+            allTags={allTags}
           />
         )}
         {view === 'bulk' && (
