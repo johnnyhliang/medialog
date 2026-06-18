@@ -33,7 +33,7 @@ function relativeAge(dateStr) {
   return `${Math.floor(d / 365)}y ago`
 }
 
-export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChange, onTogglePin, onNoteSave, onPreview, onNoteVersion, onShowHistory, onTitleChange, moveTargets, onMove }) {
+export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChange, onTogglePin, onNoteSave, onPreview, onNoteVersion, onShowHistory, onTitleChange, moveTargets, onMove, tagColors }) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(entry.note || '')
   const [editingTitle, setEditingTitle] = useState(false)
@@ -216,7 +216,7 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
 
       {/* Tags row */}
       <div className="card-tags-row">
-        <TagInput value={entry.tags || []} onChange={(next) => onTagsChange(entry.id, next)} />
+        <TagInput value={entry.tags || []} onChange={(next) => onTagsChange(entry.id, next)} tagColors={tagColors} />
       </div>
 
       {/* Actions bar */}
@@ -318,7 +318,15 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
           <span className={`status-dot dot-${entry.status}`} title={entry.status} />
         )}
         {(entry.tags || []).map((t) => (
-          <span key={t} style={{ opacity: 0.7 }}>#{t}</span>
+          <span
+            key={t}
+            style={{
+              opacity: 0.85,
+              background: tagColors?.[t] || 'transparent',
+              padding: tagColors?.[t] ? '1px 5px' : undefined,
+              borderRadius: tagColors?.[t] ? '4px' : undefined,
+            }}
+          >#{t}</span>
         ))}
         {age && <span style={{ marginLeft: 'auto' }}>{age}</span>}
       </div>
@@ -328,7 +336,7 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
   return (
     <>
       <div
-        className={`card${entry.pinned ? ' pinned' : ''}${expanded ? '' : ' card-collapsed'}`}
+        className={`card ${entry.status ? `card-status-${entry.status}` : 'card-status-backlog'}${entry.pinned ? ' pinned' : ''}${expanded ? '' : ' card-collapsed'}`}
         id={`entry-${entry.id}`}
         onClick={handleCardClick}
       >

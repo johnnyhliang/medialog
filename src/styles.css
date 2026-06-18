@@ -277,6 +277,13 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
   container-name: card;
 }
 .card:hover { box-shadow: var(--shadow-card-hover); }
+.card-status-backlog { background: var(--surface); }
+.card-status-active  { background: color-mix(in srgb, var(--active) 8%, var(--surface)); }
+.card-status-done    { background: color-mix(in srgb, var(--done) 8%, var(--surface)); }
+@supports not (background: color-mix(in srgb, red 8%, white)) {
+  .card-status-active { background: rgba(184,92,26,0.06); }
+  .card-status-done   { background: rgba(46,122,82,0.06); }
+}
 
 /* Container queries for narrow cards */
 @container card (max-width: 280px) {
@@ -609,6 +616,7 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
   font-weight: 500;
 }
 .tag-chip:hover { background: rgba(192,58,43,0.1); color: var(--danger); }
+.tag-chip[style*="background"] { padding: 2px 7px; border-radius: 4px; }
 .tag-add { width: 110px; padding: 3px 8px; font-size: 12px; }
 
 /* ── Misc ────────────────────────────────────────────────────────────────────── */

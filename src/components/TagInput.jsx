@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-export default function TagInput({ value, onChange }) {
+export default function TagInput({ value, onChange, tagColors }) {
   const [text, setText] = useState('')
 
   function addTag(e) {
@@ -18,7 +18,7 @@ export default function TagInput({ value, onChange }) {
   return (
     <div className="tags">
       {value.map((t) => (
-        <button key={t} type="button" className="tag-chip" aria-label={`remove ${t}`} onClick={() => removeTag(t)}>
+        <button key={t} type="button" className="tag-chip" aria-label={`remove ${t}`} onClick={() => removeTag(t)} style={{ background: tagColors?.[t] || undefined }}>
           #{t} ✕
         </button>
       ))}

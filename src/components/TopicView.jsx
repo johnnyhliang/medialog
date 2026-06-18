@@ -18,7 +18,7 @@ export default function TopicView({
   onAddEntry, onDelete, onStatusChange, onTagsChange, onTogglePin, onNoteSave, onPreview, onDocChange,
   onNoteVersion, onShowHistory,
   onSearchAll, globalSearchResults,
-  onTitleChange, onMove,
+  onTitleChange, onMove, tagColors,
 }) {
   const storageKey = `medialog_topic_view_${topic.id}`
   const [mode, setMode] = useState(() => {
@@ -200,6 +200,7 @@ export default function TopicView({
           onTitleChange={onTitleChange}
           moveTargets={moveTargets}
           onMove={onMove}
+          tagColors={tagColors}
         />
       </div>
 
