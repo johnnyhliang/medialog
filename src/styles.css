@@ -814,3 +814,18 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
 .versions li:last-child { border-bottom: none; }
 .version-date { color: var(--muted); font-size: 12px; white-space: nowrap; }
 .version-preview { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+
+/* ── Load more ─────────────────────────────────────────────────────────────── */
+.load-more-btn {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 9px;
+  background: var(--surface-2);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  color: var(--muted);
+  font-size: var(--text-sm);
+  text-align: center;
+}
+.load-more-btn:hover { background: var(--surface-3); color: var(--text); border-style: solid; }
