@@ -175,6 +175,11 @@ function Workspace() {
     setEntries((prev) => prev.map((e) => (e.id === entryId ? { ...updated, tags: e.tags } : e)))
   }
 
+  async function handleMove(entryId, newTopicId) {
+    await updateEntry(supabase, entryId, { topic_id: newTopicId })
+    setEntries((prev) => prev.filter((e) => e.id !== entryId))
+  }
+
   async function handleNoteVersion(entryId, note) {
     await createVersion(supabase, entryId, note)
   }
@@ -316,6 +321,7 @@ function Workspace() {
           <TopicView
             key={selectedTopic.id}
             topic={selectedTopic}
+            topics={topics}
             entries={entries}
             allCandidates={candidateIndex}
             onAddEntry={handleAddEntry}
@@ -331,6 +337,7 @@ function Workspace() {
             onSearchAll={handleSearchAll}
             globalSearchResults={globalSearchResults}
             onTitleChange={handleTitleChange}
+            onMove={handleMove}
           />
         )}
         {view === 'bulk' && (

@@ -14,11 +14,11 @@ const SCOPES = [
 ]
 
 export default function TopicView({
-  topic, entries, allCandidates,
+  topic, entries, allCandidates, topics,
   onAddEntry, onDelete, onStatusChange, onTagsChange, onTogglePin, onNoteSave, onPreview, onDocChange,
   onNoteVersion, onShowHistory,
   onSearchAll, globalSearchResults,
-  onTitleChange,
+  onTitleChange, onMove,
 }) {
   const storageKey = `medialog_topic_view_${topic.id}`
   const [mode, setMode] = useState(() => {
@@ -36,6 +36,8 @@ export default function TopicView({
   const [returnY, setReturnY] = useState(null)
 
   const scopeCtxRef = useRef({ scope: 'topic', currentTopicId: topic.id })
+
+  const moveTargets = (topics || []).filter((t) => t.id !== topic.id)
 
   // Debounce search input
   useEffect(() => {
@@ -146,6 +148,8 @@ export default function TopicView({
         onNoteVersion={onNoteVersion}
         onShowHistory={onShowHistory}
         onTitleChange={onTitleChange}
+        moveTargets={moveTargets}
+        onMove={onMove}
       />
 
       {returnY != null && <ReturnButton onReturn={handleReturn} />}
