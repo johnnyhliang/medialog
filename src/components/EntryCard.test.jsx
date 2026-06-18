@@ -14,6 +14,12 @@ const base = { id: 'x', url: 'http://a.com', title: 'A Site', note: 'my **takeaw
 const noop = () => {}
 const handlers = { onDelete: noop, onStatusChange: noop, onTagsChange: noop, onTogglePin: noop, onNoteSave: noop }
 
+async function expandCard(container) {
+  // Click the card body (not a link/button) to expand inline
+  const card = container.querySelector('.card-collapsed')
+  if (card) await userEvent.click(card)
+}
+
 test('renders markdown note and links open in a new tab', () => {
   render(<EntryCard entry={base} {...handlers} />)
   const link = screen.getByRole('link', { name: 'A Site' })
@@ -27,14 +33,16 @@ test('has an anchor id for the table of contents', () => {
 
 test('toggles pin', async () => {
   const onTogglePin = vi.fn()
-  render(<EntryCard entry={base} {...handlers} onTogglePin={onTogglePin} />)
+  const { container } = render(<EntryCard entry={base} {...handlers} onTogglePin={onTogglePin} />)
+  await expandCard(container)
   await userEvent.click(screen.getByRole('button', { name: /pin/i }))
   expect(onTogglePin).toHaveBeenCalledWith('x', true)
 })
 
 test('edits the note and saves on Done', async () => {
   const onNoteSave = vi.fn()
-  render(<EntryCard entry={base} {...handlers} onNoteSave={onNoteSave} />)
+  const { container } = render(<EntryCard entry={base} {...handlers} onNoteSave={onNoteSave} />)
+  await expandCard(container)
   await userEvent.click(screen.getByRole('button', { name: /edit/i }))
   const editor = await screen.findByLabelText('note editor')
   await userEvent.clear(editor)
@@ -45,16 +53,17 @@ test('edits the note and saves on Done', async () => {
 
 test('changes status', async () => {
   const onStatusChange = vi.fn()
-  render(<EntryCard entry={base} {...handlers} onStatusChange={onStatusChange} />)
-  await userEvent.selectOptions(screen.getByRole('combobox'), 'done')
+  const { container } = render(<EntryCard entry={base} {...handlers} onStatusChange={onStatusChange} />)
+  await expandCard(container)
+  await userEvent.selectOptions(screen.getByRole('combobox', { name: '' }), 'done')
   expect(onStatusChange).toHaveBeenCalledWith('x', 'done')
 })
 
 test('delete asks for confirmation, then fires onDelete', async () => {
   const onDelete = vi.fn()
-  render(<EntryCard entry={base} {...handlers} onDelete={onDelete} />)
+  const { container } = render(<EntryCard entry={base} {...handlers} onDelete={onDelete} />)
+  await expandCard(container)
   await userEvent.click(screen.getByRole('button', { name: /delete/i }))
-  // confirm modal — onDelete not called until confirmed
   expect(onDelete).not.toHaveBeenCalled()
   await userEvent.click(screen.getByRole('button', { name: /move to trash/i }))
   expect(onDelete).toHaveBeenCalledWith('x')
@@ -62,22 +71,25 @@ test('delete asks for confirmation, then fires onDelete', async () => {
 
 test('edits tags through TagInput', async () => {
   const onTagsChange = vi.fn()
-  render(<EntryCard entry={{ ...base, tags: [] }} {...handlers} onTagsChange={onTagsChange} />)
+  const { container } = render(<EntryCard entry={{ ...base, tags: [] }} {...handlers} onTagsChange={onTagsChange} />)
+  await expandCard(container)
   await userEvent.type(screen.getByPlaceholderText(/add tag/i), 'book{Enter}')
   expect(onTagsChange).toHaveBeenCalledWith('x', ['book'])
 })
 
-test('preview button shows filename from URL', () => {
+test('preview button shows filename from URL', async () => {
   const entry = { ...base, url: 'https://storage.example.com/user/abc-report.pdf', title: 'Report' }
   // classifyUrl needs to return non-null so the preview button renders
-  render(<EntryCard entry={entry} {...handlers} onPreview={() => {}} />)
+  const { container } = render(<EntryCard entry={entry} {...handlers} onPreview={() => {}} />)
+  await expandCard(container)
   expect(screen.getByRole('button', { name: /report\.pdf/i })).toBeInTheDocument()
 })
 
 test('clicking title enters edit mode', async () => {
   const onTitleChange = vi.fn()
   const noUrl = { ...base, url: null }
-  render(<EntryCard entry={noUrl} {...handlers} onTitleChange={onTitleChange} />)
+  const { container } = render(<EntryCard entry={noUrl} {...handlers} onTitleChange={onTitleChange} />)
+  await expandCard(container)
   await userEvent.click(screen.getByText('A Site'))
   expect(screen.getByRole('textbox', { name: /edit title/i })).toBeInTheDocument()
 })
@@ -85,7 +97,8 @@ test('clicking title enters edit mode', async () => {
 test('saves title on Enter', async () => {
   const onTitleChange = vi.fn()
   const noUrl = { ...base, url: null }
-  render(<EntryCard entry={noUrl} {...handlers} onTitleChange={onTitleChange} />)
+  const { container } = render(<EntryCard entry={noUrl} {...handlers} onTitleChange={onTitleChange} />)
+  await expandCard(container)
   await userEvent.click(screen.getByText('A Site'))
   const input = screen.getByRole('textbox', { name: /edit title/i })
   await userEvent.clear(input)
@@ -96,7 +109,8 @@ test('saves title on Enter', async () => {
 test('cancels title edit on Escape', async () => {
   const onTitleChange = vi.fn()
   const noUrl = { ...base, url: null }
-  render(<EntryCard entry={noUrl} {...handlers} onTitleChange={onTitleChange} />)
+  const { container } = render(<EntryCard entry={noUrl} {...handlers} onTitleChange={onTitleChange} />)
+  await expandCard(container)
   await userEvent.click(screen.getByText('A Site'))
   const input = screen.getByRole('textbox', { name: /edit title/i })
   await userEvent.type(input, '{Escape}')
@@ -106,7 +120,8 @@ test('cancels title edit on Escape', async () => {
 
 test('double-clicking URL title enters edit mode', async () => {
   const onTitleChange = vi.fn()
-  render(<EntryCard entry={base} {...handlers} onTitleChange={onTitleChange} />)
+  const { container } = render(<EntryCard entry={base} {...handlers} onTitleChange={onTitleChange} />)
+  await expandCard(container)
   await userEvent.dblClick(screen.getByRole('link', { name: 'A Site' }))
   expect(screen.getByRole('textbox', { name: /edit title/i })).toBeInTheDocument()
 })
@@ -114,11 +129,34 @@ test('double-clicking URL title enters edit mode', async () => {
 test('shows saving indicator while autosave timer is pending', async () => {
   vi.useFakeTimers({ shouldAdvanceTime: true })
   const onNoteSave = vi.fn()
-  render(<EntryCard entry={base} {...handlers} onNoteSave={onNoteSave} />)
+  const { container } = render(<EntryCard entry={base} {...handlers} onNoteSave={onNoteSave} />)
+  await expandCard(container)
   await userEvent.click(screen.getByRole('button', { name: /edit/i }))
   const editor = await screen.findByLabelText('note editor')
   await userEvent.type(editor, 'x')
-  // "Saving…" should appear (autosave timer running)
   expect(screen.getByText(/saving/i)).toBeInTheDocument()
   vi.useRealTimers()
+})
+
+test('collapsed by default — edit button not visible until expanded', () => {
+  render(<EntryCard entry={base} {...handlers} />)
+  expect(screen.queryByRole('button', { name: /edit/i })).toBeNull()
+})
+
+test('clicking collapsed card expands it', async () => {
+  const { container } = render(<EntryCard entry={base} {...handlers} />)
+  await expandCard(container)
+  expect(screen.getByRole('button', { name: /edit/i })).toBeInTheDocument()
+})
+
+test('move select calls onMove and disappears entry', async () => {
+  const onMove = vi.fn()
+  const targets = [{ id: 't2', name: 'Books' }]
+  const { container } = render(
+    <EntryCard entry={base} {...handlers} moveTargets={targets} onMove={onMove} />
+  )
+  await expandCard(container)
+  const moveSelect = container.querySelector('.move-select')
+  await userEvent.selectOptions(moveSelect, 't2')
+  expect(onMove).toHaveBeenCalledWith('x', 't2')
 })
