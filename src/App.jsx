@@ -183,8 +183,9 @@ function Workspace() {
     setEntries((prev) => prev.map((e) => (e.id === entryId ? { ...updated, tags: e.tags } : e)))
   }
 
-  async function handleTitleChange(entryId, title) {
-    const updated = await updateEntry(supabase, entryId, { title })
+  async function handleTitleChange(entryId, title, url) {
+    const patch = url !== undefined ? { title, url } : { title }
+    const updated = await updateEntry(supabase, entryId, patch)
     setEntries((prev) => prev.map((e) => (e.id === entryId ? { ...updated, tags: e.tags } : e)))
   }
 

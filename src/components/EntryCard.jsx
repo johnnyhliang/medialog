@@ -38,6 +38,7 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
   const [draft, setDraft] = useState(entry.note || '')
   const [editingTitle, setEditingTitle] = useState(false)
   const [titleDraft, setTitleDraft] = useState(entry.title || '')
+  const [urlDraft, setUrlDraft] = useState(entry.url || '')
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [saveStatus, setSaveStatus] = useState('idle')
   const [expanded, setExpanded] = useState(false)
@@ -73,8 +74,17 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
   }
 
   function saveTitle() {
-    const trimmed = titleDraft.trim()
-    if (trimmed && trimmed !== entry.title) onTitleChange?.(entry.id, trimmed)
+    const t = titleDraft.trim()
+    const u = urlDraft.trim()
+    const titleChanged = t !== (entry.title || '')
+    const urlChanged = u !== (entry.url || '')
+    if (titleChanged || urlChanged) {
+      if (urlChanged) {
+        onTitleChange?.(entry.id, t || entry.title || '', u)
+      } else {
+        onTitleChange?.(entry.id, t || entry.title || '')
+      }
+    }
     setEditingTitle(false)
   }
 
@@ -119,23 +129,40 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
 
   const expandedBody = (
     <>
-      {/* Title / URL */}
+      {/* Title + URL block */}
       <div className="card-title-row">
         {editingTitle ? (
-          <input
-            className="card-title-input"
-            aria-label="edit title"
-            value={titleDraft}
-            onChange={(e) => setTitleDraft(e.target.value)}
-            onBlur={saveTitle}
-            onClick={(e) => e.stopPropagation()}
-            onKeyDown={(e) => {
-              e.stopPropagation()
-              if (e.key === 'Enter') { e.preventDefault(); saveTitle() }
-              if (e.key === 'Escape') { setTitleDraft(entry.title || ''); setEditingTitle(false) }
-            }}
-            autoFocus
-          />
+          <div className="card-title-edit-form" onClick={(e) => e.stopPropagation()}>
+            <input
+              className="card-title-input"
+              aria-label="edit title"
+              placeholder="Title"
+              value={titleDraft}
+              onChange={(e) => setTitleDraft(e.target.value)}
+              onKeyDown={(e) => {
+                e.stopPropagation()
+                if (e.key === 'Enter') { e.preventDefault(); saveTitle() }
+                if (e.key === 'Escape') { setTitleDraft(entry.title || ''); setUrlDraft(entry.url || ''); setEditingTitle(false) }
+              }}
+              autoFocus
+            />
+            <input
+              className="card-url-input"
+              aria-label="edit url"
+              placeholder="URL (optional)"
+              value={urlDraft}
+              onChange={(e) => setUrlDraft(e.target.value)}
+              onKeyDown={(e) => {
+                e.stopPropagation()
+                if (e.key === 'Enter') { e.preventDefault(); saveTitle() }
+                if (e.key === 'Escape') { setTitleDraft(entry.title || ''); setUrlDraft(entry.url || ''); setEditingTitle(false) }
+              }}
+            />
+            <div className="card-title-edit-btns">
+              <button className="btn-small" onClick={saveTitle}>Save</button>
+              <button className="btn-small btn-ghost" onClick={() => { setTitleDraft(entry.title || ''); setUrlDraft(entry.url || ''); setEditingTitle(false) }}>Cancel</button>
+            </div>
+          </div>
         ) : (
           <div className="card-title-display">
             {entry.url
@@ -145,8 +172,8 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
             <button
               className="icon-btn card-title-edit-btn"
               aria-label="edit title"
-              title="Edit title"
-              onClick={(e) => { e.stopPropagation(); setTitleDraft(entry.title || ''); setEditingTitle(true) }}
+              title="Edit title / URL"
+              onClick={(e) => { e.stopPropagation(); setTitleDraft(entry.title || ''); setUrlDraft(entry.url || ''); setEditingTitle(true) }}
             >
               <Pencil size={12} />
             </button>
@@ -183,16 +210,31 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
         </div>
       ) : (
         <span className="card-no-note" onClick={(e) => { e.stopPropagation(); startEditing() }}>
-          Add a thought — why did you save this?
+          Add a note…
         </span>
       )}
 
-      {/* Meta row */}
-      <div className="card-meta">
+      {/* Tags row */}
+      <div className="card-tags-row">
         <TagInput value={entry.tags || []} onChange={(next) => onTagsChange(entry.id, next)} />
+      </div>
+
+      {/* Actions bar */}
+      <div className="card-actions-bar">
+        <select
+          className={`status-select ${statusClass}`}
+          value={entry.status || ''}
+          onChange={(e) => onStatusChange(entry.id, e.target.value || null)}
+        >
+          {STATUSES.map((s) => (
+            <option key={s} value={s}>{s === '' ? '—' : s}</option>
+          ))}
+        </select>
+
         {age && <span className="card-age">{age}</span>}
-        <div className="card-actions">
-          {/* Secondary actions — hidden on narrow cards */}
+
+        <div className="card-actions-right">
+          {/* Secondary actions */}
           <div className="card-secondary-actions" style={{ display: showSecondaryActions ? 'flex' : undefined, gap: 'inherit' }}>
             <button
               className="icon-btn"
@@ -209,7 +251,6 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
             {moveSelect}
           </div>
 
-          {/* Overflow button for narrow cards */}
           <button
             className="card-overflow-btn"
             onClick={() => setShowSecondaryActions(p => !p)}
@@ -219,27 +260,18 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
             <MoreVertical size={15} />
           </button>
 
-          {/* Primary actions — always show */}
           {editing ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <>
               {saveStatus === 'saving' && <span className="save-status">Saving…</span>}
-              {saveStatus === 'saved' && <span className="save-status">Saved ·</span>}
-              <button onClick={finishEditing}>Done</button>
-            </div>
+              {saveStatus === 'saved' && <span className="save-status">Saved</span>}
+              <button className="btn-small" onClick={finishEditing}>Done</button>
+            </>
           ) : (
             <button className="icon-btn" aria-label="edit note" onClick={startEditing}>
               <Pencil size={15} />
             </button>
           )}
-          <select
-            className={`status-select ${statusClass}`}
-            value={entry.status || ''}
-            onChange={(e) => onStatusChange(entry.id, e.target.value || null)}
-          >
-            {STATUSES.map((s) => (
-              <option key={s} value={s}>{s === '' ? 'no status' : s}</option>
-            ))}
-          </select>
+
           <button
             className="icon-btn icon-btn-danger"
             onClick={() => setConfirmDelete(true)}
