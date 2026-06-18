@@ -71,11 +71,29 @@ Phase 3/4 can interleave or follow.
 
 ---
 
-## Scope question for the user
-- **Quick pass** = Phase 0 + 1 only (tokens, modal primitive, icons) — biggest consistency win, ~half the work.
-- **Full pass** = Phases 0–4 — properly finished UI before new features.
+## Decisions (locked)
+- **Scope: Full pass (Phases 0–4).**
+- **Icons: switch to an SVG set (`lucide-react`)** for controls (pin, edit, delete, history, close, prev/next, etc.). Keep emoji only for content-type tags in chips (📄 🖼 🎥 🔗 📝) where they read as content, not UI.
+
+---
+
+## Addendum — feedback from first testing (2026-06-17)
+
+### UI (fold into Phase 2)
+- **Buttons too close / don't look good** — the card action row needs real spacing, consistent sizing, and the new SVG icons (Phase 1). This is the top visual complaint.
+- **Preview button has no file name** — it just says "Preview". It should show the file name: for a URL, the last path segment (`paper.pdf`); for an uploaded attachment, the stored filename. Derive via the same `fileName()` helper the modal uses.
+
+### Attachments & image pipeline (FUNCTIONAL — pairs with the preview polish, not pure CSS)
+- **Inline = compressed thumbnail, full image only on click.** Supabase's built-in resize/quality transforms (`getPublicUrl({ transform })`) are **Pro-plan only**, so we cannot rely on them on the free tier. Approach: **client-side compression at upload** — downscale with a `<canvas>` to a small thumbnail (e.g. ≤600px, WebP/JPEG q≈0.5) and upload **both** the thumbnail and the original. Inline note/card images render the thumbnail; clicking opens the FilePreviewModal with the original. Naming convention e.g. `…/<uuid>-name.ext` (original) + `…/<uuid>-name.thumb.webp` (thumbnail); the markdown image renderer shows the thumb and links the original.
+- **Upload size cap → 25 MB.** Currently 10 MB in two places: `src/lib/storage.js` (`MAX_BYTES = 10*1024*1024`) and the bucket `file_size_limit` in `supabase/migrations/0004_attachments_storage.sql` (`10485760`). Raise both to `26214400` (25 MB). Reject larger files client-side (`isAllowedAttachment`) with a clear message; the bucket enforces server-side as defense-in-depth (needs a migration to alter the bucket limit).
+
+### Backup of large files (decision recorded)
+- GitHub backup stores **Markdown per entry only** — attachment **binaries are NOT backed up**, only their Supabase CDN URLs. **Decision: keep the two-tier model** (git = text/structure, Supabase = binaries); do not commit binaries to git (repo bloat, 100 MB GitHub limit, every version retained forever). Document this in Settings/Backup UI so the user knows attachments aren't in the git backup. A dedicated attachment-backup (e.g. to a second bucket or storage export) is a possible future item, not now.
+
+---
 
 ## Non-goals
 - No new features in the polish pass (editor overhaul, archive, etc. are separate).
 - No framework/CSS-library migration (stay with the current hand-rolled CSS + tokens).
 - No redesign of the visual identity (keep Lora + DM Sans + warm off-white).
+- No Supabase Pro-plan dependency (image transforms must work on the free tier via client-side compression).
