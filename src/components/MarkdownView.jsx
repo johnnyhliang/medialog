@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeSlug from 'rehype-slug'
@@ -88,10 +89,17 @@ function urlTransform(url) {
 }
 
 export default function MarkdownView({ children, className = 'note', onPreview, getEntry, onJump }) {
-  const source = getEntry
-    ? expandEmbedSyntax(String(children ?? ''), (id) => getEntry(id)?.title || null)
-    : String(children ?? '')
-  const components = buildMarkdownComponents({ onPreview, getEntry, onJump })
+  const source = useMemo(
+    () =>
+      getEntry
+        ? expandEmbedSyntax(String(children ?? ''), (id) => getEntry(id)?.title || null)
+        : String(children ?? ''),
+    [children, getEntry]
+  )
+  const components = useMemo(
+    () => buildMarkdownComponents({ onPreview, getEntry, onJump }),
+    [onPreview, getEntry, onJump]
+  )
   return (
     <div className={className}>
       <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSlug]} components={components} urlTransform={urlTransform}>
