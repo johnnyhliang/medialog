@@ -7,7 +7,7 @@ import {
   bulkCreateEntries, listForRevisit, markSurfaced, listRecentActivity,
   softDeleteEntry, listTrashedEntries, restoreEntry, emptyTrash,
 } from './lib/db/entries.js'
-import { setEntryTags } from './lib/db/tags.js'
+import { setEntryTags, listTags, updateTagColor } from './lib/db/tags.js'
 import { listVersions, createVersion } from './lib/db/versions.js'
 import { fetchTitle } from './lib/enrich.js'
 import { buildMarkdownFiles } from './lib/exportMarkdown.js'
@@ -41,6 +41,7 @@ function Workspace() {
   const [trashEntries, setTrashEntries] = useState([])
   const [historyFor, setHistoryFor] = useState(null)
   const [versions, setVersions] = useState([])
+  const [allTags, setAllTags] = useState([])
 
   const [sidebarOpen, setSidebarOpen] = useState(() => {
     try { return localStorage.getItem('medialog_sidebar_open') !== 'false' } catch { return true }
@@ -75,9 +76,15 @@ function Workspace() {
     setTopics((prev) => prev.map((t) => (t.id === topicId ? { ...t, master_doc: doc } : t)))
   }
 
+  const tagColors = useMemo(
+    () => Object.fromEntries(allTags.filter(t => t.color).map(t => [t.name, t.color])),
+    [allTags]
+  )
+
   useEffect(() => {
     refreshTopics()
-    
+    refreshTags()
+
     // Handle OAuth redirect from GitHub for backup linking
     const params = new URLSearchParams(window.location.search)
     const code = params.get('code')
@@ -85,6 +92,18 @@ function Workspace() {
       handleGitHubCallback(code)
     }
   }, [])
+
+  async function refreshTags() {
+    const tags = await listTags(supabase)
+    setAllTags(tags)
+  }
+
+  async function handleUpdateTagColor(tagName, color) {
+    const tag = allTags.find(t => t.name === tagName)
+    if (!tag) return
+    await updateTagColor(supabase, tag.id, color)
+    setAllTags(prev => prev.map(t => t.name === tagName ? { ...t, color: color || null } : t))
+  }
 
   async function refreshTopics() {
     const t = await listTopics(supabase)
@@ -404,6 +423,7 @@ function Workspace() {
             globalSearchResults={globalSearchResults}
             onTitleChange={handleTitleChange}
             onMove={handleMove}
+            tagColors={tagColors}
           />
         )}
         {view === 'bulk' && (
@@ -428,7 +448,7 @@ function Workspace() {
           />
         )}
         {view === 'revisit' && <Revisit entries={revisitEntries} onSeen={handleSeen} recentActivity={recentActivity} />}
-        {view === 'settings' && <SettingsView topics={topics} onRefreshData={refreshTopics} addToast={addToast} />}
+        {view === 'settings' && <SettingsView topics={topics} onRefreshData={refreshTopics} addToast={addToast} allTags={allTags} onUpdateTagColor={handleUpdateTagColor} />}
         {view === 'trash' && (
           <TrashView
             entries={trashEntries}

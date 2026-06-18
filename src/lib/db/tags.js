@@ -17,6 +17,14 @@ export async function listTags(supabase) {
   return data
 }
 
+export async function updateTagColor(supabase, tagId, color) {
+  const { error } = await supabase
+    .from('tags')
+    .update({ color: color || null })
+    .eq('id', tagId)
+  if (error) throw new Error(error.message)
+}
+
 // Replace all of an entry's tag links with the given tag names.
 export async function setEntryTags(supabase, entryId, names) {
   const { error: delErr } = await supabase.from('entry_tags').delete().eq('entry_id', entryId)
