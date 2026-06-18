@@ -195,9 +195,20 @@ function Workspace() {
     if (inboxTopic) setInboxEntries(await listEntriesByTopic(supabase, inboxTopic.id))
   }
 
+  // Fire-and-forget: fetch titles for newly created entries that have a URL but no title yet
+  async function enrichEntries(created) {
+    for (const e of created) {
+      if (e.url && !e.title) {
+        const title = await fetchTitle(supabase, e.url)
+        if (title) await updateEntry(supabase, e.id, { title })
+      }
+    }
+  }
+
   async function handleBulkImport(items) {
     const inbox = inboxTopic || (await getTopicByName(supabase, 'Inbox'))
     const created = await bulkCreateEntries(supabase, inbox.id, items)
+    enrichEntries(created)   // ← fire-and-forget
     return created.length
   }
 
@@ -211,6 +222,7 @@ function Workspace() {
 
     let total = 0
     const newTopics = []
+    const allCreated = []
 
     for (const [topicName, items] of Object.entries(byTopic)) {
       let topic = topics.find((t) => t.name === topicName)
@@ -219,6 +231,7 @@ function Workspace() {
         newTopics.push(topic)
       }
       const created = await bulkCreateEntries(supabase, topic.id, items)
+      allCreated.push(...created)
       total += created.length
     }
 
@@ -226,6 +239,7 @@ function Workspace() {
       setTopics((prev) => [...prev, ...newTopics].sort((a, b) => a.name.localeCompare(b.name)))
     }
 
+    enrichEntries(allCreated)   // ← fire-and-forget
     return total
   }
 
