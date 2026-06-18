@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { test, expect, vi } from 'vitest'
 import TopicView from './TopicView.jsx'
@@ -23,8 +23,10 @@ test('scoped search filters the entry list', async () => {
   expect(screen.getByText('Alpha note')).toBeInTheDocument()
   expect(screen.getByText('Beta note')).toBeInTheDocument()
   await userEvent.type(screen.getByPlaceholderText(/search/i), 'alpha')
-  expect(screen.getByText('Alpha note')).toBeInTheDocument()
-  expect(screen.queryByText('Beta note')).not.toBeInTheDocument()
+  await waitFor(() => {
+    expect(screen.getByText('Alpha note')).toBeInTheDocument()
+    expect(screen.queryByText('Beta note')).not.toBeInTheDocument()
+  }, { timeout: 1000 })
 })
 
 test('view toggle shows/hides the master doc editor', async () => {

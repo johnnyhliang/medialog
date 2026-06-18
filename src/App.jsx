@@ -13,9 +13,7 @@ import { buildMarkdownFiles } from './lib/exportMarkdown.js'
 import { buildZip, downloadBlob } from './lib/buildZip.js'
 import AuthGate from './components/AuthGate.jsx'
 import TopicList from './components/TopicList.jsx'
-import EntryList from './components/EntryList.jsx'
 import QuickAdd from './components/QuickAdd.jsx'
-import SearchBar from './components/SearchBar.jsx'
 import BulkImport from './components/BulkImport.jsx'
 import SortInbox from './components/SortInbox.jsx'
 import ProgressView from './components/ProgressView.jsx'
@@ -32,7 +30,7 @@ function Workspace() {
   const [topics, setTopics] = useState([])
   const [selectedId, setSelectedId] = useState(null)
   const [entries, setEntries] = useState([])
-  const [query, setQuery] = useState('')
+  const [globalSearchResults, setGlobalSearchResults] = useState(null)
   const [view, setView] = useState('browse') // 'browse' | 'bulk' | 'sort' | 'progress' | 'revisit' | 'settings' | 'trash'
   const [inboxEntries, setInboxEntries] = useState([])
   const [revisitEntries, setRevisitEntries] = useState([])
@@ -109,14 +107,18 @@ function Workspace() {
   }, [entries, topics])
 
   useEffect(() => {
-    if (query.trim()) {
-      searchEntries(supabase, query.trim()).then(setEntries)
-    } else if (selectedId) {
+    if (selectedId) {
       listEntriesByTopic(supabase, selectedId).then(setEntries)
     } else {
       setEntries([])
     }
-  }, [selectedId, query])
+  }, [selectedId])
+
+  async function handleSearchAll(q) {
+    if (!q.trim()) { setGlobalSearchResults(null); return }
+    const results = await searchEntries(supabase, q.trim())
+    setGlobalSearchResults(results)
+  }
 
   async function handleAddTopic(name) {
     const t = await createTopic(supabase, name)
@@ -282,45 +284,30 @@ function Workspace() {
         <TopicList
           topics={topics}
           selectedId={selectedId}
-          onSelect={(id) => { setSelectedId(id); setQuery(''); setView('browse') }}
+          onSelect={(id) => { setSelectedId(id); setGlobalSearchResults(null); setView('browse') }}
           onAdd={handleAddTopic}
         />
       </aside>
       <main className="main">
         {view === 'browse' && selectedTopic && (
-          <>
-            <SearchBar value={query} onChange={setQuery} />
-            {query ? (
-              <EntryList
-                entries={entries}
-                onDelete={handleDelete}
-                onStatusChange={handleStatusChange}
-                onTagsChange={handleTagsChange}
-                onTogglePin={handleTogglePin}
-                onNoteSave={handleNoteSave}
-                onPreview={openPreview}
-                onNoteVersion={handleNoteVersion}
-                onShowHistory={handleShowHistory}
-              />
-            ) : (
-              <TopicView
-                key={selectedTopic.id}
-                topic={selectedTopic}
-                entries={entries}
-                allCandidates={candidateIndex}
-                onAddEntry={handleAddEntry}
-                onDelete={handleDelete}
-                onStatusChange={handleStatusChange}
-                onTagsChange={handleTagsChange}
-                onTogglePin={handleTogglePin}
-                onNoteSave={handleNoteSave}
-                onPreview={openPreview}
-                onDocChange={(doc) => handleDocChange(selectedTopic.id, doc)}
-                onNoteVersion={handleNoteVersion}
-                onShowHistory={handleShowHistory}
-              />
-            )}
-          </>
+          <TopicView
+            key={selectedTopic.id}
+            topic={selectedTopic}
+            entries={entries}
+            allCandidates={candidateIndex}
+            onAddEntry={handleAddEntry}
+            onDelete={handleDelete}
+            onStatusChange={handleStatusChange}
+            onTagsChange={handleTagsChange}
+            onTogglePin={handleTogglePin}
+            onNoteSave={handleNoteSave}
+            onPreview={openPreview}
+            onDocChange={(doc) => handleDocChange(selectedTopic.id, doc)}
+            onNoteVersion={handleNoteVersion}
+            onShowHistory={handleShowHistory}
+            onSearchAll={handleSearchAll}
+            globalSearchResults={globalSearchResults}
+          />
         )}
         {view === 'bulk' && (
           <BulkImport

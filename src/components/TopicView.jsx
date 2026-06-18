@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import TopicDocEditor from './TopicDocEditor.jsx'
 import MarkdownView from './MarkdownView.jsx'
 import EntryList from './EntryList.jsx'
@@ -17,6 +17,7 @@ export default function TopicView({
   topic, entries, allCandidates,
   onAddEntry, onDelete, onStatusChange, onTagsChange, onTogglePin, onNoteSave, onPreview, onDocChange,
   onNoteVersion, onShowHistory,
+  onSearchAll, globalSearchResults,
 }) {
   const storageKey = `medialog_topic_view_${topic.id}`
   const [mode, setMode] = useState(() => {
@@ -28,11 +29,25 @@ export default function TopicView({
   })
   const [docEditing, setDocEditing] = useState(false)
   const [liveDoc, setLiveDoc] = useState(topic.master_doc || '')
+  const [inputVal, setInputVal] = useState('')
   const [query, setQuery] = useState('')
   const [scope, setScope] = useState('topic')
   const [returnY, setReturnY] = useState(null)
 
   const scopeCtxRef = useRef({ scope: 'topic', currentTopicId: topic.id })
+
+  // Debounce search input
+  useEffect(() => {
+    const t = setTimeout(() => setQuery(inputVal), 120)
+    return () => clearTimeout(t)
+  }, [inputVal])
+
+  // Fire global search when scope='all' and query changes
+  useEffect(() => {
+    if (scope === 'all' && onSearchAll) {
+      onSearchAll(query)
+    }
+  }, [scope, query, onSearchAll])
 
   function setView(next) {
     setMode(next)
@@ -47,10 +62,12 @@ export default function TopicView({
   const docEmbedIds = useMemo(() => new Set(extractEmbedIds(liveDoc)), [liveDoc])
 
   const filtered = useMemo(() => {
-    let pool = entries
-    if (scope === 'doc') pool = entries.filter((e) => docEmbedIds.has(e.id))
+    if (scope === 'all') {
+      return globalSearchResults ?? fuzzyFind(query, entries, ['title', 'note'])
+    }
+    let pool = scope === 'doc' ? entries.filter((e) => docEmbedIds.has(e.id)) : entries
     return fuzzyFind(query, pool, ['title', 'note'])
-  }, [entries, query, scope, docEmbedIds])
+  }, [entries, query, scope, docEmbedIds, globalSearchResults])
 
   function handleJump(entryId) {
     setReturnY(window.scrollY)
@@ -107,8 +124,8 @@ export default function TopicView({
           className="searchbar"
           type="search"
           placeholder="Search…"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          value={inputVal}
+          onChange={(e) => setInputVal(e.target.value)}
         />
         <select value={scope} onChange={(e) => setScope(e.target.value)}>
           {SCOPES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
