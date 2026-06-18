@@ -14,21 +14,23 @@ export default function EntryList({ entries, onDelete, onStatusChange, onTagsCha
 
   return (
     <div>
-      {visible.map((e) => (
-        <EntryCard
-          key={e.id}
-          entry={e}
-          onDelete={onDelete}
-          onStatusChange={onStatusChange}
-          onTagsChange={onTagsChange}
-          onTogglePin={onTogglePin}
-          onNoteSave={onNoteSave}
-          onPreview={onPreview}
-          onNoteVersion={onNoteVersion}
-          onShowHistory={onShowHistory}
-          onTitleChange={onTitleChange}
-        />
-      ))}
+      <div className="entry-list-grid">
+        {visible.map((e) => (
+          <EntryCard
+            key={e.id}
+            entry={e}
+            onDelete={onDelete}
+            onStatusChange={onStatusChange}
+            onTagsChange={onTagsChange}
+            onTogglePin={onTogglePin}
+            onNoteSave={onNoteSave}
+            onPreview={onPreview}
+            onNoteVersion={onNoteVersion}
+            onShowHistory={onShowHistory}
+            onTitleChange={onTitleChange}
+          />
+        ))}
+      </div>
       {remaining > 0 && (
         <button
           className="load-more-btn"
