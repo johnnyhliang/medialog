@@ -883,3 +883,16 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
 .toast .icon-btn { color: rgba(255,255,255,0.7); width: 22px; height: 22px; }
 .toast .icon-btn:hover { color: #fff; background: rgba(255,255,255,0.15); }
 .toast-msg { flex: 1; }
+
+/* ── Backup note ────────────────────────────────────────────────────────────── */
+.backup-note {
+  font-size: var(--text-sm);
+  color: var(--muted);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 10px 12px;
+  margin-top: 8px;
+  line-height: 1.5;
+}
+.backup-note strong { color: var(--text); }

@@ -150,6 +150,12 @@ export default function SettingsView({ topics, onRefreshData, addToast }) {
                 Last backup: {new Date(config.last_backup_at).toLocaleString()}
               </p>
             )}
+
+            <p className="backup-note">
+              <strong>Note:</strong> The GitHub backup contains your entry text and metadata only.
+              File attachments (images, PDFs) are stored in Supabase storage and are <em>not</em> committed
+              to git. To preserve attachments, keep your Supabase project active.
+            </p>
           </div>
         )}
       </section>
