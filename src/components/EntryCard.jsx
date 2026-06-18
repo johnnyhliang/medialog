@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
-import { Clock, Pencil, Pin, PinOff, Trash2 } from 'lucide-react'
+import { Clock, MoreVertical, Pencil, Pin, PinOff, Trash2 } from 'lucide-react'
 import TagInput from './TagInput.jsx'
 import MarkdownView from './MarkdownView.jsx'
 import ConfirmModal from './ConfirmModal.jsx'
@@ -42,6 +42,7 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
   const [saveStatus, setSaveStatus] = useState('idle')
   const [expanded, setExpanded] = useState(false)
   const [showSheet, setShowSheet] = useState(false)
+  const [showSecondaryActions, setShowSecondaryActions] = useState(false)
   const timer = useRef(null)
   const statusClass = entry.status ? `status-${entry.status}` : 'status-backlog'
   const thumb = getYouTubeThumbnail(entry.url)
@@ -194,18 +195,33 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
         <TagInput value={entry.tags || []} onChange={(next) => onTagsChange(entry.id, next)} />
         {age && <span className="card-age">{age}</span>}
         <div className="card-actions">
-          <button
-            className="icon-btn"
-            aria-label={entry.pinned ? 'unpin' : 'pin'}
-            onClick={() => onTogglePin(entry.id, !entry.pinned)}
-          >
-            {entry.pinned ? <PinOff size={15} /> : <Pin size={15} />}
-          </button>
-          {onShowHistory && (
-            <button className="icon-btn" aria-label="history" onClick={() => onShowHistory(entry.id)}>
-              <Clock size={15} />
+          {/* Secondary actions — hidden on narrow cards */}
+          <div className="card-secondary-actions" style={{ display: 'flex', gap: 'inherit' }}>
+            <button
+              className="icon-btn"
+              aria-label={entry.pinned ? 'unpin' : 'pin'}
+              onClick={() => onTogglePin(entry.id, !entry.pinned)}
+            >
+              {entry.pinned ? <PinOff size={15} /> : <Pin size={15} />}
             </button>
-          )}
+            {onShowHistory && (
+              <button className="icon-btn" aria-label="history" onClick={() => onShowHistory(entry.id)}>
+                <Clock size={15} />
+              </button>
+            )}
+            {moveSelect}
+          </div>
+
+          {/* Overflow button for narrow cards */}
+          <button
+            className="card-overflow-btn"
+            aria-label="more actions"
+            onClick={() => setShowSecondaryActions(!showSecondaryActions)}
+          >
+            <MoreVertical size={15} />
+          </button>
+
+          {/* Primary actions — always show */}
           {editing ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               {saveStatus === 'saving' && <span className="save-status">Saving…</span>}
@@ -226,7 +242,6 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
               <option key={s} value={s}>{s === '' ? 'no status' : s}</option>
             ))}
           </select>
-          {moveSelect}
           <button
             className="icon-btn icon-btn-danger"
             onClick={() => setConfirmDelete(true)}

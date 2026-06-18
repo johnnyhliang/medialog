@@ -273,8 +273,29 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
   gap: 8px;
   box-shadow: var(--shadow-card);
   transition: box-shadow 0.12s;
+  container-type: inline-size;
+  container-name: card;
 }
 .card:hover { box-shadow: var(--shadow-card-hover); }
+
+/* Container queries for narrow cards */
+@container card (max-width: 280px) {
+  .card-secondary-actions { display: none; }
+  .card-overflow-btn { display: flex !important; }
+}
+@container card (min-width: 281px) {
+  .card-overflow-btn { display: none !important; }
+}
+.card-overflow-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--muted);
+  padding: 0 4px;
+  font-size: 16px;
+  line-height: 1;
+}
+.card-overflow-btn:hover { color: var(--text); }
 
 /* Collapsed card */
 .card.card-collapsed { cursor: pointer; }
@@ -496,7 +517,8 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
 
 .card-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .card-age { font-size: var(--text-xs); color: var(--muted); margin-left: auto; white-space: nowrap; }
-.card-actions { display: flex; align-items: center; gap: 10px; }
+.card-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.card-secondary-actions { display: flex; gap: inherit; }
 .icon-btn {
   background: transparent;
   border: none;
