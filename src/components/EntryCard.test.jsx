@@ -43,7 +43,7 @@ test('edits the note and saves on Done', async () => {
   const onNoteSave = vi.fn()
   const { container } = render(<EntryCard entry={base} {...handlers} onNoteSave={onNoteSave} />)
   await expandCard(container)
-  await userEvent.click(screen.getByRole('button', { name: /edit/i }))
+  await userEvent.click(screen.getByRole('button', { name: /edit note/i }))
   const editor = await screen.findByLabelText('note editor')
   await userEvent.clear(editor)
   await userEvent.type(editor, 'updated note')
@@ -85,12 +85,12 @@ test('preview button shows filename from URL', async () => {
   expect(screen.getByRole('button', { name: /report\.pdf/i })).toBeInTheDocument()
 })
 
-test('clicking title enters edit mode', async () => {
+test('clicking edit title button enters edit mode', async () => {
   const onTitleChange = vi.fn()
   const noUrl = { ...base, url: null }
   const { container } = render(<EntryCard entry={noUrl} {...handlers} onTitleChange={onTitleChange} />)
   await expandCard(container)
-  await userEvent.click(screen.getByText('A Site'))
+  await userEvent.click(screen.getByRole('button', { name: /edit title/i }))
   expect(screen.getByRole('textbox', { name: /edit title/i })).toBeInTheDocument()
 })
 
@@ -99,7 +99,7 @@ test('saves title on Enter', async () => {
   const noUrl = { ...base, url: null }
   const { container } = render(<EntryCard entry={noUrl} {...handlers} onTitleChange={onTitleChange} />)
   await expandCard(container)
-  await userEvent.click(screen.getByText('A Site'))
+  await userEvent.click(screen.getByRole('button', { name: /edit title/i }))
   const input = screen.getByRole('textbox', { name: /edit title/i })
   await userEvent.clear(input)
   await userEvent.type(input, 'New Title{Enter}')
@@ -111,18 +111,18 @@ test('cancels title edit on Escape', async () => {
   const noUrl = { ...base, url: null }
   const { container } = render(<EntryCard entry={noUrl} {...handlers} onTitleChange={onTitleChange} />)
   await expandCard(container)
-  await userEvent.click(screen.getByText('A Site'))
+  await userEvent.click(screen.getByRole('button', { name: /edit title/i }))
   const input = screen.getByRole('textbox', { name: /edit title/i })
   await userEvent.type(input, '{Escape}')
   expect(onTitleChange).not.toHaveBeenCalled()
   expect(screen.queryByRole('textbox', { name: /edit title/i })).toBeNull()
 })
 
-test('double-clicking URL title enters edit mode', async () => {
+test('URL title edit button enters edit mode', async () => {
   const onTitleChange = vi.fn()
   const { container } = render(<EntryCard entry={base} {...handlers} onTitleChange={onTitleChange} />)
   await expandCard(container)
-  await userEvent.dblClick(screen.getByRole('link', { name: 'A Site' }))
+  await userEvent.click(screen.getByRole('button', { name: /edit title/i }))
   expect(screen.getByRole('textbox', { name: /edit title/i })).toBeInTheDocument()
 })
 
@@ -131,22 +131,22 @@ test('shows saving indicator while autosave timer is pending', async () => {
   const onNoteSave = vi.fn()
   const { container } = render(<EntryCard entry={base} {...handlers} onNoteSave={onNoteSave} />)
   await expandCard(container)
-  await userEvent.click(screen.getByRole('button', { name: /edit/i }))
+  await userEvent.click(screen.getByRole('button', { name: /edit note/i }))
   const editor = await screen.findByLabelText('note editor')
   await userEvent.type(editor, 'x')
   expect(screen.getByText(/saving/i)).toBeInTheDocument()
   vi.useRealTimers()
 })
 
-test('collapsed by default — edit button not visible until expanded', () => {
+test('collapsed by default — edit note button not visible until expanded', () => {
   render(<EntryCard entry={base} {...handlers} />)
-  expect(screen.queryByRole('button', { name: /edit/i })).toBeNull()
+  expect(screen.queryByRole('button', { name: /edit note/i })).toBeNull()
 })
 
 test('clicking collapsed card expands it', async () => {
   const { container } = render(<EntryCard entry={base} {...handlers} />)
   await expandCard(container)
-  expect(screen.getByRole('button', { name: /edit/i })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /edit note/i })).toBeInTheDocument()
 })
 
 test('move select calls onMove and disappears entry', async () => {

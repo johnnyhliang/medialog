@@ -342,6 +342,13 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
 }
 .card-title:hover { color: var(--accent); text-decoration: none; }
 
+/* ── Title row (link + edit button) ───────────────────────────────────────── */
+.card-title-row { margin-bottom: 2px; }
+.card-title-display { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+.card-title-edit-btn { opacity: 0; transition: opacity 0.12s; flex-shrink: 0; }
+.card:hover .card-title-edit-btn,
+.card-title-edit-btn:focus { opacity: 1; }
+
 /* ── Inline title edit ─────────────────────────────────────────────────────── */
 .card-title-input {
   font-family: var(--font-serif);
@@ -390,7 +397,7 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-weak);
 }
-.note-editor .cm-scroller { font-family: var(--font-ui); line-height: 1.6; }
+.note-editor .cm-scroller { font-family: var(--font-ui); line-height: 1.6; overflow: visible !important; }
 .note-editor .cm-content { padding: 10px 12px; caret-color: var(--accent); }
 .note-editor .cm-gutters { background: var(--surface); border: none; color: var(--muted); }
 .note-editor .cm-cursor { border-left-color: var(--accent); }
@@ -586,7 +593,7 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
 /* ── Entry grid ─────────────────────────────────────────────────────────────── */
 .entry-list-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(var(--card-min-width, 200px), 1fr));
   gap: 12px;
   align-items: start;   /* each cell is as tall as its own content */
 }
@@ -914,6 +921,14 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
   background: var(--accent);
   color: #fff;
   border-color: var(--accent);
+}
+
+/* Card density slider */
+.card-density-ctrl { display: flex; align-items: center; }
+.card-density-ctrl input[type="range"] {
+  width: 80px;
+  accent-color: var(--accent);
+  cursor: pointer;
 }
 
 .master-doc-empty {

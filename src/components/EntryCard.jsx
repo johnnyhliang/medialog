@@ -120,7 +120,7 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
   const expandedBody = (
     <>
       {/* Title / URL */}
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
+      <div className="card-title-row">
         {editingTitle ? (
           <input
             className="card-title-input"
@@ -136,29 +136,26 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
             }}
             autoFocus
           />
-        ) : entry.url ? (
-          <a
-            href={entry.url}
-            className="card-title"
-            target="_blank"
-            rel="noreferrer"
-            onDoubleClick={(e) => { e.preventDefault(); setTitleDraft(entry.title || ''); setEditingTitle(true) }}
-          >
-            {entry.title || entry.url}
-          </a>
         ) : (
-          <span
-            className="card-title"
-            onClick={(e) => { e.stopPropagation(); setTitleDraft(entry.title || ''); setEditingTitle(true) }}
-            style={{ cursor: 'text' }}
-          >
-            {entry.title || <em className="muted">Untitled</em>}
-          </span>
-        )}
-        {!editingTitle && fileType && onPreview && (
-          <button className="preview-btn" onClick={(e) => { e.stopPropagation(); onPreview(entry.url) }}>
-            {previewLabel(entry.url)}
-          </button>
+          <div className="card-title-display">
+            {entry.url
+              ? <a href={entry.url} className="card-title" target="_blank" rel="noreferrer">{entry.title || entry.url}</a>
+              : <span className="card-title">{entry.title || <em className="muted">Untitled</em>}</span>
+            }
+            <button
+              className="icon-btn card-title-edit-btn"
+              aria-label="edit title"
+              title="Edit title"
+              onClick={(e) => { e.stopPropagation(); setTitleDraft(entry.title || ''); setEditingTitle(true) }}
+            >
+              <Pencil size={12} />
+            </button>
+            {fileType && onPreview && (
+              <button className="preview-btn" onClick={(e) => { e.stopPropagation(); onPreview(entry.url) }}>
+                {previewLabel(entry.url)}
+              </button>
+            )}
+          </div>
         )}
       </div>
 
@@ -230,7 +227,7 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
               <button onClick={finishEditing}>Done</button>
             </div>
           ) : (
-            <button className="icon-btn" aria-label="edit" onClick={startEditing}>
+            <button className="icon-btn" aria-label="edit note" onClick={startEditing}>
               <Pencil size={15} />
             </button>
           )}

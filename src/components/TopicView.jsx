@@ -37,6 +37,9 @@ export default function TopicView({
   const [docWidth, setDocWidth] = useState(() => {
     try { return localStorage.getItem('medialog_doc_width') || 'readable' } catch { return 'readable' }
   })
+  const [cardMinWidth, setCardMinWidth] = useState(() => {
+    try { return Number(localStorage.getItem('medialog_card_min_width')) || 200 } catch { return 200 }
+  })
 
   function setDocWidthAndSave(w) {
     setDocWidth(w)
@@ -124,6 +127,23 @@ export default function TopicView({
               ))}
             </div>
           )}
+          {mode === 'list' && (
+            <div className="card-density-ctrl" title="Card size">
+              <input
+                type="range"
+                min={130}
+                max={400}
+                step={10}
+                value={cardMinWidth}
+                onChange={(e) => {
+                  const v = Number(e.target.value)
+                  setCardMinWidth(v)
+                  try { localStorage.setItem('medialog_card_min_width', String(v)) } catch {}
+                }}
+                aria-label="Card size"
+              />
+            </div>
+          )}
           <div className="view-toggle">
             <button className={mode === 'doc' ? 'active' : ''} onClick={() => setView('doc')}>Doc</button>
             <button className={mode === 'list' ? 'active' : ''} onClick={() => setView('list')}>List</button>
@@ -166,20 +186,22 @@ export default function TopicView({
 
       {!query && <QuickAdd onAdd={onAddEntry} disabled={false} />}
 
-      <EntryList
-        entries={filtered}
-        onDelete={onDelete}
-        onStatusChange={onStatusChange}
-        onTagsChange={onTagsChange}
-        onTogglePin={onTogglePin}
-        onNoteSave={onNoteSave}
-        onPreview={onPreview}
-        onNoteVersion={onNoteVersion}
-        onShowHistory={onShowHistory}
-        onTitleChange={onTitleChange}
-        moveTargets={moveTargets}
-        onMove={onMove}
-      />
+      <div style={{ '--card-min-width': `${cardMinWidth}px` }}>
+        <EntryList
+          entries={filtered}
+          onDelete={onDelete}
+          onStatusChange={onStatusChange}
+          onTagsChange={onTagsChange}
+          onTogglePin={onTogglePin}
+          onNoteSave={onNoteSave}
+          onPreview={onPreview}
+          onNoteVersion={onNoteVersion}
+          onShowHistory={onShowHistory}
+          onTitleChange={onTitleChange}
+          moveTargets={moveTargets}
+          onMove={onMove}
+        />
+      </div>
 
       {returnY != null && <ReturnButton onReturn={handleReturn} />}
     </>

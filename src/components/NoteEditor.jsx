@@ -219,6 +219,8 @@ export default function NoteEditor({ value, onChange, supabase, extraExtensions 
               value={value}
               extensions={extensions}
               onChange={onChange}
+              height="auto"
+              minHeight="120px"
               basicSetup={{ lineNumbers: false, foldGutter: false, highlightActiveLine: false }}
             />
           </div>
