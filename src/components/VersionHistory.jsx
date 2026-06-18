@@ -1,5 +1,7 @@
+import EmptyState from './EmptyState.jsx'
+
 export default function VersionHistory({ versions, onRestore }) {
-  if (versions.length === 0) return <p className="muted">No past versions yet.</p>
+  if (versions.length === 0) return <EmptyState message="No past versions yet." />
   return (
     <ul className="versions">
       {versions.map((v) => (

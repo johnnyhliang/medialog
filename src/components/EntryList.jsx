@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import EntryCard from './EntryCard.jsx'
+import EmptyState from './EmptyState.jsx'
 
 const PAGE_SIZE = 50
 
 export default function EntryList({ entries, onDelete, onStatusChange, onTagsChange, onTogglePin, onNoteSave, onPreview, onNoteVersion, onShowHistory }) {
   const [limit, setLimit] = useState(PAGE_SIZE)
 
-  if (entries.length === 0) return <p className="muted">No entries yet.</p>
+  if (entries.length === 0) return <EmptyState message="No entries yet." />
 
   const visible = entries.slice(0, limit)
   const remaining = entries.length - visible.length

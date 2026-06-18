@@ -829,3 +829,16 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
   text-align: center;
 }
 .load-more-btn:hover { background: var(--surface-3); color: var(--text); border-style: solid; }
+
+/* ── Empty state ────────────────────────────────────────────────────────────────── */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 32px 16px;
+  color: var(--muted);
+  text-align: center;
+}
+.empty-state-msg { margin: 0; font-size: var(--text-base); font-style: italic; }
+.empty-state-action { font-size: var(--text-sm); }

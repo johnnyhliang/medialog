@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import ConfirmModal from './ConfirmModal.jsx'
+import EmptyState from './EmptyState.jsx'
 
 export default function TrashView({ entries, onRestore, onEmptyTrash }) {
   const [confirmEmpty, setConfirmEmpty] = useState(false)
 
-  if (!entries.length) return <p className="muted">Trash is empty.</p>
+  if (!entries.length) return <EmptyState message="Trash is empty." />
 
   return (
     <div className="trash-view">
