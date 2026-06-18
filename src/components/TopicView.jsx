@@ -57,6 +57,11 @@ export default function TopicView({
     return () => clearTimeout(t)
   }, [inputVal])
 
+  // Reset tag suggestion limit when leaving tag search
+  useEffect(() => {
+    if (!isTagSearch) setTagSuggestLimit(20)
+  }, [isTagSearch])
+
   // Tag search derived state (use inputVal for immediacy, not debounced query)
   const isTagSearch = inputVal.toLowerCase().startsWith('tag:')
   const tagSearchTerm = isTagSearch ? inputVal.slice(4).toLowerCase().trim() : ''
