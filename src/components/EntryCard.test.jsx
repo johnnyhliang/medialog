@@ -104,6 +104,13 @@ test('cancels title edit on Escape', async () => {
   expect(screen.queryByRole('textbox', { name: /edit title/i })).toBeNull()
 })
 
+test('double-clicking URL title enters edit mode', async () => {
+  const onTitleChange = vi.fn()
+  render(<EntryCard entry={base} {...handlers} onTitleChange={onTitleChange} />)
+  await userEvent.dblClick(screen.getByRole('link', { name: 'A Site' }))
+  expect(screen.getByRole('textbox', { name: /edit title/i })).toBeInTheDocument()
+})
+
 test('shows saving indicator while autosave timer is pending', async () => {
   vi.useFakeTimers({ shouldAdvanceTime: true })
   const onNoteSave = vi.fn()

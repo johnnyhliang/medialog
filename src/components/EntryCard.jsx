@@ -49,10 +49,14 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
     if (!editing) return
     if (timer.current) clearTimeout(timer.current)
     setSaveStatus('saving')
-    timer.current = setTimeout(() => {
-      onNoteSave(entry.id, draft)
-      setSaveStatus('saved')
-      setTimeout(() => setSaveStatus('idle'), 1500)
+    timer.current = setTimeout(async () => {
+      try {
+        await onNoteSave(entry.id, draft)
+        setSaveStatus('saved')
+        setTimeout(() => setSaveStatus('idle'), 1500)
+      } catch {
+        setSaveStatus('idle')
+      }
     }, 800)
     return () => clearTimeout(timer.current)
   }, [draft, editing])
@@ -98,7 +102,7 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
             className="card-title"
             target="_blank"
             rel="noreferrer"
-            onClick={(e) => { if (e.detail === 2) { e.preventDefault(); setTitleDraft(entry.title || ''); setEditingTitle(true) } }}
+            onDoubleClick={(e) => { e.preventDefault(); setTitleDraft(entry.title || ''); setEditingTitle(true) }}
           >
             {entry.title || entry.url}
           </a>
