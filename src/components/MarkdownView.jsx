@@ -27,9 +27,21 @@ function shouldEmbedLink(href) {
   }
 }
 
-export function buildMarkdownComponents({ onPreview, getEntry, onJump } = {}) {
+export function buildMarkdownComponents({ onPreview, getEntry, onJump, onToggleCheckbox } = {}) {
+  let checkboxIdx = 0
   const FILE_ICONS = { pdf: '📄', image: '🖼', text: '📝', drive: '🔗' }
   return {
+    input: ({ type, checked }) => {
+      if (type !== 'checkbox') return <input type={type} checked={!!checked} readOnly />
+      const idx = checkboxIdx++
+      return (
+        <input
+          type="checkbox"
+          checked={!!checked}
+          onChange={() => onToggleCheckbox?.(idx)}
+        />
+      )
+    },
     a: ({ href, children, ...props }) => {
       if (href && href.startsWith('#')) {
         return (
@@ -88,7 +100,7 @@ function urlTransform(url) {
   return ''
 }
 
-export default function MarkdownView({ children, className = 'note', onPreview, getEntry, onJump }) {
+export default function MarkdownView({ children, className = 'note', onPreview, getEntry, onJump, onToggleCheckbox }) {
   const source = useMemo(
     () =>
       getEntry
@@ -97,8 +109,8 @@ export default function MarkdownView({ children, className = 'note', onPreview, 
     [children, getEntry]
   )
   const components = useMemo(
-    () => buildMarkdownComponents({ onPreview, getEntry, onJump }),
-    [onPreview, getEntry, onJump]
+    () => buildMarkdownComponents({ onPreview, getEntry, onJump, onToggleCheckbox }),
+    [onPreview, getEntry, onJump, onToggleCheckbox]
   )
   return (
     <div className={className}>
