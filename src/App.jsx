@@ -4,7 +4,7 @@ import { supabase } from './lib/supabaseClient.js'
 import { listTopics, createTopic, getTopicByName } from './lib/db/topics.js'
 import {
   listEntriesByTopic, createEntry, updateEntry, searchEntries,
-  bulkCreateEntries, listForRevisit, markSurfaced,
+  bulkCreateEntries, listForRevisit, markSurfaced, listRecentActivity,
   softDeleteEntry, listTrashedEntries, restoreEntry, emptyTrash,
 } from './lib/db/entries.js'
 import { setEntryTags } from './lib/db/tags.js'
@@ -37,6 +37,7 @@ function Workspace() {
   const [view, setView] = useState('browse') // 'browse' | 'bulk' | 'sort' | 'progress' | 'revisit' | 'settings' | 'trash'
   const [inboxEntries, setInboxEntries] = useState([])
   const [revisitEntries, setRevisitEntries] = useState([])
+  const [recentActivity, setRecentActivity] = useState([])
   const [trashEntries, setTrashEntries] = useState([])
   const [historyFor, setHistoryFor] = useState(null)
   const [versions, setVersions] = useState([])
@@ -288,6 +289,7 @@ function Workspace() {
 
   async function loadRevisit() {
     setRevisitEntries(await listForRevisit(supabase, 10))
+    setRecentActivity(await listRecentActivity(supabase, 30))
   }
 
   async function handleSeen(entryId) {
@@ -425,7 +427,7 @@ function Workspace() {
             entries={entries}
           />
         )}
-        {view === 'revisit' && <Revisit entries={revisitEntries} onSeen={handleSeen} />}
+        {view === 'revisit' && <Revisit entries={revisitEntries} onSeen={handleSeen} recentActivity={recentActivity} />}
         {view === 'settings' && <SettingsView topics={topics} onRefreshData={refreshTopics} addToast={addToast} />}
         {view === 'trash' && (
           <TrashView

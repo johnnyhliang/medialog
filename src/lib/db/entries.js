@@ -90,6 +90,17 @@ export async function listForRevisit(supabase, limit) {
   return data.map(flattenTags)
 }
 
+export async function listRecentActivity(supabase, limit = 30) {
+  const { data, error } = await supabase
+    .from('entries')
+    .select(`${TAG_SELECT}, topics(name)`)
+    .is('deleted_at', null)
+    .order('updated_at', { ascending: false })
+    .limit(limit)
+  if (error) throw new Error(error.message)
+  return data.map((row) => ({ ...flattenTags(row), topicName: row.topics?.name ?? null }))
+}
+
 export async function markSurfaced(supabase, id) {
   const { error } = await supabase
     .from('entries')

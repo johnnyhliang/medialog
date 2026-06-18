@@ -77,10 +77,10 @@ export default function TopicView({
 
   const filtered = useMemo(() => {
     if (scope === 'all') {
-      return globalSearchResults ?? fuzzyFind(query, entries, ['title', 'note'])
+      return globalSearchResults ?? fuzzyFind(query, entries, ['title', 'url', 'note'])
     }
     let pool = scope === 'doc' ? entries.filter((e) => docEmbedIds.has(e.id)) : entries
-    return fuzzyFind(query, pool, ['title', 'note'])
+    return fuzzyFind(query, pool, ['title', 'url', 'note'])
   }, [entries, query, scope, docEmbedIds, globalSearchResults])
 
   function handleJump(entryId) {
