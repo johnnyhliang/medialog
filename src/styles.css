@@ -814,12 +814,3 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
 .versions li:last-child { border-bottom: none; }
 .version-date { color: var(--muted); font-size: 12px; white-space: nowrap; }
 .version-preview { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
-.history-modal {
-  position: fixed; inset: 0; background: rgba(28, 26, 21, 0.55);
-  display: flex; align-items: center; justify-content: center; padding: 20px; z-index: var(--z-confirm);
-}
-.history-panel {
-  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
-  padding: 18px 20px; max-width: 560px; width: 100%; max-height: 70vh; overflow: auto;
-  display: flex; flex-direction: column; gap: 12px; box-shadow: var(--shadow-modal);
-}

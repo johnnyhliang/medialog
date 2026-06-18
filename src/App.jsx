@@ -24,6 +24,7 @@ import SettingsView from './components/SettingsView.jsx'
 import TrashView from './components/TrashView.jsx'
 import TopicView from './components/TopicView.jsx'
 import VersionHistory from './components/VersionHistory.jsx'
+import Modal from './components/Modal.jsx'
 import { useFilePreview } from './hooks/useFilePreview.js'
 const FilePreviewModal = lazy(() => import('./components/FilePreviewModal.jsx'))
 
@@ -358,13 +359,13 @@ function Workspace() {
         </Suspense>
       )}
       {historyFor && (
-        <div className="history-modal" onClick={() => setHistoryFor(null)}>
-          <div className="history-panel" onClick={(e) => e.stopPropagation()}>
+        <Modal onClose={() => setHistoryFor(null)} label="Version history" maxWidth="560px">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxHeight: '70vh', overflow: 'auto' }}>
             <p className="section-label">Version history</p>
             <VersionHistory versions={versions} onRestore={handleRestoreVersion} />
             <button onClick={() => setHistoryFor(null)}>Close</button>
           </div>
-        </div>
+        </Modal>
       )}
     </div>
   )
