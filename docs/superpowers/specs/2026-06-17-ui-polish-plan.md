@@ -85,7 +85,18 @@ Phase 3/4 can interleave or follow.
 
 ### Attachments & image pipeline (FUNCTIONAL — pairs with the preview polish, not pure CSS)
 - **Inline = compressed thumbnail, full image only on click.** Supabase's built-in resize/quality transforms (`getPublicUrl({ transform })`) are **Pro-plan only**, so we cannot rely on them on the free tier. Approach: **client-side compression at upload** — downscale with a `<canvas>` to a small thumbnail (e.g. ≤600px, WebP/JPEG q≈0.5) and upload **both** the thumbnail and the original. Inline note/card images render the thumbnail; clicking opens the FilePreviewModal with the original. Naming convention e.g. `…/<uuid>-name.ext` (original) + `…/<uuid>-name.thumb.webp` (thumbnail); the markdown image renderer shows the thumb and links the original.
-- **Upload size cap → 25 MB.** Currently 10 MB in two places: `src/lib/storage.js` (`MAX_BYTES = 10*1024*1024`) and the bucket `file_size_limit` in `supabase/migrations/0004_attachments_storage.sql` (`10485760`). Raise both to `26214400` (25 MB). Reject larger files client-side (`isAllowedAttachment`) with a clear message; the bucket enforces server-side as defense-in-depth (needs a migration to alter the bucket limit).
+- **Upload size cap stays at 10 MB** (current value in `src/lib/storage.js` `MAX_BYTES` and the bucket `file_size_limit`). No change. With client-side thumbnailing, inline images are tiny regardless, and 10 MB keeps storage/egress bounded.
+
+### Performance (cross-cutting — smoother UX)
+The app already lazy-loads CodeMirror and code-splits PDF.js. The remaining hot spots:
+- **Long entry lists are not windowed.** A topic like "Computer Science" has 400+ entries; `EntryList` renders every `EntryCard` (each with markdown render + thumbnail). This is the biggest perf risk. Add **list virtualization** (e.g. `react-window`) or incremental "load more" so only visible cards mount.
+- **MarkdownView rebuilds its component map every render** (`buildMarkdownComponents()` + `expandEmbedSyntax` run on each render). Memoize per props. Same pattern that caused the editor slowdown.
+- **Search/scope filtering runs `fuzzyFind` over all entries on every keystroke.** Fine for small topics; **debounce** the query (~120ms) and memoize so large topics stay smooth.
+- **Inline images:** thumbnails (above) are the single biggest payload win — full images never load in a list. Keep `loading="lazy"`.
+- **Avoid redundant fetches:** entries reload on every `selectedId`/`query` change; ensure view switches don't refetch unnecessarily, and the candidate index/`getEntry` maps stay memoized.
+- **Render discipline:** stable callback identities into `EntryList`/`EntryCard` (so virtualized rows don't re-render), and keep heavy components (`NoteEditor`, `FilePreviewModal`, `PdfViewer`) lazy.
+
+Treat these as a dedicated **Phase 1.5 — Performance** in the implementation plan, landing right after the foundation so later component polish builds on a fast base.
 
 ### Backup of large files (decision recorded)
 - GitHub backup stores **Markdown per entry only** — attachment **binaries are NOT backed up**, only their Supabase CDN URLs. **Decision: keep the two-tier model** (git = text/structure, Supabase = binaries); do not commit binaries to git (repo bloat, 100 MB GitHub limit, every version retained forever). Document this in Settings/Backup UI so the user knows attachments aren't in the git backup. A dedicated attachment-backup (e.g. to a second bucket or storage export) is a possible future item, not now.
