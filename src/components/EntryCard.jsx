@@ -9,6 +9,15 @@ import { classifyUrl } from '../lib/classifyUrl.js'
 
 const NoteEditor = lazy(() => import('./NoteEditor.jsx'))
 
+function previewLabel(url) {
+  try {
+    const seg = new URL(url).pathname.split('/').filter(Boolean).pop()
+    return seg ? decodeURIComponent(seg) : 'Preview'
+  } catch {
+    return 'Preview'
+  }
+}
+
 const STATUSES = ['', 'backlog', 'active', 'done']
 
 function relativeAge(dateStr) {
@@ -62,7 +71,7 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
           </a>
           {fileType && onPreview && (
             <button className="preview-btn" onClick={() => onPreview(entry.url)}>
-              Preview
+              {previewLabel(entry.url)}
             </button>
           )}
         </div>

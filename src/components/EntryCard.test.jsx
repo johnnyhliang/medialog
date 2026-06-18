@@ -66,3 +66,10 @@ test('edits tags through TagInput', async () => {
   await userEvent.type(screen.getByPlaceholderText(/add tag/i), 'book{Enter}')
   expect(onTagsChange).toHaveBeenCalledWith('x', ['book'])
 })
+
+test('preview button shows filename from URL', () => {
+  const entry = { ...base, url: 'https://storage.example.com/user/abc-report.pdf', title: 'Report' }
+  // classifyUrl needs to return non-null so the preview button renders
+  render(<EntryCard entry={entry} {...handlers} onPreview={() => {}} />)
+  expect(screen.getByRole('button', { name: /report\.pdf/i })).toBeInTheDocument()
+})
