@@ -131,8 +131,8 @@ export default function NoteEditor({ value, onChange, supabase, extraExtensions 
         if (!isAllowedAttachment(file)) {
           throw new Error(`${file.name}: images or PDFs only, max 10 MB`)
         }
-        const url = await uploadAttachment(supabase, file)
-        next = insertAtCursor(next, markdownForAttachment(url, file))
+        const { url, thumbUrl } = await uploadAttachment(supabase, file)
+        next = insertAtCursor(next, markdownForAttachment(url, thumbUrl, file))
       }
       onChange(next)
     } catch (err) {

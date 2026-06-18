@@ -14,13 +14,18 @@ describe('isAllowedAttachment', () => {
 })
 
 describe('markdownForAttachment', () => {
-  test('images become markdown images', () => {
-    expect(markdownForAttachment('https://x/img.png', { name: 'shot.png', type: 'image/png' }))
+  test('images become markdown images (no thumb)', () => {
+    expect(markdownForAttachment('https://x/img.png', null, { name: 'shot.png', type: 'image/png' }))
       .toBe('![shot.png](https://x/img.png)')
   })
 
+  test('images with thumbUrl become linked images', () => {
+    expect(markdownForAttachment('https://x/img.png', 'https://x/img.thumb.webp', { name: 'shot.png', type: 'image/png' }))
+      .toBe('[![shot.png](https://x/img.thumb.webp)](https://x/img.png)')
+  })
+
   test('pdfs become markdown links', () => {
-    expect(markdownForAttachment('https://x/doc.pdf', { name: 'doc.pdf', type: 'application/pdf' }))
+    expect(markdownForAttachment('https://x/doc.pdf', null, { name: 'doc.pdf', type: 'application/pdf' }))
       .toBe('[doc.pdf](https://x/doc.pdf)')
   })
 })

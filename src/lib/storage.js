@@ -1,3 +1,5 @@
+import { createThumbnail } from './thumbnail.js'
+
 const BUCKET = 'attachments'
 const MAX_BYTES = 10 * 1024 * 1024
 const ALLOWED = new Set([
@@ -15,7 +17,10 @@ export function isAllowedAttachment(file) {
   return file && ALLOWED.has(file.type) && file.size <= MAX_BYTES
 }
 
-/** Upload a note attachment; returns the public URL. */
+/**
+ * Upload a note attachment.
+ * Returns { url, thumbUrl } — thumbUrl is set for raster images, null for SVGs/PDFs.
+ */
 export async function uploadAttachment(supabase, file) {
   if (!isAllowedAttachment(file)) {
     throw new Error('File must be an image or PDF under 10 MB')
@@ -24,7 +29,10 @@ export async function uploadAttachment(supabase, file) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Not signed in')
 
-  const path = `${user.id}/${crypto.randomUUID()}-${sanitizeName(file.name)}`
+  const uuid = crypto.randomUUID()
+  const safeName = sanitizeName(file.name)
+  const path = `${user.id}/${uuid}-${safeName}`
+
   const { error } = await supabase.storage.from(BUCKET).upload(path, file, {
     cacheControl: '3600',
     upsert: false,
@@ -32,14 +40,37 @@ export async function uploadAttachment(supabase, file) {
   })
   if (error) throw error
 
-  const { data } = supabase.storage.from(BUCKET).getPublicUrl(path)
-  return data.publicUrl
+  const { data: origData } = supabase.storage.from(BUCKET).getPublicUrl(path)
+  const url = origData.publicUrl
+
+  if (file.type.startsWith('image/') && file.type !== 'image/svg+xml') {
+    try {
+      const thumbBlob = await createThumbnail(file)
+      const thumbPath = `${user.id}/${uuid}-${safeName}.thumb.webp`
+      const { error: thumbErr } = await supabase.storage.from(BUCKET).upload(thumbPath, thumbBlob, {
+        cacheControl: '3600',
+        upsert: false,
+        contentType: 'image/webp',
+      })
+      if (!thumbErr) {
+        const { data: thumbData } = supabase.storage.from(BUCKET).getPublicUrl(thumbPath)
+        return { url, thumbUrl: thumbData.publicUrl }
+      }
+    } catch {
+      // thumbnail generation failed; fall through to no-thumb return
+    }
+  }
+
+  return { url, thumbUrl: null }
 }
 
 /** Insert markdown for an uploaded file at the cursor position. */
-export function markdownForAttachment(url, file) {
+export function markdownForAttachment(url, thumbUrl, file) {
   if (file.type === 'application/pdf') {
     return `[${file.name}](${url})`
+  }
+  if (thumbUrl) {
+    return `[![${file.name}](${thumbUrl})](${url})`
   }
   return `![${file.name}](${url})`
 }
