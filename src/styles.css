@@ -19,6 +19,28 @@
   --gap:         14px;
   --font-ui:     'DM Sans', system-ui, sans-serif;
   --font-serif:  'Lora', Georgia, serif;
+
+  /* Typography scale */
+  --text-xs:   11px;
+  --text-sm:   12.5px;
+  --text-base: 14px;
+  --text-md:   15px;
+  --text-lg:   17px;
+  --text-xl:   22px;
+  --text-2xl:  28px;
+
+  /* Z-index scale */
+  --z-return:   900;
+  --z-modal:   1000;
+  --z-popover: 1100;
+  --z-confirm: 1200;
+  --z-toast:   1300;
+
+  /* Shadow scale */
+  --shadow-card:       0 1px 2px rgba(0,0,0,0.03);
+  --shadow-card-hover: 0 2px 8px rgba(0,0,0,0.07);
+  --shadow-modal:      0 8px 40px rgba(0,0,0,0.18);
+  --shadow-popover:    0 6px 24px rgba(0,0,0,0.16);
 }
 
 * { box-sizing: border-box; }
@@ -117,7 +139,7 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
 .nav button.active { background: var(--accent-weak); color: var(--accent); font-weight: 600; }
 
 .section-label {
-  font-size: 10.5px;
+  font-size: var(--text-xs);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.7px;
@@ -203,15 +225,15 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
   display: flex;
   flex-direction: column;
   gap: 8px;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+  box-shadow: var(--shadow-card);
   transition: box-shadow 0.12s;
 }
-.card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.07); }
+.card:hover { box-shadow: var(--shadow-card-hover); }
 .card.pinned { border-left: 3px solid var(--accent); }
 
 .card-title {
   font-family: var(--font-serif);
-  font-size: 15px;
+  font-size: var(--text-md);
   font-weight: 600;
   line-height: 1.35;
   color: var(--text);
@@ -378,7 +400,7 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
 .card-no-note:hover { opacity: 1; color: var(--accent); }
 
 .card-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.card-age { font-size: 11.5px; color: var(--muted); margin-left: auto; white-space: nowrap; }
+.card-age { font-size: var(--text-xs); color: var(--muted); margin-left: auto; white-space: nowrap; }
 .card-actions { display: flex; align-items: center; gap: 10px; }
 .icon-btn {
   background: transparent;
@@ -437,7 +459,7 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
 .auth h1 {
   text-align: center;
   font-family: var(--font-serif);
-  font-size: 28px;
+  font-size: var(--text-2xl);
   color: var(--accent);
   margin: 0 0 4px;
 }
@@ -465,7 +487,7 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: var(--z-modal);
   padding: 20px;
 }
 
@@ -478,7 +500,7 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
   max-height: 90vh;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 8px 40px rgba(0,0,0,0.18);
+  box-shadow: var(--shadow-modal);
   overflow: hidden;
 }
 
@@ -649,7 +671,7 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
 }
 .topic-header h2 {
   font-family: var(--font-serif);
-  font-size: 22px;
+  font-size: var(--text-xl);
   font-weight: 600;
   margin: 0;
   color: var(--text);
@@ -706,12 +728,12 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
 /* ── Embed hover preview popover ──────────────────────────────────────────────── */
 .embed-popover {
   position: fixed;
-  z-index: 1100;
+  z-index: var(--z-popover);
   max-width: 320px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 8px;
-  box-shadow: 0 6px 24px rgba(0,0,0,0.16);
+  box-shadow: var(--shadow-popover);
   padding: 10px 12px;
   font-size: 12.5px;
   line-height: 1.5;
@@ -727,7 +749,7 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
   position: fixed;
   bottom: 20px;
   right: 20px;
-  z-index: 900;
+  z-index: var(--z-return);
   background: var(--accent);
   color: #fff;
   border: none;
@@ -764,7 +786,7 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1200;
+  z-index: var(--z-confirm);
   padding: 20px;
 }
 .modal {
@@ -774,7 +796,7 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
   padding: 20px 22px;
   max-width: 380px;
   width: 100%;
-  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.18);
+  box-shadow: var(--shadow-modal);
 }
 .modal p { margin: 0 0 16px; color: var(--text); font-size: 14px; line-height: 1.5; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 8px; }
@@ -794,10 +816,10 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
 .version-preview { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
 .history-modal {
   position: fixed; inset: 0; background: rgba(28, 26, 21, 0.55);
-  display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 1200;
+  display: flex; align-items: center; justify-content: center; padding: 20px; z-index: var(--z-confirm);
 }
 .history-panel {
   background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
   padding: 18px 20px; max-width: 560px; width: 100%; max-height: 70vh; overflow: auto;
-  display: flex; flex-direction: column; gap: 12px; box-shadow: 0 8px 40px rgba(0,0,0,0.18);
+  display: flex; flex-direction: column; gap: 12px; box-shadow: var(--shadow-modal);
 }
