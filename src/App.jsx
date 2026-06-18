@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
-import { LayoutGrid, Upload, Inbox, RotateCcw, BarChart2, Settings2, Trash2 as TrashIcon, Download } from 'lucide-react'
+import { LayoutGrid, Upload, Inbox, RotateCcw, BarChart2, Settings2, Trash2 as TrashIcon, Download, Menu } from 'lucide-react'
 import { supabase } from './lib/supabaseClient.js'
 import { listTopics, createTopic, getTopicByName } from './lib/db/topics.js'
 import {
@@ -307,7 +307,21 @@ function Workspace() {
 
   return (
     <div className={`app${sidebarOpen ? '' : ' sidebar-collapsed'}`}>
-      <aside className="sidebar">
+      {/* Mobile topbar */}
+      <header className="mobile-topbar">
+        <h1>MediaLog</h1>
+        <button className="hamburger-btn" onClick={toggleSidebar} aria-label="Toggle menu">
+          <Menu size={22} />
+        </button>
+      </header>
+
+      {/* Sidebar overlay (mobile) */}
+      <div
+        className={`sidebar-overlay${sidebarOpen ? ' visible' : ''}`}
+        onClick={toggleSidebar}
+      />
+
+      <aside className={`sidebar${sidebarOpen ? ' mobile-open' : ''}`}>
         <div className="brand-row">
           <h1>MediaLog</h1>
           <button className="signout" onClick={() => supabase.auth.signOut()}>Sign out</button>
