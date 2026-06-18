@@ -5,6 +5,7 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
   const [config, setConfig] = useState(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [pendingColors, setPendingColors] = useState({})
 
   useEffect(() => {
     loadConfig()
@@ -175,8 +176,12 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
               }}>#{tag.name}</span>
               <input
                 type="color"
-                value={tag.color || '#e8e3d8'}
-                onChange={(e) => onUpdateTagColor(tag.name, e.target.value)}
+                value={pendingColors[tag.name] ?? tag.color ?? '#e8e3d8'}
+                onChange={(e) => setPendingColors(prev => ({ ...prev, [tag.name]: e.target.value }))}
+                onBlur={(e) => {
+                  const c = e.target.value
+                  if (c !== (tag.color || '#e8e3d8')) onUpdateTagColor(tag.name, c)
+                }}
                 style={{ width: 32, height: 28, border: 'none', cursor: 'pointer', borderRadius: 4 }}
                 title={`Color for #${tag.name}`}
               />

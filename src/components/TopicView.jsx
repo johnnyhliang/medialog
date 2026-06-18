@@ -57,14 +57,14 @@ export default function TopicView({
     return () => clearTimeout(t)
   }, [inputVal])
 
+  // Tag search derived state (use inputVal for immediacy, not debounced query)
+  const isTagSearch = inputVal.toLowerCase().startsWith('tag:')
+  const tagSearchTerm = isTagSearch ? inputVal.slice(4).toLowerCase().trim() : ''
+
   // Reset tag suggestion limit when leaving tag search
   useEffect(() => {
     if (!isTagSearch) setTagSuggestLimit(20)
   }, [isTagSearch])
-
-  // Tag search derived state (use inputVal for immediacy, not debounced query)
-  const isTagSearch = inputVal.toLowerCase().startsWith('tag:')
-  const tagSearchTerm = isTagSearch ? inputVal.slice(4).toLowerCase().trim() : ''
 
   const [tagSuggestLimit, setTagSuggestLimit] = useState(20)
 
@@ -77,7 +77,7 @@ export default function TopicView({
 
   const filteredByTag = useMemo(() => {
     if (!isTagSearch || !tagSearchTerm) return null
-    return entries.filter(e => (e.tags || []).some(t => t.toLowerCase() === tagSearchTerm))
+    return entries.filter(e => (e.tags || []).some(t => t.toLowerCase().includes(tagSearchTerm)))
   }, [isTagSearch, tagSearchTerm, entries])
 
   // Fire global search when scope='all' and query changes
