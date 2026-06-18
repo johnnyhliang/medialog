@@ -19,5 +19,5 @@ test('shows the first entry and advances on "seen"', async () => {
 
 test('shows empty message when nothing to revisit', () => {
   render(<Revisit entries={[]} onSeen={() => {}} />)
-  expect(screen.getByText(/nothing to revisit/i)).toBeInTheDocument()
+  expect(screen.getByText(/nothing to resurface/i)).toBeInTheDocument()
 })
