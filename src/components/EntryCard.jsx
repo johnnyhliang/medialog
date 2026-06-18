@@ -127,7 +127,9 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
             value={titleDraft}
             onChange={(e) => setTitleDraft(e.target.value)}
             onBlur={saveTitle}
+            onClick={(e) => e.stopPropagation()}
             onKeyDown={(e) => {
+              e.stopPropagation()
               if (e.key === 'Enter') { e.preventDefault(); saveTitle() }
               if (e.key === 'Escape') { setTitleDraft(entry.title || ''); setEditingTitle(false) }
             }}
@@ -146,14 +148,14 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
         ) : (
           <span
             className="card-title"
-            onClick={() => { setTitleDraft(entry.title || ''); setEditingTitle(true) }}
+            onClick={(e) => { e.stopPropagation(); setTitleDraft(entry.title || ''); setEditingTitle(true) }}
             style={{ cursor: 'text' }}
           >
             {entry.title || <em className="muted">Untitled</em>}
           </span>
         )}
         {!editingTitle && fileType && onPreview && (
-          <button className="preview-btn" onClick={() => onPreview(entry.url)}>
+          <button className="preview-btn" onClick={(e) => { e.stopPropagation(); onPreview(entry.url) }}>
             {previewLabel(entry.url)}
           </button>
         )}
@@ -172,15 +174,17 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
 
       {/* Note or editor */}
       {editing ? (
-        <Suspense fallback={<p className="muted">Loading editor…</p>}>
-          <NoteEditor value={draft} onChange={setDraft} supabase={supabase} />
-        </Suspense>
+        <div onClick={(e) => e.stopPropagation()}>
+          <Suspense fallback={<p className="muted">Loading editor…</p>}>
+            <NoteEditor value={draft} onChange={setDraft} supabase={supabase} />
+          </Suspense>
+        </div>
       ) : entry.note ? (
-        <div onClick={(e) => { if (e.target.type !== 'checkbox') startEditing() }} style={{ cursor: 'text' }}>
+        <div onClick={(e) => { if (e.target.type !== 'checkbox') { e.stopPropagation(); startEditing() } }} style={{ cursor: 'text' }}>
           <MarkdownView onPreview={onPreview} onToggleCheckbox={handleCheckboxToggle}>{entry.note}</MarkdownView>
         </div>
       ) : (
-        <span className="card-no-note" onClick={startEditing}>
+        <span className="card-no-note" onClick={(e) => { e.stopPropagation(); startEditing() }}>
           Add a thought — why did you save this?
         </span>
       )}
@@ -252,7 +256,6 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
           className="card-title"
           target="_blank"
           rel="noreferrer"
-          onClick={(e) => e.stopPropagation()}
           style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}
         >
           {entry.title || entry.url}
@@ -282,34 +285,26 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
       <div
         className={`card${entry.pinned ? ' pinned' : ''}${expanded ? '' : ' card-collapsed'}`}
         id={`entry-${entry.id}`}
-        onClick={expanded ? undefined : handleCardClick}
+        onClick={handleCardClick}
       >
         {expanded ? expandedBody : collapsedBody}
-
-        {confirmDelete && (
-          <ConfirmModal
-            message="Move this entry to trash?"
-            confirmLabel="Move to Trash"
-            onConfirm={() => { setConfirmDelete(false); onDelete(entry.id) }}
-            onCancel={() => setConfirmDelete(false)}
-          />
-        )}
       </div>
 
       {showSheet && (
         <Modal onClose={() => setShowSheet(false)} label={entry.title || 'Entry'}>
           <div style={{ padding: '4px 0' }}>
             {expandedBody}
-            {confirmDelete && (
-              <ConfirmModal
-                message="Move this entry to trash?"
-                confirmLabel="Move to Trash"
-                onConfirm={() => { setConfirmDelete(false); onDelete(entry.id); setShowSheet(false) }}
-                onCancel={() => setConfirmDelete(false)}
-              />
-            )}
           </div>
         </Modal>
+      )}
+
+      {confirmDelete && (
+        <ConfirmModal
+          message="Move this entry to trash?"
+          confirmLabel="Move to Trash"
+          onConfirm={() => { setConfirmDelete(false); onDelete(entry.id); setShowSheet(false) }}
+          onCancel={() => setConfirmDelete(false)}
+        />
       )}
     </>
   )
