@@ -196,7 +196,7 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
         {age && <span className="card-age">{age}</span>}
         <div className="card-actions">
           {/* Secondary actions — hidden on narrow cards */}
-          <div className="card-secondary-actions" style={{ display: 'flex', gap: 'inherit' }}>
+          <div className="card-secondary-actions" style={{ display: showSecondaryActions ? 'flex' : undefined, gap: 'inherit' }}>
             <button
               className="icon-btn"
               aria-label={entry.pinned ? 'unpin' : 'pin'}
@@ -215,8 +215,9 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
           {/* Overflow button for narrow cards */}
           <button
             className="card-overflow-btn"
-            aria-label="more actions"
-            onClick={() => setShowSecondaryActions(!showSecondaryActions)}
+            onClick={() => setShowSecondaryActions(p => !p)}
+            aria-label="More actions"
+            style={{ color: showSecondaryActions ? 'var(--text)' : undefined }}
           >
             <MoreVertical size={15} />
           </button>
