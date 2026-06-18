@@ -7,6 +7,7 @@ import {
   softDeleteEntry, listTrashedEntries, restoreEntry, emptyTrash,
 } from './lib/db/entries.js'
 import { setEntryTags } from './lib/db/tags.js'
+import { listVersions, createVersion } from './lib/db/versions.js'
 import { fetchTitle } from './lib/enrich.js'
 import { buildMarkdownFiles } from './lib/exportMarkdown.js'
 import { buildZip, downloadBlob } from './lib/buildZip.js'
@@ -22,6 +23,7 @@ import Revisit from './components/Revisit.jsx'
 import SettingsView from './components/SettingsView.jsx'
 import TrashView from './components/TrashView.jsx'
 import TopicView from './components/TopicView.jsx'
+import VersionHistory from './components/VersionHistory.jsx'
 import { useFilePreview } from './hooks/useFilePreview.js'
 const FilePreviewModal = lazy(() => import('./components/FilePreviewModal.jsx'))
 
@@ -34,6 +36,8 @@ function Workspace() {
   const [inboxEntries, setInboxEntries] = useState([])
   const [revisitEntries, setRevisitEntries] = useState([])
   const [trashEntries, setTrashEntries] = useState([])
+  const [historyFor, setHistoryFor] = useState(null)
+  const [versions, setVersions] = useState([])
 
   const { previewUrl, openPreview, closePreview } = useFilePreview()
 
@@ -159,6 +163,22 @@ function Workspace() {
     setEntries((prev) => prev.map((e) => (e.id === entryId ? { ...updated, tags: e.tags } : e)))
   }
 
+  async function handleNoteVersion(entryId, note) {
+    await createVersion(supabase, entryId, note)
+  }
+
+  async function handleShowHistory(entryId) {
+    setVersions(await listVersions(supabase, entryId))
+    setHistoryFor(entryId)
+  }
+
+  async function handleRestoreVersion(note) {
+    const updated = await updateEntry(supabase, historyFor, { note })
+    await createVersion(supabase, historyFor, note)
+    setEntries((prev) => prev.map((e) => (e.id === historyFor ? { ...updated, tags: e.tags } : e)))
+    setHistoryFor(null)
+  }
+
   async function loadInbox() {
     if (inboxTopic) setInboxEntries(await listEntriesByTopic(supabase, inboxTopic.id))
   }
@@ -278,6 +298,8 @@ function Workspace() {
                 onTogglePin={handleTogglePin}
                 onNoteSave={handleNoteSave}
                 onPreview={openPreview}
+                onNoteVersion={handleNoteVersion}
+                onShowHistory={handleShowHistory}
               />
             ) : (
               <TopicView
@@ -293,6 +315,8 @@ function Workspace() {
                 onNoteSave={handleNoteSave}
                 onPreview={openPreview}
                 onDocChange={(doc) => handleDocChange(selectedTopic.id, doc)}
+                onNoteVersion={handleNoteVersion}
+                onShowHistory={handleShowHistory}
               />
             )}
           </>
@@ -332,6 +356,15 @@ function Workspace() {
         <Suspense fallback={null}>
           <FilePreviewModal url={previewUrl} onClose={closePreview} />
         </Suspense>
+      )}
+      {historyFor && (
+        <div className="history-modal" onClick={() => setHistoryFor(null)}>
+          <div className="history-panel" onClick={(e) => e.stopPropagation()}>
+            <p className="section-label">Version history</p>
+            <VersionHistory versions={versions} onRestore={handleRestoreVersion} />
+            <button onClick={() => setHistoryFor(null)}>Close</button>
+          </div>
+        </div>
       )}
     </div>
   )

@@ -22,7 +22,7 @@ function relativeAge(dateStr) {
   return `${Math.floor(d / 365)}y ago`
 }
 
-export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChange, onTogglePin, onNoteSave, onPreview }) {
+export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChange, onTogglePin, onNoteSave, onPreview, onNoteVersion, onShowHistory }) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(entry.note || '')
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -42,6 +42,7 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
   function finishEditing() {
     if (timer.current) clearTimeout(timer.current)
     onNoteSave(entry.id, draft)
+    onNoteVersion?.(entry.id, draft) // commit a version snapshot on Done
     setEditing(false)
   }
 
@@ -102,6 +103,9 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
           <button className="icon-btn" aria-label={entry.pinned ? 'unpin' : 'pin'} onClick={() => onTogglePin(entry.id, !entry.pinned)}>
             {entry.pinned ? '★' : '☆'}
           </button>
+          {onShowHistory && (
+            <button className="icon-btn" aria-label="history" onClick={() => onShowHistory(entry.id)}>🕘</button>
+          )}
           {editing ? (
             <button onClick={finishEditing}>Done</button>
           ) : (

@@ -771,3 +771,19 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
   font-weight: 500;
 }
 .btn-danger:hover { background: var(--danger); opacity: 0.9; }
+
+/* ── Version history ─────────────────────────────────────────────────────────── */
+.versions { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; }
+.versions li { display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--border); padding: 6px 0; }
+.versions li:last-child { border-bottom: none; }
+.version-date { color: var(--muted); font-size: 12px; white-space: nowrap; }
+.version-preview { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+.history-modal {
+  position: fixed; inset: 0; background: rgba(28, 26, 21, 0.55);
+  display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 1200;
+}
+.history-panel {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 18px 20px; max-width: 560px; width: 100%; max-height: 70vh; overflow: auto;
+  display: flex; flex-direction: column; gap: 12px; box-shadow: 0 8px 40px rgba(0,0,0,0.18);
+}

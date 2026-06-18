@@ -16,6 +16,7 @@ const SCOPES = [
 export default function TopicView({
   topic, entries, allCandidates,
   onAddEntry, onDelete, onStatusChange, onTagsChange, onTogglePin, onNoteSave, onPreview, onDocChange,
+  onNoteVersion, onShowHistory,
 }) {
   const storageKey = `medialog_topic_view_${topic.id}`
   const [mode, setMode] = useState(() => {
@@ -124,6 +125,8 @@ export default function TopicView({
         onTogglePin={onTogglePin}
         onNoteSave={onNoteSave}
         onPreview={onPreview}
+        onNoteVersion={onNoteVersion}
+        onShowHistory={onShowHistory}
       />
 
       {returnY != null && <ReturnButton onReturn={handleReturn} />}
