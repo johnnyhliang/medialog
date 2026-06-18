@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient.js'
 
-export default function SettingsView({ topics, onRefreshData, addToast }) {
+export default function SettingsView({ topics, onRefreshData, addToast, allTags = [], onUpdateTagColor }) {
   const [config, setConfig] = useState(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -160,6 +160,36 @@ export default function SettingsView({ topics, onRefreshData, addToast }) {
         )}
       </section>
 
+      <section>
+        <h3 className="section-label">Tag Colors</h3>
+        {allTags.length === 0 && <p className="muted" style={{ fontSize: 13 }}>No tags yet. Add tags to entries to see them here.</p>}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {allTags.map(tag => (
+            <div key={tag.id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{
+                flex: 1,
+                fontSize: 13,
+                padding: '2px 8px',
+                borderRadius: 5,
+                background: tag.color || 'var(--surface-3)',
+              }}>#{tag.name}</span>
+              <input
+                type="color"
+                value={tag.color || '#e8e3d8'}
+                onChange={(e) => onUpdateTagColor(tag.name, e.target.value)}
+                style={{ width: 32, height: 28, border: 'none', cursor: 'pointer', borderRadius: 4 }}
+                title={`Color for #${tag.name}`}
+              />
+              <button
+                style={{ fontSize: 11, padding: '3px 8px' }}
+                onClick={() => onUpdateTagColor(tag.name, null)}
+                title="Remove color"
+              >✕</button>
+            </div>
+          ))}
+        </div>
+      </section>
+
       <style dangerouslySetInnerHTML={{ __html: `
         .settings-view { max-width: 600px; margin: 0 auto; padding: 2rem; }
         .card { background: var(--bg-card); padding: 1.5rem; border-radius: 8px; border: 1px solid var(--border); }
@@ -169,6 +199,7 @@ export default function SettingsView({ topics, onRefreshData, addToast }) {
         .form-group input[type="text"] { width: 100%; }
         .actions { display: flex; gap: 1rem; margin-top: 2rem; }
         .status-msg { margin-top: 1rem; padding: 1rem; border-radius: 4px; background: var(--bg-highlight); border: 1px solid var(--border); }
+        .section-label { font-size: 1rem; font-weight: 600; margin-bottom: 1rem; }
       `}} />
     </div>
   )
