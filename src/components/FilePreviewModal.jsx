@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
+import { ExternalLink, X } from 'lucide-react'
 import { classifyUrl } from '../lib/classifyUrl.js'
 import MarkdownView from './MarkdownView.jsx'
 
@@ -94,8 +95,12 @@ export default function FilePreviewModal({ url, onClose }) {
       <div className="file-preview-modal" role="dialog" aria-modal="true" aria-label={`Preview: ${name}`}>
         <div className="file-preview-header">
           <span className="filename">{icon} {name}</span>
-          <a href={url} target="_blank" rel="noreferrer" className="icon-btn" title="Open in new tab">↗</a>
-          <button ref={closeBtnRef} className="icon-btn" onClick={onClose} aria-label="Close preview">✕</button>
+          <a href={url} target="_blank" rel="noreferrer" className="icon-btn" title="Open in new tab">
+            <ExternalLink size={15} />
+          </a>
+          <button ref={closeBtnRef} className="icon-btn" onClick={onClose} aria-label="Close preview">
+            <X size={15} />
+          </button>
         </div>
         <div className="file-preview-body">
           <Suspense fallback={<p className="muted">Loading…</p>}>

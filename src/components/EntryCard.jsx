@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
+import { Clock, Pencil, Pin, PinOff, Trash2 } from 'lucide-react'
 import TagInput from './TagInput.jsx'
 import MarkdownView from './MarkdownView.jsx'
 import ConfirmModal from './ConfirmModal.jsx'
@@ -100,16 +101,24 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
         <TagInput value={entry.tags || []} onChange={(next) => onTagsChange(entry.id, next)} />
         {age && <span className="card-age">{age}</span>}
         <div className="card-actions">
-          <button className="icon-btn" aria-label={entry.pinned ? 'unpin' : 'pin'} onClick={() => onTogglePin(entry.id, !entry.pinned)}>
-            {entry.pinned ? '★' : '☆'}
+          <button
+            className="icon-btn"
+            aria-label={entry.pinned ? 'unpin' : 'pin'}
+            onClick={() => onTogglePin(entry.id, !entry.pinned)}
+          >
+            {entry.pinned ? <PinOff size={15} /> : <Pin size={15} />}
           </button>
           {onShowHistory && (
-            <button className="icon-btn" aria-label="history" onClick={() => onShowHistory(entry.id)}>🕘</button>
+            <button className="icon-btn" aria-label="history" onClick={() => onShowHistory(entry.id)}>
+              <Clock size={15} />
+            </button>
           )}
           {editing ? (
             <button onClick={finishEditing}>Done</button>
           ) : (
-            <button className="icon-btn" aria-label="edit" onClick={startEditing}>✎</button>
+            <button className="icon-btn" aria-label="edit" onClick={startEditing}>
+              <Pencil size={15} />
+            </button>
           )}
           <select
             className={`status-select ${statusClass}`}
@@ -120,7 +129,13 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
               <option key={s} value={s}>{s === '' ? 'no status' : s}</option>
             ))}
           </select>
-          <button className="icon-btn" onClick={() => setConfirmDelete(true)} aria-label="delete">🗑</button>
+          <button
+            className="icon-btn icon-btn-danger"
+            onClick={() => setConfirmDelete(true)}
+            aria-label="delete"
+          >
+            <Trash2 size={15} />
+          </button>
         </div>
       </div>
 
