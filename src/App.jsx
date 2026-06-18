@@ -24,6 +24,8 @@ import TopicView from './components/TopicView.jsx'
 import VersionHistory from './components/VersionHistory.jsx'
 import Modal from './components/Modal.jsx'
 import { useFilePreview } from './hooks/useFilePreview.js'
+import useToast from './hooks/useToast.js'
+import Toast from './components/Toast.jsx'
 const FilePreviewModal = lazy(() => import('./components/FilePreviewModal.jsx'))
 
 function Workspace() {
@@ -39,6 +41,7 @@ function Workspace() {
   const [versions, setVersions] = useState([])
 
   const { previewUrl, openPreview, closePreview } = useFilePreview()
+  const { toasts, addToast, dismissToast } = useToast()
 
   const inboxTopic = topics.find((t) => t.name === 'Inbox')
   const selectedTopic = topics.find((t) => t.id === selectedId) || null
@@ -99,6 +102,7 @@ function Workspace() {
         const { data: config } = await supabase.from('user_configs').select('auto_backup').maybeSingle()
         if (config?.auto_backup) {
           await supabase.functions.invoke('github-backup', { body: { action: 'push' } })
+          addToast('Auto-backup complete', 'success')
         }
       } catch {
         // auto-backup failures are silent — user can trigger manually in Settings
@@ -331,7 +335,7 @@ function Workspace() {
           />
         )}
         {view === 'revisit' && <Revisit entries={revisitEntries} onSeen={handleSeen} />}
-        {view === 'settings' && <SettingsView topics={topics} onRefreshData={refreshTopics} />}
+        {view === 'settings' && <SettingsView topics={topics} onRefreshData={refreshTopics} addToast={addToast} />}
         {view === 'trash' && (
           <TrashView
             entries={trashEntries}
@@ -345,6 +349,7 @@ function Workspace() {
           <FilePreviewModal url={previewUrl} onClose={closePreview} />
         </Suspense>
       )}
+      <Toast toasts={toasts} onDismiss={dismissToast} />
       {historyFor && (
         <Modal onClose={() => setHistoryFor(null)} label="Version history" maxWidth="560px">
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxHeight: '70vh', overflow: 'auto' }}>

@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient.js'
 
-export default function SettingsView({ topics, onRefreshData }) {
+export default function SettingsView({ topics, onRefreshData, addToast }) {
   const [config, setConfig] = useState(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [status, setStatus] = useState('')
 
   useEffect(() => {
     loadConfig()
@@ -45,13 +44,13 @@ export default function SettingsView({ topics, onRefreshData }) {
       })
       .eq('user_id', config.user_id)
     
-    if (error) setStatus(`Error: ${error.message}`)
-    else setStatus('Settings saved.')
+    if (error) addToast(`Error: ${error.message}`, 'error')
+    else addToast('Settings saved', 'success')
     setSaving(false)
   }
 
   async function handleBackup() {
-    setStatus('Preparing backup...')
+    addToast('Preparing backup...', 'info')
     try {
       // 1. Decrypt token (via Edge Function or just fetch it if you trust RLS)
       // For simplicity in this prototype, we'll assume the client can fetch the token 
@@ -67,16 +66,16 @@ export default function SettingsView({ topics, onRefreshData }) {
       })
       
       if (error) throw error
-      setStatus(`Backup successful! Commit: ${data.sha.slice(0, 7)}`)
+      addToast(`Backup successful! Commit: ${data.sha.slice(0, 7)}`, 'success')
       loadConfig()
     } catch (err) {
-      setStatus(`Backup failed: ${err.message}`)
+      addToast(`Backup failed: ${err.message}`, 'error')
     }
   }
 
   async function handleRestore() {
     if (!confirm('This will pull all data from GitHub. Duplicate entries might be created. Continue?')) return
-    setStatus('Restoring from GitHub...')
+    addToast('Restoring from GitHub...', 'info')
     try {
       const { data, error } = await supabase.functions.invoke('github-backup', {
         body: { action: 'pull' }
@@ -85,10 +84,10 @@ export default function SettingsView({ topics, onRefreshData }) {
       if (error) throw error
       
       // Data processing would happen here or in the Edge Function
-      setStatus(`Restore complete! Imported ${data.count} items.`)
+      addToast(`Restore complete! Imported ${data.count} items.`, 'success')
       onRefreshData()
     } catch (err) {
-      setStatus(`Restore failed: ${err.message}`)
+      addToast(`Restore failed: ${err.message}`, 'error')
     }
   }
 
@@ -153,7 +152,6 @@ export default function SettingsView({ topics, onRefreshData }) {
             )}
           </div>
         )}
-        {status && <p className="status-msg">{status}</p>}
       </section>
 
       <style dangerouslySetInnerHTML={{ __html: `
