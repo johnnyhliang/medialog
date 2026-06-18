@@ -36,6 +36,7 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(entry.note || '')
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [saveStatus, setSaveStatus] = useState('idle')
   const timer = useRef(null)
   const statusClass = entry.status ? `status-${entry.status}` : 'status-backlog'
   const thumb = getYouTubeThumbnail(entry.url)
@@ -45,7 +46,12 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
   useEffect(() => {
     if (!editing) return
     if (timer.current) clearTimeout(timer.current)
-    timer.current = setTimeout(() => onNoteSave(entry.id, draft), 800)
+    setSaveStatus('saving')
+    timer.current = setTimeout(() => {
+      onNoteSave(entry.id, draft)
+      setSaveStatus('saved')
+      setTimeout(() => setSaveStatus('idle'), 1500)
+    }, 800)
     return () => clearTimeout(timer.current)
   }, [draft, editing])
 
@@ -123,7 +129,11 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
             </button>
           )}
           {editing ? (
-            <button onClick={finishEditing}>Done</button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              {saveStatus === 'saving' && <span className="save-status">Saving…</span>}
+              {saveStatus === 'saved' && <span className="save-status">Saved ·</span>}
+              <button onClick={finishEditing}>Done</button>
+            </div>
           ) : (
             <button className="icon-btn" aria-label="edit" onClick={startEditing}>
               <Pencil size={15} />

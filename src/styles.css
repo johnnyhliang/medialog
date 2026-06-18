@@ -815,6 +815,13 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
 .version-date { color: var(--muted); font-size: 12px; white-space: nowrap; }
 .version-preview { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
 
+/* ── Autosave indicator ─────────────────────────────────────────────────────── */
+.save-status {
+  font-size: var(--text-xs);
+  color: var(--muted);
+  white-space: nowrap;
+}
+
 /* ── Load more ─────────────────────────────────────────────────────────────── */
 .load-more-btn {
   display: block;

@@ -73,3 +73,15 @@ test('preview button shows filename from URL', () => {
   render(<EntryCard entry={entry} {...handlers} onPreview={() => {}} />)
   expect(screen.getByRole('button', { name: /report\.pdf/i })).toBeInTheDocument()
 })
+
+test('shows saving indicator while autosave timer is pending', async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true })
+  const onNoteSave = vi.fn()
+  render(<EntryCard entry={base} {...handlers} onNoteSave={onNoteSave} />)
+  await userEvent.click(screen.getByRole('button', { name: /edit/i }))
+  const editor = await screen.findByLabelText('note editor')
+  await userEvent.type(editor, 'x')
+  // "Saving…" should appear (autosave timer running)
+  expect(screen.getByText(/saving/i)).toBeInTheDocument()
+  vi.useRealTimers()
+})
