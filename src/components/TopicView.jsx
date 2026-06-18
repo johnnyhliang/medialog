@@ -34,6 +34,14 @@ export default function TopicView({
   const [query, setQuery] = useState('')
   const [scope, setScope] = useState('topic')
   const [returnY, setReturnY] = useState(null)
+  const [docWidth, setDocWidth] = useState(() => {
+    try { return localStorage.getItem('medialog_doc_width') || 'readable' } catch { return 'readable' }
+  })
+
+  function setDocWidthAndSave(w) {
+    setDocWidth(w)
+    try { localStorage.setItem('medialog_doc_width', w) } catch {}
+  }
 
   const scopeCtxRef = useRef({ scope: 'topic', currentTopicId: topic.id })
 
@@ -96,14 +104,35 @@ export default function TopicView({
     <>
       <div className="topic-header">
         <h2>{topic.name}</h2>
-        <div className="view-toggle">
-          <button className={mode === 'doc' ? 'active' : ''} onClick={() => setView('doc')}>Doc</button>
-          <button className={mode === 'list' ? 'active' : ''} onClick={() => setView('list')}>List</button>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          {mode === 'doc' && (
+            <div className="doc-width-btns">
+              {[
+                { key: 'narrow',   label: 'S' },
+                { key: 'readable', label: 'M' },
+                { key: 'wide',     label: 'L' },
+                { key: 'full',     label: '∞' },
+              ].map(({ key, label }) => (
+                <button
+                  key={key}
+                  className={docWidth === key ? 'active' : ''}
+                  onClick={() => setDocWidthAndSave(key)}
+                  title={key}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
+          <div className="view-toggle">
+            <button className={mode === 'doc' ? 'active' : ''} onClick={() => setView('doc')}>Doc</button>
+            <button className={mode === 'list' ? 'active' : ''} onClick={() => setView('list')}>List</button>
+          </div>
         </div>
       </div>
 
       {mode === 'doc' && (
-        <div className="master-doc">
+        <div className={`master-doc doc-width-${docWidth}`}>
           {(docEditing || !liveDoc.trim()) ? (
             <TopicDocEditor
               topicId={topic.id}
