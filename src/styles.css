@@ -241,6 +241,21 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
 }
 .card-title:hover { color: var(--accent); text-decoration: none; }
 
+/* ── Inline title edit ─────────────────────────────────────────────────────── */
+.card-title-input {
+  font-family: var(--font-serif);
+  font-size: var(--text-md);
+  font-weight: 600;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--accent);
+  border-radius: 5px;
+  padding: 1px 6px;
+  line-height: 1.35;
+  width: 100%;
+  box-shadow: 0 0 0 3px var(--accent-weak);
+}
+
 /* YouTube thumbnail */
 .card-thumb {
   display: block;

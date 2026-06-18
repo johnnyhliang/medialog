@@ -4,7 +4,7 @@ import EmptyState from './EmptyState.jsx'
 
 const PAGE_SIZE = 50
 
-export default function EntryList({ entries, onDelete, onStatusChange, onTagsChange, onTogglePin, onNoteSave, onPreview, onNoteVersion, onShowHistory }) {
+export default function EntryList({ entries, onDelete, onStatusChange, onTagsChange, onTogglePin, onNoteSave, onPreview, onNoteVersion, onShowHistory, onTitleChange }) {
   const [limit, setLimit] = useState(PAGE_SIZE)
 
   if (entries.length === 0) return <EmptyState message="No entries yet." />
@@ -26,6 +26,7 @@ export default function EntryList({ entries, onDelete, onStatusChange, onTagsCha
           onPreview={onPreview}
           onNoteVersion={onNoteVersion}
           onShowHistory={onShowHistory}
+          onTitleChange={onTitleChange}
         />
       ))}
       {remaining > 0 && (

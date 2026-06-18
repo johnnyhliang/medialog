@@ -32,9 +32,11 @@ function relativeAge(dateStr) {
   return `${Math.floor(d / 365)}y ago`
 }
 
-export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChange, onTogglePin, onNoteSave, onPreview, onNoteVersion, onShowHistory }) {
+export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChange, onTogglePin, onNoteSave, onPreview, onNoteVersion, onShowHistory, onTitleChange }) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(entry.note || '')
+  const [editingTitle, setEditingTitle] = useState(false)
+  const [titleDraft, setTitleDraft] = useState(entry.title || '')
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [saveStatus, setSaveStatus] = useState('idle')
   const timer = useRef(null)
@@ -62,6 +64,12 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
     setEditing(false)
   }
 
+  function saveTitle() {
+    const trimmed = titleDraft.trim()
+    if (trimmed && trimmed !== entry.title) onTitleChange?.(entry.id, trimmed)
+    setEditingTitle(false)
+  }
+
   function startEditing() {
     setDraft(entry.note || '')
     setEditing(true)
@@ -70,20 +78,45 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
   return (
     <div className={`card${entry.pinned ? ' pinned' : ''}`} id={`entry-${entry.id}`}>
       {/* Title / URL */}
-      {entry.url ? (
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
-          <a href={entry.url} className="card-title" target="_blank" rel="noreferrer">
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
+        {editingTitle ? (
+          <input
+            className="card-title-input"
+            aria-label="edit title"
+            value={titleDraft}
+            onChange={(e) => setTitleDraft(e.target.value)}
+            onBlur={saveTitle}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') { e.preventDefault(); saveTitle() }
+              if (e.key === 'Escape') { setTitleDraft(entry.title || ''); setEditingTitle(false) }
+            }}
+            autoFocus
+          />
+        ) : entry.url ? (
+          <a
+            href={entry.url}
+            className="card-title"
+            target="_blank"
+            rel="noreferrer"
+            onClick={(e) => { if (e.detail === 2) { e.preventDefault(); setTitleDraft(entry.title || ''); setEditingTitle(true) } }}
+          >
             {entry.title || entry.url}
           </a>
-          {fileType && onPreview && (
-            <button className="preview-btn" onClick={() => onPreview(entry.url)}>
-              {previewLabel(entry.url)}
-            </button>
-          )}
-        </div>
-      ) : entry.title ? (
-        <span className="card-title">{entry.title}</span>
-      ) : null}
+        ) : (
+          <span
+            className="card-title"
+            onClick={() => { setTitleDraft(entry.title || ''); setEditingTitle(true) }}
+            style={{ cursor: 'text' }}
+          >
+            {entry.title || <em className="muted">Untitled</em>}
+          </span>
+        )}
+        {!editingTitle && fileType && onPreview && (
+          <button className="preview-btn" onClick={() => onPreview(entry.url)}>
+            {previewLabel(entry.url)}
+          </button>
+        )}
+      </div>
 
       {/* YouTube thumbnail */}
       {thumb && !editing && (

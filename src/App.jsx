@@ -170,6 +170,11 @@ function Workspace() {
     setEntries((prev) => prev.map((e) => (e.id === entryId ? { ...updated, tags: e.tags } : e)))
   }
 
+  async function handleTitleChange(entryId, title) {
+    const updated = await updateEntry(supabase, entryId, { title })
+    setEntries((prev) => prev.map((e) => (e.id === entryId ? { ...updated, tags: e.tags } : e)))
+  }
+
   async function handleNoteVersion(entryId, note) {
     await createVersion(supabase, entryId, note)
   }
@@ -311,6 +316,7 @@ function Workspace() {
             onShowHistory={handleShowHistory}
             onSearchAll={handleSearchAll}
             globalSearchResults={globalSearchResults}
+            onTitleChange={handleTitleChange}
           />
         )}
         {view === 'bulk' && (

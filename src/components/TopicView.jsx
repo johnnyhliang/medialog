@@ -18,6 +18,7 @@ export default function TopicView({
   onAddEntry, onDelete, onStatusChange, onTagsChange, onTogglePin, onNoteSave, onPreview, onDocChange,
   onNoteVersion, onShowHistory,
   onSearchAll, globalSearchResults,
+  onTitleChange,
 }) {
   const storageKey = `medialog_topic_view_${topic.id}`
   const [mode, setMode] = useState(() => {
@@ -144,6 +145,7 @@ export default function TopicView({
         onPreview={onPreview}
         onNoteVersion={onNoteVersion}
         onShowHistory={onShowHistory}
+        onTitleChange={onTitleChange}
       />
 
       {returnY != null && <ReturnButton onReturn={handleReturn} />}

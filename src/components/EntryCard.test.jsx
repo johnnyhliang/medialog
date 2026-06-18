@@ -74,6 +74,36 @@ test('preview button shows filename from URL', () => {
   expect(screen.getByRole('button', { name: /report\.pdf/i })).toBeInTheDocument()
 })
 
+test('clicking title enters edit mode', async () => {
+  const onTitleChange = vi.fn()
+  const noUrl = { ...base, url: null }
+  render(<EntryCard entry={noUrl} {...handlers} onTitleChange={onTitleChange} />)
+  await userEvent.click(screen.getByText('A Site'))
+  expect(screen.getByRole('textbox', { name: /edit title/i })).toBeInTheDocument()
+})
+
+test('saves title on Enter', async () => {
+  const onTitleChange = vi.fn()
+  const noUrl = { ...base, url: null }
+  render(<EntryCard entry={noUrl} {...handlers} onTitleChange={onTitleChange} />)
+  await userEvent.click(screen.getByText('A Site'))
+  const input = screen.getByRole('textbox', { name: /edit title/i })
+  await userEvent.clear(input)
+  await userEvent.type(input, 'New Title{Enter}')
+  expect(onTitleChange).toHaveBeenCalledWith('x', 'New Title')
+})
+
+test('cancels title edit on Escape', async () => {
+  const onTitleChange = vi.fn()
+  const noUrl = { ...base, url: null }
+  render(<EntryCard entry={noUrl} {...handlers} onTitleChange={onTitleChange} />)
+  await userEvent.click(screen.getByText('A Site'))
+  const input = screen.getByRole('textbox', { name: /edit title/i })
+  await userEvent.type(input, '{Escape}')
+  expect(onTitleChange).not.toHaveBeenCalled()
+  expect(screen.queryByRole('textbox', { name: /edit title/i })).toBeNull()
+})
+
 test('shows saving indicator while autosave timer is pending', async () => {
   vi.useFakeTimers({ shouldAdvanceTime: true })
   const onNoteSave = vi.fn()
