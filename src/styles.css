@@ -124,6 +124,49 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
 }
 .sidebar .signout:hover { color: var(--danger); background: transparent; }
 
+/* Collapsed sidebar (icon rail) */
+.app.sidebar-collapsed .sidebar {
+  width: 44px;
+  padding: 16px 0;
+  gap: 12px;
+  overflow: hidden;
+}
+.app.sidebar-collapsed .sidebar h1,
+.app.sidebar-collapsed .brand-row .signout,
+.app.sidebar-collapsed .nav button span,
+.app.sidebar-collapsed .topic-list-label,
+.app.sidebar-collapsed .topic-add,
+.app.sidebar-collapsed .topic-name-text {
+  display: none;
+}
+.app.sidebar-collapsed .nav button {
+  width: 44px;
+  justify-content: center;
+  padding: 8px 0;
+  border-radius: 0;
+}
+.app.sidebar-collapsed .topic-item button {
+  width: 44px;
+  justify-content: center;
+  padding: 6px 0;
+  font-size: 11px;
+  font-weight: 600;
+}
+.sidebar-toggle {
+  margin-top: auto;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 8px 0;
+  font-size: 18px;
+}
+.sidebar-toggle:hover { color: var(--text); }
+
 .nav { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 1px; }
 .nav button {
   width: 100%;
@@ -134,6 +177,9 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
   padding: 7px 10px;
   color: var(--muted);
   font-size: 13.5px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 .nav button:hover { background: var(--surface-3); color: var(--text); }
 .nav button.active { background: var(--accent-weak); color: var(--accent); font-weight: 600; }
@@ -168,7 +214,7 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
 .main {
   flex: 1;
   padding: 24px 28px;
-  max-width: 1000px;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: var(--gap);
@@ -526,7 +572,6 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
 /* ── Wide desktop (≥1200px) ─────────────────────────────────────────────────── */
 @media (min-width: 1200px) {
   .sidebar { width: 256px; }
-  .main { max-width: 1100px; }
 }
 
 /* ── Responsive ─────────────────────────────────────────────────────────────── */

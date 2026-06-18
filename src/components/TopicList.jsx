@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-export default function TopicList({ topics, selectedId, onSelect, onAdd }) {
+export default function TopicList({ topics, selectedId, onSelect, onAdd, sidebarCollapsed }) {
   const [name, setName] = useState('')
 
   function handleAdd(e) {
@@ -20,8 +20,12 @@ export default function TopicList({ topics, selectedId, onSelect, onAdd }) {
             <button
               className={t.id === selectedId ? 'selected' : ''}
               onClick={() => onSelect(t.id)}
+              title={t.name}
             >
-              {t.name}
+              {sidebarCollapsed
+                ? t.name.slice(0, 2).toUpperCase()
+                : t.name
+              }
             </button>
           </li>
         ))}

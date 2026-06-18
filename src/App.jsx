@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { LayoutGrid, Upload, Inbox, RotateCcw, BarChart2, Settings2, Trash2 as TrashIcon, Download } from 'lucide-react'
 import { supabase } from './lib/supabaseClient.js'
 import { listTopics, createTopic, getTopicByName } from './lib/db/topics.js'
 import {
@@ -39,6 +40,18 @@ function Workspace() {
   const [trashEntries, setTrashEntries] = useState([])
   const [historyFor, setHistoryFor] = useState(null)
   const [versions, setVersions] = useState([])
+
+  const [sidebarOpen, setSidebarOpen] = useState(() => {
+    try { return localStorage.getItem('medialog_sidebar_open') !== 'false' } catch { return true }
+  })
+
+  function toggleSidebar() {
+    setSidebarOpen((prev) => {
+      const next = !prev
+      try { localStorage.setItem('medialog_sidebar_open', String(next)) } catch {}
+      return next
+    })
+  }
 
   const { previewUrl, openPreview, closePreview } = useFilePreview()
   const { toasts, addToast, dismissToast } = useToast()
@@ -293,28 +306,64 @@ function Workspace() {
   }
 
   return (
-    <div className="app">
+    <div className={`app${sidebarOpen ? '' : ' sidebar-collapsed'}`}>
       <aside className="sidebar">
         <div className="brand-row">
           <h1>MediaLog</h1>
           <button className="signout" onClick={() => supabase.auth.signOut()}>Sign out</button>
         </div>
         <ul className="nav">
-          <li><button className={view === 'browse' ? 'active' : ''} onClick={() => setView('browse')}>Browse</button></li>
-          <li><button className={view === 'bulk' ? 'active' : ''} onClick={() => setView('bulk')}>Bulk Import</button></li>
-          <li><button className={view === 'sort' ? 'active' : ''} onClick={() => { setView('sort'); loadInbox() }}>Sort Inbox</button></li>
-          <li><button className={view === 'revisit' ? 'active' : ''} onClick={() => { setView('revisit'); loadRevisit() }}>Revisit</button></li>
-          <li><button className={view === 'progress' ? 'active' : ''} onClick={() => setView('progress')}>Progress</button></li>
-          <li><button className={view === 'settings' ? 'active' : ''} onClick={() => setView('settings')}>Settings</button></li>
-          <li><button className={view === 'trash' ? 'active' : ''} onClick={() => { setView('trash'); loadTrash() }}>Trash</button></li>
-          <li><button onClick={handleExport}>Export</button></li>
+          <li>
+            <button className={view === 'browse' ? 'active' : ''} onClick={() => setView('browse')} title="Browse">
+              <LayoutGrid size={16} /><span>Browse</span>
+            </button>
+          </li>
+          <li>
+            <button className={view === 'bulk' ? 'active' : ''} onClick={() => setView('bulk')} title="Bulk Import">
+              <Upload size={16} /><span>Bulk Import</span>
+            </button>
+          </li>
+          <li>
+            <button className={view === 'sort' ? 'active' : ''} onClick={() => { setView('sort'); loadInbox() }} title="Sort Inbox">
+              <Inbox size={16} /><span>Sort Inbox</span>
+            </button>
+          </li>
+          <li>
+            <button className={view === 'revisit' ? 'active' : ''} onClick={() => { setView('revisit'); loadRevisit() }} title="Revisit">
+              <RotateCcw size={16} /><span>Revisit</span>
+            </button>
+          </li>
+          <li>
+            <button className={view === 'progress' ? 'active' : ''} onClick={() => setView('progress')} title="Progress">
+              <BarChart2 size={16} /><span>Progress</span>
+            </button>
+          </li>
+          <li>
+            <button className={view === 'settings' ? 'active' : ''} onClick={() => setView('settings')} title="Settings">
+              <Settings2 size={16} /><span>Settings</span>
+            </button>
+          </li>
+          <li>
+            <button className={view === 'trash' ? 'active' : ''} onClick={() => { setView('trash'); loadTrash() }} title="Trash">
+              <TrashIcon size={16} /><span>Trash</span>
+            </button>
+          </li>
+          <li>
+            <button onClick={handleExport} title="Export">
+              <Download size={16} /><span>Export</span>
+            </button>
+          </li>
         </ul>
         <TopicList
           topics={topics}
           selectedId={selectedId}
           onSelect={(id) => { setSelectedId(id); setGlobalSearchResults(null); setView('browse') }}
           onAdd={handleAddTopic}
+          sidebarCollapsed={!sidebarOpen}
         />
+        <button className="sidebar-toggle" onClick={toggleSidebar} title={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}>
+          {sidebarOpen ? '‹' : '›'}
+        </button>
       </aside>
       <main className="main">
         {view === 'browse' && selectedTopic && (
