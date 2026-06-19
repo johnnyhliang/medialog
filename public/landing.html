@@ -221,6 +221,86 @@
       object-fit: cover;
       object-position: top;
     }
+
+    /* ── Problem ─────────────────────────────────────────────────────────────── */
+    .problem { background: var(--bg); padding: 96px 24px; }
+    .problem-grid {
+      display: grid;
+      grid-template-columns: 2fr 3fr;
+      gap: 64px;
+      align-items: center;
+    }
+    .problem-quote blockquote {
+      font-family: var(--font-serif);
+      font-size: clamp(22px, 2.8vw, 34px);
+      font-style: italic;
+      color: var(--text);
+      line-height: 1.35;
+      margin-bottom: 14px;
+    }
+    .problem-quote cite {
+      font-family: var(--font-ui);
+      font-size: 13px;
+      color: var(--muted);
+      font-style: normal;
+    }
+    .problem-text p {
+      font-family: var(--font-ui);
+      font-size: 16px;
+      color: var(--text);
+      line-height: 1.8;
+      margin-bottom: 18px;
+    }
+    .problem-text p:last-child { margin-bottom: 0; }
+
+    /* ── Loop ────────────────────────────────────────────────────────────────── */
+    .loop { background: var(--surface-2); padding: 80px 24px; }
+    .loop-steps {
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      gap: 0;
+    }
+    .loop-arrow {
+      font-size: 18px;
+      color: var(--border);
+      padding: 0 6px;
+      margin-top: 30px;
+      flex-shrink: 0;
+      user-select: none;
+    }
+    .loop-step {
+      text-align: center;
+      padding: 18px 12px;
+      border-radius: 10px;
+      flex: 1;
+      min-width: 0;
+      transition: background 0.35s ease;
+    }
+    .loop-step.active { background: rgba(61,90,74,0.09); }
+    .loop-icon {
+      font-size: 22px;
+      margin-bottom: 10px;
+      color: var(--border);
+      transition: color 0.35s ease;
+      line-height: 1;
+    }
+    .loop-step.active .loop-icon { color: var(--accent); }
+    .loop-step-name {
+      font-family: var(--font-ui);
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--muted);
+      margin-bottom: 6px;
+      transition: color 0.35s ease;
+    }
+    .loop-step.active .loop-step-name { color: var(--accent); }
+    .loop-step-desc {
+      font-family: var(--font-ui);
+      font-size: 11.5px;
+      color: var(--muted);
+      line-height: 1.55;
+    }
   </style>
 </head>
 <body>
@@ -253,6 +333,62 @@
             alt="MediaLog app interface"
             loading="lazy"
           />
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Problem ──────────────────────────────────────────────────────────── -->
+  <section class="problem reveal">
+    <div class="container">
+      <div class="problem-grid">
+        <div class="problem-quote">
+          <blockquote>"A source is not<br>a system."</blockquote>
+          <cite>— MediaLog</cite>
+        </div>
+        <div class="problem-text">
+          <p>Your browser tabs are not a reading list. Your "Save for later" folder is a graveyard. Bookmarks are where links go to die.</p>
+          <p>The problem isn't capture — it's what happens after. Nothing gets revisited. Nothing gets synthesized. Nothing gets remembered.</p>
+          <p>MediaLog is the system, not another inbox. Every link is placed in a topic, triaged, consumed, and revisited on a schedule that builds retention.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Loop ─────────────────────────────────────────────────────────────── -->
+  <section class="loop reveal" id="loop">
+    <div class="container">
+      <p class="section-eyebrow">How it works</p>
+      <h2 class="section-headline">Capture. Triage. Consume.<br>Retain. Synthesize.</h2>
+      <div class="loop-steps">
+        <div class="loop-step" data-step="0">
+          <div class="loop-icon">↓</div>
+          <div class="loop-step-name">Capture</div>
+          <div class="loop-step-desc">Links, shortcuts,<br>bulk paste</div>
+        </div>
+        <div class="loop-arrow">→</div>
+        <div class="loop-step" data-step="1">
+          <div class="loop-icon">⊞</div>
+          <div class="loop-step-name">Triage</div>
+          <div class="loop-step-desc">Sort Inbox<br>forces placement</div>
+        </div>
+        <div class="loop-arrow">→</div>
+        <div class="loop-step" data-step="2">
+          <div class="loop-icon">◎</div>
+          <div class="loop-step-name">Consume</div>
+          <div class="loop-step-desc">Reader mode,<br>status tracking</div>
+        </div>
+        <div class="loop-arrow">→</div>
+        <div class="loop-step" data-step="3">
+          <div class="loop-icon">↺</div>
+          <div class="loop-step-name">Retain</div>
+          <div class="loop-step-desc">Spaced revisit,<br>SRS</div>
+        </div>
+        <div class="loop-arrow">→</div>
+        <div class="loop-step" data-step="4">
+          <div class="loop-icon">✦</div>
+          <div class="loop-step-name">Synthesize</div>
+          <div class="loop-step-desc">Living topic docs,<br>AI</div>
         </div>
       </div>
     </div>
