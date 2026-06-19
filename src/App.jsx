@@ -45,6 +45,7 @@ function Workspace() {
   const [allTags, setAllTags] = useState([])
   const [exportModal, setExportModal] = useState(null) // null | { estimatedKB: number, loading: boolean }
   const [inboxCount, setInboxCount] = useState(0)
+  const [archiveToast, setArchiveToast] = useState(true)
 
   const [sidebarOpen, setSidebarOpen] = useState(() => {
     try { return localStorage.getItem('medialog_sidebar_open') !== 'false' } catch { return true }
@@ -83,6 +84,17 @@ function Workspace() {
     () => Object.fromEntries(allTags.filter(t => t.color).map(t => [t.name, t.color])),
     [allTags]
   )
+
+  useEffect(() => {
+    supabase.from('user_configs').select('archive_toast').maybeSingle().then(({ data }) => {
+      if (data && typeof data.archive_toast === 'boolean') setArchiveToast(data.archive_toast)
+    })
+  }, [])
+
+  async function handleToggleArchiveToast(val) {
+    setArchiveToast(val)
+    await supabase.from('user_configs').update({ archive_toast: val }).eq('user_id', (await supabase.auth.getUser()).data.user.id)
+  }
 
   useEffect(() => {
     refreshTopics()
@@ -511,7 +523,7 @@ function Workspace() {
           />
         )}
         {view === 'revisit' && <Revisit entries={revisitEntries} onSeen={handleSeen} recentActivity={recentActivity} />}
-        {view === 'settings' && <SettingsView topics={topics} onRefreshData={refreshTopics} addToast={addToast} allTags={allTags} onUpdateTagColor={handleUpdateTagColor} />}
+        {view === 'settings' && <SettingsView topics={topics} onRefreshData={refreshTopics} addToast={addToast} allTags={allTags} onUpdateTagColor={handleUpdateTagColor} archiveToast={archiveToast} onToggleArchiveToast={handleToggleArchiveToast} />}
         {view === 'trash' && (
           <TrashView
             entries={trashEntries}

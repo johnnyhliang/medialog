@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient.js'
 
-export default function SettingsView({ topics, onRefreshData, addToast, allTags = [], onUpdateTagColor }) {
+export default function SettingsView({ topics, onRefreshData, addToast, allTags = [], onUpdateTagColor, archiveToast, onToggleArchiveToast }) {
   const [config, setConfig] = useState(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -159,6 +159,18 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
             </p>
           </div>
         )}
+      </section>
+
+      <section>
+        <h3 className="section-label">Behavior</h3>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13 }}>
+          <input
+            type="checkbox"
+            checked={archiveToast ?? true}
+            onChange={(e) => onToggleArchiveToast(e.target.checked)}
+          />
+          Show undo notification when archiving done entries (3 seconds)
+        </label>
       </section>
 
       <section>
