@@ -30,7 +30,7 @@ export default function FileRow({ file, publicUrl, supabase, onDeleteClick, onSe
       .like('note', `%${publicUrl}%`)
       .is('deleted_at', null)
       .then(({ data }) => setRefs(data || []))
-  }, [publicUrl])
+  }, [publicUrl, supabase])
 
   return (
     <div className="file-row">

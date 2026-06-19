@@ -131,6 +131,22 @@ Fixes navigation/clutter ACROSS topics, complementing Living Topic Docs' within-
 
 ---
 
+## Specs on file (reference index)
+
+Detailed specs for future work, mapped to phases. Check here before scoping any feature
+— a spec may already exist.
+
+| Spec | Phase | What it covers |
+| :--- | :---- | :------------- |
+| [`2026-06-19-anti-clutter-quality-gates.md`](2026-06-19-anti-clutter-quality-gates.md) | **Phase 0.5** | Fuzzy duplicate detection at capture, empty-note aging warnings, Done takeaway prompt, `maybe` status, alternative views (list / kanban / table) |
+| [`2026-06-19-tuxedo-analysis.md`](2026-06-19-tuxedo-analysis.md) | **Phase 0.5 / A** | Command palette (`Ctrl-P`), full keyboard navigation layer, saved search shortcuts, natural-language capture, snooze-to-date, density toggle — TUI patterns worth stealing |
+| [`2026-06-19-entry-version-history.md`](2026-06-19-entry-version-history.md) | **Phase A** | Session-based snapshots (not keystroke-level), thinning strategy, version-history drawer UI, schema extension of existing `entry_versions` table |
+| [`2026-06-17-file-preview-design.md`](2026-06-17-file-preview-design.md) | **Phase A** | File attachment previews — PDF, image, video inline in entry |
+| [`2026-06-17-living-topic-docs-design.md`](2026-06-17-living-topic-docs-design.md) | **Phase 0** | Living topic docs design spec (master doc per topic) |
+| [`2026-06-19-dashboard-design.md`](2026-06-19-dashboard-design.md) | **Phase 0.5** | Dashboard home view — inbox card, movers widget, Morning Brew digest, TickTick-style quick-add |
+
+---
+
 ## Guardrails (from core philosophy — don't violate)
 
 - **Triage is mandatory.** Every new CAPTURE source (feeds, email) MUST dump into
