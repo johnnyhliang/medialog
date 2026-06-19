@@ -11,6 +11,9 @@ export default function TopicsGrid({ topics, onSelectTopic }) {
       {sorted.map((t) => (
         <button key={t.id} className="topics-grid-card" onClick={() => onSelectTopic(t)}>
           <span className="topics-grid-name">{t.name}</span>
+          {t.entry_count != null && (
+            <span className="topics-grid-count">{t.entry_count}</span>
+          )}
         </button>
       ))}
     </div>

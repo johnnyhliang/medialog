@@ -1479,6 +1479,14 @@ a.activity-title:hover { color: var(--accent); }
 
 .topics-grid-name { display: block; }
 
+.topics-grid-count {
+  display: block;
+  margin-top: 6px;
+  font-size: var(--text-xs);
+  font-weight: 400;
+  color: var(--muted);
+}
+
 .topics-grid-empty { padding: 16px 0; }
 
 /* ── Widget Panel ──────────────────────────────── */

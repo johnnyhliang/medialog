@@ -7,18 +7,23 @@ function mockClient(result) {
     order: vi.fn(() => Promise.resolve(result)),
     insert: vi.fn(() => chain),
     eq: vi.fn(() => chain),
+    is: vi.fn(() => chain),
     single: vi.fn(() => Promise.resolve(result)),
   }
   return { from: vi.fn(() => chain), _chain: chain }
 }
 
 describe('topics db', () => {
-  test('listTopics returns rows ordered by name', async () => {
-    const rows = [{ id: '1', name: 'AI' }, { id: '2', name: 'Film' }]
+  test('listTopics returns rows ordered by name with entry_count', async () => {
+    const rows = [
+      { id: '1', name: 'AI', entries: [{ count: 5 }] },
+      { id: '2', name: 'Film', entries: [] },
+    ]
     const client = mockClient({ data: rows, error: null })
     const result = await listTopics(client)
     expect(client.from).toHaveBeenCalledWith('topics')
-    expect(result).toEqual(rows)
+    expect(result[0].entry_count).toBe(5)
+    expect(result[1].entry_count).toBe(0)
   })
 
   test('createTopic inserts and returns the new row', async () => {

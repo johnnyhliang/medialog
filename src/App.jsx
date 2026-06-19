@@ -271,6 +271,7 @@ function Workspace() {
     const inbox = inboxTopic || (await getTopicByName(supabase, 'Inbox'))
     const created = await bulkCreateEntries(supabase, inbox.id, items)
     enrichEntries(created)   // ← fire-and-forget
+    setInboxCount((prev) => prev + created.length)
     return created.length
   }
 
@@ -308,11 +309,13 @@ function Workspace() {
   async function handleAssign(entryId, topicId) {
     await updateEntry(supabase, entryId, { topic_id: topicId })
     setInboxEntries((prev) => prev.filter((e) => e.id !== entryId))
+    setInboxCount((prev) => Math.max(0, prev - 1))
   }
 
   async function handleSortDelete(entryId) {
     await softDeleteEntry(supabase, entryId)
     setInboxEntries((prev) => prev.filter((e) => e.id !== entryId))
+    setInboxCount((prev) => Math.max(0, prev - 1))
   }
 
   async function loadTrash() {

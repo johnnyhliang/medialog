@@ -94,11 +94,13 @@ async function fetchHeadlines(): Promise<any[]> {
       const titleMatch = m[1].match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/) ||
                          m[1].match(/<title>(.*?)<\/title>/)
       const linkMatch  = m[1].match(/<link>(.*?)<\/link>/)
+      const guidMatch  = m[1].match(/<guid[^>]*>(.*?)<\/guid>/)
+      const url = linkMatch?.[1]?.trim() || guidMatch?.[1]?.trim() || ''
       return {
         title: titleMatch?.[1]?.trim() ?? '',
-        url:   linkMatch?.[1]?.trim() ?? '',
+        url,
       }
-    }).filter((h) => h.title)
+    }).filter((h) => h.title && h.url)
   } catch {
     return []
   }

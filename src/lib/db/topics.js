@@ -1,10 +1,12 @@
 export async function listTopics(supabase) {
   const { data, error } = await supabase
     .from('topics')
-    .select('*')
+    .select('*, entries!entries_topic_id_fkey(count)')
+    .is('entries.deleted_at', null)
     .order('name', { ascending: true })
   if (error) throw new Error(error.message)
-  return data
+  // Flatten embedded count: [{ count: N }] → entry_count: N
+  return (data ?? []).map((t) => ({ ...t, entry_count: t.entries?.[0]?.count ?? 0 }))
 }
 
 export async function getTopicByName(supabase, name) {
