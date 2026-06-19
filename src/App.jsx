@@ -42,6 +42,7 @@ function Workspace() {
   const [historyFor, setHistoryFor] = useState(null)
   const [versions, setVersions] = useState([])
   const [allTags, setAllTags] = useState([])
+  const [exportModal, setExportModal] = useState(null) // null | { estimatedKB: number, loading: boolean }
 
   const [sidebarOpen, setSidebarOpen] = useState(() => {
     try { return localStorage.getItem('medialog_sidebar_open') !== 'false' } catch { return true }
@@ -316,7 +317,28 @@ function Workspace() {
     setRevisitEntries((prev) => prev.filter((e) => e.id !== entryId))
   }
 
-  async function handleExport() {
+  async function handleExportClick() {
+    // Fast size estimate: one aggregation query instead of fetching all content
+    setExportModal({ estimatedKB: null, entryCount: null, loading: true })
+    try {
+      const { data, error } = await supabase
+        .from('entries')
+        .select('id, note, title, url')
+        .is('deleted_at', null)
+      if (error) throw error
+      const rawBytes = (data || []).reduce((sum, e) => {
+        return sum + (e.note?.length || 0) + (e.title?.length || 0) + (e.url?.length || 0)
+      }, 0)
+      // Markdown adds ~15% overhead; zip compresses text to ~35% of raw
+      const estimatedKB = Math.round((rawBytes * 1.15 * 0.35) / 1024) || 1
+      setExportModal({ estimatedKB, entryCount: data.length, loading: false })
+    } catch {
+      setExportModal({ estimatedKB: null, entryCount: null, loading: false })
+    }
+  }
+
+  async function handleExportConfirm() {
+    setExportModal(null)
     const all = []
     for (const t of topics) {
       const rows = await listEntriesByTopic(supabase, t.id)
@@ -385,7 +407,7 @@ function Workspace() {
             </button>
           </li>
           <li>
-            <button onClick={handleExport} title="Export">
+            <button onClick={handleExportClick} title="Export">
               <Download size={16} /><span>Export</span>
             </button>
           </li>
@@ -466,6 +488,37 @@ function Workspace() {
         </Suspense>
       )}
       <Toast toasts={toasts} onDismiss={dismissToast} />
+      {exportModal && (
+        <Modal onClose={() => setExportModal(null)} label="Export library" maxWidth="400px">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: '4px 0' }}>
+            {exportModal.loading ? (
+              <p className="muted" style={{ fontSize: 13 }}>Calculating export size…</p>
+            ) : (
+              <>
+                <p style={{ fontSize: 14, margin: 0 }}>
+                  Export <strong>{exportModal.entryCount ?? '—'} entries</strong> across <strong>{topics.length} topics</strong> as a zip of Markdown files.
+                </p>
+                <p className="muted" style={{ fontSize: 13, margin: 0 }}>
+                  Estimated size: <strong>~{exportModal.estimatedKB != null
+                    ? exportModal.estimatedKB >= 1024
+                      ? `${(exportModal.estimatedKB / 1024).toFixed(1)} MB`
+                      : `${exportModal.estimatedKB} KB`
+                    : '—'}</strong> (compressed)
+                </p>
+                <p className="muted" style={{ fontSize: 12, margin: 0 }}>
+                  Note: file attachments (images, PDFs) are stored in Supabase and are not included in this export.
+                </p>
+              </>
+            )}
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button className="btn-small btn-ghost" onClick={() => setExportModal(null)}>Cancel</button>
+              <button className="btn-small" onClick={handleExportConfirm} disabled={exportModal.loading}>
+                {exportModal.loading ? 'Calculating…' : 'Export'}
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
       {historyFor && (
         <Modal onClose={() => setHistoryFor(null)} label="Version history" maxWidth="560px">
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxHeight: '70vh', overflow: 'auto' }}>

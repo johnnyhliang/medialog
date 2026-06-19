@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Trash2 } from 'lucide-react'
 
 export default function SortInbox({ entries, topics, onAssign, onDelete }) {
   const [index, setIndex] = useState(0)
@@ -35,7 +36,9 @@ export default function SortInbox({ entries, topics, onAssign, onDelete }) {
             ))}
           </select>
           <button onClick={handleAssign}>Assign</button>
-          <button className="icon-btn" onClick={handleDelete} aria-label="delete">Delete</button>
+          <button className="btn-small btn-danger" onClick={handleDelete} aria-label="delete">
+            <Trash2 size={13} /> Delete
+          </button>
         </div>
       </div>
     </div>

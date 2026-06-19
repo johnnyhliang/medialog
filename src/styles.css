@@ -1241,8 +1241,11 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
 .btn-danger {
   background: var(--danger);
   color: #fff;
-  border: none;
+  border: 1px solid var(--danger);
   font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 .btn-danger:hover { background: var(--danger); opacity: 0.9; }
 

@@ -13,7 +13,7 @@ Replace the "no topic selected" blank state with a personal morning dashboard: t
 
 ## Layout
 
-Two-column layout inside the existing `<main>` area. Renders when no topic is selected (Home nav item, default on load).
+Two-column layout inside the existing `<main>` area. Renders when `view === 'home'` (new nav item, default on load).
 
 ```
 ┌────────────────────────────────┬──────────────────────┐
@@ -25,16 +25,23 @@ Two-column layout inside the existing `<main>` area. Renders when no topic is se
 │  ┌───────┐ ┌───────┐          │  Gmail  · GCal       │
 │  │  CS   │ │  ...  │          │                      │
 │  └───────┘ └───────┘          │  MARKET              │
-│                                │  VOO  +0.4%  $541   │
-│                                │  MSFT +1.2%  $421   │
-│                                │  MA   -0.1%  $488   │
-│                                │  V    +0.3%  $275   │
-│                                │  SPGI +0.8%  $491   │
+│                                │  VOO   +0.4%  $541  │
+│                                │  NVDA  +2.1%  $875  │
+│                                │  AMZN  +0.8%  $192  │
+│                                │  AVGO  -0.3%  $168  │
+│                                │  MA    -0.1%  $488  │
+│                                │  V     +0.3%  $275  │
+│                                │  SPGI  +0.8%  $491  │
 │                                │                      │
-│                                │  NEWS                │
+│                                │  TRENDING (WSB)      │
+│                                │  ① NVDA  1,204 ↑89% │
+│                                │  ② GME    847  ↑12% │
+│                                │  ③ TSLA   621  ↓3%  │
+│                                │                      │
+│                                │  HEADLINES           │
 │                                │  · Fed holds rates…  │
-│                                │  · SPGI upgrades…    │
-│                                │  · Markets open…     │
+│                                │  · Broadcom beats…   │
+│                                │  · Oil falls on…     │
 └────────────────────────────────┴──────────────────────┘
 ```
 
@@ -49,29 +56,22 @@ Root component. Two-column flex layout. Left = `<TopicsGrid>`, right = `<WidgetP
 
 ### `TopicsGrid.jsx`
 - CSS `auto-fill` grid, `minmax(160px, 1fr)`
-- Each topic card: name, entry count, last-edited age (from `entries.updated_at` max per topic — already available from the topics list)
-- Pinned topics (no concept of topic pinning yet — sort alphabetically for now)
-- Status tint: use existing `--surface-2` card style, no status tint (topics aren't statused)
-- Click → calls `onSelectTopic(topic)` which sets `selectedTopic` in App and switches to browse view
+- Each topic card: name, entry count, last-edited age
+- Sorted alphabetically (no topic-level pinning concept yet)
+- Click → calls `onSelectTopic(topic)` which sets `selectedTopic` in App and switches to `view = 'browse'`
 - Empty state: "No topics yet — create one in the sidebar"
 
 ### `WidgetPanel.jsx`
 Right column. Renders a hardcoded array of widget components top-to-bottom with consistent gap. Adding a widget = one import + one JSX line.
 
-```jsx
-// Structure — not final code, illustrative
-const WIDGETS = [ClockWidget, SearchWidget, QuickLinksWidget, MarketWidget, NewsWidget]
-```
-
 ### `ClockWidget.jsx`
 - `useEffect` + `setInterval(1000)` updating a `Date` state
-- Displays: `Thu Jun 19 · 10:42 AM`
-- No seconds (cleaner)
+- Displays: `Thu Jun 19 · 10:42 AM` — no seconds (cleaner)
 - Clears interval on unmount
 
 ### `SearchWidget.jsx`
 - Controlled text input, `onKeyDown` Enter → `window.open(url, '_blank')`
-- Three engine options, stored in component as a constant array:
+- Three engine options hardcoded:
   ```js
   const ENGINES = [
     { label: 'G',   name: 'Google',     url: q => `https://www.google.com/search?q=${encodeURIComponent(q)}&udm=14` },
@@ -79,51 +79,76 @@ const WIDGETS = [ClockWidget, SearchWidget, QuickLinksWidget, MarketWidget, News
     { label: 'K',   name: 'Kagi',       url: q => `https://kagi.com/search?q=${encodeURIComponent(q)}` },
   ]
   ```
-- Selected engine stored in `localStorage` key `medialog_search_engine` (persists preference)
-- Engine toggle: small pill buttons next to input, active engine highlighted with accent color
+- Selected engine persisted in `localStorage` key `medialog_search_engine`
+- Active engine pill highlighted with accent color
 
 ### `QuickLinksWidget.jsx`
-- Hardcoded links:
+- Hardcoded:
   ```js
   const LINKS = [
-    { label: 'Gmail',    href: 'https://mail.google.com',          icon: 'Mail' },
-    { label: 'Calendar', href: 'https://calendar.google.com',       icon: 'Calendar' },
+    { label: 'Gmail',    href: 'https://mail.google.com',    icon: 'Mail' },
+    { label: 'Calendar', href: 'https://calendar.google.com', icon: 'Calendar' },
   ]
   ```
-- Renders as a row of icon + label chips, opening in new tab
-- Icons from lucide-react
+- Icon + label chips, open new tab, lucide-react icons
 
-### `MarketWidget.jsx`
-- Hardcoded tickers in component file:
+### `MarketNewsWidget.jsx`
+Single component that fires one edge function call and renders three sections: Market, Trending, Headlines.
+
+**Market section:**
+- Hardcoded tickers:
   ```js
-  const TICKERS = ['VOO', 'MSFT', 'AAPL', 'MA', 'V', 'SPGI']
+  const TICKERS = ['VOO', 'NVDA', 'AMZN', 'AVGO', 'MA', 'V', 'SPGI']
   ```
-- Calls `supabase.functions.invoke('market', { body: { tickers: TICKERS } })` on mount and every 5 minutes
-- Shows: ticker | price | daily change % (green if positive, red if negative)
-- Loading state: skeleton rows. Error state: "Market data unavailable"
-- Last-updated timestamp shown below the list ("Updated 3m ago")
+- Displays: ticker | price | daily change % (green positive, red negative)
 
-### `NewsWidget.jsx`
-- Called in same `market` edge function invocation — returns `{ quotes, news }` to avoid two round-trips
-- Shows top 5 headlines: bullet + truncated title (max 80 chars) linking to article URL in new tab
-- Loading/error states same pattern as MarketWidget
+**Trending section (WSB/Reddit):**
+- Top 5 tickers by mention count from ApeWisdom, filtered to r/wallstreetbets + r/stocks
+- Shows: rank | ticker | mention count | 24h change in mentions (↑/↓ %)
 
-### `market` Supabase Edge Function (`supabase/functions/market/index.ts`)
-- Accepts `{ tickers: string[] }` POST body
-- **Quotes:** Yahoo Finance unofficial endpoint: `https://query1.finance.yahoo.com/v8/finance/chart/{ticker}?interval=1d&range=1d` — no API key required, rate-limit friendly for personal use (6 tickers = 6 sequential fetches, cached 5 min server-side via response headers)
-- **News:** NewsAPI.org `https://newsapi.org/v2/top-headlines?category=business&pageSize=5&apiKey={NEWS_API_KEY}` — requires `NEWS_API_KEY` secret set in Supabase dashboard
-- Returns: `{ quotes: [{ ticker, price, change, changePercent }], news: [{ title, url }] }`
-- CORS headers for browser calls
-- Error handling: if Yahoo fails for a ticker, that ticker is omitted (not a fatal error); if NewsAPI fails, `news` returns `[]`
+**Headlines section:**
+- Top 5 headlines from Reuters RSS parsed server-side
+- Each headline: bullet + truncated title (max 80 chars) as external link
+
+**Polling:** fetches on mount, refreshes every 5 minutes. Shows "Updated Xm ago" timestamp. Loading = skeleton rows. Error = graceful "unavailable" message per section (one failing doesn't break others).
+
+---
+
+## `market` Supabase Edge Function (`supabase/functions/market/index.ts`)
+
+Accepts POST with `{ tickers: string[] }`. Returns:
+```ts
+{
+  quotes: Array<{ ticker: string, price: number, change: number, changePercent: number }>,
+  trending: Array<{ ticker: string, mentions: number, mentionsDelta: number }>,
+  headlines: Array<{ title: string, url: string, source: string }>
+}
+```
+
+**Quotes** — Yahoo Finance unofficial endpoint (no key required):
+`https://query1.finance.yahoo.com/v8/finance/chart/{ticker}?interval=1d&range=1d`
+Fetch each ticker sequentially; omit any that fail without failing the whole response.
+
+**Trending** — ApeWisdom (no key required):
+`https://apewisdom.io/api/v1.0/filter/all-reddit/page/1`
+Returns ranked tickers with `mentions` and `mentions_24h_ago`. Compute delta % from those two fields. Take top 5 results.
+
+**Headlines** — Reuters RSS (no key required):
+`https://feeds.reuters.com/reuters/businessNews`
+Fetch XML, parse `<item>` elements, extract `<title>` and `<link>`. Return top 5. Pure text parsing, no external library needed in Deno (string split/regex on the XML).
+
+**No secrets required** — all three sources are public endpoints.
+
+**CORS headers** on all responses for browser `invoke()` calls.
 
 ---
 
 ## Navigation
 
-- New "Home" nav item added to sidebar, first position, `Home` icon (lucide)
-- `view === 'home'` added to App's view state
-- Default view on load: `'home'` (currently defaults to browse with no topic selected — change to `'home'`)
-- Clicking a topic card in TopicsGrid sets `selectedTopic` and `view = 'browse'`
+- New "Home" nav item, first position in sidebar, `Home` icon (lucide-react)
+- `view` state gains `'home'` option in App.jsx
+- Default view on load changes from `'browse'` to `'home'`
+- Clicking a topic card → sets `selectedId` + `setView('browse')`
 
 ---
 
@@ -132,16 +157,13 @@ const WIDGETS = [ClockWidget, SearchWidget, QuickLinksWidget, MarketWidget, News
 ```
 App.jsx
   └── HomeView (view === 'home')
-        ├── TopicsGrid  ← receives topics[] prop (already loaded in App)
+        ├── TopicsGrid       ← topics[] prop (already loaded in App)
         └── WidgetPanel
-              ├── ClockWidget      (no props — self-contained)
-              ├── SearchWidget     (no props — self-contained)
-              ├── QuickLinksWidget (no props — hardcoded)
-              ├── MarketWidget     ← receives supabase client prop
-              └── NewsWidget       ← receives data from MarketWidget via shared fetch (or co-located in one widget)
+              ├── ClockWidget         (self-contained)
+              ├── SearchWidget        (self-contained, localStorage)
+              ├── QuickLinksWidget    (self-contained, hardcoded)
+              └── MarketNewsWidget    ← supabase prop for functions.invoke
 ```
-
-`MarketWidget` and `NewsWidget` can be co-located as `MarketNewsWidget` since they share a single edge function call — one fetch, two display sections.
 
 ---
 
@@ -161,33 +183,24 @@ supabase/functions/market/index.ts
 ## Modified Files
 
 ```
-src/App.jsx          — add 'home' view, default to 'home', pass topics to HomeView
-src/styles.css       — HomeView layout, TopicsGrid, WidgetPanel, widget styles
+src/App.jsx       — add 'home' view, default to 'home', pass topics + onSelectTopic to HomeView
+src/styles.css    — HomeView layout, TopicsGrid cards, WidgetPanel, per-widget styles
 ```
 
 ---
 
 ## Secrets Required
 
-- `NEWS_API_KEY` — set in Supabase dashboard → Edge Function secrets. Free tier at newsapi.org (100 req/day, plenty for personal use).
+None. All data sources (Yahoo Finance, ApeWisdom, Reuters RSS) are public endpoints.
 
 ---
 
 ## Future Widget Ideas (not in this spec)
 
 - Custom quick links editor with icon picker and variable-width chips
-- Canvas (UMich) upcoming assignments
+- Canvas (UMich) upcoming assignments widget
 - TickTick task list integration
 - Google Calendar real data (OAuth)
 - Browser extension: new tab override pointing to this dashboard
 - Weather widget
-- Daily writing prompt / journal entry quick-add
-
----
-
-## What This Is Not
-
-- No drag-to-reorder widgets (hardcoded layout)
-- No widget config UI (edit the source file)
-- No real-time market data (5-min poll is sufficient)
-- No Canvas/TickTick/Calendar API integration (quick links only for now)
+- Micro-cap screener / mini Bloomberg
