@@ -544,14 +544,37 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
 .embed-pdf object { width: 100%; height: 100%; border: 0; }
 
 /* No-note nudge */
-.card-no-note {
+/* Collapse handle */
+.card-collapse-row {
+  display: flex;
+  justify-content: flex-end;
+  margin: -6px -6px 0;
+}
+.card-collapse-btn { opacity: 0.4; }
+.card-collapse-btn:hover { opacity: 1; }
+/* Hide collapse button when card is rendered inside a modal sheet */
+.modal .card-collapse-row { display: none; }
+
+/* Add note button */
+.card-add-note-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
   font-size: 12.5px;
   color: var(--muted);
-  font-style: italic;
-  opacity: 0.7;
+  background: var(--surface-2);
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  padding: 6px 12px;
   cursor: pointer;
+  width: 100%;
+  transition: background 0.1s, color 0.1s, border-color 0.1s;
 }
-.card-no-note:hover { opacity: 1; color: var(--accent); }
+.card-add-note-btn:hover {
+  background: var(--accent-weak);
+  color: var(--accent);
+  border-color: var(--accent);
+}
 
 /* Tags row */
 .card-tags-row { padding: 4px 0 2px; }

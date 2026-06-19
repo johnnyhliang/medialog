@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
-import { Clock, MoreVertical, Pencil, Pin, PinOff, Trash2 } from 'lucide-react'
+import { ChevronUp, Clock, MoreVertical, Pencil, Pin, PinOff, Plus, Trash2 } from 'lucide-react'
 import TagInput from './TagInput.jsx'
 import MarkdownView from './MarkdownView.jsx'
 import ConfirmModal from './ConfirmModal.jsx'
@@ -104,7 +104,8 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
 
   function handleCardClick(e) {
     if (e.target.closest('a, button, input, select')) return
-    if (window.innerWidth <= 640) {
+    // Use sheet on mobile OR on narrow grid cells (≤320px wide) so content isn't crammed
+    if (window.innerWidth <= 640 || e.currentTarget.offsetWidth <= 320) {
       setShowSheet(true)
     } else {
       setExpanded((prev) => !prev)
@@ -129,6 +130,17 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
 
   const expandedBody = (
     <>
+      {/* Collapse handle — only shown in inline-expanded state, not in sheet */}
+      <div className="card-collapse-row">
+        <button
+          className="icon-btn card-collapse-btn"
+          aria-label="Collapse card"
+          onClick={(e) => { e.stopPropagation(); setExpanded(false) }}
+        >
+          <ChevronUp size={15} />
+        </button>
+      </div>
+
       {/* Title + URL block */}
       <div className="card-title-row">
         {editingTitle ? (
@@ -209,9 +221,10 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
           <MarkdownView onPreview={onPreview} onToggleCheckbox={handleCheckboxToggle}>{entry.note}</MarkdownView>
         </div>
       ) : (
-        <span className="card-no-note" onClick={(e) => { e.stopPropagation(); startEditing() }}>
-          Add a note…
-        </span>
+        <button className="card-add-note-btn" onClick={(e) => { e.stopPropagation(); startEditing() }}>
+          <Plus size={13} />
+          Add a note
+        </button>
       )}
 
       {/* Tags row */}
