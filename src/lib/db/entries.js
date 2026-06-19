@@ -142,3 +142,15 @@ export async function emptyTrash(supabase) {
     .not('deleted_at', 'is', null)
   if (error) throw new Error(error.message)
 }
+
+export async function listArchivedEntriesByTopic(supabase, topicId) {
+  const { data, error } = await supabase
+    .from('entries')
+    .select(TAG_SELECT)
+    .eq('topic_id', topicId)
+    .eq('status', 'done')
+    .is('deleted_at', null)
+    .order('created_at', { ascending: false })
+  if (error) throw new Error(error.message)
+  return data.map(flattenTags)
+}

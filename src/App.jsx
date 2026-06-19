@@ -46,6 +46,7 @@ function Workspace() {
   const [exportModal, setExportModal] = useState(null) // null | { estimatedKB: number, loading: boolean }
   const [inboxCount, setInboxCount] = useState(0)
   const [archiveToast, setArchiveToast] = useState(true)
+  const [pendingArchiveIds, setPendingArchiveIds] = useState(new Set())
 
   const [sidebarOpen, setSidebarOpen] = useState(() => {
     try { return localStorage.getItem('medialog_sidebar_open') !== 'false' } catch { return true }
@@ -175,6 +176,12 @@ function Workspace() {
     }
   }, [selectedId])
 
+  useEffect(() => {
+    if (pendingArchiveIds.size > 0) {
+      setPendingArchiveIds(new Set())
+    }
+  }, [selectedId])
+
   async function handleSearchAll(q) {
     if (!q.trim()) { setGlobalSearchResults(null); return }
     const results = await searchEntries(supabase, q.trim())
@@ -205,8 +212,34 @@ function Workspace() {
   }
 
   async function handleStatusChange(entryId, status) {
+    const entry = entries.find(e => e.id === entryId)
+    const prevStatus = entry?.status || null
     const updated = await updateEntry(supabase, entryId, { status })
     setEntries((prev) => prev.map((e) => (e.id === entryId ? { ...updated, tags: e.tags } : e)))
+
+    if (status === 'done') {
+      if (archiveToast) {
+        setPendingArchiveIds((prev) => new Set([...prev, entryId]))
+        addToast(
+          'Moved to archive',
+          'info',
+          {
+            duration: 3000,
+            actions: [{ label: 'Undo', onClick: () => handleUndoArchive(entryId, prevStatus) }],
+            onExpire: () => setPendingArchiveIds((prev) => { const next = new Set(prev); next.delete(entryId); return next }),
+          }
+        )
+      }
+    } else {
+      // If re-opened from done, remove from pending if present
+      setPendingArchiveIds((prev) => { const next = new Set(prev); next.delete(entryId); return next })
+    }
+  }
+
+  async function handleUndoArchive(entryId, prevStatus) {
+    const updated = await updateEntry(supabase, entryId, { status: prevStatus })
+    setEntries((prev) => prev.map((e) => (e.id === entryId ? { ...updated, tags: e.tags } : e)))
+    setPendingArchiveIds((prev) => { const next = new Set(prev); next.delete(entryId); return next })
   }
 
   async function handleTagsChange(entryId, tags) {
@@ -499,6 +532,8 @@ function Workspace() {
             onMove={handleMove}
             tagColors={tagColors}
             allTags={allTags}
+            pendingArchiveIds={pendingArchiveIds}
+            supabase={supabase}
           />
         )}
         {view === 'bulk' && (

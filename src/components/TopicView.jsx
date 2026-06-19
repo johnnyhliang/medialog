@@ -4,6 +4,7 @@ import MarkdownView from './MarkdownView.jsx'
 import EntryList from './EntryList.jsx'
 import QuickAdd from './QuickAdd.jsx'
 import ReturnButton from './ReturnButton.jsx'
+import ArchiveSection from './ArchiveSection.jsx'
 import { fuzzyFind } from '../lib/fuzzyFind.js'
 import { extractEmbedIds } from '../lib/embeds.js'
 
@@ -20,6 +21,8 @@ export default function TopicView({
   onSearchAll, globalSearchResults,
   onTitleChange, onMove, tagColors,
   allTags = [],
+  pendingArchiveIds = new Set(),
+  supabase,
 }) {
   const storageKey = `medialog_topic_view_${topic.id}`
   const [mode, setMode] = useState(() => {
@@ -102,13 +105,18 @@ export default function TopicView({
   const docEmbedIds = useMemo(() => new Set(extractEmbedIds(liveDoc)), [liveDoc])
 
   const filtered = useMemo(() => {
-    if (filteredByTag !== null) return filteredByTag
-    if (scope === 'all') {
-      return globalSearchResults ?? fuzzyFind(query, entries, ['title', 'url', 'note'])
+    let result
+    if (filteredByTag !== null) {
+      result = filteredByTag
+    } else if (scope === 'all') {
+      result = globalSearchResults ?? fuzzyFind(query, entries, ['title', 'url', 'note'])
+    } else {
+      let pool = scope === 'doc' ? entries.filter((e) => docEmbedIds.has(e.id)) : entries
+      result = fuzzyFind(query, pool, ['title', 'url', 'note'])
     }
-    let pool = scope === 'doc' ? entries.filter((e) => docEmbedIds.has(e.id)) : entries
-    return fuzzyFind(query, pool, ['title', 'url', 'note'])
-  }, [entries, query, scope, docEmbedIds, globalSearchResults, filteredByTag])
+    // Hide done entries unless they're pending archive (timer still running)
+    return result.filter(e => e.status !== 'done' || pendingArchiveIds.has(e.id))
+  }, [entries, query, scope, docEmbedIds, globalSearchResults, filteredByTag, pendingArchiveIds])
 
   function handleJump(entryId) {
     setReturnY(window.scrollY)
@@ -276,6 +284,14 @@ export default function TopicView({
           tagColors={tagColors}
         />
       </div>
+
+      <ArchiveSection
+        key={topic.id}
+        topicId={topic.id}
+        supabase={supabase}
+        onStatusChange={onStatusChange}
+        onDelete={onDelete}
+      />
 
       {returnY != null && <ReturnButton onReturn={handleReturn} />}
     </>
