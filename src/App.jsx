@@ -172,6 +172,18 @@ function Workspace() {
     setGlobalSearchResults(results)
   }
 
+  async function handleCheckDuplicate(url) {
+    if (!url) return null
+    const { data } = await supabase
+      .from('entries')
+      .select('id, created_at, topics(name)')
+      .eq('url', url)
+      .is('deleted_at', null)
+      .maybeSingle()
+    if (!data) return null
+    return { id: data.id, created_at: data.created_at, topic_name: data.topics?.name || 'Unknown' }
+  }
+
   async function handleAddTopic(name) {
     const t = await createTopic(supabase, name)
     applyAddTopic(t)
@@ -512,6 +524,7 @@ function Workspace() {
               allTags={allTags}
               pendingArchiveIds={pendingArchiveIds}
               supabase={supabase}
+              onCheckDuplicate={handleCheckDuplicate}
             />
           )}
           {view === 'bulk' && (

@@ -23,6 +23,7 @@ export default function TopicView({
   allTags = [],
   pendingArchiveIds = new Set(),
   supabase,
+  onCheckDuplicate,
 }) {
   const storageKey = `medialog_topic_view_${topic.id}`
   const [mode, setMode] = useState(() => {
@@ -265,7 +266,7 @@ export default function TopicView({
         )}
       </div>
 
-      {!query && <QuickAdd onAdd={onAddEntry} disabled={false} />}
+      {!query && <QuickAdd onAdd={onAddEntry} disabled={false} onCheckDuplicate={onCheckDuplicate} />}
 
       <div style={{ '--card-min-width': `${cardMinWidth}px` }}>
         <EntryList
