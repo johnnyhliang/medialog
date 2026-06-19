@@ -220,12 +220,12 @@ function Workspace() {
     if (status === 'done') {
       if (archiveToast) {
         setPendingArchiveIds((prev) => new Set([...prev, entryId]))
-        const toastId = addToast(
+        addToast(
           'Moved to archive',
           'info',
           {
             duration: 3000,
-            actions: [{ label: 'Undo', onClick: () => { dismissToast(toastId); handleUndoArchive(entryId, prevStatus) } }],
+            actions: [{ label: 'Undo', onClick: () => handleUndoArchive(entryId, prevStatus) }],
             onExpire: () => setPendingArchiveIds((prev) => { const next = new Set(prev); next.delete(entryId); return next }),
           }
         )
