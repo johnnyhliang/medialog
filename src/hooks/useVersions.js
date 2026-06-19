@@ -11,6 +11,7 @@ export function useVersions() {
 
   function closeHistory() {
     setHistoryFor(null)
+    setVersions([])
   }
 
   return { historyFor, versions, openHistory, closeHistory }

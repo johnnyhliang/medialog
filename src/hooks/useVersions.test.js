@@ -21,3 +21,11 @@ test('closeHistory sets historyFor to null', () => {
   act(() => { result.current.closeHistory() })
   expect(result.current.historyFor).toBeNull()
 })
+
+test('closeHistory clears both historyFor and versions', () => {
+  const { result } = renderHook(() => useVersions())
+  act(() => { result.current.openHistory('entry-1', [{ id: 'v1', note: 'hello' }]) })
+  act(() => { result.current.closeHistory() })
+  expect(result.current.historyFor).toBeNull()
+  expect(result.current.versions).toEqual([])
+})

@@ -13,9 +13,5 @@ export function useTopics() {
     setSelectedId(topic.id)
   }
 
-  function applySelectTopic(id) {
-    setSelectedId(id)
-  }
-
-  return { topics, setTopics, selectedId, setSelectedId, inboxCount, setInboxCount, selectedTopic, inboxTopic, applyAddTopic, applySelectTopic }
+  return { topics, setTopics, selectedId, setSelectedId, inboxCount, setInboxCount, selectedTopic, inboxTopic, applyAddTopic }
 }

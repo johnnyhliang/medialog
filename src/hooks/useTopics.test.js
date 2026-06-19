@@ -29,10 +29,3 @@ test('applyAddTopic appends, sorts by name, and selects the new topic', () => {
   expect(result.current.selectedId).toBe('2')
 })
 
-test('applySelectTopic sets selectedId and updates selectedTopic', () => {
-  const { result } = renderHook(() => useTopics())
-  act(() => { result.current.setTopics([{ id: '1', name: 'Books' }]) })
-  act(() => { result.current.applySelectTopic('1') })
-  expect(result.current.selectedId).toBe('1')
-  expect(result.current.selectedTopic).toEqual({ id: '1', name: 'Books' })
-})
