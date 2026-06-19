@@ -1013,7 +1013,71 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
 }
 .master-doc-empty:hover { color: var(--accent); }
 
-.search-scope { display: flex; gap: 6px; align-items: center; position: relative; }
+.search-scope { display: flex; gap: 6px; align-items: center; position: relative; flex-wrap: wrap; }
+
+/* Searchbar wrapper — becomes highlighted in tag-mode */
+.searchbar-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+  overflow: hidden;
+}
+.searchbar-wrap:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-weak);
+}
+.searchbar-wrap.tag-mode {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 6%, var(--surface));
+  box-shadow: 0 0 0 3px var(--accent-weak);
+}
+.searchbar-wrap .searchbar {
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  flex: 1;
+  min-width: 0;
+  border-radius: 0;
+  padding: 7px 10px;
+}
+.searchbar-wrap .searchbar:focus { box-shadow: none; border-color: transparent; }
+
+/* tag: mode pill — shown inside the input when in tag search mode */
+.tag-mode-pill {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  background: var(--accent);
+  color: #fff;
+  border-radius: 4px;
+  padding: 2px 6px;
+  margin-left: 8px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.tag-mode-pill-sm {
+  font-size: 10px;
+  padding: 1px 5px;
+  margin-left: 0;
+}
+.tag-mode-clear {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  padding: 0 10px;
+  font-size: 14px;
+  cursor: pointer;
+  flex-shrink: 0;
+  border-radius: 0;
+}
+.tag-mode-clear:hover { color: var(--text); background: transparent; }
+
+/* Dropdown — shown when search is focused */
 .tag-search-dropdown {
   position: absolute;
   top: calc(100% + 4px);
@@ -1036,9 +1100,10 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
   gap: 8px;
 }
 .tag-search-item:hover { background: var(--surface-3); }
-.tag-search-item .tag-color-swatch {
-  width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0;
-}
+.tag-search-trigger { color: var(--muted); font-style: italic; }
+.tag-search-trigger:hover { color: var(--text); background: var(--surface-2); }
+.tag-color-swatch { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+
 .search-scope select {
   font-size: 12px;
   padding: 4px 8px;

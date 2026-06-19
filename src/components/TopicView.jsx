@@ -35,6 +35,7 @@ export default function TopicView({
   const [query, setQuery] = useState('')
   const [scope, setScope] = useState('topic')
   const [returnY, setReturnY] = useState(null)
+  const [searchFocused, setSearchFocused] = useState(false)
   const [docWidth, setDocWidth] = useState(() => {
     try { return localStorage.getItem('medialog_doc_width') || 'readable' } catch { return 'readable' }
   })
@@ -197,30 +198,51 @@ export default function TopicView({
       )}
 
       <div className="search-scope">
-        <input
-          className="searchbar"
-          type="search"
-          placeholder="Search… (try tag:book)"
-          value={inputVal}
-          onChange={(e) => setInputVal(e.target.value)}
-        />
+        <div className={`searchbar-wrap${isTagSearch ? ' tag-mode' : ''}`}>
+          {isTagSearch && <span className="tag-mode-pill">tag:</span>}
+          <input
+            className="searchbar"
+            type="search"
+            placeholder="Search…"
+            value={isTagSearch ? inputVal.slice(4) : inputVal}
+            onChange={(e) => setInputVal(isTagSearch ? `tag:${e.target.value}` : e.target.value)}
+            onFocus={() => setSearchFocused(true)}
+            onBlur={() => setSearchFocused(false)}
+          />
+          {isTagSearch && (
+            <button
+              className="tag-mode-clear"
+              aria-label="Exit tag search"
+              onMouseDown={(e) => { e.preventDefault(); setInputVal(''); setSearchFocused(false) }}
+            >✕</button>
+          )}
+        </div>
         <select value={scope} onChange={(e) => setScope(e.target.value)}>
           {SCOPES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
         </select>
-        {isTagSearch && tagSuggestions.length > 0 && (
+        {searchFocused && (
           <div className="tag-search-dropdown">
-            {tagSuggestions.map(t => (
+            {!isTagSearch && (
+              <div
+                className="tag-search-item tag-search-trigger"
+                onMouseDown={(e) => { e.preventDefault(); setInputVal('tag:'); setSearchFocused(true) }}
+              >
+                <span className="tag-mode-pill tag-mode-pill-sm">tag:</span>
+                Search by tag
+              </div>
+            )}
+            {isTagSearch && tagSuggestions.map(t => (
               <div
                 key={t.id}
                 className="tag-search-item"
-                onClick={() => setInputVal(`tag:${t.name}`)}
+                onMouseDown={(e) => { e.preventDefault(); setInputVal(`tag:${t.name}`) }}
               >
                 {t.color && <span className="tag-color-swatch" style={{ background: t.color }} />}
                 #{t.name}
               </div>
             ))}
-            {(allTags || []).filter(t => !tagSearchTerm || t.name.toLowerCase().includes(tagSearchTerm)).length > tagSuggestions.length && (
-              <div className="tag-search-item" style={{ color: 'var(--muted)' }} onClick={() => setTagSuggestLimit(l => l + 20)}>
+            {isTagSearch && (allTags || []).filter(t => !tagSearchTerm || t.name.toLowerCase().includes(tagSearchTerm)).length > tagSuggestions.length && (
+              <div className="tag-search-item" style={{ color: 'var(--muted)' }} onMouseDown={(e) => { e.preventDefault(); setTagSuggestLimit(l => l + 20) }}>
                 Load more…
               </div>
             )}
