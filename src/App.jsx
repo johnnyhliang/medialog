@@ -1,6 +1,6 @@
 // src/App.jsx
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
-import { LayoutGrid, Upload, Inbox, RotateCcw, BarChart2, Settings2, Trash2 as TrashIcon, Download, Menu, Home } from 'lucide-react'
+import { LayoutGrid, Upload, Inbox, RotateCcw, BarChart2, Settings2, Trash2 as TrashIcon, Download, Menu, Home, FolderOpen } from 'lucide-react'
 import { supabase } from './lib/supabaseClient.js'
 import { listTopics, createTopic, getTopicByName } from './lib/db/topics.js'
 import {
@@ -23,6 +23,7 @@ import Revisit from './components/Revisit.jsx'
 import SettingsView from './components/SettingsView.jsx'
 import TrashView from './components/TrashView.jsx'
 import HomeView from './components/HomeView.jsx'
+import FilesView from './components/FilesView.jsx'
 import TopicView from './components/TopicView.jsx'
 import ExportModal from './components/ExportModal.jsx'
 import VersionHistoryModal from './components/VersionHistoryModal.jsx'
@@ -100,6 +101,7 @@ function Workspace() {
 
   const autoBackupTimer = useRef(null)
   const pendingBackup = useRef(false)
+  const pendingEntryScroll = useRef(null)
   useEffect(() => {
     pendingBackup.current = true
     if (autoBackupTimer.current) return
@@ -121,7 +123,16 @@ function Workspace() {
 
   useEffect(() => {
     if (selectedId) {
-      listEntriesByTopic(supabase, selectedId).then(setEntries)
+      listEntriesByTopic(supabase, selectedId).then(data => {
+        setEntries(data)
+        if (pendingEntryScroll.current) {
+          const id = pendingEntryScroll.current
+          pendingEntryScroll.current = null
+          setTimeout(() => {
+            document.getElementById(`entry-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          }, 150)
+        }
+      })
     } else {
       setEntries([])
     }
@@ -293,6 +304,13 @@ function Workspace() {
 
   function handleSelectTopic(topic) {
     setSelectedId(topic.id)
+    setGlobalSearchResults(null)
+    setView('browse')
+  }
+
+  function handleSelectEntry(entry) {
+    pendingEntryScroll.current = entry.id
+    setSelectedId(entry.topic_id)
     setGlobalSearchResults(null)
     setView('browse')
   }
@@ -472,6 +490,11 @@ function Workspace() {
             </button>
           </li>
           <li>
+            <button className={view === 'files' ? 'active' : ''} onClick={() => setView('files')} title="Files">
+              <FolderOpen size={16} /><span>Files</span>
+            </button>
+          </li>
+          <li>
             <button onClick={handleExportClick} title="Export">
               <Download size={16} /><span>Export</span>
             </button>
@@ -568,6 +591,12 @@ function Workspace() {
               entries={trashEntries}
               onRestore={handleRestore}
               onEmptyTrash={handleEmptyTrash}
+            />
+          )}
+          {view === 'files' && (
+            <FilesView
+              supabase={supabase}
+              onSelectEntry={handleSelectEntry}
             />
           )}
         </div>
