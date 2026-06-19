@@ -1,3 +1,4 @@
+// src/App.jsx
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { LayoutGrid, Upload, Inbox, RotateCcw, BarChart2, Settings2, Trash2 as TrashIcon, Download, Menu, Home } from 'lucide-react'
 import { supabase } from './lib/supabaseClient.js'
@@ -23,31 +24,38 @@ import SettingsView from './components/SettingsView.jsx'
 import TrashView from './components/TrashView.jsx'
 import HomeView from './components/HomeView.jsx'
 import TopicView from './components/TopicView.jsx'
-import VersionHistory from './components/VersionHistory.jsx'
-import Modal from './components/Modal.jsx'
+import ExportModal from './components/ExportModal.jsx'
+import VersionHistoryModal from './components/VersionHistoryModal.jsx'
 import { useFilePreview } from './hooks/useFilePreview.js'
 import useToast from './hooks/useToast.js'
 import Toast from './components/Toast.jsx'
+import { useTopics } from './hooks/useTopics.js'
+import { useEntries } from './hooks/useEntries.js'
+import { usePendingArchive } from './hooks/usePendingArchive.js'
+import { useInbox } from './hooks/useInbox.js'
+import { useTrash } from './hooks/useTrash.js'
+import { useRevisit } from './hooks/useRevisit.js'
+import { useTags } from './hooks/useTags.js'
+import { useVersions } from './hooks/useVersions.js'
+import { useExport } from './hooks/useExport.js'
+import { useArchiveToast } from './hooks/useArchiveToast.js'
 const FilePreviewModal = lazy(() => import('./components/FilePreviewModal.jsx'))
 
 function Workspace() {
-  const [topics, setTopics] = useState([])
-  const [selectedId, setSelectedId] = useState(null)
-  const [entries, setEntries] = useState([])
-  const [globalSearchResults, setGlobalSearchResults] = useState(null)
-  const [view, setView] = useState('home') // 'home' | 'browse' | 'bulk' | 'sort' | 'progress' | 'revisit' | 'settings' | 'trash'
-  const [inboxEntries, setInboxEntries] = useState([])
-  const [revisitEntries, setRevisitEntries] = useState([])
-  const [recentActivity, setRecentActivity] = useState([])
-  const [trashEntries, setTrashEntries] = useState([])
-  const [historyFor, setHistoryFor] = useState(null)
-  const [versions, setVersions] = useState([])
-  const [allTags, setAllTags] = useState([])
-  const [exportModal, setExportModal] = useState(null) // null | { estimatedKB: number, loading: boolean }
-  const [inboxCount, setInboxCount] = useState(0)
-  const [archiveToast, setArchiveToast] = useState(true)
-  const [pendingArchiveIds, setPendingArchiveIds] = useState(new Set())
+  const { topics, setTopics, selectedId, setSelectedId, inboxCount, setInboxCount, selectedTopic, inboxTopic, applyAddTopic } = useTopics()
+  const { entries, setEntries, globalSearchResults, setGlobalSearchResults, applyUpdateEntry, applyDeleteEntry, applyMoveEntry } = useEntries()
+  const { pendingArchiveIds, addPending, removePending } = usePendingArchive(selectedId)
+  const { inboxEntries, setInboxEntries, applyAssign, applySortDelete } = useInbox()
+  const { trashEntries, setTrashEntries, applyRestore, applyClear } = useTrash()
+  const { revisitEntries, setRevisitEntries, recentActivity, setRecentActivity, applySeen } = useRevisit()
+  const { allTags, setAllTags, tagColors, applyUpdateTagColor } = useTags()
+  const { historyFor, versions, openHistory, closeHistory } = useVersions()
+  const { exportModal, openExportLoading, setExportResult, closeExportModal } = useExport()
+  const { archiveToast, setArchiveToast } = useArchiveToast()
+  const { previewUrl, openPreview, closePreview } = useFilePreview()
+  const { toasts, addToast, dismissToast } = useToast()
 
+  const [view, setView] = useState('home')
   const [sidebarOpen, setSidebarOpen] = useState(() => {
     try { return localStorage.getItem('medialog_sidebar_open') !== 'false' } catch { return true }
   })
@@ -60,13 +68,6 @@ function Workspace() {
     })
   }
 
-  const { previewUrl, openPreview, closePreview } = useFilePreview()
-  const { toasts, addToast, dismissToast } = useToast()
-
-  const inboxTopic = topics.find((t) => t.name === 'Inbox')
-  const selectedTopic = topics.find((t) => t.id === selectedId) || null
-
-  // Candidate index for the [[ autocomplete (current topic's entries).
   const candidateIndex = useMemo(() => {
     const topicName = selectedTopic?.name || ''
     return entries.map((e) => ({
@@ -81,33 +82,50 @@ function Workspace() {
     setTopics((prev) => prev.map((t) => (t.id === topicId ? { ...t, master_doc: doc } : t)))
   }
 
-  const tagColors = useMemo(
-    () => Object.fromEntries(allTags.filter(t => t.color).map(t => [t.name, t.color])),
-    [allTags]
-  )
-
   useEffect(() => {
     supabase.from('user_configs').select('archive_toast').maybeSingle().then(({ data }) => {
       if (data && typeof data.archive_toast === 'boolean') setArchiveToast(data.archive_toast)
     })
   }, [])
 
-  async function handleToggleArchiveToast(val) {
-    setArchiveToast(val)
-    await supabase.from('user_configs').update({ archive_toast: val }).eq('user_id', (await supabase.auth.getUser()).data.user.id)
-  }
-
   useEffect(() => {
     refreshTopics()
     refreshTags()
-
-    // Handle OAuth redirect from GitHub for backup linking
     const params = new URLSearchParams(window.location.search)
     const code = params.get('code')
     if (code && window.location.pathname.includes('/settings')) {
       handleGitHubCallback(code)
     }
   }, [])
+
+  const autoBackupTimer = useRef(null)
+  const pendingBackup = useRef(false)
+  useEffect(() => {
+    pendingBackup.current = true
+    if (autoBackupTimer.current) return
+    autoBackupTimer.current = setTimeout(async () => {
+      autoBackupTimer.current = null
+      if (!pendingBackup.current) return
+      pendingBackup.current = false
+      try {
+        const { data: config } = await supabase.from('user_configs').select('auto_backup').maybeSingle()
+        if (config?.auto_backup) {
+          await supabase.functions.invoke('github-backup', { body: { action: 'push' } })
+          addToast('Auto-backup complete', 'success')
+        }
+      } catch {
+        // auto-backup failures are silent
+      }
+    }, 60000)
+  }, [entries, topics])
+
+  useEffect(() => {
+    if (selectedId) {
+      listEntriesByTopic(supabase, selectedId).then(setEntries)
+    } else {
+      setEntries([])
+    }
+  }, [selectedId])
 
   async function refreshTags() {
     const tags = await listTags(supabase)
@@ -118,13 +136,12 @@ function Workspace() {
     const tag = allTags.find(t => t.name === tagName)
     if (!tag) return
     await updateTagColor(supabase, tag.id, color)
-    setAllTags(prev => prev.map(t => t.name === tagName ? { ...t, color: color || null } : t))
+    applyUpdateTagColor(tagName, color)
   }
 
   async function refreshTopics() {
     const t = await listTopics(supabase)
     setTopics(t)
-    // Load inbox count for home view (don't auto-select a topic)
     const inbox = t.find((topic) => topic.name === 'Inbox')
     if (inbox) {
       const { count } = await supabase
@@ -139,48 +156,15 @@ function Workspace() {
   async function handleGitHubCallback(code) {
     setView('settings')
     window.history.replaceState({}, document.title, window.location.pathname)
-    const { data, error } = await supabase.functions.invoke('github-token', {
-      body: { code }
-    })
+    const { data, error } = await supabase.functions.invoke('github-token', { body: { code } })
     if (error) alert(`GitHub Connection Failed: ${error.message}`)
-    else window.location.reload() // Refresh to load new config
+    else window.location.reload()
   }
 
-  // Auto-backup: fires 60s after the last change, won't reset on every keystroke
-  const autoBackupTimer = useRef(null)
-  const pendingBackup = useRef(false)
-  useEffect(() => {
-    pendingBackup.current = true
-    if (autoBackupTimer.current) return // timer already running — let it fire
-    autoBackupTimer.current = setTimeout(async () => {
-      autoBackupTimer.current = null
-      if (!pendingBackup.current) return
-      pendingBackup.current = false
-      try {
-        const { data: config } = await supabase.from('user_configs').select('auto_backup').maybeSingle()
-        if (config?.auto_backup) {
-          await supabase.functions.invoke('github-backup', { body: { action: 'push' } })
-          addToast('Auto-backup complete', 'success')
-        }
-      } catch {
-        // auto-backup failures are silent — user can trigger manually in Settings
-      }
-    }, 60000)
-  }, [entries, topics])
-
-  useEffect(() => {
-    if (selectedId) {
-      listEntriesByTopic(supabase, selectedId).then(setEntries)
-    } else {
-      setEntries([])
-    }
-  }, [selectedId])
-
-  useEffect(() => {
-    if (pendingArchiveIds.size > 0) {
-      setPendingArchiveIds(new Set())
-    }
-  }, [selectedId])
+  async function handleToggleArchiveToast(val) {
+    setArchiveToast(val)
+    await supabase.from('user_configs').update({ archive_toast: val }).eq('user_id', (await supabase.auth.getUser()).data.user.id)
+  }
 
   async function handleSearchAll(q) {
     if (!q.trim()) { setGlobalSearchResults(null); return }
@@ -190,8 +174,7 @@ function Workspace() {
 
   async function handleAddTopic(name) {
     const t = await createTopic(supabase, name)
-    setTopics((prev) => [...prev, t].sort((a, b) => a.name.localeCompare(b.name)))
-    setSelectedId(t.id)
+    applyAddTopic(t)
   }
 
   async function handleAddEntry({ url, note }) {
@@ -201,45 +184,44 @@ function Workspace() {
       const title = await fetchTitle(supabase, url)
       if (title) {
         const updated = await updateEntry(supabase, e.id, { title })
-        setEntries((prev) => prev.map((x) => (x.id === e.id ? { ...updated, tags: x.tags } : x)))
+        applyUpdateEntry(e.id, updated)
       }
     }
   }
 
   async function handleDelete(id) {
     await softDeleteEntry(supabase, id)
-    setEntries((prev) => prev.filter((e) => e.id !== id))
+    applyDeleteEntry(id)
   }
 
   async function handleStatusChange(entryId, status) {
     const entry = entries.find(e => e.id === entryId)
     const prevStatus = entry?.status || null
     const updated = await updateEntry(supabase, entryId, { status })
-    setEntries((prev) => prev.map((e) => (e.id === entryId ? { ...updated, tags: e.tags } : e)))
+    applyUpdateEntry(entryId, updated)
 
     if (status === 'done') {
       if (archiveToast) {
-        setPendingArchiveIds((prev) => new Set([...prev, entryId]))
+        addPending(entryId)
         addToast(
           'Moved to archive',
           'info',
           {
             duration: 3000,
             actions: [{ label: 'Undo', onClick: () => handleUndoArchive(entryId, prevStatus) }],
-            onExpire: () => setPendingArchiveIds((prev) => { const next = new Set(prev); next.delete(entryId); return next }),
+            onExpire: () => removePending(entryId),
           }
         )
       }
     } else {
-      // If re-opened from done, remove from pending if present
-      setPendingArchiveIds((prev) => { const next = new Set(prev); next.delete(entryId); return next })
+      removePending(entryId)
     }
   }
 
   async function handleUndoArchive(entryId, prevStatus) {
     const updated = await updateEntry(supabase, entryId, { status: prevStatus })
-    setEntries((prev) => prev.map((e) => (e.id === entryId ? { ...updated, tags: e.tags } : e)))
-    setPendingArchiveIds((prev) => { const next = new Set(prev); next.delete(entryId); return next })
+    applyUpdateEntry(entryId, updated)
+    removePending(entryId)
   }
 
   async function handleTagsChange(entryId, tags) {
@@ -257,18 +239,18 @@ function Workspace() {
 
   async function handleNoteSave(entryId, note) {
     const updated = await updateEntry(supabase, entryId, { note })
-    setEntries((prev) => prev.map((e) => (e.id === entryId ? { ...updated, tags: e.tags } : e)))
+    applyUpdateEntry(entryId, updated)
   }
 
   async function handleTitleChange(entryId, title, url) {
     const patch = url !== undefined ? { title, url } : { title }
     const updated = await updateEntry(supabase, entryId, patch)
-    setEntries((prev) => prev.map((e) => (e.id === entryId ? { ...updated, tags: e.tags } : e)))
+    applyUpdateEntry(entryId, updated)
   }
 
   async function handleMove(entryId, newTopicId) {
     await updateEntry(supabase, entryId, { topic_id: newTopicId })
-    setEntries((prev) => prev.filter((e) => e.id !== entryId))
+    applyMoveEntry(entryId)
   }
 
   async function handleNoteVersion(entryId, note) {
@@ -276,15 +258,15 @@ function Workspace() {
   }
 
   async function handleShowHistory(entryId) {
-    setVersions(await listVersions(supabase, entryId))
-    setHistoryFor(entryId)
+    const versionList = await listVersions(supabase, entryId)
+    openHistory(entryId, versionList)
   }
 
   async function handleRestoreVersion(note) {
     const updated = await updateEntry(supabase, historyFor, { note })
     await createVersion(supabase, historyFor, note)
-    setEntries((prev) => prev.map((e) => (e.id === historyFor ? { ...updated, tags: e.tags } : e)))
-    setHistoryFor(null)
+    applyUpdateEntry(historyFor, updated)
+    closeHistory()
   }
 
   async function loadInbox() {
@@ -302,7 +284,6 @@ function Workspace() {
     setView('browse')
   }
 
-  // Fire-and-forget: fetch titles for newly created entries that have a URL but no title yet
   async function enrichEntries(created) {
     for (const e of created) {
       if (e.url && !e.title) {
@@ -315,7 +296,7 @@ function Workspace() {
   async function handleBulkImport(items) {
     const inbox = inboxTopic || (await getTopicByName(supabase, 'Inbox'))
     const created = await bulkCreateEntries(supabase, inbox.id, items)
-    enrichEntries(created)   // ← fire-and-forget
+    enrichEntries(created)
     setInboxCount((prev) => prev + created.length)
     return created.length
   }
@@ -347,19 +328,19 @@ function Workspace() {
       setTopics((prev) => [...prev, ...newTopics].sort((a, b) => a.name.localeCompare(b.name)))
     }
 
-    enrichEntries(allCreated)   // ← fire-and-forget
+    enrichEntries(allCreated)
     return total
   }
 
   async function handleAssign(entryId, topicId) {
     await updateEntry(supabase, entryId, { topic_id: topicId })
-    setInboxEntries((prev) => prev.filter((e) => e.id !== entryId))
+    applyAssign(entryId)
     setInboxCount((prev) => Math.max(0, prev - 1))
   }
 
   async function handleSortDelete(entryId) {
     await softDeleteEntry(supabase, entryId)
-    setInboxEntries((prev) => prev.filter((e) => e.id !== entryId))
+    applySortDelete(entryId)
     setInboxCount((prev) => Math.max(0, prev - 1))
   }
 
@@ -369,12 +350,12 @@ function Workspace() {
 
   async function handleRestore(entryId) {
     await restoreEntry(supabase, entryId)
-    setTrashEntries((prev) => prev.filter((e) => e.id !== entryId))
+    applyRestore(entryId)
   }
 
   async function handleEmptyTrash() {
     await emptyTrash(supabase)
-    setTrashEntries([])
+    applyClear()
   }
 
   async function loadRevisit() {
@@ -384,12 +365,11 @@ function Workspace() {
 
   async function handleSeen(entryId) {
     await markSurfaced(supabase, entryId)
-    setRevisitEntries((prev) => prev.filter((e) => e.id !== entryId))
+    applySeen(entryId)
   }
 
   async function handleExportClick() {
-    // Fast size estimate: one aggregation query instead of fetching all content
-    setExportModal({ estimatedKB: null, entryCount: null, loading: true })
+    openExportLoading()
     try {
       const { data, error } = await supabase
         .from('entries')
@@ -399,16 +379,15 @@ function Workspace() {
       const rawBytes = (data || []).reduce((sum, e) => {
         return sum + (e.note?.length || 0) + (e.title?.length || 0) + (e.url?.length || 0)
       }, 0)
-      // Markdown adds ~15% overhead; zip compresses text to ~35% of raw
       const estimatedKB = Math.round((rawBytes * 1.15 * 0.35) / 1024) || 1
-      setExportModal({ estimatedKB, entryCount: data.length, loading: false })
+      setExportResult(estimatedKB, data.length)
     } catch {
-      setExportModal({ estimatedKB: null, entryCount: null, loading: false })
+      setExportResult(null, null)
     }
   }
 
   async function handleExportConfirm() {
-    setExportModal(null)
+    closeExportModal()
     const all = []
     for (const t of topics) {
       const rows = await listEntriesByTopic(supabase, t.id)
@@ -421,7 +400,6 @@ function Workspace() {
 
   return (
     <div className={`app${sidebarOpen ? '' : ' sidebar-collapsed'}`}>
-      {/* Mobile topbar */}
       <header className="mobile-topbar">
         <h1>MediaLog</h1>
         <button className="hamburger-btn" onClick={toggleSidebar} aria-label="Toggle menu">
@@ -429,7 +407,6 @@ function Workspace() {
         </button>
       </header>
 
-      {/* Sidebar overlay (mobile) */}
       <div
         className={`sidebar-overlay${sidebarOpen ? ' visible' : ''}`}
         onClick={toggleSidebar}
@@ -498,76 +475,90 @@ function Workspace() {
           {sidebarOpen ? '‹' : '›'}
         </button>
       </aside>
+
       <main className="main">
         <div key={view === 'browse' ? `browse-${selectedId}` : view} className="view-enter">
-        {view === 'home' && (
-          <HomeView
-            topics={topics}
-            inboxCount={inboxCount}
-            onSelectTopic={handleSelectTopic}
-            onSortInbox={handleSortInbox}
-            supabase={supabase}
-          />
-        )}
-        {view === 'browse' && selectedTopic && (
-          <TopicView
-            key={selectedTopic.id}
-            topic={selectedTopic}
-            topics={topics}
-            entries={entries}
-            allCandidates={candidateIndex}
-            onAddEntry={handleAddEntry}
-            onDelete={handleDelete}
-            onStatusChange={handleStatusChange}
-            onTagsChange={handleTagsChange}
-            onTogglePin={handleTogglePin}
-            onNoteSave={handleNoteSave}
-            onPreview={openPreview}
-            onDocChange={(doc) => handleDocChange(selectedTopic.id, doc)}
-            onNoteVersion={handleNoteVersion}
-            onShowHistory={handleShowHistory}
-            onSearchAll={handleSearchAll}
-            globalSearchResults={globalSearchResults}
-            onTitleChange={handleTitleChange}
-            onMove={handleMove}
-            tagColors={tagColors}
-            allTags={allTags}
-            pendingArchiveIds={pendingArchiveIds}
-            supabase={supabase}
-          />
-        )}
-        {view === 'bulk' && (
-          <BulkImport
-            onImport={handleBulkImport}
-            onSmartImport={handleSmartImport}
-            topics={topics}
-          />
-        )}
-        {view === 'sort' && (
-          <SortInbox
-            entries={inboxEntries}
-            topics={topics}
-            onAssign={handleAssign}
-            onDelete={handleSortDelete}
-          />
-        )}
-        {view === 'progress' && (
-          <ProgressView
-            topicName={topics.find((t) => t.id === selectedId)?.name || ''}
-            entries={entries}
-          />
-        )}
-        {view === 'revisit' && <Revisit entries={revisitEntries} onSeen={handleSeen} recentActivity={recentActivity} />}
-        {view === 'settings' && <SettingsView topics={topics} onRefreshData={refreshTopics} addToast={addToast} allTags={allTags} onUpdateTagColor={handleUpdateTagColor} archiveToast={archiveToast} onToggleArchiveToast={handleToggleArchiveToast} />}
-        {view === 'trash' && (
-          <TrashView
-            entries={trashEntries}
-            onRestore={handleRestore}
-            onEmptyTrash={handleEmptyTrash}
-          />
-        )}
+          {view === 'home' && (
+            <HomeView
+              topics={topics}
+              inboxCount={inboxCount}
+              onSelectTopic={handleSelectTopic}
+              onSortInbox={handleSortInbox}
+              supabase={supabase}
+            />
+          )}
+          {view === 'browse' && selectedTopic && (
+            <TopicView
+              key={selectedTopic.id}
+              topic={selectedTopic}
+              topics={topics}
+              entries={entries}
+              allCandidates={candidateIndex}
+              onAddEntry={handleAddEntry}
+              onDelete={handleDelete}
+              onStatusChange={handleStatusChange}
+              onTagsChange={handleTagsChange}
+              onTogglePin={handleTogglePin}
+              onNoteSave={handleNoteSave}
+              onPreview={openPreview}
+              onDocChange={(doc) => handleDocChange(selectedTopic.id, doc)}
+              onNoteVersion={handleNoteVersion}
+              onShowHistory={handleShowHistory}
+              onSearchAll={handleSearchAll}
+              globalSearchResults={globalSearchResults}
+              onTitleChange={handleTitleChange}
+              onMove={handleMove}
+              tagColors={tagColors}
+              allTags={allTags}
+              pendingArchiveIds={pendingArchiveIds}
+              supabase={supabase}
+            />
+          )}
+          {view === 'bulk' && (
+            <BulkImport
+              onImport={handleBulkImport}
+              onSmartImport={handleSmartImport}
+              topics={topics}
+            />
+          )}
+          {view === 'sort' && (
+            <SortInbox
+              entries={inboxEntries}
+              topics={topics}
+              onAssign={handleAssign}
+              onDelete={handleSortDelete}
+            />
+          )}
+          {view === 'progress' && (
+            <ProgressView
+              topicName={topics.find((t) => t.id === selectedId)?.name || ''}
+              entries={entries}
+            />
+          )}
+          {view === 'revisit' && (
+            <Revisit entries={revisitEntries} onSeen={handleSeen} recentActivity={recentActivity} />
+          )}
+          {view === 'settings' && (
+            <SettingsView
+              topics={topics}
+              onRefreshData={refreshTopics}
+              addToast={addToast}
+              allTags={allTags}
+              onUpdateTagColor={handleUpdateTagColor}
+              archiveToast={archiveToast}
+              onToggleArchiveToast={handleToggleArchiveToast}
+            />
+          )}
+          {view === 'trash' && (
+            <TrashView
+              entries={trashEntries}
+              onRestore={handleRestore}
+              onEmptyTrash={handleEmptyTrash}
+            />
+          )}
         </div>
       </main>
+
       {previewUrl && (
         <Suspense fallback={null}>
           <FilePreviewModal url={previewUrl} onClose={closePreview} />
@@ -575,44 +566,19 @@ function Workspace() {
       )}
       <Toast toasts={toasts} onDismiss={dismissToast} />
       {exportModal && (
-        <Modal onClose={() => setExportModal(null)} label="Export library" maxWidth="400px">
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: '4px 0' }}>
-            {exportModal.loading ? (
-              <p className="muted" style={{ fontSize: 13 }}>Calculating export size…</p>
-            ) : (
-              <>
-                <p style={{ fontSize: 14, margin: 0 }}>
-                  Export <strong>{exportModal.entryCount ?? '—'} entries</strong> across <strong>{topics.length} topics</strong> as a zip of Markdown files.
-                </p>
-                <p className="muted" style={{ fontSize: 13, margin: 0 }}>
-                  Estimated size: <strong>~{exportModal.estimatedKB != null
-                    ? exportModal.estimatedKB >= 1024
-                      ? `${(exportModal.estimatedKB / 1024).toFixed(1)} MB`
-                      : `${exportModal.estimatedKB} KB`
-                    : '—'}</strong> (compressed)
-                </p>
-                <p className="muted" style={{ fontSize: 12, margin: 0 }}>
-                  Note: file attachments (images, PDFs) are stored in Supabase and are not included in this export.
-                </p>
-              </>
-            )}
-            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-              <button className="btn-small btn-ghost" onClick={() => setExportModal(null)}>Cancel</button>
-              <button className="btn-small" onClick={handleExportConfirm} disabled={exportModal.loading}>
-                {exportModal.loading ? 'Calculating…' : 'Export'}
-              </button>
-            </div>
-          </div>
-        </Modal>
+        <ExportModal
+          exportModal={exportModal}
+          topics={topics}
+          onConfirm={handleExportConfirm}
+          onClose={closeExportModal}
+        />
       )}
       {historyFor && (
-        <Modal onClose={() => setHistoryFor(null)} label="Version history" maxWidth="560px">
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxHeight: '70vh', overflow: 'auto' }}>
-            <p className="section-label">Version history</p>
-            <VersionHistory versions={versions} onRestore={handleRestoreVersion} />
-            <button onClick={() => setHistoryFor(null)}>Close</button>
-          </div>
-        </Modal>
+        <VersionHistoryModal
+          versions={versions}
+          onRestore={handleRestoreVersion}
+          onClose={closeHistory}
+        />
       )}
     </div>
   )
