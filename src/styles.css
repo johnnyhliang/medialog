@@ -1778,3 +1778,22 @@ a.activity-title:hover { color: var(--accent); }
     width: 100%;
   }
 }
+
+/* ── Files Tab ─────────────────────────────────── */
+.storage-bar-wrap { margin-bottom: 20px; }
+.storage-bar-track {
+  height: 6px;
+  background: var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+.storage-bar-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 3px;
+  transition: width 0.3s;
+}
+.storage-bar-fill.storage-bar-warn { background: #e07b39; }
+.storage-bar-label { font-size: var(--text-xs); color: var(--muted); margin: 0; }
+.storage-bar-warning { font-size: var(--text-xs); color: #e07b39; margin: 4px 0 0; }
