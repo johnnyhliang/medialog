@@ -574,7 +574,53 @@
   </footer>
 
   <script>
-    /* JS goes here in Task 5 */
+    (function () {
+      'use strict';
+
+      /* ── Scroll reveals ─────────────────────────────────────────────────── */
+      const revealEls = document.querySelectorAll('.reveal');
+
+      const revealObserver = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (!entry.isIntersecting) return;
+          entry.target.classList.add('visible');
+
+          // Stagger any .reveal-child elements inside this section
+          var children = entry.target.querySelectorAll('.reveal-child');
+          children.forEach(function (child, i) {
+            child.style.transitionDelay = (i * 0.1) + 's';
+            child.classList.add('visible');
+          });
+
+          // Unobserve — reveal fires once only
+          revealObserver.unobserve(entry.target);
+        });
+      }, { threshold: 0.12 });
+
+      revealEls.forEach(function (el) { revealObserver.observe(el); });
+
+      /* ── Loop step sequential highlight ────────────────────────────────── */
+      var loopSection = document.getElementById('loop');
+      var loopSteps   = document.querySelectorAll('.loop-step');
+      var loopFired   = false;
+
+      var loopObserver = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (!entry.isIntersecting || loopFired) return;
+          loopFired = true;
+
+          loopSteps.forEach(function (step, i) {
+            setTimeout(function () {
+              step.classList.add('active');
+            }, i * 150);
+          });
+
+          loopObserver.unobserve(loopSection);
+        });
+      }, { threshold: 0.3 });
+
+      if (loopSection) loopObserver.observe(loopSection);
+    })();
   </script>
 </body>
 </html>
