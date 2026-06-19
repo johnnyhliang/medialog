@@ -17,21 +17,26 @@ Two-column layout inside the existing `<main>` area. Renders when `view === 'hom
 
 ```
 ┌────────────────────────────────┬──────────────────────┐
-│  TOPICS                        │  Thu Jun 19 · 10:42  │
-│  ┌───────┐ ┌───────┐ ┌───────┐│                      │
-│  │  AI   │ │ Books │ │ Work  ││  [Search............]│
-│  │  12   │ │  4    │ │  8    ││  [G] [DDG] [Kagi]   │
-│  └───────┘ └───────┘ └───────┘│                      │
-│  ┌───────┐ ┌───────┐          │  Gmail  · GCal       │
-│  │  CS   │ │  ...  │          │                      │
-│  └───────┘ └───────┘          │  MARKET              │
-│                                │  VOO   +0.4%  $541  │
-│                                │  NVDA  +2.1%  $875  │
-│                                │  AMZN  +0.8%  $192  │
-│                                │  AVGO  -0.3%  $168  │
+│  ┌─────────────────────────┐   │  Thu Jun 19 · 10:42  │
+│  │ 📥 Inbox  3 unsorted  → │   │                      │
+│  └─────────────────────────┘   │  [Search............]│
+│                                │  [G] [DDG] [Kagi]   │
+│  TOPICS                        │                      │
+│  ┌───────┐ ┌───────┐ ┌───────┐│  Gmail · GCal · Brew │
+│  │  AI   │ │ Books │ │ Work  ││                      │
+│  │  12   │ │  4    │ │  8    ││  MARKET              │
+│  └───────┘ └───────┘ └───────┘│  VOO   +0.4%  $541  │
+│  ┌───────┐ ┌───────┐          │  NVDA  +2.1%  $875  │
+│  │  CS   │ │  ...  │          │  AMZN  +0.8%  $192  │
+│  └───────┘ └───────┘          │  AVGO  -0.3%  $168  │
 │                                │  MA    -0.1%  $488  │
 │                                │  V     +0.3%  $275  │
 │                                │  SPGI  +0.8%  $491  │
+│                                │                      │
+│                                │  MOVERS TODAY        │
+│                                │  ↑ NVDA  +8.2%      │
+│                                │  ↑ SMCI  +6.1%      │
+│                                │  ↓ INTC  -4.3%      │
 │                                │                      │
 │                                │  TRENDING (WSB)      │
 │                                │  ① NVDA  1,204 ↑89% │
@@ -45,110 +50,130 @@ Two-column layout inside the existing `<main>` area. Renders when `view === 'hom
 └────────────────────────────────┴──────────────────────┘
 ```
 
-On mobile (≤640px): columns stack vertically, topics grid first.
+On mobile (≤640px): columns stack vertically, inbox card first, topics grid, then widget panel.
 
 ---
 
 ## Components
 
 ### `HomeView.jsx`
-Root component. Two-column flex layout. Left = `<TopicsGrid>`, right = `<WidgetPanel>`. Receives `topics` prop from App.
+Root component. Two-column flex layout. Left = inbox card + `<TopicsGrid>`, right = `<WidgetPanel>`. Receives `topics`, `inboxCount`, `onSelectTopic`, `onSortInbox` props from App.
+
+### Inbox Card
+Full-width card above the topics grid on the left column.
+
+- Always visible regardless of inbox count
+- Shows: Inbox icon (`Inbox` from lucide-react) + topic name + entry count
+- If count > 0: count badge styled with accent color + "Sort now →" button that calls `onSortInbox()` (navigates to sort view)
+- If count === 0: muted "All clear" state with a checkmark icon
+- `inboxCount` derived in App from `inboxEntries.length` (already loaded when sort view is used) — on home load, App runs a lightweight count query: `select count(*) from entries where topic_id = inboxTopicId and deleted_at is null`
+
+### Inbox pinned in sidebar
+- The Inbox topic always renders first in `TopicList`, above the alphabetical list, separated by a thin divider
+- Inbox entry gets an `Inbox` lucide icon before the name
+- Implemented in `TopicList.jsx`: split `topics` into `[inboxTopic, ...rest]`, render inbox item separately at top
 
 ### `TopicsGrid.jsx`
 - CSS `auto-fill` grid, `minmax(160px, 1fr)`
 - Each topic card: name, entry count, last-edited age
-- Sorted alphabetically (no topic-level pinning concept yet)
-- Click → calls `onSelectTopic(topic)` which sets `selectedTopic` in App and switches to `view = 'browse'`
+- Excludes Inbox (shown separately above)
+- Sorted alphabetically
+- Click → `onSelectTopic(topic)` → sets `selectedId` + `view = 'browse'` in App
 - Empty state: "No topics yet — create one in the sidebar"
 
 ### `WidgetPanel.jsx`
-Right column. Renders a hardcoded array of widget components top-to-bottom with consistent gap. Adding a widget = one import + one JSX line.
+Right column. Renders a hardcoded array of widget components top-to-bottom. Adding a new widget = one import + one JSX line.
 
 ### `ClockWidget.jsx`
 - `useEffect` + `setInterval(1000)` updating a `Date` state
-- Displays: `Thu Jun 19 · 10:42 AM` — no seconds (cleaner)
+- Displays: `Thu Jun 19 · 10:42 AM` — no seconds
 - Clears interval on unmount
 
 ### `SearchWidget.jsx`
-- Controlled text input, `onKeyDown` Enter → `window.open(url, '_blank')`
-- Three engine options hardcoded:
+- Controlled text input, Enter → `window.open(url, '_blank')`
+- Three hardcoded engines:
   ```js
   const ENGINES = [
-    { label: 'G',   name: 'Google',     url: q => `https://www.google.com/search?q=${encodeURIComponent(q)}&udm=14` },
-    { label: 'DDG', name: 'DuckDuckGo', url: q => `https://duckduckgo.com/?q=${encodeURIComponent(q)}` },
-    { label: 'K',   name: 'Kagi',       url: q => `https://kagi.com/search?q=${encodeURIComponent(q)}` },
+    { label: 'G',   url: q => `https://www.google.com/search?q=${encodeURIComponent(q)}&udm=14` },
+    { label: 'DDG', url: q => `https://duckduckgo.com/?q=${encodeURIComponent(q)}` },
+    { label: 'K',   url: q => `https://kagi.com/search?q=${encodeURIComponent(q)}` },
   ]
   ```
 - Selected engine persisted in `localStorage` key `medialog_search_engine`
 - Active engine pill highlighted with accent color
 
 ### `QuickLinksWidget.jsx`
-- Hardcoded:
+- Three hardcoded links:
   ```js
   const LINKS = [
-    { label: 'Gmail',    href: 'https://mail.google.com',    icon: 'Mail' },
-    { label: 'Calendar', href: 'https://calendar.google.com', icon: 'Calendar' },
+    { label: 'Gmail',    href: 'https://mail.google.com',         icon: 'Mail' },
+    { label: 'Calendar', href: 'https://calendar.google.com',      icon: 'Calendar' },
+    { label: 'Brew',     href: 'https://www.morningbrew.com',      icon: 'Coffee' },
   ]
   ```
-- Icon + label chips, open new tab, lucide-react icons
+- Icon + label chips in a flex row, open new tab
 
 ### `MarketNewsWidget.jsx`
-Single component that fires one edge function call and renders three sections: Market, Trending, Headlines.
+Single component firing one edge function call, rendering four sections: Market, Movers, Trending, Headlines.
 
 **Market section:**
 - Hardcoded tickers:
   ```js
   const TICKERS = ['VOO', 'NVDA', 'AMZN', 'AVGO', 'MA', 'V', 'SPGI']
   ```
-- Displays: ticker | price | daily change % (green positive, red negative)
+- Displays: ticker | price | daily change % (green/red)
+
+**Movers Today section:**
+- Top 3 day gainers + top 3 day losers from Yahoo Finance predefined screener
+- Compact two-column layout: `↑ NVDA +8.2%` / `↓ INTC -4.3%`
+- Endpoint: `https://query1.finance.yahoo.com/v1/finance/screener/predefined/saved?scrIds=day_gainers&count=5` and `scrIds=day_losers`
 
 **Trending section (WSB/Reddit):**
-- Top 5 tickers by mention count from ApeWisdom, filtered to r/wallstreetbets + r/stocks
-- Shows: rank | ticker | mention count | 24h change in mentions (↑/↓ %)
+- Top 5 from ApeWisdom `filter/all-reddit`
+- Shows: rank | ticker | mentions | 24h delta (↑/↓ %)
 
 **Headlines section:**
-- Top 5 headlines from Reuters RSS parsed server-side
-- Each headline: bullet + truncated title (max 80 chars) as external link
+- Top 5 from Reuters RSS `feeds.reuters.com/reuters/businessNews`
+- Parsed server-side; title + link returned
 
-**Polling:** fetches on mount, refreshes every 5 minutes. Shows "Updated Xm ago" timestamp. Loading = skeleton rows. Error = graceful "unavailable" message per section (one failing doesn't break others).
+**Polling:** on mount + every 5 min. "Updated Xm ago" timestamp. Per-section graceful error ("unavailable") so one failing source doesn't break others.
 
 ---
 
 ## `market` Supabase Edge Function (`supabase/functions/market/index.ts`)
 
-Accepts POST with `{ tickers: string[] }`. Returns:
+Accepts POST `{ tickers: string[] }`. Returns:
 ```ts
 {
-  quotes: Array<{ ticker: string, price: number, change: number, changePercent: number }>,
-  trending: Array<{ ticker: string, mentions: number, mentionsDelta: number }>,
-  headlines: Array<{ title: string, url: string, source: string }>
+  quotes:    Array<{ ticker: string, price: number, change: number, changePercent: number }>,
+  gainers:   Array<{ ticker: string, changePercent: number }>,
+  losers:    Array<{ ticker: string, changePercent: number }>,
+  trending:  Array<{ ticker: string, mentions: number, mentionsDelta: number }>,
+  headlines: Array<{ title: string, url: string }>
 }
 ```
 
-**Quotes** — Yahoo Finance unofficial endpoint (no key required):
-`https://query1.finance.yahoo.com/v8/finance/chart/{ticker}?interval=1d&range=1d`
-Fetch each ticker sequentially; omit any that fail without failing the whole response.
+**Quotes** — `https://query1.finance.yahoo.com/v8/finance/chart/{ticker}?interval=1d&range=1d` (no key)
 
-**Trending** — ApeWisdom (no key required):
-`https://apewisdom.io/api/v1.0/filter/all-reddit/page/1`
-Returns ranked tickers with `mentions` and `mentions_24h_ago`. Compute delta % from those two fields. Take top 5 results.
+**Movers** — `https://query1.finance.yahoo.com/v1/finance/screener/predefined/saved?scrIds=day_gainers&count=5` and `scrIds=day_losers` (no key)
 
-**Headlines** — Reuters RSS (no key required):
-`https://feeds.reuters.com/reuters/businessNews`
-Fetch XML, parse `<item>` elements, extract `<title>` and `<link>`. Return top 5. Pure text parsing, no external library needed in Deno (string split/regex on the XML).
+**Trending** — `https://apewisdom.io/api/v1.0/filter/all-reddit/page/1` (no key). Delta = `(mentions - mentions_24h_ago) / mentions_24h_ago * 100`.
 
-**No secrets required** — all three sources are public endpoints.
+**Headlines** — `https://feeds.reuters.com/reuters/businessNews` RSS XML, regex parse `<title>` and `<link>` from `<item>` blocks, return top 5.
 
-**CORS headers** on all responses for browser `invoke()` calls.
+**No secrets required.**
+
+**CORS headers** on all responses.
 
 ---
 
 ## Navigation
 
-- New "Home" nav item, first position in sidebar, `Home` icon (lucide-react)
-- `view` state gains `'home'` option in App.jsx
-- Default view on load changes from `'browse'` to `'home'`
-- Clicking a topic card → sets `selectedId` + `setView('browse')`
+- New "Home" nav item, first in sidebar nav, `Home` lucide icon
+- `view` gains `'home'` in App state
+- Default view on load: `'home'`
+- Clicking topic card → `selectedId` + `view = 'browse'`
+- Clicking "Sort now →" on inbox card → `view = 'sort'` + `loadInbox()`
 
 ---
 
@@ -157,12 +182,18 @@ Fetch XML, parse `<item>` elements, extract `<title>` and `<link>`. Return top 5
 ```
 App.jsx
   └── HomeView (view === 'home')
-        ├── TopicsGrid       ← topics[] prop (already loaded in App)
+        ├── InboxCard        ← inboxCount (lightweight count query), onSortInbox
+        ├── TopicsGrid       ← topics[] (already loaded), onSelectTopic
         └── WidgetPanel
               ├── ClockWidget         (self-contained)
               ├── SearchWidget        (self-contained, localStorage)
               ├── QuickLinksWidget    (self-contained, hardcoded)
-              └── MarketNewsWidget    ← supabase prop for functions.invoke
+              └── MarketNewsWidget    ← supabase prop
+
+TopicList.jsx (sidebar)
+  ├── InboxItem (pinned top, Inbox icon, always first)
+  ├── [divider]
+  └── rest of topics alphabetically
 ```
 
 ---
@@ -172,6 +203,7 @@ App.jsx
 ```
 src/components/HomeView.jsx
 src/components/TopicsGrid.jsx
+src/components/InboxCard.jsx
 src/components/WidgetPanel.jsx
 src/components/widgets/ClockWidget.jsx
 src/components/widgets/SearchWidget.jsx
@@ -183,24 +215,25 @@ supabase/functions/market/index.ts
 ## Modified Files
 
 ```
-src/App.jsx       — add 'home' view, default to 'home', pass topics + onSelectTopic to HomeView
-src/styles.css    — HomeView layout, TopicsGrid cards, WidgetPanel, per-widget styles
+src/App.jsx          — 'home' view, default to 'home', inbox count query on home load,
+                       pass props to HomeView, onSortInbox handler
+src/components/TopicList.jsx  — pin Inbox to top with icon + divider
+src/styles.css       — HomeView layout, InboxCard, TopicsGrid, WidgetPanel, widget styles
 ```
 
 ---
 
 ## Secrets Required
 
-None. All data sources (Yahoo Finance, ApeWisdom, Reuters RSS) are public endpoints.
+None. All data sources are public endpoints.
 
 ---
 
 ## Future Widget Ideas (not in this spec)
 
 - Custom quick links editor with icon picker and variable-width chips
-- Canvas (UMich) upcoming assignments widget
-- TickTick task list integration
+- TickTick task management widget (OAuth, full CRUD)
+- Canvas (UMich) upcoming assignments
 - Google Calendar real data (OAuth)
 - Browser extension: new tab override pointing to this dashboard
 - Weather widget
-- Micro-cap screener / mini Bloomberg
