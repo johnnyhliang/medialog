@@ -186,6 +186,6 @@ User-confirmed decisions, to build after the polish foundation lands:
   development with per-task + final review). Integrate stale branches by hand, never blind-merge.
 
 ## 8. Known operational TODOs
-- **Apply migrations** `0007_master_doc.sql` + `0008_entry_versions.sql` to Supabase.
+- ~~Apply migrations `0007_master_doc.sql` + `0008_entry_versions.sql`~~ ✅ Applied.
 - Set edge-function secrets + deploy (`ai`, `github-*`); GitHub OAuth callback = `…/settings`.
 - Run `node scripts/parse-import.cjs` then Smart Import (uncheck the 3,671-entry "Resources").
