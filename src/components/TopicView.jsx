@@ -77,7 +77,8 @@ export default function TopicView({
   }, [isTagSearch, tagSearchTerm, allTags, tagSuggestLimit])
 
   const filteredByTag = useMemo(() => {
-    if (!isTagSearch || !tagSearchTerm) return null
+    if (!isTagSearch) return null
+    if (!tagSearchTerm) return entries // tag: with no term → show all, don't fuzzy-search "tag:"
     return entries.filter(e => (e.tags || []).some(t => t.toLowerCase().includes(tagSearchTerm)))
   }, [isTagSearch, tagSearchTerm, entries])
 
