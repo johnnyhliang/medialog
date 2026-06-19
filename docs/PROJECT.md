@@ -100,6 +100,14 @@ MediaLog's moat is closing all five in one tool.
 
 ## 3. SPECCED / IN-FLIGHT (designed, approved, being built next)
 
+**Dashboard / Home view — `docs/superpowers/specs/2026-06-19-dashboard-design.md`** ← NEXT TO BUILD
+- `view = 'home'` default on load; new "Home" nav item first in sidebar
+- Left: Inbox card (count + "Sort now →") + Topics grid (all non-inbox topics, auto-fill)
+- Right widgets: Clock · Search bar (Google udm=14 / DDG / Kagi, engine persisted in localStorage) · Quick links (Gmail, GCal, Morning Brew) · Market prices (VOO/NVDA/AMZN/AVGO/MA/V/SPGI) · Movers Today (top gainers/losers) · WSB Trending (ApeWisdom) · Reuters RSS headlines
+- Inbox pinned first in sidebar with Inbox icon + divider; rest alphabetical
+- `supabase/functions/market/index.ts` edge function — zero secrets, all public endpoints
+- `src/components/widgets/` directory for widget components
+
 **UI Polish (full pass — `2026-06-17-ui-polish-plan.md`, plan `2026-06-18-ui-polish.md`)**
 - Design tokens (typography/spacing/shadow/z-index scales)
 - One shared **Modal primitive** (replaces 4 inconsistent modal implementations)
@@ -121,9 +129,8 @@ MediaLog's moat is closing all five in one tool.
 
 Ordered by leverage; each is its own brainstorm → spec → plan → build cycle.
 
-- **Phase 0 (now):** Living Topic Docs ✅ + UI polish (in flight)
-- **Phase 0.5:** **Top-level visual organization** (board/grouped/pinned topics above the list —
-  fixes "topic list gets long"); **Archive for stale entries** (distinct from Trash)
+- **Phase 0 (now):** Living Topic Docs ✅ + UI polish (in flight) + Dashboard (specced ✅, plan next)
+- **Phase 0.5:** **Archive for stale entries** (distinct from Trash — plan written: `2026-06-18-archive-done-toast.md`); **Code modularization** (App.jsx → domain hooks, styles.css → component files)
 - **Phase A — close the read→retain loop:** **full-text mirror** (`enrich` fetches body text,
   offline+searchable) → **Reader mode** (distraction-free) → **Highlight layer** (select in
   reader → child highlight entry) → **SRS Revisit 2.0** (SM2 algorithm; the retention payoff)
@@ -185,7 +192,15 @@ User-confirmed decisions, to build after the polish foundation lands:
 - **Conventions:** superpowers workflow (brainstorming → writing-plans → subagent-driven-
   development with per-task + final review). Integrate stale branches by hand, never blind-merge.
 
-## 8. Known operational TODOs
+## 8. Recent session changes (2026-06-19)
+- Card UX: narrow cards (≤320px) open sheet modal; ChevronUp collapse button; "Add a note" is now a dashed button
+- Hover transitions: card lift (translateY -2px + accent border tint), view fade-in (0.2s), nav transitions
+- Export: confirmation modal with fast size estimate (lightweight select + 35% compression factor)
+- Sort Inbox: delete button is now red btn-danger with Trash2 icon, visually separate from Assign
+- All 9 migrations confirmed applied (0001–0009)
+- Dashboard spec written and approved — ready for writing-plans
+
+## 9. Known operational TODOs
 - ~~Apply migrations `0007_master_doc.sql` + `0008_entry_versions.sql`~~ ✅ Applied.
 - Set edge-function secrets + deploy (`ai`, `github-*`); GitHub OAuth callback = `…/settings`.
 - Run `node scripts/parse-import.cjs` then Smart Import (uncheck the 3,671-entry "Resources").
