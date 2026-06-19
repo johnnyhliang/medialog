@@ -1797,3 +1797,43 @@ a.activity-title:hover { color: var(--accent); }
 .storage-bar-fill.storage-bar-warn { background: #e07b39; }
 .storage-bar-label { font-size: var(--text-xs); color: var(--muted); margin: 0; }
 .storage-bar-warning { font-size: var(--text-xs); color: #e07b39; margin: 4px 0 0; }
+
+/* ── FileRow ────────────────────────────────────── */
+.file-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+.file-row:last-child { border-bottom: none; }
+.file-row-thumb {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.file-thumb { width: 48px; height: 48px; object-fit: cover; }
+.file-icon { color: var(--muted); }
+.file-row-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.file-name {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.file-meta { font-size: var(--text-xs); }
+.file-refs { font-size: var(--text-xs); }
