@@ -39,7 +39,7 @@ export default function MarketNewsWidget({ supabase }) {
       <p className="widget-section-label">MARKET</p>
       <table className="widget-market-table">
         <tbody>
-          {data.quotes.map((q) => (
+          {data.quotes?.map((q) => (
             <tr key={q.ticker}>
               <td className="market-ticker">{q.ticker}</td>
               <td className="market-price">${q.price.toFixed(2)}</td>
@@ -54,10 +54,10 @@ export default function MarketNewsWidget({ supabase }) {
       {/* Movers section */}
       <p className="widget-section-label">MOVERS TODAY</p>
       <div className="widget-movers">
-        {data.gainers.slice(0, 3).map((m) => (
+        {data.gainers?.slice(0, 3).map((m) => (
           <span key={m.ticker} className="mover up">↑ {m.ticker} +{m.changePercent.toFixed(1)}%</span>
         ))}
-        {data.losers.slice(0, 3).map((m) => (
+        {data.losers?.slice(0, 3).map((m) => (
           <span key={m.ticker} className="mover down">↓ {m.ticker} {m.changePercent.toFixed(1)}%</span>
         ))}
       </div>
@@ -65,7 +65,7 @@ export default function MarketNewsWidget({ supabase }) {
       {/* Trending section */}
       <p className="widget-section-label">TRENDING (WSB)</p>
       <ol className="widget-trending">
-        {data.trending.map((t) => (
+        {data.trending?.map((t) => (
           <li key={t.ticker}>
             <span className="trend-ticker">{t.ticker}</span>
             <span className="trend-mentions">{t.mentions.toLocaleString()}</span>
@@ -79,7 +79,7 @@ export default function MarketNewsWidget({ supabase }) {
       {/* Headlines section */}
       <p className="widget-section-label">HEADLINES</p>
       <ul className="widget-headlines">
-        {data.headlines.map((h) => (
+        {data.headlines?.map((h) => (
           <li key={h.url}>
             <a href={h.url} target="_blank" rel="noreferrer">{h.title}</a>
           </li>

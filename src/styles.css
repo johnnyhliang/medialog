@@ -1645,8 +1645,8 @@ a.activity-title:hover { color: var(--accent); }
 .widget-market-error, .widget-market-loading { font-size: var(--text-sm); margin: 0; }
 
 /* Sidebar: inbox pinned */
-.topic-inbox-btn {
-  display: flex !important;
+.sidebar .topics .topic-inbox-btn {
+  display: flex;
   align-items: center;
   gap: 6px;
 }
