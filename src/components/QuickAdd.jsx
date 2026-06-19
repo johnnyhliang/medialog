@@ -13,8 +13,12 @@ export default function QuickAdd({ onAdd, disabled, onCheckDuplicate }) {
   async function handleUrlBlur() {
     const u = url.trim()
     if (!u || !onCheckDuplicate) { setDupWarning(null); return }
-    const dup = await onCheckDuplicate(u)
-    setDupWarning(dup || null)
+    try {
+      const dup = await onCheckDuplicate(u)
+      setDupWarning(dup || null)
+    } catch {
+      setDupWarning(null)
+    }
   }
 
   async function handleSubmit(e) {

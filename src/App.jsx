@@ -179,9 +179,10 @@ function Workspace() {
       .select('id, created_at, topics(name)')
       .eq('url', url)
       .is('deleted_at', null)
-      .maybeSingle()
-    if (!data) return null
-    return { id: data.id, created_at: data.created_at, topic_name: data.topics?.name || 'Unknown' }
+      .limit(1)
+    const row = data?.[0]
+    if (!row) return null
+    return { id: row.id, created_at: row.created_at, topic_name: row.topics?.name || 'Unknown' }
   }
 
   async function handleAddTopic(name) {
