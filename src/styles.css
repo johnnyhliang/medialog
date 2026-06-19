@@ -1837,3 +1837,38 @@ a.activity-title:hover { color: var(--accent); }
 }
 .file-meta { font-size: var(--text-xs); }
 .file-refs { font-size: var(--text-xs); }
+
+/* ── FilesView ────────────────────────────────────── */
+.files-view { max-width: 720px; padding: 24px; }
+.files-heading { font-family: var(--font-serif); font-size: 1.4rem; margin: 0 0 16px; }
+.files-sort-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.files-sort-label { font-size: var(--text-xs); }
+.files-sort-btn {
+  font-size: var(--text-xs);
+  padding: 3px 10px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+}
+.files-sort-btn.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+.files-count { margin-left: auto; font-size: var(--text-xs); }
+.files-list { border-top: 1px solid var(--border); }
+.files-empty { padding: 24px 0; }
+.files-load-more {
+  margin-top: 16px;
+  width: 100%;
+  padding: 10px;
+  font-size: 13px;
+}
