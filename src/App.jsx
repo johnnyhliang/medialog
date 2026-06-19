@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
-import { LayoutGrid, Upload, Inbox, RotateCcw, BarChart2, Settings2, Trash2 as TrashIcon, Download, Menu } from 'lucide-react'
+import { LayoutGrid, Upload, Inbox, RotateCcw, BarChart2, Settings2, Trash2 as TrashIcon, Download, Menu, Home } from 'lucide-react'
 import { supabase } from './lib/supabaseClient.js'
 import { listTopics, createTopic, getTopicByName } from './lib/db/topics.js'
 import {
@@ -21,6 +21,7 @@ import ProgressView from './components/ProgressView.jsx'
 import Revisit from './components/Revisit.jsx'
 import SettingsView from './components/SettingsView.jsx'
 import TrashView from './components/TrashView.jsx'
+import HomeView from './components/HomeView.jsx'
 import TopicView from './components/TopicView.jsx'
 import VersionHistory from './components/VersionHistory.jsx'
 import Modal from './components/Modal.jsx'
@@ -34,7 +35,7 @@ function Workspace() {
   const [selectedId, setSelectedId] = useState(null)
   const [entries, setEntries] = useState([])
   const [globalSearchResults, setGlobalSearchResults] = useState(null)
-  const [view, setView] = useState('browse') // 'browse' | 'bulk' | 'sort' | 'progress' | 'revisit' | 'settings' | 'trash'
+  const [view, setView] = useState('home') // 'home' | 'browse' | 'bulk' | 'sort' | 'progress' | 'revisit' | 'settings' | 'trash'
   const [inboxEntries, setInboxEntries] = useState([])
   const [revisitEntries, setRevisitEntries] = useState([])
   const [recentActivity, setRecentActivity] = useState([])
@@ -43,6 +44,7 @@ function Workspace() {
   const [versions, setVersions] = useState([])
   const [allTags, setAllTags] = useState([])
   const [exportModal, setExportModal] = useState(null) // null | { estimatedKB: number, loading: boolean }
+  const [inboxCount, setInboxCount] = useState(0)
 
   const [sidebarOpen, setSidebarOpen] = useState(() => {
     try { return localStorage.getItem('medialog_sidebar_open') !== 'false' } catch { return true }
@@ -109,7 +111,16 @@ function Workspace() {
   async function refreshTopics() {
     const t = await listTopics(supabase)
     setTopics(t)
-    if (t.length && !selectedId) setSelectedId(t[0].id)
+    // Load inbox count for home view (don't auto-select a topic)
+    const inbox = t.find((topic) => topic.name === 'Inbox')
+    if (inbox) {
+      const { count } = await supabase
+        .from('entries')
+        .select('id', { count: 'exact', head: true })
+        .eq('topic_id', inbox.id)
+        .is('deleted_at', null)
+      setInboxCount(count ?? 0)
+    }
   }
 
   async function handleGitHubCallback(code) {
@@ -233,6 +244,17 @@ function Workspace() {
 
   async function loadInbox() {
     if (inboxTopic) setInboxEntries(await listEntriesByTopic(supabase, inboxTopic.id))
+  }
+
+  function handleSortInbox() {
+    setView('sort')
+    loadInbox()
+  }
+
+  function handleSelectTopic(topic) {
+    setSelectedId(topic.id)
+    setGlobalSearchResults(null)
+    setView('browse')
   }
 
   // Fire-and-forget: fetch titles for newly created entries that have a URL but no title yet
@@ -372,6 +394,11 @@ function Workspace() {
         </div>
         <ul className="nav">
           <li>
+            <button className={view === 'home' ? 'active' : ''} onClick={() => setView('home')} title="Home">
+              <Home size={16} /><span>Home</span>
+            </button>
+          </li>
+          <li>
             <button className={view === 'browse' ? 'active' : ''} onClick={() => setView('browse')} title="Browse">
               <LayoutGrid size={16} /><span>Browse</span>
             </button>
@@ -425,6 +452,15 @@ function Workspace() {
       </aside>
       <main className="main">
         <div key={view === 'browse' ? `browse-${selectedId}` : view} className="view-enter">
+        {view === 'home' && (
+          <HomeView
+            topics={topics}
+            inboxCount={inboxCount}
+            onSelectTopic={handleSelectTopic}
+            onSortInbox={handleSortInbox}
+            supabase={supabase}
+          />
+        )}
         {view === 'browse' && selectedTopic && (
           <TopicView
             key={selectedTopic.id}

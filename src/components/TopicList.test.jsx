@@ -18,3 +18,19 @@ test('adds a new topic', async () => {
   await userEvent.click(screen.getByRole('button', { name: /add/i }))
   expect(onAdd).toHaveBeenCalledWith('Fitness')
 })
+
+test('renders Inbox topic first with inbox icon', () => {
+  const topics = [
+    { id: 'i', name: 'Inbox' },
+    { id: '1', name: 'Zebra' },
+    { id: '2', name: 'Alpha' },
+  ]
+  render(<TopicList topics={topics} selectedId={null} onSelect={() => {}} onAdd={() => {}} />)
+  const buttons = document.querySelectorAll('.topics button')
+  // First button should be Inbox
+  expect(buttons[0].className).toContain('topic-inbox-btn')
+  // Rest should be alphabetical
+  const names = [...buttons].slice(1).map((b) => b.textContent.trim())
+  expect(names[0]).toBe('Alpha')
+  expect(names[1]).toBe('Zebra')
+})

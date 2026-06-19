@@ -1,7 +1,13 @@
 import { useState } from 'react'
+import { Inbox } from 'lucide-react'
 
 export default function TopicList({ topics, selectedId, onSelect, onAdd, sidebarCollapsed }) {
   const [name, setName] = useState('')
+
+  const inboxTopic = topics.find((t) => t.name === 'Inbox')
+  const rest = topics
+    .filter((t) => t.name !== 'Inbox')
+    .sort((a, b) => a.name.localeCompare(b.name))
 
   function handleAdd(e) {
     e.preventDefault()
@@ -15,7 +21,21 @@ export default function TopicList({ topics, selectedId, onSelect, onAdd, sidebar
     <nav>
       <p className="section-label">Topics</p>
       <ul className="topics">
-        {topics.map((t) => (
+        {inboxTopic && (
+          <li key={inboxTopic.id}>
+            <button
+              className={inboxTopic.id === selectedId ? 'selected topic-inbox-btn' : 'topic-inbox-btn'}
+              onClick={() => onSelect(inboxTopic.id)}
+              title="Inbox"
+            >
+              <Inbox size={14} className="topic-inbox-icon" />
+              {!sidebarCollapsed && <span>{inboxTopic.name}</span>}
+              {sidebarCollapsed && <span>{inboxTopic.name.slice(0, 2).toUpperCase()}</span>}
+            </button>
+          </li>
+        )}
+        {inboxTopic && rest.length > 0 && <li><hr className="topic-divider" /></li>}
+        {rest.map((t) => (
           <li key={t.id}>
             <button
               className={t.id === selectedId ? 'selected' : ''}
