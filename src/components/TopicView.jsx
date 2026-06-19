@@ -208,6 +208,12 @@ export default function TopicView({
             onChange={(e) => setInputVal(isTagSearch ? `tag:${e.target.value}` : e.target.value)}
             onFocus={() => setSearchFocused(true)}
             onBlur={() => setSearchFocused(false)}
+            onKeyDown={(e) => {
+              if (e.key === 'Backspace' && isTagSearch && tagSearchTerm === '') {
+                e.preventDefault()
+                setInputVal('')
+              }
+            }}
           />
           {isTagSearch && (
             <button
