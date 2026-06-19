@@ -402,6 +402,7 @@ function Workspace() {
         </button>
       </aside>
       <main className="main">
+        <div key={view === 'browse' ? `browse-${selectedId}` : view} className="view-enter">
         {view === 'browse' && selectedTopic && (
           <TopicView
             key={selectedTopic.id}
@@ -457,6 +458,7 @@ function Workspace() {
             onEmptyTrash={handleEmptyTrash}
           />
         )}
+        </div>
       </main>
       {previewUrl && (
         <Suspense fallback={null}>
