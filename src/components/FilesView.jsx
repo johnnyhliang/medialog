@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import StorageBar from './StorageBar.jsx'
 import FileRow from './FileRow.jsx'
 import ConfirmModal from './ConfirmModal.jsx'
@@ -34,19 +34,19 @@ export default function FilesView({ supabase, onSelectEntry }) {
     supabase.auth.getUser().then(({ data }) => {
       if (data?.user) setUserId(data.user.id)
     })
-  }, [])
+  }, [supabase])
 
-  useEffect(() => {
-    if (!userId) return
-    loadFiles()
-  }, [userId])
-
-  async function loadFiles() {
+  const loadFiles = useCallback(async () => {
     setLoading(true)
     const { data } = await supabase.storage.from('attachments').list(userId)
     setFiles(data || [])
     setLoading(false)
-  }
+  }, [supabase, userId])
+
+  useEffect(() => {
+    if (!userId) return
+    loadFiles()
+  }, [userId, loadFiles])
 
   async function handleDeleteConfirm() {
     const path = `${userId}/${deleteTarget.file.name}`
