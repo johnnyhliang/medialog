@@ -2,6 +2,7 @@ import { createThumbnail } from './thumbnail.js'
 
 const BUCKET = 'attachments'
 const MAX_BYTES = 10 * 1024 * 1024
+export const CAP_BYTES = 500 * 1024 * 1024
 const ALLOWED = new Set([
   'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml', 'application/pdf',
 ])
@@ -17,6 +18,11 @@ export function isAllowedAttachment(file) {
   return file && ALLOWED.has(file.type) && file.size <= MAX_BYTES
 }
 
+export async function getUserUsageBytes(supabase, userId) {
+  const { data } = await supabase.storage.from(BUCKET).list(userId)
+  return (data || []).reduce((sum, f) => sum + (f.metadata?.size || 0), 0)
+}
+
 /**
  * Upload a note attachment.
  * Returns { url, thumbUrl } — thumbUrl is set for raster images, null for SVGs/PDFs.
@@ -28,6 +34,12 @@ export async function uploadAttachment(supabase, file) {
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Not signed in')
+
+  const used = await getUserUsageBytes(supabase, user.id)
+  if (used + file.size > CAP_BYTES) {
+    const usedMB = Math.round(used / 1024 / 1024)
+    throw new Error(`Storage limit reached. You've used ${usedMB} MB of 500 MB. Delete files to free space.`)
+  }
 
   const uuid = crypto.randomUUID()
   const safeName = sanitizeName(file.name)
