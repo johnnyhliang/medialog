@@ -160,3 +160,70 @@ test('move select calls onMove and disappears entry', async () => {
   await userEvent.selectOptions(moveSelect, 't2')
   expect(onMove).toHaveBeenCalledWith('x', 't2')
 })
+
+test('shows no-note chip for entries with no note older than 14 days', () => {
+  const oldDate = new Date(Date.now() - 15 * 86400000).toISOString()
+  const entry = { id: 'x', url: 'http://a.com', title: 'A Site', note: null, status: null, tags: [], pinned: false, created_at: oldDate }
+  const { container } = render(<EntryCard entry={entry} {...handlers} />)
+  expect(screen.getByText(/no notes/i)).toBeInTheDocument()
+  expect(container.querySelector('.card-aged-no-note')).not.toBeNull()
+})
+
+test('does not show no-note chip when note exists even if old', () => {
+  const oldDate = new Date(Date.now() - 15 * 86400000).toISOString()
+  const entry = { ...base, created_at: oldDate }
+  const { container } = render(<EntryCard entry={entry} {...handlers} />)
+  expect(screen.queryByText(/no notes/i)).not.toBeInTheDocument()
+  expect(container.querySelector('.card-aged-no-note')).toBeNull()
+})
+
+test('does not show no-note chip for entries newer than 14 days with no note', () => {
+  const recentDate = new Date(Date.now() - 10 * 86400000).toISOString()
+  const entry = { id: 'x', url: 'http://a.com', title: 'A Site', note: null, status: null, tags: [], pinned: false, created_at: recentDate }
+  const { container } = render(<EntryCard entry={entry} {...handlers} />)
+  expect(screen.queryByText(/no notes/i)).not.toBeInTheDocument()
+  expect(container.querySelector('.card-aged-no-note')).toBeNull()
+})
+
+test('shows takeaway prompt when transitioning to done with no note', async () => {
+  const onStatusChange = vi.fn()
+  const entry = { id: 'x', url: 'http://a.com', title: 'A Site', note: null, status: null, tags: [], pinned: false }
+  const { container } = render(<EntryCard entry={entry} {...handlers} onStatusChange={onStatusChange} />)
+  await expandCard(container)
+  await userEvent.selectOptions(screen.getByRole('combobox'), 'done')
+  expect(screen.getByText(/any final takeaway/i)).toBeInTheDocument()
+  expect(onStatusChange).not.toHaveBeenCalled()
+})
+
+test('skip on takeaway prompt calls onStatusChange with done', async () => {
+  const onStatusChange = vi.fn()
+  const entry = { id: 'x', url: 'http://a.com', title: 'A Site', note: null, status: null, tags: [], pinned: false }
+  const { container } = render(<EntryCard entry={entry} {...handlers} onStatusChange={onStatusChange} />)
+  await expandCard(container)
+  await userEvent.selectOptions(screen.getByRole('combobox'), 'done')
+  await userEvent.click(screen.getByRole('button', { name: /skip/i }))
+  expect(onStatusChange).toHaveBeenCalledWith('x', 'done')
+  expect(screen.queryByText(/any final takeaway/i)).not.toBeInTheDocument()
+})
+
+test('save on takeaway prompt calls onNoteSave then onStatusChange with done', async () => {
+  const onStatusChange = vi.fn()
+  const onNoteSave = vi.fn()
+  const entry = { id: 'x', url: 'http://a.com', title: 'A Site', note: null, status: null, tags: [], pinned: false }
+  const { container } = render(<EntryCard entry={entry} {...handlers} onStatusChange={onStatusChange} onNoteSave={onNoteSave} />)
+  await expandCard(container)
+  await userEvent.selectOptions(screen.getByRole('combobox'), 'done')
+  await userEvent.type(screen.getByPlaceholderText(/what did you learn/i), 'my takeaway')
+  await userEvent.click(screen.getByRole('button', { name: /save & done/i }))
+  expect(onNoteSave).toHaveBeenCalledWith('x', 'my takeaway')
+  expect(onStatusChange).toHaveBeenCalledWith('x', 'done')
+})
+
+test('skips takeaway prompt when transitioning to done with existing note', async () => {
+  const onStatusChange = vi.fn()
+  const { container } = render(<EntryCard entry={base} {...handlers} onStatusChange={onStatusChange} />)
+  await expandCard(container)
+  await userEvent.selectOptions(screen.getByRole('combobox'), 'done')
+  expect(screen.queryByText(/any final takeaway/i)).not.toBeInTheDocument()
+  expect(onStatusChange).toHaveBeenCalledWith('x', 'done')
+})

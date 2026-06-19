@@ -624,6 +624,49 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
   min-width: 0;
 }
 .card-age { font-size: var(--text-xs); color: var(--muted); white-space: nowrap; }
+.card-no-note-chip {
+  font-size: 10px;
+  color: var(--muted);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 5px;
+  display: inline-block;
+  margin-top: 4px;
+}
+.card-aged-no-note {
+  opacity: 0.65;
+}
+.takeaway-prompt {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.takeaway-prompt-label {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text);
+}
+.takeaway-input {
+  width: 100%;
+  font-size: 13px;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg, #fff);
+  color: var(--text);
+  resize: vertical;
+  box-sizing: border-box;
+}
+.takeaway-actions {
+  display: flex;
+  gap: 8px;
+}
 .card-actions-right {
   display: flex;
   align-items: center;

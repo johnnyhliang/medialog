@@ -33,6 +33,11 @@ function relativeAge(dateStr) {
   return `${Math.floor(d / 365)}y ago`
 }
 
+function daysOld(dateStr) {
+  if (!dateStr) return 0
+  return Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000)
+}
+
 export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChange, onTogglePin, onNoteSave, onPreview, onNoteVersion, onShowHistory, onTitleChange, moveTargets, onMove, tagColors }) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(entry.note || '')
@@ -44,11 +49,15 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
   const [expanded, setExpanded] = useState(false)
   const [showSheet, setShowSheet] = useState(false)
   const [showSecondaryActions, setShowSecondaryActions] = useState(false)
+  const [takeawayPrompt, setTakeawayPrompt] = useState(false)
+  const [takeaway, setTakeaway] = useState('')
   const timer = useRef(null)
   const statusClass = entry.status ? `status-${entry.status}` : 'status-backlog'
   const thumb = getYouTubeThumbnail(entry.url)
   const fileType = classifyUrl(entry.url)
   const age = relativeAge(entry.created_at)
+  const days = daysOld(entry.created_at)
+  const noNoteAged = !entry.note && days >= 14
 
   useEffect(() => {
     if (!editing) return
@@ -110,6 +119,27 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
     } else {
       setExpanded((prev) => !prev)
     }
+  }
+
+  function handleStatusSelect(e) {
+    const status = e.target.value || null
+    if (status === 'done' && !entry.note) {
+      setTakeawayPrompt(true)
+    } else {
+      onStatusChange(entry.id, status)
+    }
+  }
+
+  function handleTakeawaySave() {
+    if (takeaway.trim()) onNoteSave(entry.id, takeaway.trim())
+    onStatusChange(entry.id, 'done')
+    setTakeawayPrompt(false)
+    setTakeaway('')
+  }
+
+  function handleTakeawaySkip() {
+    onStatusChange(entry.id, 'done')
+    setTakeawayPrompt(false)
   }
 
   function handleMove(e) {
@@ -232,12 +262,30 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
         <TagInput value={entry.tags || []} onChange={(next) => onTagsChange(entry.id, next)} tagColors={tagColors} />
       </div>
 
+      {takeawayPrompt && (
+        <div className="takeaway-prompt" onClick={(e) => e.stopPropagation()}>
+          <p className="takeaway-prompt-label">Any final takeaway to add?</p>
+          <textarea
+            className="takeaway-input"
+            placeholder="What did you learn?"
+            rows={2}
+            value={takeaway}
+            onChange={(e) => setTakeaway(e.target.value)}
+            autoFocus
+          />
+          <div className="takeaway-actions">
+            <button className="btn-small" onClick={handleTakeawaySave}>Save &amp; Done</button>
+            <button className="btn-small btn-ghost" onClick={handleTakeawaySkip}>Skip</button>
+          </div>
+        </div>
+      )}
+
       {/* Actions bar */}
       <div className="card-actions-bar">
         <select
           className={`status-select ${statusClass}`}
           value={entry.status || ''}
-          onChange={(e) => onStatusChange(entry.id, e.target.value || null)}
+          onChange={handleStatusSelect}
         >
           {STATUSES.map((s) => (
             <option key={s} value={s}>{s === '' ? '—' : s}</option>
@@ -326,6 +374,9 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
       {entry.note && (
         <p className="card-preview-note">{entry.note.replace(/[#*`[\]]/g, '').slice(0, 120)}</p>
       )}
+      {noNoteAged && (
+        <span className="card-no-note-chip">no notes · {days}d</span>
+      )}
       <div className="card-compact-meta">
         {entry.status && (
           <span className={`status-dot dot-${entry.status}`} title={entry.status} />
@@ -349,7 +400,7 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
   return (
     <>
       <div
-        className={`card ${entry.status ? `card-status-${entry.status}` : 'card-status-backlog'}${entry.pinned ? ' pinned' : ''}${expanded ? '' : ' card-collapsed'}`}
+        className={`card ${entry.status ? `card-status-${entry.status}` : 'card-status-backlog'}${entry.pinned ? ' pinned' : ''}${expanded ? '' : ' card-collapsed'}${noNoteAged ? ' card-aged-no-note' : ''}`}
         id={`entry-${entry.id}`}
         onClick={handleCardClick}
       >
