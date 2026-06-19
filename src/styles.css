@@ -1324,6 +1324,35 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
 .toast .icon-btn { color: rgba(255,255,255,0.7); width: 22px; height: 22px; }
 .toast .icon-btn:hover { color: #fff; background: rgba(255,255,255,0.15); }
 .toast-msg { flex: 1; }
+.toast { position: relative; overflow: hidden; padding-bottom: 6px; }
+
+.toast-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  width: 100%;
+  background: rgba(255,255,255,0.5);
+  transform-origin: left;
+  animation: toast-countdown linear forwards;
+}
+@keyframes toast-countdown {
+  from { transform: scaleX(1); }
+  to   { transform: scaleX(0); }
+}
+
+.toast-action-btn {
+  background: rgba(255,255,255,0.2);
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 4px;
+  color: #fff;
+  font-size: 12px;
+  padding: 2px 8px;
+  cursor: pointer;
+  margin-right: 4px;
+  white-space: nowrap;
+}
+.toast-action-btn:hover { background: rgba(255,255,255,0.35); }
 
 /* ── Backup note ────────────────────────────────────────────────────────────── */
 .backup-note {
