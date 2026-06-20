@@ -2003,6 +2003,52 @@ a.activity-title:hover { color: var(--accent); }
   margin: 0;
 }
 
+/* ── Weather Widget ──────────────────────────────────────────────────────────── */
+.kw-weather { padding: 2px 0 6px; }
+.kw-weather-row { display: flex; align-items: flex-start; gap: 10px; }
+.kw-weather-icon { font-size: 28px; line-height: 1; margin-top: 2px; }
+.kw-weather-info { display: flex; flex-direction: column; gap: 2px; }
+.kw-weather-temp { font-size: 22px; font-weight: 700; line-height: 1; color: var(--text); }
+.kw-weather-desc { font-size: var(--text-xs); color: var(--muted); }
+.kw-weather-loc {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: var(--text-xs);
+  color: var(--muted);
+  cursor: pointer;
+  text-decoration: underline;
+  text-align: left;
+}
+.kw-weather-loc:hover { color: var(--accent); }
+.kw-weather-form { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+.kw-weather-input {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--text-xs);
+  padding: 4px 7px;
+  border-radius: 6px;
+}
+.kw-weather-set {
+  font-size: var(--text-xs);
+  padding: 4px 8px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+}
+.kw-weather-cancel {
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 16px;
+  padding: 0 2px;
+  line-height: 1;
+}
+.kw-weather-cancel:hover { color: var(--danger); }
+.kw-weather-err { font-size: var(--text-xs); color: var(--danger); width: 100%; }
+
 /* Sidebar: inbox pinned */
 .sidebar .topics .topic-inbox-btn {
   display: flex;
