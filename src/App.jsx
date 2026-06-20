@@ -1,6 +1,6 @@
 // src/App.jsx
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
-import { Search, Upload, Inbox, RotateCcw, BarChart2, Settings2, Trash2 as TrashIcon, Download, Menu, Home, FolderOpen, Rss } from 'lucide-react'
+import { Search, Upload, Inbox, RotateCcw, BarChart2, Settings2, Trash2 as TrashIcon, Download, Menu, Home, FolderOpen, Rss, Briefcase } from 'lucide-react'
 import { supabase } from './lib/supabaseClient.js'
 import { listTopics, createTopic, getTopicByName } from './lib/db/topics.js'
 import {
@@ -23,6 +23,7 @@ import Revisit from './components/Revisit.jsx'
 import SettingsView from './components/SettingsView.jsx'
 import TrashView from './components/TrashView.jsx'
 import FeedView from './components/FeedView.jsx'
+import ApplicationsView from './components/ApplicationsView.jsx'
 import ExploreView from './components/ExploreView.jsx'
 import HomeView from './components/HomeView.jsx'
 import FilesView from './components/FilesView.jsx'
@@ -59,6 +60,12 @@ function Workspace() {
   const { toasts, addToast, dismissToast } = useToast()
 
   const [view, setView] = useState('home')
+  const [trackPrefill, setTrackPrefill] = useState(null)
+
+  function handleTrack(opportunity) {
+    setTrackPrefill(opportunity)
+    setView('applications')
+  }
   const [sidebarOpen, setSidebarOpen] = useState(() => {
     try {
       // v2: sidebar defaults open; only respect a stored 'false' if user explicitly set it post-fix
@@ -534,6 +541,11 @@ function Workspace() {
             </button>
           </li>
           <li>
+            <button className={view === 'applications' ? 'active' : ''} onClick={() => setView('applications')} title="Applications">
+              <Briefcase size={16} /><span>Applications</span>
+            </button>
+          </li>
+          <li>
             <button onClick={handleExportClick} title="Export">
               <Download size={16} /><span>Export</span>
             </button>
@@ -562,6 +574,7 @@ function Workspace() {
               onSortInbox={handleSortInbox}
               onTopicIconChange={handleTopicIconChange}
               supabase={supabase}
+              onTrack={handleTrack}
             />
           )}
           {view === 'explore' && (
@@ -656,6 +669,13 @@ function Workspace() {
               supabase={supabase}
               topics={topics}
               onSaveItem={handleSaveFromFeed}
+            />
+          )}
+          {view === 'applications' && (
+            <ApplicationsView
+              supabase={supabase}
+              prefill={trackPrefill}
+              onClearPrefill={() => setTrackPrefill(null)}
             />
           )}
         </div>
