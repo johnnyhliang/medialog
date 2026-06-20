@@ -89,7 +89,7 @@ export default function WeatherWidget() {
       {!editing ? (
         <>
           <div className="kw-weather-main">
-            <WeatherIcon size={32} strokeWidth={1.5} className="kw-weather-icon" />
+            <WeatherIcon size={20} strokeWidth={1.5} className="kw-weather-icon" />
             <div className="kw-weather-temps">
               <span className="kw-weather-temp">{weather ? `${weather.temp}°` : error ? '—' : '…'}</span>
               <span className="kw-weather-feels">
