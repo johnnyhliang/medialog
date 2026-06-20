@@ -58,10 +58,26 @@ function Workspace() {
   const { toasts, addToast, dismissToast } = useToast()
 
   const [view, setView] = useState('home')
-  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(() => {
+    try {
+      // v2: sidebar defaults open; only respect a stored 'false' if user explicitly set it post-fix
+      const stored = localStorage.getItem('medialog_sidebar_open')
+      const migrated = localStorage.getItem('medialog_sidebar_migrated')
+      if (!migrated) {
+        localStorage.removeItem('medialog_sidebar_open')
+        localStorage.setItem('medialog_sidebar_migrated', '1')
+        return true
+      }
+      return stored !== 'false'
+    } catch { return true }
+  })
 
   function toggleSidebar() {
-    setSidebarOpen((prev) => !prev)
+    setSidebarOpen((prev) => {
+      const next = !prev
+      try { localStorage.setItem('medialog_sidebar_open', String(next)) } catch {}
+      return next
+    })
   }
 
   const candidateIndex = useMemo(() => {
