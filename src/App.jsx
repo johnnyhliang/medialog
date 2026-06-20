@@ -1,6 +1,6 @@
 // src/App.jsx
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
-import { LayoutGrid, Upload, Inbox, RotateCcw, BarChart2, Settings2, Trash2 as TrashIcon, Download, Menu, Home, FolderOpen, Rss } from 'lucide-react'
+import { Search, Upload, Inbox, RotateCcw, BarChart2, Settings2, Trash2 as TrashIcon, Download, Menu, Home, FolderOpen, Rss } from 'lucide-react'
 import { supabase } from './lib/supabaseClient.js'
 import { listTopics, createTopic, getTopicByName } from './lib/db/topics.js'
 import {
@@ -23,6 +23,7 @@ import Revisit from './components/Revisit.jsx'
 import SettingsView from './components/SettingsView.jsx'
 import TrashView from './components/TrashView.jsx'
 import FeedView from './components/FeedView.jsx'
+import ExploreView from './components/ExploreView.jsx'
 import HomeView from './components/HomeView.jsx'
 import FilesView from './components/FilesView.jsx'
 import TopicView from './components/TopicView.jsx'
@@ -488,8 +489,8 @@ function Workspace() {
             </button>
           </li>
           <li>
-            <button className={view === 'browse' ? 'active' : ''} onClick={() => setView('browse')} title="Browse">
-              <LayoutGrid size={16} /><span>Browse</span>
+            <button className={view === 'explore' ? 'active' : ''} onClick={() => setView('explore')} title="Explore">
+              <Search size={16} /><span>Explore</span>
             </button>
           </li>
           <li>
@@ -552,7 +553,7 @@ function Workspace() {
       </aside>
 
       <main className="main">
-        <div key={view === 'browse' ? `browse-${selectedId}` : view} className="view-enter">
+        <div key={view === 'browse' ? `browse-${selectedId}` : view === 'explore' ? 'explore' : view} className="view-enter">
           {view === 'home' && (
             <HomeView
               topics={topics}
@@ -561,6 +562,16 @@ function Workspace() {
               onSortInbox={handleSortInbox}
               onTopicIconChange={handleTopicIconChange}
               supabase={supabase}
+            />
+          )}
+          {view === 'explore' && (
+            <ExploreView
+              supabase={supabase}
+              topics={topics}
+              onSelectEntry={(entry) => {
+                setSelectedId(entry.topic_id)
+                setView('browse')
+              }}
             />
           )}
           {view === 'browse' && selectedTopic && (

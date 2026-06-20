@@ -101,6 +101,18 @@ export async function listRecentActivity(supabase, limit = 30) {
   return data.map((row) => ({ ...flattenTags(row), topicName: row.topics?.name ?? null }))
 }
 
+export async function listReadingQueue(supabase) {
+  const { data, error } = await supabase
+    .from('entries')
+    .select(`${TAG_SELECT}, topics(name)`)
+    .is('deleted_at', null)
+    .in('status', ['active', 'backlog'])
+    .order('pinned', { ascending: false })
+    .order('created_at', { ascending: false })
+  if (error) throw new Error(error.message)
+  return data.map((row) => ({ ...flattenTags(row), topicName: row.topics?.name ?? null }))
+}
+
 export async function markSurfaced(supabase, id) {
   const { error } = await supabase
     .from('entries')
