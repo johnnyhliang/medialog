@@ -2004,39 +2004,73 @@ a.activity-title:hover { color: var(--accent); }
 }
 
 /* ── Weather Widget ──────────────────────────────────────────────────────────── */
-.kw-weather { padding: 2px 0 6px; }
-.kw-weather-row { display: flex; align-items: flex-start; gap: 10px; }
-.kw-weather-icon { font-size: 28px; line-height: 1; margin-top: 2px; }
-.kw-weather-info { display: flex; flex-direction: column; gap: 2px; }
-.kw-weather-temp { font-size: 22px; font-weight: 700; line-height: 1; color: var(--text); }
-.kw-weather-desc { font-size: var(--text-xs); color: var(--muted); }
+.kw-weather { display: flex; flex-direction: column; gap: 4px; }
+
+.kw-weather-main { display: flex; align-items: center; gap: 10px; }
+.kw-weather-icon { color: var(--muted); flex-shrink: 0; }
+.kw-weather-temps { display: flex; align-items: baseline; gap: 8px; }
+.kw-weather-temp {
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -1px;
+  color: var(--text);
+}
+.kw-weather-feels { font-size: var(--text-xs); color: var(--muted); }
+
+.kw-weather-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--text-xs);
+  color: var(--muted);
+  padding-left: 42px;
+}
+.kw-weather-condition { color: var(--text); font-weight: 500; }
+.kw-weather-wind { display: flex; align-items: center; gap: 3px; }
+
 .kw-weather-loc {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   background: none;
   border: none;
-  padding: 0;
+  padding: 2px 0 0 40px;
   font-size: var(--text-xs);
   color: var(--muted);
   cursor: pointer;
-  text-decoration: underline;
   text-align: left;
+  opacity: 0.7;
+  transition: opacity 0.1s, color 0.1s;
 }
-.kw-weather-loc:hover { color: var(--accent); }
-.kw-weather-form { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+.kw-weather-loc:hover { color: var(--accent); opacity: 1; }
+
+.kw-weather-form {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+.kw-weather-form-pin { color: var(--muted); flex-shrink: 0; }
 .kw-weather-input {
   flex: 1;
   min-width: 0;
   font-size: var(--text-xs);
-  padding: 4px 7px;
+  padding: 4px 8px;
   border-radius: 6px;
+  height: 28px;
 }
 .kw-weather-set {
   font-size: var(--text-xs);
-  padding: 4px 8px;
+  padding: 4px 10px;
+  height: 28px;
   background: var(--accent);
   color: #fff;
   border: none;
   border-radius: 6px;
+  font-weight: 500;
 }
+.kw-weather-set:hover { background: #2d4338; }
 .kw-weather-cancel {
   background: none;
   border: none;
@@ -2047,7 +2081,7 @@ a.activity-title:hover { color: var(--accent); }
   line-height: 1;
 }
 .kw-weather-cancel:hover { color: var(--danger); }
-.kw-weather-err { font-size: var(--text-xs); color: var(--danger); width: 100%; }
+.kw-weather-err { font-size: var(--text-xs); color: var(--danger); width: 100%; padding-left: 18px; }
 
 /* Sidebar: inbox pinned */
 .sidebar .topics .topic-inbox-btn {
