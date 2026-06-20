@@ -781,6 +781,86 @@ git commit -m "feat: pg_cron schedules for hourly opportunity fetch and daily pr
 
 ---
 
+---
+
+## How to Add a Company (anytime, 30 seconds)
+
+The careers.ts `COMPANIES` array is your personal feed list. Add any company you find interesting by identifying their ATS slug.
+
+**Step 1: Find the ATS**
+
+Go to the company's careers page and look at the URL:
+
+| URL pattern | ATS | Example |
+|---|---|---|
+| `boards.greenhouse.io/SLUG` | greenhouse | `boards.greenhouse.io/stripe` → slug `stripe` |
+| `jobs.lever.co/SLUG` | lever | `jobs.lever.co/notion` → slug `notion` |
+| `jobs.ashbyhq.com/SLUG` | ashby | `jobs.ashbyhq.com/linear` → slug `linear` |
+
+If the URL doesn't match any of these, the company has a custom careers page and can't be added this way (Jane Street, DE Shaw, etc. — these need a custom fetcher).
+
+**Step 2: Verify the API returns data**
+
+Paste one of these in your browser to confirm:
+- Greenhouse: `https://boards-api.greenhouse.io/v1/boards/SLUG/jobs`
+- Lever: `https://api.lever.co/v0/postings/SLUG`
+- Ashby: `https://api.ashbyhq.com/posting-api/job-board/SLUG`
+
+If you get a JSON response with jobs, the slug is correct.
+
+**Step 3: Add one line to `careers.ts`**
+
+```ts
+{ slug: 'your-slug', name: 'Company Name', ats: 'greenhouse', tags: ['ai'] },
+```
+
+Tags are freeform but use existing ones where possible: `ai`, `research`, `quant`, `startup`, `big-tech`, `defense`, `crypto`, `fintech`.
+
+**Step 4: Redeploy**
+
+```bash
+supabase functions deploy fetch-opportunities
+```
+
+Done. The next hourly cron picks up the new company automatically.
+
+---
+
+**Some companies to consider adding (all verified ATS):**
+
+```ts
+// AI / Research
+{ slug: 'huggingface', name: 'Hugging Face', ats: 'greenhouse', tags: ['ai', 'research'] },
+{ slug: 'scaleai', name: 'Scale AI', ats: 'greenhouse', tags: ['ai'] },
+{ slug: 'databricks', name: 'Databricks', ats: 'greenhouse', tags: ['ai'] },
+{ slug: 'waymo', name: 'Waymo', ats: 'greenhouse', tags: ['ai'] },
+{ slug: 'palantir', name: 'Palantir', ats: 'lever', tags: ['ai'] },
+{ slug: 'weights-biases', name: 'Weights & Biases', ats: 'greenhouse', tags: ['ai', 'research'] },
+{ slug: 'modal-labs', name: 'Modal', ats: 'ashby', tags: ['ai', 'startup'] },
+{ slug: 'groq', name: 'Groq', ats: 'greenhouse', tags: ['ai'] },
+{ slug: 'replit', name: 'Replit', ats: 'ashby', tags: ['ai', 'startup'] },
+{ slug: 'cursor', name: 'Cursor', ats: 'ashby', tags: ['ai', 'startup'] },
+
+// Quant / Finance
+{ slug: 'point72', name: 'Point72', ats: 'greenhouse', tags: ['quant'] },
+{ slug: 'aqr', name: 'AQR Capital', ats: 'greenhouse', tags: ['quant'] },
+{ slug: 'virtu-financial', name: 'Virtu Financial', ats: 'greenhouse', tags: ['quant'] },
+
+// High-signal startups
+{ slug: 'retool', name: 'Retool', ats: 'greenhouse', tags: ['startup'] },
+{ slug: 'rippling', name: 'Rippling', ats: 'greenhouse', tags: ['startup'] },
+{ slug: 'ramp', name: 'Ramp', ats: 'greenhouse', tags: ['fintech', 'startup'] },
+{ slug: 'brex', name: 'Brex', ats: 'lever', tags: ['fintech', 'startup'] },
+{ slug: 'benchling', name: 'Benchling', ats: 'greenhouse', tags: ['startup'] },
+{ slug: 'hex', name: 'Hex', ats: 'ashby', tags: ['startup'] },
+
+// Defense / Deep tech
+{ slug: 'shield-ai', name: 'Shield AI', ats: 'greenhouse', tags: ['defense'] },
+{ slug: 'joby-aviation', name: 'Joby Aviation', ats: 'greenhouse', tags: ['deep-tech'] },
+```
+
+---
+
 ## Backend Done Criteria
 
 - `opportunities`, `programs`, `applications` tables exist with RLS enabled
