@@ -89,7 +89,8 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
 /* ── Layout ─────────────────────────────────────────────────────────────────── */
 .app {
   display: flex;
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
 }
 
 .sidebar {
@@ -103,6 +104,8 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
   gap: 20px;
   transition: width 0.22s ease, padding 0.22s ease;
   overflow: hidden;
+  height: 100%;
+  box-sizing: border-box;
 }
 .sidebar h1 {
   font-family: var(--font-serif);
@@ -156,6 +159,16 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
   padding: 6px 0;
   font-size: 11px;
   font-weight: 600;
+}
+
+/* Topic list grows to fill sidebar, scrolls if needed; keeps toggle pinned */
+.sidebar nav {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Sidebar toggle button — floats at the bottom of the sidebar */
@@ -246,6 +259,7 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
   display: flex;
   flex-direction: column;
   gap: var(--gap);
+  overflow-y: auto;
 }
 
 /* ── Quick add ──────────────────────────────────────────────────────────────── */
