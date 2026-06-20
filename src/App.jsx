@@ -1,6 +1,6 @@
 // src/App.jsx
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
-import { LayoutGrid, Upload, Inbox, RotateCcw, BarChart2, Settings2, Trash2 as TrashIcon, Download, Menu, Home, FolderOpen } from 'lucide-react'
+import { LayoutGrid, Upload, Inbox, RotateCcw, BarChart2, Settings2, Trash2 as TrashIcon, Download, Menu, Home, FolderOpen, Rss } from 'lucide-react'
 import { supabase } from './lib/supabaseClient.js'
 import { listTopics, createTopic, getTopicByName } from './lib/db/topics.js'
 import {
@@ -22,6 +22,7 @@ import ProgressView from './components/ProgressView.jsx'
 import Revisit from './components/Revisit.jsx'
 import SettingsView from './components/SettingsView.jsx'
 import TrashView from './components/TrashView.jsx'
+import FeedView from './components/FeedView.jsx'
 import HomeView from './components/HomeView.jsx'
 import FilesView from './components/FilesView.jsx'
 import TopicView from './components/TopicView.jsx'
@@ -81,6 +82,10 @@ function Workspace() {
 
   function handleDocChange(topicId, doc) {
     setTopics((prev) => prev.map((t) => (t.id === topicId ? { ...t, master_doc: doc } : t)))
+  }
+
+  function handleTopicIconChange(topicId, icon) {
+    setTopics((prev) => prev.map((t) => (t.id === topicId ? { ...t, icon } : t)))
   }
 
   useEffect(() => {
@@ -332,6 +337,24 @@ function Workspace() {
     return created.length
   }
 
+  async function handleSaveFromFeed(item, topicId) {
+    const entry = await createEntry(supabase, { topicId, url: item.url, title: item.title, note: item.note || '' })
+    enrichEntries([entry])
+    if (selectedId === topicId) setEntries((prev) => [entry, ...prev])
+    const inbox = topics.find((t) => t.name === 'Inbox')
+    if (inbox && topicId === inbox.id) setInboxCount((prev) => prev + 1)
+    addToast('saved to ' + (topics.find((t) => t.id === topicId)?.name ?? 'topic'), 'success')
+  }
+
+  async function handleArchiveImport(topicId, items) {
+    const created = await bulkCreateEntries(supabase, topicId, items)
+    enrichEntries(created)
+    if (selectedId === topicId) {
+      setEntries((prev) => [...created, ...prev])
+    }
+    return created.length
+  }
+
   async function handleSmartImport(importedEntries) {
     const byTopic = {}
     for (const e of importedEntries) {
@@ -495,6 +518,11 @@ function Workspace() {
             </button>
           </li>
           <li>
+            <button className={view === 'feed' ? 'active' : ''} onClick={() => setView('feed')} title="Feed">
+              <Rss size={16} /><span>Feed</span>
+            </button>
+          </li>
+          <li>
             <button onClick={handleExportClick} title="Export">
               <Download size={16} /><span>Export</span>
             </button>
@@ -520,6 +548,7 @@ function Workspace() {
               inboxCount={inboxCount}
               onSelectTopic={handleSelectTopic}
               onSortInbox={handleSortInbox}
+              onTopicIconChange={handleTopicIconChange}
               supabase={supabase}
             />
           )}
@@ -555,6 +584,7 @@ function Workspace() {
             <BulkImport
               onImport={handleBulkImport}
               onSmartImport={handleSmartImport}
+              onArchiveImport={handleArchiveImport}
               topics={topics}
             />
           )}
@@ -597,6 +627,13 @@ function Workspace() {
             <FilesView
               supabase={supabase}
               onSelectEntry={handleSelectEntry}
+            />
+          )}
+          {view === 'feed' && (
+            <FeedView
+              supabase={supabase}
+              topics={topics}
+              onSaveItem={handleSaveFromFeed}
             />
           )}
         </div>

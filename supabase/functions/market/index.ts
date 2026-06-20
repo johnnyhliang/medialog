@@ -17,13 +17,14 @@ serve(async (req) => {
     tickers = body.tickers ?? []
   } catch { /* default empty */ }
 
-  const [quotes, trending, headlines] = await Promise.all([
+  const [quotes, movers, trending, headlines] = await Promise.all([
     fetchQuotes(tickers),
+    fetchMovers(),
     fetchTrending(),
     fetchHeadlines(),
   ])
 
-  return new Response(JSON.stringify({ quotes, trending, headlines }), {
+  return new Response(JSON.stringify({ quotes, gainers: movers.gainers, losers: movers.losers, trending, headlines }), {
     headers: { ...CORS, 'Content-Type': 'application/json' },
   })
 })
@@ -42,6 +43,24 @@ async function fetchQuotes(tickers: string[]) {
   return results
     .filter((r): r is PromiseFulfilledResult<any> => r.status === 'fulfilled')
     .map((r) => r.value)
+}
+
+async function fetchMovers(): Promise<{ gainers: any[], losers: any[] }> {
+  try {
+    const [gRes, lRes] = await Promise.all([
+      fetch('https://query1.finance.yahoo.com/v1/finance/screener/predefined/saved?scrIds=day_gainers&count=5'),
+      fetch('https://query1.finance.yahoo.com/v1/finance/screener/predefined/saved?scrIds=day_losers&count=5'),
+    ])
+    const [gJson, lJson] = await Promise.all([gRes.json(), lRes.json()])
+    const parse = (json: any) =>
+      (json?.finance?.result?.[0]?.quotes ?? []).slice(0, 3).map((q: any) => ({
+        ticker: q.symbol,
+        changePercent: q.regularMarketChangePercent ?? 0,
+      }))
+    return { gainers: parse(gJson), losers: parse(lJson) }
+  } catch {
+    return { gainers: [], losers: [] }
+  }
 }
 
 async function fetchTrending(): Promise<any[]> {

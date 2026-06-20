@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { parseBulk } from '../lib/parseBulk.js'
 import SmartImport from './SmartImport.jsx'
+import ArchiveCrawl from './ArchiveCrawl.jsx'
 
-export default function BulkImport({ onImport, onSmartImport, topics }) {
+export default function BulkImport({ onImport, onSmartImport, onArchiveImport, topics }) {
   const [tab, setTab] = useState('text')
   const [text, setText] = useState('')
   const [status, setStatus] = useState(null)
@@ -25,6 +26,9 @@ export default function BulkImport({ onImport, onSmartImport, topics }) {
         <button className={tab === 'smart' ? 'active' : ''} onClick={() => setTab('smart')}>
           Smart Import
         </button>
+        <button className={tab === 'archive' ? 'active' : ''} onClick={() => setTab('archive')}>
+          Blog archive
+        </button>
       </div>
 
       {tab === 'text' && (
@@ -43,6 +47,10 @@ export default function BulkImport({ onImport, onSmartImport, topics }) {
 
       {tab === 'smart' && (
         <SmartImport topics={topics} onImport={onSmartImport} />
+      )}
+
+      {tab === 'archive' && (
+        <ArchiveCrawl topics={topics} onImport={onArchiveImport} />
       )}
     </div>
   )

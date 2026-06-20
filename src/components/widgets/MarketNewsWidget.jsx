@@ -45,6 +45,26 @@ export default function MarketNewsWidget({ supabase }) {
         ))}
       </div>
 
+      {(data.gainers?.length > 0 || data.losers?.length > 0) && <>
+        <p className="kw-label" style={{ marginTop: 20 }}>movers today</p>
+        <div className="kw-rows">
+          {data.gainers?.map((m) => (
+            <div key={m.ticker} className="kw-mover-row">
+              <span className="kw-mover-arrow up">↑</span>
+              <span className="kw-ticker">{m.ticker}</span>
+              <span className="kw-pct up">+{m.changePercent.toFixed(1)}%</span>
+            </div>
+          ))}
+          {data.losers?.map((m) => (
+            <div key={m.ticker} className="kw-mover-row">
+              <span className="kw-mover-arrow down">↓</span>
+              <span className="kw-ticker">{m.ticker}</span>
+              <span className="kw-pct down">{m.changePercent.toFixed(1)}%</span>
+            </div>
+          ))}
+        </div>
+      </>}
+
       {data.trending?.length > 0 && <>
         <p className="kw-label" style={{ marginTop: 20 }}>trending (wsb)</p>
         <div className="kw-rows">

@@ -13,7 +13,7 @@ test('renders search input and three engine buttons', () => {
   expect(screen.getByPlaceholderText(/search/i)).toBeTruthy()
   expect(screen.getByText('google')).toBeTruthy()
   expect(screen.getByText('ddg')).toBeTruthy()
-  expect(screen.getByText('kagi')).toBeTruthy()
+  expect(screen.getByText('brave')).toBeTruthy()
 })
 
 test('pressing Enter opens search in new tab with default engine (google)', async () => {
