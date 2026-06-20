@@ -7,8 +7,12 @@ export default function WidgetPanel({ supabase }) {
   return (
     <div className="widget-panel">
       <ClockWidget />
+      <div className="kw-divider" />
       <SearchWidget />
+      <div className="kw-divider" />
+      <p className="kw-label">quick links</p>
       <QuickLinksWidget />
+      <div className="kw-divider" />
       <MarketNewsWidget supabase={supabase} />
     </div>
   )

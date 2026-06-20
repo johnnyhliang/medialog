@@ -1,11 +1,10 @@
-// src/components/widgets/MarketNewsWidget.jsx
 import { useEffect, useRef, useState } from 'react'
 
 const TICKERS = ['VOO', 'NVDA', 'AMZN', 'AVGO', 'MA', 'V', 'SPGI']
 const POLL_MS = 300_000
 
 export default function MarketNewsWidget({ supabase }) {
-  const [data, setData]   = useState(null)
+  const [data, setData] = useState(null)
   const [error, setError] = useState(false)
   const [updatedAt, setUpdatedAt] = useState(null)
   const intervalRef = useRef(null)
@@ -26,67 +25,55 @@ export default function MarketNewsWidget({ supabase }) {
     return () => clearInterval(intervalRef.current)
   }, [])
 
-  if (error) return <p className="widget-market-error muted">Market data unavailable</p>
-  if (!data)  return <p className="widget-market-loading muted">Loading…</p>
+  if (error) return <p className="kw-empty">market data unavailable</p>
+  if (!data)  return <p className="kw-empty">loading…</p>
 
-  const minutesAgo = updatedAt
-    ? Math.floor((Date.now() - updatedAt.getTime()) / 60000)
-    : 0
+  const minutesAgo = updatedAt ? Math.floor((Date.now() - updatedAt.getTime()) / 60000) : 0
 
   return (
-    <div className="widget-market">
-      {/* Market section */}
-      <p className="widget-section-label">MARKET</p>
-      <table className="widget-market-table">
-        <tbody>
-          {data.quotes?.map((q) => (
-            <tr key={q.ticker}>
-              <td className="market-ticker">{q.ticker}</td>
-              <td className="market-price">${q.price.toFixed(2)}</td>
-              <td className={`market-change ${q.changePercent >= 0 ? 'up' : 'down'}`}>
-                {q.changePercent >= 0 ? '+' : ''}{q.changePercent.toFixed(2)}%
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-
-      {/* Movers section */}
-      <p className="widget-section-label">MOVERS TODAY</p>
-      <div className="widget-movers">
-        {data.gainers?.slice(0, 3).map((m) => (
-          <span key={m.ticker} className="mover up">↑ {m.ticker} +{m.changePercent.toFixed(1)}%</span>
-        ))}
-        {data.losers?.slice(0, 3).map((m) => (
-          <span key={m.ticker} className="mover down">↓ {m.ticker} {m.changePercent.toFixed(1)}%</span>
+    <div className="kw-market">
+      <p className="kw-label">market</p>
+      <div className="kw-rows">
+        {data.quotes?.map((q) => (
+          <div key={q.ticker} className="kw-market-row">
+            <span className="kw-ticker">{q.ticker}</span>
+            <span className="kw-price">${q.price.toFixed(2)}</span>
+            <span className={`kw-pct ${q.changePercent >= 0 ? 'up' : 'down'}`}>
+              {q.changePercent >= 0 ? '+' : ''}{q.changePercent.toFixed(2)}%
+            </span>
+          </div>
         ))}
       </div>
 
-      {/* Trending section */}
-      <p className="widget-section-label">TRENDING (WSB)</p>
-      <ol className="widget-trending">
-        {data.trending?.map((t) => (
-          <li key={t.ticker}>
-            <span className="trend-ticker">{t.ticker}</span>
-            <span className="trend-mentions">{t.mentions.toLocaleString()}</span>
-            <span className={`trend-delta ${t.mentionsDelta >= 0 ? 'up' : 'down'}`}>
-              {t.mentionsDelta >= 0 ? '↑' : '↓'}{Math.abs(t.mentionsDelta).toFixed(0)}%
-            </span>
-          </li>
-        ))}
-      </ol>
+      {data.trending?.length > 0 && <>
+        <p className="kw-label" style={{ marginTop: 20 }}>trending (wsb)</p>
+        <div className="kw-rows">
+          {data.trending.map((t, i) => (
+            <div key={t.ticker} className="kw-trend-row">
+              <span className="kw-trend-rank">{i + 1}</span>
+              <span className="kw-ticker">{t.ticker}</span>
+              <span className="kw-mentions">{t.mentions.toLocaleString()} mentions</span>
+              <span className={`kw-pct ${t.mentionsDelta >= 0 ? 'up' : 'down'}`}>
+                {t.mentionsDelta >= 0 ? '↑' : '↓'}{Math.abs(t.mentionsDelta).toFixed(0)}%
+              </span>
+            </div>
+          ))}
+        </div>
+      </>}
 
-      {/* Headlines section */}
-      <p className="widget-section-label">HEADLINES</p>
-      <ul className="widget-headlines">
-        {data.headlines?.map((h) => (
-          <li key={h.url}>
-            <a href={h.url} target="_blank" rel="noreferrer">{h.title}</a>
-          </li>
-        ))}
-      </ul>
+      {data.headlines?.length > 0 && <>
+        <p className="kw-label" style={{ marginTop: 20 }}>headlines</p>
+        <div className="kw-rows">
+          {data.headlines.map((h) => (
+            <a key={h.url} href={h.url} target="_blank" rel="noreferrer" className="kw-headline-row">
+              <span className="kw-dot">•</span>
+              <span className="kw-headline-text">{h.title}</span>
+            </a>
+          ))}
+        </div>
+      </>}
 
-      <p className="widget-updated muted">Updated {minutesAgo}m ago</p>
+      <p className="kw-updated">updated {minutesAgo}m ago</p>
     </div>
   )
 }

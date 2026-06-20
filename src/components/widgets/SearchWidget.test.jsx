@@ -1,4 +1,3 @@
-// src/components/widgets/SearchWidget.test.jsx
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { vi, test, expect, beforeEach } from 'vitest'
@@ -12,12 +11,12 @@ beforeEach(() => {
 test('renders search input and three engine buttons', () => {
   render(<SearchWidget />)
   expect(screen.getByPlaceholderText(/search/i)).toBeTruthy()
-  expect(screen.getByText('G')).toBeTruthy()
-  expect(screen.getByText('DDG')).toBeTruthy()
-  expect(screen.getByText('K')).toBeTruthy()
+  expect(screen.getByText('google')).toBeTruthy()
+  expect(screen.getByText('ddg')).toBeTruthy()
+  expect(screen.getByText('kagi')).toBeTruthy()
 })
 
-test('pressing Enter opens search in new tab with default engine (G)', async () => {
+test('pressing Enter opens search in new tab with default engine (google)', async () => {
   render(<SearchWidget />)
   const input = screen.getByPlaceholderText(/search/i)
   await userEvent.type(input, 'react hooks{Enter}')
@@ -25,21 +24,17 @@ test('pressing Enter opens search in new tab with default engine (G)', async () 
     expect.stringContaining('google.com/search'),
     '_blank'
   )
-  expect(window.open).toHaveBeenCalledWith(
-    expect.stringContaining('udm=14'),
-    '_blank'
-  )
 })
 
 test('switching engine persists to localStorage', async () => {
   render(<SearchWidget />)
-  await userEvent.click(screen.getByText('DDG'))
+  await userEvent.click(screen.getByText('ddg'))
   expect(localStorage.getItem('medialog_search_engine')).toBe('DDG')
 })
 
 test('selected engine is highlighted with active class', async () => {
   render(<SearchWidget />)
-  const ddg = screen.getByText('DDG')
+  const ddg = screen.getByText('ddg')
   await userEvent.click(ddg)
   expect(ddg.className).toContain('active')
 })

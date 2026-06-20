@@ -1,10 +1,9 @@
-// src/components/widgets/ClockWidget.jsx
 import { useEffect, useState } from 'react'
 
 function formatClock(date) {
-  const day = date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+  const day = date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
   const time = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
-  return `${day} · ${time}`
+  return { day: day.toLowerCase(), time: time.toLowerCase() }
 }
 
 export default function ClockWidget() {
@@ -15,5 +14,10 @@ export default function ClockWidget() {
     return () => clearInterval(id)
   }, [])
 
-  return <p className="widget-clock">{display}</p>
+  return (
+    <div className="kw-clock">
+      <span className="kw-clock-time">{display.time}</span>
+      <span className="kw-clock-day">{display.day}</span>
+    </div>
+  )
 }

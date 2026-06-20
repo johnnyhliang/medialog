@@ -1,0 +1,63 @@
+
+[1m[7m[36m RUN [39m[27m[22m [36mv2.1.9 [39m[90mC:/Users/liang/Documents/medialog[39m
+
+ [32m✓[39m src/lib/entryTitle.test.js [2m([22m[2m9 tests[22m[2m)[22m[90m 12[2mms[22m[39m
+ [32m✓[39m src/lib/db/tags.test.js [2m([22m[2m3 tests[22m[2m)[22m[90m 19[2mms[22m[39m
+ [32m✓[39m src/lib/db/versions.test.js [2m([22m[2m2 tests[22m[2m)[22m[90m 18[2mms[22m[39m
+ [32m✓[39m src/lib/classifyUrl.test.js [2m([22m[2m9 tests[22m[2m)[22m[90m 52[2mms[22m[39m
+ [32m✓[39m src/lib/ai.test.js [2m([22m[2m7 tests[22m[2m)[22m[90m 18[2mms[22m[39m
+ [32m✓[39m src/lib/headingSlug.test.js [2m([22m[2m5 tests[22m[2m)[22m[90m 14[2mms[22m[39m
+ [32m✓[39m src/lib/exportMarkdown.test.js [2m([22m[2m3 tests[22m[2m)[22m[90m 24[2mms[22m[39m
+ [32m✓[39m src/lib/db/topics.test.js [2m([22m[2m5 tests[22m[2m)[22m[90m 75[2mms[22m[39m
+ [32m✓[39m supabase/functions/_shared/isSafeUrl.test.js [2m([22m[2m6 tests[22m[2m)[22m[90m 46[2mms[22m[39m
+ [32m✓[39m src/lib/db/entries.test.js [2m([22m[2m11 tests[22m[2m)[22m[90m 78[2mms[22m[39m
+ [32m✓[39m supabase/functions/_shared/extractTitle.test.js [2m([22m[2m6 tests[22m[2m)[22m[90m 41[2mms[22m[39m
+ [32m✓[39m src/components/SortInbox.test.jsx [2m([22m[2m4 tests[22m[2m)[22m[33m 975[2mms[22m[39m
+   [33m[2m✓[22m[39m shows the first inbox entry and a topic selector excluding Inbox [33m377[2mms[22m[39m
+   [33m[2m✓[22m[39m assigns the current entry to the chosen topic [33m413[2mms[22m[39m
+ [32m✓[39m src/components/NoteEditor.test.jsx [2m([22m[2m2 tests[22m[2m)[22m[33m 719[2mms[22m[39m
+   [33m[2m✓[22m[39m switches between write, preview, and split modes [33m623[2mms[22m[39m
+ [32m✓[39m src/lib/fuzzyFind.test.js [2m([22m[2m6 tests[22m[2m)[22m[90m 19[2mms[22m[39m
+ [32m✓[39m src/lib/enrich.test.js [2m([22m[2m3 tests[22m[2m)[22m[90m 24[2mms[22m[39m
+ [32m✓[39m src/lib/embeds.test.js [2m([22m[2m6 tests[22m[2m)[22m[90m 14[2mms[22m[39m
+ [32m✓[39m src/lib/storage.test.js [2m([22m[2m4 tests[22m[2m)[22m[90m 14[2mms[22m[39m
+ [32m✓[39m src/components/AuthGate.test.jsx [2m([22m[2m2 tests[22m[2m)[22m[90m 140[2mms[22m[39m
+ [32m✓[39m src/components/LinkEmbed.test.jsx [2m([22m[2m3 tests[22m[2m)[22m[90m 230[2mms[22m[39m
+ [32m✓[39m src/components/EntryEmbed.test.jsx [2m([22m[2m3 tests[22m[2m)[22m[33m 695[2mms[22m[39m
+   [33m[2m✓[22m[39m renders chip with label and fires onJump on click [33m483[2mms[22m[39m
+ [32m✓[39m src/components/Modal.test.jsx [2m([22m[2m4 tests[22m[2m)[22m[33m 596[2mms[22m[39m
+   [33m[2m✓[22m[39m calls onClose when backdrop is clicked [33m332[2mms[22m[39m
+ [32m✓[39m src/components/VersionHistory.test.jsx [2m([22m[2m3 tests[22m[2m)[22m[33m 797[2mms[22m[39m
+   [33m[2m✓[22m[39m lists versions with a preview [33m387[2mms[22m[39m
+   [33m[2m✓[22m[39m restores a chosen version [33m383[2mms[22m[39m
+ [32m✓[39m src/lib/entryAutocomplete.test.js [2m([22m[2m3 tests[22m[2m)[22m[90m 11[2mms[22m[39m
+ [32m✓[39m src/components/Revisit.test.jsx [2m([22m[2m2 tests[22m[2m)[22m[33m 456[2mms[22m[39m
+   [33m[2m✓[22m[39m shows the first entry and advances on "seen" [33m446[2mms[22m[39m
+ [32m✓[39m src/components/TopicView.test.jsx [2m([22m[2m2 tests[22m[2m)[22m[33m 987[2mms[22m[39m
+   [33m[2m✓[22m[39m scoped search filters the entry list [33m761[2mms[22m[39m
+ [32m✓[39m src/components/EntryCard.test.jsx [2m([22m[2m8 tests[22m[2m)[22m[33m 2537[2mms[22m[39m
+   [33m[2m✓[22m[39m renders markdown note and links open in a new tab [33m387[2mms[22m[39m
+   [33m[2m✓[22m[39m edits the note and saves on Done [33m1027[2mms[22m[39m
+   [33m[2m✓[22m[39m delete asks for confirmation, then fires onDelete [33m329[2mms[22m[39m
+ [32m✓[39m src/components/MarkdownView.test.jsx [2m([22m[2m2 tests[22m[2m)[22m[33m 394[2mms[22m[39m
+   [33m[2m✓[22m[39m renders embed token as a chip showing the entry title [33m359[2mms[22m[39m
+ [32m✓[39m src/components/ProgressView.test.jsx [2m([22m[2m2 tests[22m[2m)[22m[90m 97[2mms[22m[39m
+ [32m✓[39m src/components/QuickAdd.test.jsx [2m([22m[2m2 tests[22m[2m)[22m[33m 953[2mms[22m[39m
+   [33m[2m✓[22m[39m submits url + note and clears fields [33m895[2mms[22m[39m
+ [32m✓[39m src/components/TopicList.test.jsx [2m([22m[2m2 tests[22m[2m)[22m[33m 614[2mms[22m[39m
+   [33m[2m✓[22m[39m adds a new topic [33m316[2mms[22m[39m
+ [32m✓[39m src/lib/searchFilter.test.js [2m([22m[2m3 tests[22m[2m)[22m[90m 13[2mms[22m[39m
+ [32m✓[39m src/lib/parseBulk.test.js [2m([22m[2m3 tests[22m[2m)[22m[90m 13[2mms[22m[39m
+ [32m✓[39m src/components/TagInput.test.jsx [2m([22m[2m2 tests[22m[2m)[22m[33m 468[2mms[22m[39m
+   [33m[2m✓[22m[39m adds a tag on Enter and calls onChange [33m371[2mms[22m[39m
+ [32m✓[39m src/components/BulkImport.test.jsx [2m([22m[2m2 tests[22m[2m)[22m[33m 748[2mms[22m[39m
+   [33m[2m✓[22m[39m parses textarea and calls onImport with item count [33m692[2mms[22m[39m
+ [32m✓[39m src/components/ReturnButton.test.jsx [2m([22m[2m1 test[22m[2m)[22m[33m 314[2mms[22m[39m
+   [33m[2m✓[22m[39m renders and fires onReturn [33m311[2mms[22m[39m
+ [32m✓[39m src/App.test.jsx [2m([22m[2m1 test[22m[2m)[22m[90m 86[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m36 passed[39m[22m[90m (36)[39m
+[2m      Tests [22m [1m[32m141 passed[39m[22m[90m (141)[39m
+[2m   Start at [22m 02:45:07
+[2m   Duration [22m 17.03s[2m (transform 5.65s, setup 18.00s, collect 38.43s, tests 12.31s, environment 92.34s, prepare 13.91s)[22m
+

@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "medialog": {
+      "command": "node",
+      "args": ["C:/Users/liang/Documents/medialog/mcp-server/server.js"],
+      "env": {
+        "MCP_SUPABASE_URL": "https://YOUR_PROJECT.supabase.co",
+        "MCP_SUPABASE_SERVICE_ROLE_KEY": "YOUR_SERVICE_ROLE_KEY"
+      }
+    }
+  }
+}

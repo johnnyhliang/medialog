@@ -1,10 +1,9 @@
-// src/components/widgets/SearchWidget.jsx
 import { useState } from 'react'
 
 const ENGINES = [
-  { label: 'G',   url: (q) => `https://www.google.com/search?q=${encodeURIComponent(q)}&udm=14` },
-  { label: 'DDG', url: (q) => `https://duckduckgo.com/?q=${encodeURIComponent(q)}` },
-  { label: 'K',   url: (q) => `https://kagi.com/search?q=${encodeURIComponent(q)}` },
+  { label: 'google',     key: 'G',   url: (q) => `https://www.google.com/search?q=${encodeURIComponent(q)}&udm=14` },
+  { label: 'ddg',        key: 'DDG', url: (q) => `https://duckduckgo.com/?q=${encodeURIComponent(q)}` },
+  { label: 'kagi',       key: 'K',   url: (q) => `https://kagi.com/search?q=${encodeURIComponent(q)}` },
 ]
 
 function loadEngine() {
@@ -17,31 +16,31 @@ export default function SearchWidget() {
 
   function handleKeyDown(e) {
     if (e.key !== 'Enter' || !query.trim()) return
-    const eng = ENGINES.find((en) => en.label === engine) || ENGINES[0]
+    const eng = ENGINES.find((en) => en.key === engine) || ENGINES[0]
     window.open(eng.url(query.trim()), '_blank')
     setQuery('')
   }
 
-  function selectEngine(label) {
-    setEngine(label)
-    try { localStorage.setItem('medialog_search_engine', label) } catch {}
+  function selectEngine(key) {
+    setEngine(key)
+    try { localStorage.setItem('medialog_search_engine', key) } catch {}
   }
 
   return (
-    <div className="widget-search">
+    <div className="kw-search">
       <input
-        className="widget-search-input"
-        placeholder="Search…"
+        className="kw-search-input"
+        placeholder="search…"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         onKeyDown={handleKeyDown}
       />
-      <div className="widget-engine-row">
+      <div className="kw-engine-row">
         {ENGINES.map((en) => (
           <button
-            key={en.label}
-            className={`widget-engine-btn${engine === en.label ? ' active' : ''}`}
-            onClick={() => selectEngine(en.label)}
+            key={en.key}
+            className={`kw-engine-btn${engine === en.key ? ' active' : ''}`}
+            onClick={() => selectEngine(en.key)}
           >
             {en.label}
           </button>
