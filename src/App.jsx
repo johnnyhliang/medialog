@@ -546,7 +546,8 @@ function Workspace() {
           sidebarCollapsed={!sidebarOpen}
         />
         <button className="sidebar-toggle" onClick={toggleSidebar} title={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}>
-          {sidebarOpen ? '‹' : '›'}
+          <span className="sidebar-toggle-icon" style={{ transform: sidebarOpen ? 'rotate(0deg)' : 'rotate(180deg)' }}>‹</span>
+          <span className="sidebar-toggle-label">{sidebarOpen ? 'collapse' : 'expand'}</span>
         </button>
       </aside>
 

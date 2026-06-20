@@ -101,6 +101,8 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
   display: flex;
   flex-direction: column;
   gap: 20px;
+  transition: width 0.22s ease, padding 0.22s ease;
+  overflow: hidden;
 }
 .sidebar h1 {
   font-family: var(--font-serif);
@@ -126,10 +128,9 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
 
 /* Collapsed sidebar (icon rail) */
 .app.sidebar-collapsed .sidebar {
-  width: 44px;
-  padding: 16px 0;
+  width: 52px;
+  padding: 16px 4px;
   gap: 12px;
-  overflow: hidden;
 }
 .app.sidebar-collapsed .sidebar h1,
 .app.sidebar-collapsed .brand-row .signout,
@@ -137,13 +138,17 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
 .app.sidebar-collapsed .topic-list-label,
 .app.sidebar-collapsed .topic-add,
 .app.sidebar-collapsed .topic-name-text {
-  display: none;
+  opacity: 0;
+  pointer-events: none;
+  width: 0;
+  overflow: hidden;
+  white-space: nowrap;
 }
 .app.sidebar-collapsed .nav button {
   width: 44px;
   justify-content: center;
   padding: 8px 0;
-  border-radius: 0;
+  border-radius: 6px;
 }
 .app.sidebar-collapsed .topic-item button {
   width: 44px;
@@ -152,20 +157,42 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
   font-size: 11px;
   font-weight: 600;
 }
+
+/* Sidebar toggle button — floats at the bottom of the sidebar */
 .sidebar-toggle {
   margin-top: auto;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  color: var(--muted);
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 6px;
   width: 100%;
-  padding: 8px 0;
-  font-size: 18px;
+  padding: 7px 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+  overflow: hidden;
 }
-.sidebar-toggle:hover { color: var(--text); }
+.sidebar-toggle:hover {
+  background: var(--surface-3, var(--surface));
+  color: var(--text);
+}
+.sidebar-toggle-icon {
+  font-size: 14px;
+  line-height: 1;
+  flex-shrink: 0;
+  transition: transform 0.22s ease;
+}
+.app.sidebar-collapsed .sidebar-toggle {
+  padding: 7px 0;
+  justify-content: center;
+}
+.app.sidebar-collapsed .sidebar-toggle-label { display: none; }
 
 .nav { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 1px; }
 .nav button {
