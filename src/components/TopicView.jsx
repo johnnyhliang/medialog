@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import TopicDocEditor from './TopicDocEditor.jsx'
 import MarkdownView from './MarkdownView.jsx'
 import EntryList from './EntryList.jsx'
@@ -43,9 +43,26 @@ export default function TopicView({
   const [docWidth, setDocWidth] = useState(() => {
     try { return localStorage.getItem('medialog_doc_width') || 'readable' } catch { return 'readable' }
   })
-  const [cardMinWidth, setCardMinWidth] = useState(() => {
-    try { return Number(localStorage.getItem('medialog_card_min_width')) || 200 } catch { return 200 }
+  const [cols, setCols] = useState(() => {
+    try { return Number(localStorage.getItem('medialog_card_cols')) || 3 } catch { return 3 }
   })
+  const gridRef = useRef(null)
+  const [containerWidth, setContainerWidth] = useState(0)
+
+  useEffect(() => {
+    if (!gridRef.current) return
+    const ro = new ResizeObserver(([entry]) => setContainerWidth(entry.contentRect.width))
+    ro.observe(gridRef.current)
+    return () => ro.disconnect()
+  }, [])
+
+  const colsToMinWidth = useCallback((c, w) => {
+    if (!w) return 200
+    const gap = 12
+    return Math.floor((w - gap * (c - 1)) / c)
+  }, [])
+
+  const cardMinWidth = containerWidth ? colsToMinWidth(cols, containerWidth) : 200
 
   function setDocWidthAndSave(w) {
     setDocWidth(w)
@@ -164,20 +181,21 @@ export default function TopicView({
             </div>
           )}
           {mode === 'list' && (
-            <div className="card-density-ctrl" title="Card size">
+            <div className="card-density-ctrl" title="Columns">
               <input
                 type="range"
-                min={130}
-                max={400}
-                step={10}
-                value={cardMinWidth}
+                min={1}
+                max={5}
+                step={1}
+                value={cols}
                 onChange={(e) => {
                   const v = Number(e.target.value)
-                  setCardMinWidth(v)
-                  try { localStorage.setItem('medialog_card_min_width', String(v)) } catch {}
+                  setCols(v)
+                  try { localStorage.setItem('medialog_card_cols', String(v)) } catch {}
                 }}
-                aria-label="Card size"
+                aria-label="Columns"
               />
+              <span className="card-density-label">{cols} col{cols !== 1 ? 's' : ''}</span>
             </div>
           )}
           <div className="view-toggle">
@@ -268,7 +286,12 @@ export default function TopicView({
 
       {!query && <QuickAdd onAdd={onAddEntry} disabled={false} onCheckDuplicate={onCheckDuplicate} />}
 
-      <div style={{ '--card-min-width': `${cardMinWidth}px` }}>
+      <div className="entries-section-header">
+        <span className="entries-section-label">Entries</span>
+        {filtered.length > 0 && <span className="entries-section-count">{filtered.length}</span>}
+      </div>
+
+      <div ref={gridRef} style={{ '--card-min-width': `${cardMinWidth}px` }}>
         <EntryList
           entries={filtered}
           onDelete={onDelete}
