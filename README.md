@@ -54,3 +54,13 @@ Open the deployed URL in Safari -> Share -> Add to Home Screen.
 - [ ] **`capture` SSRF fix** — add `isSafeUrl` validation to the capture edge function before inserting `url` into DB. Low priority (secret-gated) but clean it up before wider use
 - [ ] **Instagram Reels ingestion** — DM reel link to configured alt account → cron edge fn polls DM inbox → fetches caption via private API → Claude Haiku summary → creates entry in "Reels" topic. Needs: `INSTAGRAM_SESSION_ID`, `ANTHROPIC_API_KEY`. Video transcription (Whisper) is v2. Plan: `docs/superpowers/plans/2026-06-21-instagram-reels.md`
 - [ ] **From roadmap (other agent)** — migration assistant, conversation capture, weekly digest, semantic search, MCP v2. See `docs/superpowers/specs/` for specs
+- [ ] **Browser bookmarklet** — one-click desktop capture without opening the app; no spec yet, Phase 1 priority
+- [ ] **iOS Shortcut** — Share Sheet → MediaLog QuickAdd; guide exists in app but not verified set up. Test with a real share before relying on it.
+- [ ] **Conversation capture QuickAdd mode** — `#ai-chat` tag shortcut + larger note textarea; spec at `docs/superpowers/specs/2026-06-21-conversation-capture-design.md`. No schema change needed, just UI.
+- [ ] **OneTab bulk import fix** — bulk importer currently expects bare URLs; OneTab exports `title - url` per line. Small parser fix in bulk importer, then the tab-dump migration path works today.
+
+### Tech Debt
+- [ ] **Prune stale git worktrees** — `feat/ai-infra`, `worktree-feat+feed-widget`, `worktree-feat+opportunity-radar-backend` are orphaned. Run `git worktree prune` and delete the branches if not needed.
+- [ ] **Apply migration 0018** — `supabase/migrations/0018_wayback.sql` adds `wayback_submitted_at` column; run `npx supabase db push`
+- [ ] **MCP server is stale** — `mcp-server/` was built for an older schema. Does not know about RSS feeds, files, topic lifecycle, Wayback data, or the current DB shape. Don't wire it to Claude Desktop until v2 is built (Phase C, after semantic search). Spec: `docs/superpowers/specs/2026-06-21-mcp-v2-design.md`
+- [ ] **`frontend-design` plugin** — shows as `unknown` version in Claude Code; may be broken. Low priority.
