@@ -394,6 +394,7 @@ function Workspace() {
   async function handleSaveFromFeed(item, topicId) {
     const entry = await createEntry(supabase, { topicId, url: item.url, title: item.title, note: item.note || '' })
     enrichEntries([entry])
+    embedEntryAsync(supabase, entry)
     if (selectedId === topicId) setEntries((prev) => [entry, ...prev])
     const inbox = topics.find((t) => t.name === 'Inbox')
     if (inbox && topicId === inbox.id) setInboxCount((prev) => prev + 1)
