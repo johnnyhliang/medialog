@@ -49,25 +49,23 @@ Deno.serve(async (req) => {
     })
   }
 
+  if (body.url && !isSafeUrl(body.url)) {
+    return new Response(JSON.stringify({ error: 'unsafe url' }), {
+      status: 400, headers: { ...cors, 'Content-Type': 'application/json' },
+    })
+  }
+
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL')!,
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
   )
   const userId = Deno.env.get('CAPTURE_USER_ID')!
 
-  // Find the user's Inbox topic.
   const { data: inbox } = await supabase
     .from('topics').select('id').eq('user_id', userId).eq('name', 'Inbox').single()
   if (!inbox) {
     return new Response(JSON.stringify({ error: 'no inbox' }), {
       status: 500, headers: { ...cors, 'Content-Type': 'application/json' },
-    })
-  }
-
-  // Validate URL if provided (note-only entries have url: null)
-  if (body.url && !isSafeUrl(body.url)) {
-    return new Response(JSON.stringify({ error: 'unsafe url' }), {
-      status: 400, headers: { ...cors, 'Content-Type': 'application/json' },
     })
   }
 

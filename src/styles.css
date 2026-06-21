@@ -277,7 +277,7 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
 .quickadd-row > * { flex: 1; }
 .toggle-btn { background: var(--surface-alt); color: var(--text); border: 1px solid var(--border); padding: 8px 12px; border-radius: 4px; cursor: pointer; font-size: 13px; transition: all 0.2s; }
 .toggle-btn:hover { background: var(--surface); }
-.toggle-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+.toggle-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
 .quickadd textarea { min-height: 48px; font-size: 13.5px; }
 .quickadd-dup-warning {
   font-size: var(--text-xs);
@@ -1086,6 +1086,20 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
   .toast-container { left: 8px; right: 8px; transform: none; bottom: 12px; }
   .toast { max-width: 100%; }
 }
+
+/* ── Topic action buttons (archive / delete in topic header) ────────────────── */
+.topic-action-btn {
+  font-size: 12px;
+  padding: 3px 10px;
+  border-radius: 5px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+.topic-action-btn:hover { background: var(--surface-2); color: var(--text); }
+.topic-action-btn--danger { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 30%, transparent); }
+.topic-action-btn--danger:hover { background: #FEE2E2; color: var(--danger); }
 
 /* ── Topic view layout ───────────────────────────────────────────────────────── */
 .topic-header {
