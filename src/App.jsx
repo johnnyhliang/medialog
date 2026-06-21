@@ -1,6 +1,6 @@
 // src/App.jsx
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
-import { Search, Upload, Inbox, RotateCcw, BarChart2, Settings2, Trash2 as TrashIcon, Download, Menu, Home, FolderOpen, Rss, Briefcase, PackageOpen, Archive } from 'lucide-react'
+import { Search, Upload, Inbox, RotateCcw, BarChart2, Settings2, Trash2 as TrashIcon, Download, Menu, Home, FolderOpen, Rss, Briefcase, PackageOpen, Archive, ScrollText } from 'lucide-react'
 import { supabase } from './lib/supabaseClient.js'
 import { listTopics, createTopic, getTopicByName, listDeletedTopics, archiveTopic, unarchiveTopic, softDeleteTopic, restoreDeletedTopic } from './lib/db/topics.js'
 import {
@@ -26,6 +26,7 @@ import SettingsView from './components/SettingsView.jsx'
 import TrashView from './components/TrashView.jsx'
 import FeedView from './components/FeedView.jsx'
 import ApplicationsView from './components/ApplicationsView.jsx'
+import DigestView from './components/DigestView.jsx'
 import ExploreView from './components/ExploreView.jsx'
 import HomeView from './components/HomeView.jsx'
 import FilesView from './components/FilesView.jsx'
@@ -652,6 +653,20 @@ function Workspace() {
             </button>
           </li>
           <li>
+            <button className={view === 'digest' ? 'active' : ''} onClick={() => setView('digest')} title="Digest" style={{ position: 'relative' }}>
+              <ScrollText size={16} /><span>Digest</span>
+              {(() => {
+                try {
+                  const last = localStorage.getItem('medialog_digest_last_viewed')
+                  if (!last || Date.now() - Number(last) > 7 * 24 * 60 * 60 * 1000) {
+                    return <span className="nav-dot" />
+                  }
+                } catch {}
+                return null
+              })()}
+            </button>
+          </li>
+          <li>
             <button onClick={handleExportClick} title="Export">
               <Download size={16} /><span>Export</span>
             </button>
@@ -810,6 +825,9 @@ function Workspace() {
               prefill={trackPrefill}
               onClearPrefill={() => setTrackPrefill(null)}
             />
+          )}
+          {view === 'digest' && (
+            <DigestView topics={topics} inboxTopicId={inboxTopic?.id} />
           )}
         </div>
       </main>
