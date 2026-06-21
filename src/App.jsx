@@ -245,11 +245,10 @@ function Workspace() {
   }
 
   async function handleUndoTrash(entry) {
-    await restoreEntry(supabase, entry.id)
+    const inboxId = inboxTopic?.id
+    await restoreEntry(supabase, entry.id, inboxId)
     applyRestore(entry.id)
-    if (entry.topic_id === selectedId) {
-      setEntries((prev) => [entry, ...prev])
-    }
+    if (inboxId) setInboxCount((prev) => prev + 1)
   }
 
   async function handleDelete(id) {
@@ -444,8 +443,10 @@ function Workspace() {
   }
 
   async function handleRestore(entryId) {
-    await restoreEntry(supabase, entryId)
+    const inboxId = inboxTopic?.id
+    await restoreEntry(supabase, entryId, inboxId)
     applyRestore(entryId)
+    if (inboxId) setInboxCount((prev) => prev + 1)
   }
 
   async function handleEmptyTrash() {

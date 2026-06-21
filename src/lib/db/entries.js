@@ -139,10 +139,11 @@ export async function listTrashedEntries(supabase) {
   return data.map(flattenTags)
 }
 
-export async function restoreEntry(supabase, id) {
+export async function restoreEntry(supabase, id, inboxId) {
+  const update = inboxId ? { deleted_at: null, topic_id: inboxId } : { deleted_at: null }
   const { error } = await supabase
     .from('entries')
-    .update({ deleted_at: null })
+    .update(update)
     .eq('id', id)
   if (error) throw new Error(error.message)
 }
