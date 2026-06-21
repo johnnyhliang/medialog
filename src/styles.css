@@ -275,6 +275,9 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
 }
 .quickadd-row { display: flex; gap: 8px; }
 .quickadd-row > * { flex: 1; }
+.toggle-btn { background: var(--surface-alt); color: var(--text); border: 1px solid var(--border); padding: 8px 12px; border-radius: 4px; cursor: pointer; font-size: 13px; transition: all 0.2s; }
+.toggle-btn:hover { background: var(--surface); }
+.toggle-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
 .quickadd textarea { min-height: 48px; font-size: 13.5px; }
 .quickadd-dup-warning {
   font-size: var(--text-xs);

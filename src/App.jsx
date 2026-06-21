@@ -230,9 +230,13 @@ function Workspace() {
     applyAddTopic(t)
   }
 
-  async function handleAddEntry({ url, note, title: prefetchedTitle }) {
+  async function handleAddEntry({ url, note, title: prefetchedTitle, tags = [] }) {
     const e = await createEntry(supabase, { topicId: selectedId, url, note })
     setEntries((prev) => [{ ...e, tags: [] }, ...prev])
+    if (tags.length > 0) {
+      await setEntryTags(supabase, e.id, tags)
+      setEntries((prev) => prev.map((entry) => entry.id === e.id ? { ...entry, tags } : entry))
+    }
     if (url) {
       const title = prefetchedTitle ?? await fetchTitle(supabase, url)
       if (title) {

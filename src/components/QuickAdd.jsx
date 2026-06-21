@@ -12,6 +12,7 @@ export default function QuickAdd({ onAdd, disabled, onCheckDuplicate, supabase }
   const [showNudge, setShowNudge] = useState(false)
   const [fetchedTitle, setFetchedTitle] = useState(null)
   const [fetchingTitle, setFetchingTitle] = useState(false)
+  const [conversationMode, setConversationMode] = useState(false)
   const textareaRef = useRef(null)
 
   useEffect(() => {
@@ -45,10 +46,12 @@ export default function QuickAdd({ onAdd, disabled, onCheckDuplicate, supabase }
     if (u && !n) setShowNudge(true)
     else setShowNudge(false)
     setDupWarning(null)
-    await onAdd({ url: u || null, note: n, title: fetchedTitle || undefined })
+    const tags = conversationMode ? ['ai-chat'] : []
+    await onAdd({ url: u || null, note: n, title: fetchedTitle || undefined, tags })
     setUrl('')
     setNote('')
     setFetchedTitle(null)
+    setConversationMode(false)
   }
 
   return (
@@ -74,10 +77,10 @@ export default function QuickAdd({ onAdd, disabled, onCheckDuplicate, supabase }
       )}
       <textarea
         ref={textareaRef}
-        placeholder="What's worth remembering about this?"
+        placeholder={conversationMode ? "Paste conversation here…" : "What's worth remembering about this?"}
         maxLength={10000}
-        rows={2}
-        style={{ resize: 'none', overflow: 'hidden' }}
+        rows={conversationMode ? 8 : 2}
+        style={{ resize: 'none', overflow: 'hidden', ...(conversationMode && { minHeight: '180px' }) }}
         value={note}
         onChange={(e) => { setNote(e.target.value); if (e.target.value) setShowNudge(false) }}
       />
@@ -85,6 +88,7 @@ export default function QuickAdd({ onAdd, disabled, onCheckDuplicate, supabase }
         <p className="quickadd-nudge">No notes yet — why does this matter?</p>
       )}
       <div className="quickadd-row">
+        <button type="button" className={`toggle-btn${conversationMode ? ' active' : ''}`} onClick={() => setConversationMode(!conversationMode)}>Conversation</button>
         <button type="submit" disabled={disabled}>Save</button>
       </div>
     </form>
