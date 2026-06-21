@@ -1,8 +1,40 @@
 import { extractMetadata } from '../_shared/extractTitle.ts'
 import { isSafeUrl } from '../_shared/isSafeUrl.ts'
 
-const MAX_BYTES = 512 * 1024 // only need the <head>; cap the read at 512KB
-const TIMEOUT_MS = 5000
+const MAX_BYTES = 512 * 1024
+const TIMEOUT_MS = 6000
+
+const BROWSER_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
+
+// Known oEmbed providers — returns { title, thumbnail_url, author_name, ... }
+const OEMBED_PROVIDERS: Array<{ test: RegExp; endpoint: string }> = [
+  {
+    test: /youtube\.com\/watch|youtu\.be\//,
+    endpoint: 'https://www.youtube.com/oembed',
+  },
+  {
+    test: /vimeo\.com\//,
+    endpoint: 'https://vimeo.com/api/oembed.json',
+  },
+]
+
+async function tryOembed(url: string, controller: AbortController): Promise<{ title: string | null; image: string | null; description: string | null } | null> {
+  const provider = OEMBED_PROVIDERS.find((p) => p.test.test(url))
+  if (!provider) return null
+  try {
+    const endpoint = `${provider.endpoint}?url=${encodeURIComponent(url)}&format=json`
+    const res = await fetch(endpoint, { signal: controller.signal })
+    if (!res.ok) return null
+    const json = await res.json()
+    return {
+      title: json.title ?? null,
+      image: json.thumbnail_url ?? null,
+      description: json.author_name ? `by ${json.author_name}` : null,
+    }
+  } catch {
+    return null
+  }
+}
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -28,28 +60,42 @@ Deno.serve(async (req) => {
     })
   }
 
+  let site = ''
+  try { site = new URL(url).hostname } catch { /* ignore */ }
+
   try {
     const controller = new AbortController()
     const timer = setTimeout(() => controller.abort(), TIMEOUT_MS)
-    let html: string
+
+    let result: { title: string | null; site: string; image: string | null; description: string | null }
+
     try {
-      const res = await fetch(url, {
-        headers: { 'User-Agent': 'MediaLogBot/1.0' },
-        redirect: 'follow',
-        signal: controller.signal,
-      })
-      const buf = new Uint8Array(await res.arrayBuffer())
-      html = new TextDecoder().decode(buf.slice(0, MAX_BYTES))
+      // Try oEmbed first for known providers (YouTube, Vimeo, etc.)
+      const oembed = await tryOembed(url, controller)
+      if (oembed) {
+        result = { ...oembed, site }
+      } else {
+        const res = await fetch(url, {
+          headers: {
+            'User-Agent': BROWSER_UA,
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.5',
+          },
+          redirect: 'follow',
+          signal: controller.signal,
+        })
+        const buf = new Uint8Array(await res.arrayBuffer())
+        const html = new TextDecoder().decode(buf.slice(0, MAX_BYTES))
+        result = extractMetadata(html, url)
+      }
     } finally {
       clearTimeout(timer)
     }
-    const result = extractMetadata(html, url)
+
     return new Response(JSON.stringify(result), {
       headers: { ...cors, 'Content-Type': 'application/json' },
     })
   } catch (_e) {
-    let site = ''
-    try { site = new URL(url).hostname } catch { /* ignore */ }
     return new Response(JSON.stringify({ title: null, site, image: null, description: null }), {
       headers: { ...cors, 'Content-Type': 'application/json' },
     })
