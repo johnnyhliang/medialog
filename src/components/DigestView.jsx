@@ -12,7 +12,7 @@ function shortDate(str) {
 }
 
 export default function DigestView({ topics, inboxTopicId }) {
-  const [window, setWindow] = useState('7d')
+  const [timeWindow, setTimeWindow] = useState('7d')
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
 
@@ -24,22 +24,22 @@ export default function DigestView({ topics, inboxTopicId }) {
     setLoading(true)
     const now = new Date()
     let since = null
-    if (window === '7d') since = new Date(now - 7 * 24 * 60 * 60 * 1000)
-    else if (window === '30d') since = new Date(now - 30 * 24 * 60 * 60 * 1000)
+    if (timeWindow === '7d') since = new Date(now - 7 * 24 * 60 * 60 * 1000)
+    else if (timeWindow === '30d') since = new Date(now - 30 * 24 * 60 * 60 * 1000)
     computeDigest(supabase, since, inboxTopicId).then(d => {
       setData(d)
       setLoading(false)
     })
-  }, [window, inboxTopicId])
+  }, [timeWindow, inboxTopicId])
 
   return (
     <div className="digest-view">
       <div className="digest-header">
         <h2>Digest</h2>
         <div className="digest-window-btns">
-          <button className={window === '7d' ? 'active' : ''} onClick={() => setWindow('7d')}>7 days</button>
-          <button className={window === '30d' ? 'active' : ''} onClick={() => setWindow('30d')}>30 days</button>
-          <button className={window === 'all' ? 'active' : ''} onClick={() => setWindow('all')}>All time</button>
+          <button className={timeWindow === '7d' ? 'active' : ''} onClick={() => setTimeWindow('7d')}>7 days</button>
+          <button className={timeWindow === '30d' ? 'active' : ''} onClick={() => setTimeWindow('30d')}>30 days</button>
+          <button className={timeWindow === 'all' ? 'active' : ''} onClick={() => setTimeWindow('all')}>All time</button>
         </div>
       </div>
 

@@ -3102,7 +3102,6 @@ a.activity-title:hover { color: var(--accent); }
   position: relative;
   display: flex;
   align-items: center;
-  /* hover/selected styles are defined above with the topic list rules */
 }
 .topic-item > button:first-child {
   flex: 1;

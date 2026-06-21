@@ -27,7 +27,7 @@ export async function computeDigest(supabase, since, inboxTopicId) {
       : Promise.resolve({ data: [] }),
     supabase.from('entries').select('id, title, url, created_at').eq('status', 'active').is('deleted_at', null).order('created_at', { ascending: true }).limit(5),
     supabase.from('entries').select('topic_id').gte('updated_at', thirtyDaysAgo).is('deleted_at', null),
-    supabase.from('topics').select('id, name').is('archived_at', null).is('deleted_at', null),
+    supabase.from('topics').select('id, name').is('archived_at', null),
   ])
 
   const recentTopicIds = new Set((recentTopicIdsRes.data || []).map(r => r.topic_id))
