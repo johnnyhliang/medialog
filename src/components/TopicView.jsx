@@ -24,6 +24,7 @@ export default function TopicView({
   pendingArchiveIds = new Set(),
   supabase,
   onCheckDuplicate,
+  onEntryUpdate,
 }) {
   const storageKey = `medialog_topic_view_${topic.id}`
   const [mode, setMode] = useState(() => {
@@ -306,6 +307,7 @@ export default function TopicView({
           moveTargets={moveTargets}
           onMove={onMove}
           tagColors={tagColors}
+          onEntryUpdate={onEntryUpdate}
         />
       </div>
 

@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
-import { ChevronUp, Clock, MoreVertical, Pencil, Pin, PinOff, Plus, Trash2 } from 'lucide-react'
+import { ChevronUp, Clock, MoreVertical, Pencil, Pin, PinOff, Plus, Trash2, Archive } from 'lucide-react'
+import WaybackPopup from './WaybackPopup.jsx'
 import TagInput from './TagInput.jsx'
 import MarkdownView from './MarkdownView.jsx'
 import ConfirmModal from './ConfirmModal.jsx'
@@ -46,7 +47,7 @@ function daysOld(dateStr) {
   return Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000)
 }
 
-export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChange, onTogglePin, onNoteSave, onPreview, onNoteVersion, onShowHistory, onTitleChange, moveTargets, onMove, tagColors }) {
+export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChange, onTogglePin, onNoteSave, onPreview, onNoteVersion, onShowHistory, onTitleChange, moveTargets, onMove, tagColors, onEntryUpdate, supabase: supabaseClient }) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(entry.note || '')
   const [editingTitle, setEditingTitle] = useState(false)
@@ -60,6 +61,7 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
   const [takeawayPrompt, setTakeawayPrompt] = useState(false)
   const [takeaway, setTakeaway] = useState('')
   const [fetchingTitle, setFetchingTitle] = useState(false)
+  const [showWayback, setShowWayback] = useState(false)
   const timer = useRef(null)
   const statusClass = entry.status ? `status-${entry.status}` : 'status-backlog'
   const thumb = getYouTubeThumbnail(entry.url)
@@ -353,6 +355,16 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
                 <Clock size={15} />
               </button>
             )}
+            {entry.url && (
+              <button
+                className="icon-btn"
+                aria-label="archive to Wayback Machine"
+                title="Wayback Machine"
+                onClick={(e) => { e.stopPropagation(); setShowWayback(true) }}
+              >
+                <Archive size={15} />
+              </button>
+            )}
             {moveSelect}
           </div>
 
@@ -465,6 +477,15 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
           confirmLabel="Move to Trash"
           onConfirm={() => { setConfirmDelete(false); onDelete(entry.id); setShowSheet(false) }}
           onCancel={() => setConfirmDelete(false)}
+        />
+      )}
+
+      {showWayback && (
+        <WaybackPopup
+          entry={entry}
+          supabase={supabaseClient || supabase}
+          onClose={() => setShowWayback(false)}
+          onEntryUpdate={(updated) => { onEntryUpdate?.(updated); setShowWayback(false) }}
         />
       )}
     </>

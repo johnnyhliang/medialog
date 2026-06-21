@@ -674,6 +674,9 @@ function Workspace() {
               pendingArchiveIds={pendingArchiveIds}
               supabase={supabase}
               onCheckDuplicate={handleCheckDuplicate}
+              onEntryUpdate={(updated) => {
+                setEntries((prev) => prev.map((e) => e.id === updated.id ? { ...e, ...updated } : e))
+              }}
             />
           )}
           {view === 'bulk' && (
