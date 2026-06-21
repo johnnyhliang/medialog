@@ -39,15 +39,11 @@ Open the deployed URL in Safari -> Share -> Add to Home Screen.
 ## TODO
 
 ### Activate
-- [ ] **Twitter agent** — get `auth_token` cookie from twitter.com DevTools, then `npx supabase secrets set TWITTER_AUTH_TOKEN=<value>` + redeploy `fetch-opportunities`
-- [ ] **Apply migrations 0016, 0019, 0020, 0021** — run `npx supabase db push` to apply Companies tab (0016), cron secret header (0019), DB length constraints (0020), private attachments bucket (0021)
-- [ ] **CRON_SECRET setup (do together with db push)** — (1) `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` to generate, (2) `npx supabase secrets set CRON_SECRET=<value>`, (3) in Supabase SQL editor: `alter database postgres set app.cron_secret = '<same-value>';`, (4) `npx supabase db push` — steps 2 and 4 must happen together or cron gets 403s
-- [ ] **Deploy fetch-opportunities** — `npx supabase functions deploy fetch-opportunities` after setting Twitter secret
+- [ ] **CRON_SECRET setup** — (1) `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` to generate, (2) `npx supabase secrets set CRON_SECRET=<value>`, (3) in Supabase SQL editor: `alter database postgres set app.cron_secret = '<same-value>';` — must do 2 and 3 together or cron gets 403s
 
 ### Security (remaining)
 - [ ] **`enrich` CORS is `*`** — fine for a personal tool, but means any site can call it if they know the URL
 - [ ] **`capture` SSRF** — the `capture` function inserts whatever `url` the caller sends directly into the DB without `isSafeUrl` validation (unlike `enrich` which does validate). Low risk since it's secret-gated, but worth noting
-- [ ] **`dangerouslySetInnerHTML` in SettingsView** — the inline `<style>` block is static string so not exploitable now, but move it to CSS to avoid the pattern
 
 ### Features
 - [ ] **Archive browsing view** — dedicated view of `status=done` entries grouped by topic; add nav button. Plan: `docs/superpowers/plans/2026-06-21-archive-browsing-view.md`
@@ -61,6 +57,5 @@ Open the deployed URL in Safari -> Share -> Add to Home Screen.
 
 ### Tech Debt
 - [ ] **Prune stale git worktrees** — `feat/ai-infra`, `worktree-feat+feed-widget`, `worktree-feat+opportunity-radar-backend` are orphaned. Run `git worktree prune` and delete the branches if not needed.
-- [ ] **Apply migration 0018** — `supabase/migrations/0018_wayback.sql` adds `wayback_submitted_at` column; run `npx supabase db push`
 - [ ] **MCP server is stale** — `mcp-server/` was built for an older schema. Does not know about RSS feeds, files, topic lifecycle, Wayback data, or the current DB shape. Don't wire it to Claude Desktop until v2 is built (Phase C, after semantic search). Spec: `docs/superpowers/specs/2026-06-21-mcp-v2-design.md`
 - [ ] **`frontend-design` plugin** — shows as `unknown` version in Claude Code; may be broken. Low priority.

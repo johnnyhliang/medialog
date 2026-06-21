@@ -236,7 +236,7 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
 
 /* ── Topic list ─────────────────────────────────────────────────────────────── */
 .topics { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 1px; }
-.topics button {
+.topics button:not(.topic-menu-btn) {
   width: 100%;
   text-align: left;
   background: transparent;
@@ -246,7 +246,7 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
   color: var(--text);
   font-size: 13.5px;
 }
-.topics button:hover { background: var(--surface-3); }
+.topics button:not(.topic-menu-btn):hover { background: var(--surface-3); }
 .topics button.selected { background: var(--surface); font-weight: 600; border: 1px solid var(--border); }
 .topic-add { display: flex; gap: 6px; margin-top: 8px; }
 .topic-add input { flex: 1; min-width: 0; font-size: 13px; }
@@ -2846,6 +2846,17 @@ a.activity-title:hover { color: var(--accent); }
 }
 .apps-confirm button { font-size: var(--text-xs); padding: 3px 8px; }
 
+/* ── Settings view ───────────────────────────────────────────────────────────── */
+.settings-view { max-width: 700px; margin: 0 auto; padding: 2rem; }
+.settings-view .card { background: var(--bg-card); padding: 1.5rem; border-radius: 8px; border: 1px solid var(--border); }
+.settings-view .form-group { margin-bottom: 1.5rem; }
+.settings-view .form-group label { display: block; margin-bottom: 0.5rem; font-weight: 600; }
+.settings-view .form-group.inline label { display: flex; align-items: center; gap: 0.5rem; font-weight: 400; cursor: pointer; }
+.settings-view .form-group input[type="text"],
+.settings-view .form-group input[type="password"] { width: 100%; }
+.settings-view .actions { display: flex; gap: 1rem; margin-top: 2rem; }
+.settings-view .section-label { font-size: 1rem; font-weight: 600; margin-bottom: 1rem; }
+
 /* ── Settings tabs ───────────────────────────────────────────────────────────── */
 .settings-tabs {
   display: flex;
@@ -3100,8 +3111,7 @@ a.activity-title:hover { color: var(--accent); }
   line-height: 1;
   flex-shrink: 0;
 }
-.topic-item:hover .topic-menu-btn,
-.topic-menu-btn:focus {
+.topic-item:hover .topic-menu-btn {
   display: flex;
   align-items: center;
 }

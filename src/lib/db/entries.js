@@ -156,6 +156,20 @@ export async function emptyTrash(supabase) {
   if (error) throw new Error(error.message)
 }
 
+export async function listAllArchivedEntries(supabase) {
+  const { data, error } = await supabase
+    .from('entries')
+    .select(`${TAG_SELECT}, topics(name)`)
+    .eq('status', 'done')
+    .is('deleted_at', null)
+    .order('created_at', { ascending: false })
+  if (error) throw new Error(error.message)
+  return data.map((row) => {
+    const { topics, ...rest } = row
+    return { ...flattenTags(rest), topicName: topics?.name ?? 'Unknown' }
+  })
+}
+
 export async function listArchivedEntriesByTopic(supabase, topicId) {
   const { data, error } = await supabase
     .from('entries')

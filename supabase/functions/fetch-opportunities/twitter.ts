@@ -23,10 +23,19 @@ function isHighQuality(tweet: any, author: any): boolean {
   return true
 }
 
-export async function fetchTwitter(): Promise<Opportunity[]> {
-  const authToken = Deno.env.get('TWITTER_AUTH_TOKEN')
+export async function fetchTwitter(supabase: any): Promise<Opportunity[]> {
+  let authToken: string | undefined
+
+  // Try DB first (user-managed token), fall back to env secret
+  const { data: config } = await supabase
+    .from('user_configs')
+    .select('twitter_auth_token')
+    .limit(1)
+    .maybeSingle()
+  authToken = config?.twitter_auth_token ?? Deno.env.get('TWITTER_AUTH_TOKEN')
+
   if (!authToken) {
-    console.warn('TWITTER_AUTH_TOKEN not set — skipping Twitter')
+    console.warn('No Twitter auth token — skipping Twitter')
     return []
   }
 

@@ -12,6 +12,8 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
   const [saving, setSaving] = useState(false)
   const [pendingColors, setPendingColors] = useState({})
   const [tab, setTab] = useState('github')
+  const [twitterToken, setTwitterToken] = useState('')
+  const [twitterSaving, setTwitterSaving] = useState(false)
   const [bulkTopic, setBulkTopic] = useState('')
   const [skipSubmitted, setSkipSubmitted] = useState(true)
   const [bulkRunning, setBulkRunning] = useState(false)
@@ -32,7 +34,10 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
       .select('*')
       .eq('user_id', user.id)
       .maybeSingle()
-    if (data) setConfig(data)
+    if (data) {
+      setConfig(data)
+      setTwitterToken(data.twitter_auth_token ?? '')
+    }
     setLoading(false)
   }
 
@@ -105,6 +110,17 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
     }
   }
 
+  async function handleSaveTwitterToken() {
+    setTwitterSaving(true)
+    const { data: { user } } = await supabase.auth.getUser()
+    const { error } = await supabase
+      .from('user_configs')
+      .upsert({ user_id: user.id, twitter_auth_token: twitterToken || null }, { onConflict: 'user_id' })
+    if (error) addToast(`Error: ${error.message}`, 'error')
+    else addToast('Twitter token saved', 'success')
+    setTwitterSaving(false)
+  }
+
   async function handleBulkArchive() {
     if (!bulkTopic) return
     setBulkRunning(true)
@@ -167,6 +183,7 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
 
   const TABS = [
     { id: 'github',    label: 'GitHub' },
+    { id: 'twitter',   label: 'Twitter' },
     { id: 'behavior',  label: 'Behavior' },
     { id: 'tags',      label: 'Tag Colors' },
     { id: 'companies', label: 'Companies' },
@@ -231,6 +248,41 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
               </p>
             </div>
           )}
+        </section>
+      )}
+
+      {tab === 'twitter' && (
+        <section>
+          <h2>Twitter / X Auth Token</h2>
+          <div className="card">
+            <p className="muted" style={{ fontSize: 13, marginBottom: 16 }}>
+              Paste your <code>auth_token</code> cookie from twitter.com DevTools (Application → Cookies).
+              This is used by the opportunity radar to fetch tweets. Token is stored in your account only.
+            </p>
+            <div className="form-group">
+              <label>auth_token</label>
+              <input
+                type="password"
+                value={twitterToken}
+                onChange={(e) => setTwitterToken(e.target.value)}
+                placeholder="Paste auth_token value here"
+                style={{ fontFamily: 'monospace', fontSize: 12 }}
+              />
+            </div>
+            <div className="actions">
+              <button className="primary" onClick={handleSaveTwitterToken} disabled={twitterSaving}>
+                {twitterSaving ? 'Saving…' : 'Save Token'}
+              </button>
+              {twitterToken && (
+                <button onClick={async () => {
+                  setTwitterToken('')
+                  const { data: { user } } = await supabase.auth.getUser()
+                  await supabase.from('user_configs').upsert({ user_id: user.id, twitter_auth_token: null }, { onConflict: 'user_id' })
+                  addToast('Twitter token cleared', 'success')
+                }}>Clear</button>
+              )}
+            </div>
+          </div>
         </section>
       )}
 
@@ -359,16 +411,6 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
         </div>
       </section>
 
-      <style dangerouslySetInnerHTML={{ __html: `
-        .settings-view { max-width: 700px; margin: 0 auto; padding: 2rem; }
-        .card { background: var(--bg-card); padding: 1.5rem; border-radius: 8px; border: 1px solid var(--border); }
-        .form-group { margin-bottom: 1.5rem; }
-        .form-group label { display: block; margin-bottom: 0.5rem; font-weight: 600; }
-        .form-group.inline label { display: flex; align-items: center; gap: 0.5rem; font-weight: 400; cursor: pointer; }
-        .form-group input[type="text"] { width: 100%; }
-        .actions { display: flex; gap: 1rem; margin-top: 2rem; }
-        .section-label { font-size: 1rem; font-weight: 600; margin-bottom: 1rem; }
-      `}} />
     </div>
   )
 }

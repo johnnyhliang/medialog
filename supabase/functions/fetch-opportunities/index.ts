@@ -6,17 +6,40 @@ import { fetchTwitter } from './twitter.ts'
 import { fetchGithub } from './github.ts'
 import type { Opportunity } from './hn.ts'
 
-const ROLE_KEYWORDS = [
+// Strict student-level keywords matched against title only (for structured career pages)
+const STUDENT_TITLE_KEYWORDS = [
+  'intern', 'internship', 'fellowship', 'fellow', 'new grad', 'new graduate',
+  'entry level', 'entry-level', 'early career', 'university', 'student',
+  'cohort', 'rotational', 'explore', 'focus', 'step', 'university grad',
+  'associate', 'junior',
+]
+
+// Broader keywords for unstructured sources (HN, Twitter) matched against full text
+const BROAD_KEYWORDS = [
   'intern', 'internship', 'new grad', 'entry level', 'fellowship', 'cohort',
-  'quant', 'research', 'software engineer', 'swe', 'product', 'vc', 'analyst',
-  'explore', 'focus', 'step', 'university', 'phd', 'ml', 'ai', 'data',
-  'programmer', 'developer', 'engineer', 'hiring', 'opportunity', 'apply',
-  'forms.gle', 'google form',
+  'quant', 'research', 'swe', 'vc', 'explore', 'focus', 'step', 'university',
+  'phd', 'hiring', 'opportunity', 'apply', 'forms.gle', 'google form',
+]
+
+// Exclude senior/leadership titles that slip through on structured career pages
+const EXCLUDE_TITLE_KEYWORDS = [
+  'senior', 'staff', 'principal', 'lead ', 'head of', 'director', 'manager',
+  'vp ', 'vice president', 'partner', 'distinguished',
 ]
 
 function matchesRoleFilter(item: Opportunity): boolean {
-  const text = `${item.title} ${item.body ?? ''}`.toLowerCase()
-  return ROLE_KEYWORDS.some((k) => text.includes(k))
+  const title = item.title.toLowerCase()
+  const fullText = `${item.title} ${item.body ?? ''}`.toLowerCase()
+
+  // Structured career-page sources: match title against student keywords, exclude senior titles
+  const isCareerSource = ['greenhouse', 'lever', 'ashby'].includes(item.source)
+  if (isCareerSource) {
+    if (EXCLUDE_TITLE_KEYWORDS.some((k) => title.includes(k))) return false
+    return STUDENT_TITLE_KEYWORDS.some((k) => title.includes(k))
+  }
+
+  // Unstructured sources (HN, Twitter): broader full-text match
+  return BROAD_KEYWORDS.some((k) => fullText.includes(k))
 }
 
 serve(async (req) => {
@@ -39,7 +62,7 @@ serve(async (req) => {
   const [hn, careers, twitter, github] = await Promise.allSettled([
     fetchHN(),
     fetchCareers(),
-    fetchTwitter(),
+    fetchTwitter(supabase),
     fetchGithub(),
   ])
 

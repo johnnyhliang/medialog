@@ -1,6 +1,6 @@
 // src/App.jsx
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
-import { Search, Upload, Inbox, RotateCcw, BarChart2, Settings2, Trash2 as TrashIcon, Download, Menu, Home, FolderOpen, Rss, Briefcase } from 'lucide-react'
+import { Search, Upload, Inbox, RotateCcw, BarChart2, Settings2, Trash2 as TrashIcon, Download, Menu, Home, FolderOpen, Rss, Briefcase, PackageOpen, Archive } from 'lucide-react'
 import { supabase } from './lib/supabaseClient.js'
 import { listTopics, createTopic, getTopicByName, listDeletedTopics, archiveTopic, unarchiveTopic, softDeleteTopic, restoreDeletedTopic } from './lib/db/topics.js'
 import {
@@ -17,6 +17,8 @@ import AuthGate from './components/AuthGate.jsx'
 import TopicList from './components/TopicList.jsx'
 import QuickAdd from './components/QuickAdd.jsx'
 import BulkImport from './components/BulkImport.jsx'
+import MigrationView from './components/MigrationView.jsx'
+import ArchiveView from './components/ArchiveView.jsx'
 import SortInbox from './components/SortInbox.jsx'
 import ProgressView from './components/ProgressView.jsx'
 import Revisit from './components/Revisit.jsx'
@@ -396,6 +398,42 @@ function Workspace() {
     return created.length
   }
 
+  async function handleMigrationImport(entries, raw) {
+    // Group by suggestedTopic; topics without a match go to Inbox
+    const inbox = inboxTopic || (await getTopicByName(supabase, 'Inbox'))
+    const byTopic = {}
+    for (const e of entries) {
+      const key = e.topic_id ? `__id__${e.topic_id}` : (e.suggestedTopic || '__inbox__')
+      if (!byTopic[key]) byTopic[key] = []
+      byTopic[key].push(e)
+    }
+    let total = 0
+    const newTopics = []
+    const allCreated = []
+    for (const [key, items] of Object.entries(byTopic)) {
+      let topicId
+      if (key.startsWith('__id__')) {
+        topicId = key.slice(6)
+      } else if (key === '__inbox__') {
+        topicId = inbox.id
+      } else {
+        let topic = topics.find((t) => t.name.toLowerCase() === key.toLowerCase())
+        if (!topic) { topic = await createTopic(supabase, key); newTopics.push(topic) }
+        topicId = topic.id
+      }
+      const mapped = items.map(({ url, title, note, tags }) => ({ url, title, note, tags }))
+      const created = await bulkCreateEntries(supabase, topicId, mapped)
+      allCreated.push(...created)
+      total += created.length
+    }
+    if (newTopics.length > 0) {
+      setTopics((prev) => [...prev, ...newTopics].sort((a, b) => a.name.localeCompare(b.name)))
+    }
+    enrichEntries(allCreated)
+    setInboxCount((prev) => prev + allCreated.filter((e) => e.topic_id === inbox.id).length)
+    return total
+  }
+
   async function handleSmartImport(importedEntries) {
     const byTopic = {}
     for (const e of importedEntries) {
@@ -557,6 +595,16 @@ function Workspace() {
           <li>
             <button className={view === 'bulk' ? 'active' : ''} onClick={() => setView('bulk')} title="Bulk Import">
               <Upload size={16} /><span>Bulk Import</span>
+            </button>
+          </li>
+          <li>
+            <button className={view === 'migration' ? 'active' : ''} onClick={() => setView('migration')} title="Import">
+              <PackageOpen size={16} /><span>Import</span>
+            </button>
+          </li>
+          <li>
+            <button className={view === 'archive' ? 'active' : ''} onClick={() => setView('archive')} title="Archive">
+              <Archive size={16} /><span>Archive</span>
             </button>
           </li>
           <li>
@@ -737,6 +785,19 @@ function Workspace() {
               supabase={supabase}
               topics={topics}
               onSaveItem={handleSaveFromFeed}
+            />
+          )}
+          {view === 'archive' && (
+            <ArchiveView
+              topics={topics}
+              onSelectTopic={(id) => { setSelectedId(id); setView('browse') }}
+            />
+          )}
+          {view === 'migration' && (
+            <MigrationView
+              topics={topics}
+              onImportEntries={handleMigrationImport}
+              addToast={addToast}
             />
           )}
           {view === 'applications' && (
