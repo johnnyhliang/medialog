@@ -459,7 +459,7 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
                 Set your Instagram session cookie (from instagram.com DevTools → Application → Cookies → <code>sessionid</code>):<br />
                 <code style={{ fontSize: 11 }}>npx supabase secrets set INSTAGRAM_SESSION_ID=&lt;value&gt;</code>
               </li>
-              <li>Set your Anthropic API key (used for caption tagging):<br /><code style={{ fontSize: 11 }}>npx supabase secrets set ANTHROPIC_API_KEY=&lt;key&gt;</code></li>
+              <li>Your existing <code>GEMINI_API_KEY</code> secret is reused for caption summarization — no additional API key needed</li>
               <li>Set your Supabase user ID (from Auth dashboard):<br /><code style={{ fontSize: 11 }}>npx supabase secrets set CAPTURE_USER_ID=&lt;uuid&gt;</code></li>
             </ol>
             <p className="muted" style={{ fontSize: 12, marginTop: 16, marginBottom: 0 }}>
@@ -469,7 +469,7 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
         </section>
       )}
 
-      <section style={{ marginTop: 32, borderTop: '1px solid var(--border)', paddingTop: 24 }}>
+      {tab === 'behavior' && <section style={{ marginTop: 32, borderTop: '1px solid var(--border)', paddingTop: 24 }}>
         <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 4, marginTop: 0 }}>Bulk archive to Wayback Machine</h3>
         <p className="muted" style={{ fontSize: 13, marginBottom: 16 }}>
           Submits all URLs in a topic to archive.org one at a time, with a 5-second gap to stay within rate limits.
@@ -544,7 +544,7 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
             </p>
           )}
         </div>
-      </section>
+      </section>}
 
     </div>
   )
