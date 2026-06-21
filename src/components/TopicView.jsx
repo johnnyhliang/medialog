@@ -284,7 +284,7 @@ export default function TopicView({
         )}
       </div>
 
-      {!query && <QuickAdd onAdd={onAddEntry} disabled={false} onCheckDuplicate={onCheckDuplicate} />}
+      {!query && <div style={{ marginTop: 12 }}><QuickAdd onAdd={onAddEntry} disabled={false} onCheckDuplicate={onCheckDuplicate} /></div>}
 
       <div className="entries-section-header">
         <span className="entries-section-label">Entries</span>
