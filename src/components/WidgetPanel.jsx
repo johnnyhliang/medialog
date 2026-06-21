@@ -5,8 +5,9 @@ import MarketNewsWidget from './widgets/MarketNewsWidget.jsx'
 import WeatherWidget from './widgets/WeatherWidget.jsx'
 import DeadlineAlertBanner from './widgets/DeadlineAlertBanner.jsx'
 import OpportunitiesWidget from './widgets/OpportunitiesWidget.jsx'
+import FeedWidget from './widgets/FeedWidget.jsx'
 
-export default function WidgetPanel({ supabase, onTrack }) {
+export default function WidgetPanel({ supabase, onTrack, onSaveFeedItem, onGoToFeed }) {
   return (
     <div className="widget-panel">
       <DeadlineAlertBanner supabase={supabase} />
@@ -17,6 +18,8 @@ export default function WidgetPanel({ supabase, onTrack }) {
       <div className="kw-divider" />
       <p className="kw-label">quick links</p>
       <QuickLinksWidget />
+      <div className="kw-divider" />
+      <FeedWidget supabase={supabase} onSave={onSaveFeedItem} onGoToFeed={onGoToFeed} />
       <div className="kw-divider" />
       <OpportunitiesWidget supabase={supabase} onTrack={onTrack} />
       <div className="kw-divider" />
