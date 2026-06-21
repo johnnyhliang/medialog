@@ -11,6 +11,7 @@ import {
 import { setEntryTags, listTags, updateTagColor } from './lib/db/tags.js'
 import { listVersions, createVersion } from './lib/db/versions.js'
 import { fetchTitle } from './lib/enrich.js'
+import { embedEntryAsync } from './lib/embedEntry.js'
 import { buildMarkdownFiles } from './lib/exportMarkdown.js'
 import { buildZip, downloadBlob } from './lib/buildZip.js'
 import AuthGate from './components/AuthGate.jsx'
@@ -238,13 +239,16 @@ function Workspace() {
       await setEntryTags(supabase, e.id, tags)
       setEntries((prev) => prev.map((entry) => entry.id === e.id ? { ...entry, tags } : entry))
     }
+    let finalEntry = e
     if (url) {
       const title = prefetchedTitle ?? await fetchTitle(supabase, url)
       if (title) {
         const updated = await updateEntry(supabase, e.id, { title })
         applyUpdateEntry(e.id, updated)
+        finalEntry = updated
       }
     }
+    embedEntryAsync(supabase, { ...finalEntry, note })
   }
 
   function handleToggleTrashToast(val) {
@@ -317,6 +321,7 @@ function Workspace() {
   async function handleNoteSave(entryId, note) {
     const updated = await updateEntry(supabase, entryId, { note })
     applyUpdateEntry(entryId, updated)
+    embedEntryAsync(supabase, updated)
   }
 
   async function handleTitleChange(entryId, title, url) {
@@ -381,6 +386,7 @@ function Workspace() {
     const inbox = inboxTopic || (await getTopicByName(supabase, 'Inbox'))
     const created = await bulkCreateEntries(supabase, inbox.id, items)
     enrichEntries(created)
+    created.forEach(e => embedEntryAsync(supabase, e))
     setInboxCount((prev) => prev + created.length)
     return created.length
   }
@@ -397,6 +403,7 @@ function Workspace() {
   async function handleArchiveImport(topicId, items) {
     const created = await bulkCreateEntries(supabase, topicId, items)
     enrichEntries(created)
+    created.forEach(e => embedEntryAsync(supabase, e))
     if (selectedId === topicId) {
       setEntries((prev) => [...created, ...prev])
     }
@@ -435,6 +442,7 @@ function Workspace() {
       setTopics((prev) => [...prev, ...newTopics].sort((a, b) => a.name.localeCompare(b.name)))
     }
     enrichEntries(allCreated)
+    allCreated.forEach(e => embedEntryAsync(supabase, e))
     setInboxCount((prev) => prev + allCreated.filter((e) => e.topic_id === inbox.id).length)
     return total
   }
@@ -467,6 +475,7 @@ function Workspace() {
     }
 
     enrichEntries(allCreated)
+    allCreated.forEach(e => embedEntryAsync(supabase, e))
     return total
   }
 
@@ -744,6 +753,9 @@ function Workspace() {
               onEntryUpdate={(updated) => {
                 setEntries((prev) => prev.map((e) => e.id === updated.id ? { ...e, ...updated } : e))
               }}
+              onArchiveTopic={handleArchiveTopic}
+              onUnarchiveTopic={handleUnarchiveTopic}
+              onDeleteTopic={handleDeleteTopic}
             />
           )}
           {view === 'bulk' && (
@@ -788,6 +800,7 @@ function Workspace() {
             <TrashView
               entries={trashEntries}
               deletedTopics={deletedTopics}
+              topics={topics}
               onRestore={handleRestore}
               onRestoreTopic={handleRestoreTopic}
               onEmptyTrash={handleEmptyTrash}
@@ -809,7 +822,10 @@ function Workspace() {
           {view === 'archive' && (
             <ArchiveView
               topics={topics}
+              archivedTopics={archivedTopics}
               onSelectTopic={(id) => { setSelectedId(id); setView('browse') }}
+              onUnarchiveTopic={handleUnarchiveTopic}
+              onDeleteTopic={handleDeleteTopic}
             />
           )}
           {view === 'migration' && (
