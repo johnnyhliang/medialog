@@ -35,7 +35,8 @@ Deno.serve(async (req) => {
     return json({ error: 'instagram_fetch_failed', detail: String(e) }, 502)
   }
 
-  const { data: topicId } = await sb.rpc('ensure_reels_topic', { p_user_id: ownerId })
+  const { data: topicId, error: rpcErr } = await sb.rpc('ensure_reels_topic', { p_user_id: ownerId })
+  if (rpcErr || !topicId) return json({ error: 'topic_rpc_failed', detail: String(rpcErr) }, 500)
 
   let inserted = 0
   for (const reel of reels) {
@@ -47,16 +48,21 @@ Deno.serve(async (req) => {
       .maybeSingle()
     if (existing) continue
 
-    const note = anthropicKey ? await summarizeReel(reel.caption, anthropicKey) : reel.caption.slice(0, 300)
+    let note = ''
+    try {
+      note = anthropicKey ? await summarizeReel(reel.caption, anthropicKey) : reel.caption.slice(0, 300)
+    } catch {
+      note = reel.caption.slice(0, 300)
+    }
 
-    await sb.from('entries').insert({
+    const { error: insertErr } = await sb.from('entries').insert({
       user_id: ownerId,
       topic_id: topicId,
       url: reel.reelUrl,
       title: 'Instagram Reel',
       note,
     })
-    inserted++
+    if (!insertErr) inserted++
   }
 
   return json({ processed: reels.length, inserted })
