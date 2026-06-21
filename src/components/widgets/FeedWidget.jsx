@@ -3,7 +3,7 @@ import { listFeeds, listFeedItems, dismissFeedItem, markFeedItemSaved } from '..
 
 function formatAge(dateStr) {
   if (!dateStr) return ''
-  const diff = Date.now() - new Date(dateStr).getTime()
+  const diff = Math.max(0, Date.now() - new Date(dateStr).getTime())
   const h = Math.floor(diff / 3600000)
   if (h < 1) return `${Math.floor(diff / 60000)}m`
   if (h < 24) return `${h}h`
@@ -33,13 +33,21 @@ export default function FeedWidget({ supabase, onSave, onGoToFeed }) {
 
   async function dismiss(item) {
     setItems((prev) => prev.filter((i) => i.id !== item.id))
-    await dismissFeedItem(supabase, item.id)
+    try {
+      await dismissFeedItem(supabase, item.id)
+    } catch {
+      setItems((prev) => [...prev, item])
+    }
   }
 
   async function save(item) {
     setItems((prev) => prev.filter((i) => i.id !== item.id))
-    await markFeedItemSaved(supabase, item.id)
-    onSave?.(item)
+    try {
+      await markFeedItemSaved(supabase, item.id)
+      onSave?.(item)
+    } catch {
+      setItems((prev) => [...prev, item])
+    }
   }
 
   // Still loading
@@ -57,7 +65,11 @@ export default function FeedWidget({ supabase, onSave, onGoToFeed }) {
       </div>
 
       {items.length === 0 ? (
-        <p className="kw-empty">No new items · <button className="fw-see-all" onClick={onGoToFeed}>open feed ↗</button></p>
+        <p className="kw-empty">
+          No new items{onGoToFeed && (
+            <> · <button className="fw-see-all" onClick={onGoToFeed}>open feed ↗</button></>
+          )}
+        </p>
       ) : (
         <>
           <div className="fw-rows">
