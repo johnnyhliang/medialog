@@ -78,7 +78,7 @@ describe('uploadAttachment cap enforcement', () => {
             data: [{ name: 'big.jpg', metadata: { size: 499 * 1024 * 1024 } }]
           }),
           upload: vi.fn(),
-          getPublicUrl: vi.fn().mockReturnValue({ data: { publicUrl: 'https://x/f' } }),
+          createSignedUrl: vi.fn().mockResolvedValue({ data: { signedUrl: 'https://x/signed' }, error: null }),
         })
       }
     }
@@ -93,7 +93,7 @@ describe('uploadAttachment cap enforcement', () => {
         from: () => ({
           list: vi.fn().mockResolvedValue({ data: [] }),
           upload: vi.fn().mockResolvedValue({ error: null }),
-          getPublicUrl: vi.fn().mockReturnValue({ data: { publicUrl: 'https://x/f' } }),
+          createSignedUrl: vi.fn().mockResolvedValue({ data: { signedUrl: 'https://x/signed' }, error: null }),
         })
       }
     }

@@ -26,6 +26,7 @@ function makeSupabase(files = []) {
     list: vi.fn().mockResolvedValue({ data: files }),
     remove: vi.fn().mockResolvedValue({ error: null }),
     getPublicUrl: vi.fn().mockReturnValue({ data: { publicUrl: 'https://x/f' } }),
+    createSignedUrl: vi.fn().mockResolvedValue({ data: { signedUrl: 'https://x/signed' }, error: null }),
   }
   return {
     auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'u1' } } }) },
