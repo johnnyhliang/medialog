@@ -190,6 +190,7 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
     { id: 'keywords',    label: 'Keywords' },
     { id: 'programs',    label: 'Programs' },
     { id: 'bookmarklet', label: 'Bookmarklet' },
+    { id: 'mobile',      label: 'iOS Shortcut' },
   ]
 
   return (
@@ -387,6 +388,54 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
                   </>
                 )
               })()
+            )}
+          </div>
+        </section>
+      )}
+
+      {tab === 'mobile' && (
+        <section>
+          <h2>iOS Shortcut</h2>
+          <div className="card">
+            <p className="muted" style={{ fontSize: 13, marginBottom: 16 }}>
+              Create an iOS Shortcut to share any Safari page directly to your MediaLog inbox.
+              In the Shortcuts app, create a new shortcut with these actions:
+            </p>
+            <ol style={{ fontSize: 13, lineHeight: 1.8, paddingLeft: 20, marginBottom: 16 }}>
+              <li>Receive input from <strong>Share Sheet</strong> (input type: URLs)</li>
+              <li>Get URLs from <em>Shortcut Input</em></li>
+              <li>Get Name of <em>Shortcut Input</em></li>
+              <li>Get Contents of URL → Method: POST, Headers: <code>Content-Type: application/json</code>, Body: JSON (see below)</li>
+              <li>Show Result (optional — confirms it saved)</li>
+            </ol>
+            <div className="form-group">
+              <label>Capture Endpoint</label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input readOnly value="https://bhxqgpgyxqnqvnqjvrrj.supabase.co/functions/v1/capture" style={{ fontFamily: 'monospace', fontSize: 12 }} />
+                <button onClick={() => { navigator.clipboard.writeText('https://bhxqgpgyxqnqvnqjvrrj.supabase.co/functions/v1/capture'); addToast('Copied', 'success') }} style={{ flexShrink: 0 }}>Copy</button>
+              </div>
+            </div>
+            {import.meta.env.VITE_CAPTURE_SECRET ? (
+              <div className="form-group">
+                <label>JSON Body (paste into "Request Body" field)</label>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <textarea
+                    readOnly
+                    rows={3}
+                    style={{ fontFamily: 'monospace', fontSize: 11, resize: 'none' }}
+                    value={`{"secret":"${import.meta.env.VITE_CAPTURE_SECRET}","url":"[URLs]","note":"[Name]"}`}
+                  />
+                  <button
+                    onClick={() => { navigator.clipboard.writeText(`{"secret":"${import.meta.env.VITE_CAPTURE_SECRET}","url":"[URLs]","note":"[Name]"}`); addToast('Copied', 'success') }}
+                    style={{ flexShrink: 0, alignSelf: 'flex-start' }}
+                  >Copy</button>
+                </div>
+                <p className="muted" style={{ fontSize: 11, marginTop: 4 }}>Replace <code>[URLs]</code> and <code>[Name]</code> with the Shortcuts variables of the same name.</p>
+              </div>
+            ) : (
+              <p style={{ color: 'var(--warning, #b45309)', fontSize: 13 }}>
+                Add <code>VITE_CAPTURE_SECRET</code> to your <code>.env.local</code> to see the pre-filled JSON body.
+              </p>
             )}
           </div>
         </section>
