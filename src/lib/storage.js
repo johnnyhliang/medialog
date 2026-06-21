@@ -52,8 +52,11 @@ export async function uploadAttachment(supabase, file) {
   })
   if (error) throw error
 
-  const { data: origData } = supabase.storage.from(BUCKET).getPublicUrl(path)
-  const url = origData.publicUrl
+  const { data: origData, error: signErr } = await supabase.storage
+    .from(BUCKET)
+    .createSignedUrl(path, 60 * 60 * 24 * 7) // 7-day expiry
+  if (signErr) throw signErr
+  const url = origData.signedUrl
 
   if (file.type.startsWith('image/') && file.type !== 'image/svg+xml') {
     try {
@@ -65,8 +68,9 @@ export async function uploadAttachment(supabase, file) {
         contentType: 'image/webp',
       })
       if (!thumbErr) {
-        const { data: thumbData } = supabase.storage.from(BUCKET).getPublicUrl(thumbPath)
-        return { url, thumbUrl: thumbData.publicUrl }
+        const { data: thumbData } = await supabase.storage
+          .from(BUCKET).createSignedUrl(thumbPath, 60 * 60 * 24 * 7)
+        return { url, thumbUrl: thumbData?.signedUrl ?? null }
       }
     } catch {
       // thumbnail generation failed; fall through to no-thumb return

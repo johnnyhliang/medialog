@@ -29,6 +29,7 @@ export default function FilesView({ supabase, onSelectEntry }) {
   const [pageSize, setPageSize] = useState(PAGE_SIZE)
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [userId, setUserId] = useState(null)
+  const [fileUrls, setFileUrls] = useState({})
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -36,10 +37,22 @@ export default function FilesView({ supabase, onSelectEntry }) {
     })
   }, [supabase])
 
+  async function signUrl(fileName) {
+    const { data } = await supabase.storage
+      .from('attachments')
+      .createSignedUrl(`${userId}/${fileName}`, 60 * 60) // 1-hour for file browser
+    return data?.signedUrl ?? null
+  }
+
   const loadFiles = useCallback(async () => {
     setLoading(true)
     const { data } = await supabase.storage.from('attachments').list(userId)
     setFiles(data || [])
+    const urls = {}
+    for (const f of data || []) {
+      urls[f.name] = await signUrl(f.name)
+    }
+    setFileUrls(urls)
     setLoading(false)
   }, [supabase, userId])
 
@@ -53,10 +66,6 @@ export default function FilesView({ supabase, onSelectEntry }) {
     await supabase.storage.from('attachments').remove([path])
     setDeleteTarget(null)
     await loadFiles()
-  }
-
-  function getPublicUrl(file) {
-    return supabase.storage.from('attachments').getPublicUrl(`${userId}/${file.name}`).data.publicUrl
   }
 
   const sorted = sortFiles(files, sortBy)
@@ -96,7 +105,7 @@ export default function FilesView({ supabase, onSelectEntry }) {
               <FileRow
                 key={file.name}
                 file={file}
-                publicUrl={getPublicUrl(file)}
+                publicUrl={fileUrls[file.name] ?? ''}
                 supabase={supabase}
                 onDeleteClick={(f, url, refs) => setDeleteTarget({ file: f, publicUrl: url, refs })}
                 onSelectEntry={onSelectEntry}
