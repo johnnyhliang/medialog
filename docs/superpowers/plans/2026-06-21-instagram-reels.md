@@ -153,11 +153,11 @@ git commit -m "feat: Claude Haiku reel caption summarizer"
 
 **Files:**
 - Create: `supabase/functions/fetch-reels/index.ts`
-- Create: `supabase/migrations/0022_reels_topic.sql`
+- Create: `supabase/migrations/0025_reels_topic.sql`
 
 - [ ] **Step 1: Create migration to ensure Reels topic per user**
 
-`supabase/migrations/0022_reels_topic.sql` — this is a stored function called on first reel insert rather than a static row, because users are dynamic:
+`supabase/migrations/0025_reels_topic.sql` — this is a stored function called on first reel insert rather than a static row, because users are dynamic:
 
 ```sql
 -- Helper: ensure a 'Reels' topic exists for a user, return its id
@@ -181,7 +181,6 @@ $$;
 - [ ] **Step 2: Create `index.ts`**
 
 ```typescript
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { fetchInboxReels } from './instagram.ts'
 import { summarizeReel } from './summarize.ts'
@@ -189,7 +188,7 @@ import { summarizeReel } from './summarize.ts'
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } })
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204 })
 
   const cronSecret = Deno.env.get('CRON_SECRET')
@@ -211,8 +210,8 @@ serve(async (req) => {
   // Get all users who have a Reels topic (opt-in: they must exist)
   // For a personal tool, just use service role to insert for the single user
   // Get user from a config table or env var
-  const ownerId = Deno.env.get('OWNER_USER_ID')
-  if (!ownerId) return json({ error: 'OWNER_USER_ID not set' }, 500)
+  const ownerId = Deno.env.get('CAPTURE_USER_ID')
+  if (!ownerId) return json({ error: 'CAPTURE_USER_ID not set' }, 500)
 
   let reels
   try {
@@ -255,7 +254,7 @@ serve(async (req) => {
 - [ ] **Step 3: Commit**
 
 ```bash
-git add supabase/functions/fetch-reels/index.ts supabase/migrations/0022_reels_topic.sql
+git add supabase/functions/fetch-reels/index.ts supabase/migrations/0025_reels_topic.sql
 git commit -m "feat: fetch-reels edge function — poll DM inbox, summarize, upsert entries"
 ```
 
@@ -264,11 +263,11 @@ git commit -m "feat: fetch-reels edge function — poll DM inbox, summarize, ups
 ### Task 4: Schedule + secrets setup
 
 **Files:**
-- Create: `supabase/migrations/0023_reels_cron.sql`
+- Create: `supabase/migrations/0026_reels_cron.sql`
 
 - [ ] **Step 1: Create cron migration**
 
-`supabase/migrations/0023_reels_cron.sql`:
+`supabase/migrations/0026_reels_cron.sql`:
 
 ```sql
 select cron.unschedule('fetch-reels') where exists (
@@ -300,7 +299,7 @@ npx supabase secrets set INSTAGRAM_SESSION_ID=<your-sessionid>
 npx supabase secrets set ANTHROPIC_API_KEY=<your-key>
 
 # Set your user ID (find it in Supabase Auth dashboard)
-npx supabase secrets set OWNER_USER_ID=<your-uuid>
+npx supabase secrets set CAPTURE_USER_ID=<your-uuid>
 
 # Apply migrations
 npx supabase db push
@@ -321,7 +320,7 @@ Expected response: `{"processed": N, "inserted": M}`
 - [ ] **Step 4: Commit**
 
 ```bash
-git add supabase/migrations/0023_reels_cron.sql
+git add supabase/migrations/0026_reels_cron.sql
 git commit -m "feat: schedule fetch-reels every 15 minutes via pg_cron"
 ```
 
@@ -331,5 +330,5 @@ git commit -m "feat: schedule fetch-reels every 15 minutes via pg_cron"
 
 - **Session expiry:** `INSTAGRAM_SESSION_ID` expires. When it does, the function returns 403 from Instagram and logs it — you'll need to re-set the secret from DevTools. No auto-renewal in v1.
 - **Video transcription:** v2 could download the reel audio, send to Whisper for transcription, and summarize the transcript instead of just the caption.
-- **Multi-user:** Currently hardcoded to `OWNER_USER_ID`. v2 could store per-user Instagram sessions in a `user_integrations` table.
+- **Multi-user:** Currently hardcoded to `CAPTURE_USER_ID`. v2 could store per-user Instagram sessions in a `user_integrations` table.
 - **DM cleanup:** Doesn't delete/mark DMs as read after processing — you'll accumulate read reels in your inbox.
