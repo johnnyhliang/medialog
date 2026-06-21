@@ -5,10 +5,18 @@ import MarkdownView from './MarkdownView.jsx'
 import ConfirmModal from './ConfirmModal.jsx'
 import Modal from './Modal.jsx'
 import { supabase } from '../lib/supabaseClient.js'
+import { fetchTitle } from '../lib/enrich.js'
 import { getYouTubeThumbnail } from '../lib/youtube.js'
 import { classifyUrl } from '../lib/classifyUrl.js'
 
 const NoteEditor = lazy(() => import('./NoteEditor.jsx'))
+
+function faviconUrl(url) {
+  try {
+    const { hostname } = new URL(url)
+    return `https://www.google.com/s2/favicons?domain=${hostname}&sz=16`
+  } catch { return null }
+}
 
 function previewLabel(url) {
   try {
@@ -51,6 +59,7 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
   const [showSecondaryActions, setShowSecondaryActions] = useState(false)
   const [takeawayPrompt, setTakeawayPrompt] = useState(false)
   const [takeaway, setTakeaway] = useState('')
+  const [fetchingTitle, setFetchingTitle] = useState(false)
   const timer = useRef(null)
   const statusClass = entry.status ? `status-${entry.status}` : 'status-backlog'
   const thumb = getYouTubeThumbnail(entry.url)
@@ -175,19 +184,40 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
       <div className="card-title-row">
         {editingTitle ? (
           <div className="card-title-edit-form" onClick={(e) => e.stopPropagation()}>
-            <input
-              className="card-title-input"
-              aria-label="edit title"
-              placeholder="Title"
-              value={titleDraft}
-              onChange={(e) => setTitleDraft(e.target.value)}
-              onKeyDown={(e) => {
-                e.stopPropagation()
-                if (e.key === 'Enter') { e.preventDefault(); saveTitle() }
-                if (e.key === 'Escape') { setTitleDraft(entry.title || ''); setUrlDraft(entry.url || ''); setEditingTitle(false) }
-              }}
-              autoFocus
-            />
+            <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+              <input
+                className="card-title-input"
+                aria-label="edit title"
+                placeholder="Title"
+                value={titleDraft}
+                style={{ flex: 1 }}
+                onChange={(e) => setTitleDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  e.stopPropagation()
+                  if (e.key === 'Enter') { e.preventDefault(); saveTitle() }
+                  if (e.key === 'Escape') { setTitleDraft(entry.title || ''); setUrlDraft(entry.url || ''); setEditingTitle(false) }
+                }}
+                autoFocus
+              />
+              {(urlDraft || entry.url) && (
+                <button
+                  type="button"
+                  className="btn-small btn-ghost"
+                  title="Fill with page title"
+                  disabled={fetchingTitle}
+                  onClick={async () => {
+                    const u = urlDraft || entry.url
+                    if (!u) return
+                    setFetchingTitle(true)
+                    const t = await fetchTitle(supabase, u)
+                    if (t) setTitleDraft(t)
+                    setFetchingTitle(false)
+                  }}
+                >
+                  {fetchingTitle ? '…' : '↓ title'}
+                </button>
+              )}
+            </div>
             <input
               className="card-url-input"
               aria-label="edit url"
@@ -208,7 +238,21 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
         ) : (
           <div className="card-title-display">
             {entry.url
-              ? <a href={entry.url} className="card-title" target="_blank" rel="noreferrer">{entry.title || entry.url}</a>
+              ? (
+                <a href={entry.url} className="card-title" target="_blank" rel="noreferrer">
+                  {faviconUrl(entry.url) && (
+                    <img
+                      src={faviconUrl(entry.url)}
+                      alt=""
+                      width={14}
+                      height={14}
+                      style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: 5, borderRadius: 2, flexShrink: 0 }}
+                      onError={(e) => { e.currentTarget.style.display = 'none' }}
+                    />
+                  )}
+                  {entry.title || entry.url}
+                </a>
+              )
               : <span className="card-title">{entry.title || <em className="muted">Untitled</em>}</span>
             }
             <button

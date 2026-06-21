@@ -56,6 +56,9 @@ function Workspace() {
   const { historyFor, versions, openHistory, closeHistory } = useVersions()
   const { exportModal, openExportLoading, setExportResult, closeExportModal } = useExport()
   const { archiveToast, setArchiveToast } = useArchiveToast()
+  const [trashToast, setTrashToast] = useState(() => {
+    try { return localStorage.getItem('medialog_trash_toast') !== 'false' } catch { return true }
+  })
   const { previewUrl, openPreview, closePreview } = useFilePreview()
   const { toasts, addToast, dismissToast } = useToast()
 
@@ -236,9 +239,29 @@ function Workspace() {
     }
   }
 
+  function handleToggleTrashToast(val) {
+    setTrashToast(val)
+    try { localStorage.setItem('medialog_trash_toast', val) } catch {}
+  }
+
+  async function handleUndoTrash(entry) {
+    await restoreEntry(supabase, entry.id)
+    applyRestore(entry.id)
+    if (entry.topic_id === selectedId) {
+      setEntries((prev) => [entry, ...prev])
+    }
+  }
+
   async function handleDelete(id) {
+    const entry = entries.find((e) => e.id === id)
     await softDeleteEntry(supabase, id)
     applyDeleteEntry(id)
+    if (trashToast && entry) {
+      addToast('Moved to trash', 'info', {
+        duration: 5000,
+        actions: [{ label: 'Undo', onClick: () => handleUndoTrash(entry) }],
+      })
+    }
   }
 
   async function handleStatusChange(entryId, status) {
@@ -649,6 +672,8 @@ function Workspace() {
               onUpdateTagColor={handleUpdateTagColor}
               archiveToast={archiveToast}
               onToggleArchiveToast={handleToggleArchiveToast}
+              trashToast={trashToast}
+              onToggleTrashToast={handleToggleTrashToast}
             />
           )}
           {view === 'trash' && (
