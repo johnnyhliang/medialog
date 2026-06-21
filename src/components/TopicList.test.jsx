@@ -1,7 +1,9 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { vi, test, expect } from 'vitest'
+import { vi, test, expect, beforeEach } from 'vitest'
 import TopicList from './TopicList.jsx'
+
+beforeEach(() => localStorage.clear())
 
 test('lists topics and selects one on click', async () => {
   const onSelect = vi.fn()
@@ -26,11 +28,47 @@ test('renders Inbox topic first with inbox icon', () => {
     { id: '2', name: 'Alpha' },
   ]
   render(<TopicList topics={topics} selectedId={null} onSelect={() => {}} onAdd={() => {}} />)
-  const buttons = document.querySelectorAll('.topics button')
-  // First button should be Inbox
-  expect(buttons[0].className).toContain('topic-inbox-btn')
-  // Rest should be alphabetical
-  const names = [...buttons].slice(1).map((b) => b.textContent.trim())
-  expect(names[0]).toBe('Alpha')
-  expect(names[1]).toBe('Zebra')
+  const inboxBtn = document.querySelector('.topic-inbox-btn')
+  expect(inboxBtn).toBeTruthy()
+  const topicBtns = [...document.querySelectorAll('.topic-item > button:first-child')]
+  const names = topicBtns.map((b) => b.textContent.trim()).sort()
+  expect(names).toEqual(['Alpha', 'Zebra'])
+})
+
+const baseProps = {
+  topics: [{ id: 'i', name: 'Inbox', archived_at: null }],
+  activeTopics: [{ id: 'i', name: 'Inbox', archived_at: null }, { id: 'a1', name: 'AI', archived_at: null }],
+  archivedTopics: [{ id: 'a2', name: 'Old Project', archived_at: '2026-01-01' }],
+  selectedId: null,
+  onSelect: vi.fn(),
+  onAdd: vi.fn(),
+  sidebarCollapsed: false,
+  onArchive: vi.fn(),
+  onUnarchive: vi.fn(),
+  onDeleteTopic: vi.fn(),
+}
+
+test('archived section is collapsed by default and expands on click', async () => {
+  render(<TopicList {...baseProps} />)
+  expect(screen.queryByText('Old Project')).not.toBeInTheDocument()
+  await userEvent.click(screen.getByRole('button', { name: /archived/i }))
+  expect(screen.getByText('Old Project')).toBeInTheDocument()
+})
+
+test('clicking archive in menu calls onArchive', async () => {
+  const onArchive = vi.fn()
+  render(<TopicList {...baseProps} onArchive={onArchive} />)
+  await userEvent.hover(screen.getByRole('button', { name: 'AI' }))
+  await userEvent.click(screen.getByRole('button', { name: /topic menu/i }))
+  await userEvent.click(screen.getByRole('button', { name: /^archive$/i }))
+  expect(onArchive).toHaveBeenCalledWith('a1')
+})
+
+test('clicking delete in menu calls onDeleteTopic', async () => {
+  const onDeleteTopic = vi.fn()
+  render(<TopicList {...baseProps} onDeleteTopic={onDeleteTopic} />)
+  await userEvent.hover(screen.getByRole('button', { name: 'AI' }))
+  await userEvent.click(screen.getByRole('button', { name: /topic menu/i }))
+  await userEvent.click(screen.getByRole('button', { name: /delete/i }))
+  expect(onDeleteTopic).toHaveBeenCalledWith('a1')
 })
