@@ -1,6 +1,9 @@
-select cron.unschedule('fetch-reels') where exists (
-  select 1 from cron.job where jobname = 'fetch-reels'
-);
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'fetch-reels') THEN
+    PERFORM cron.unschedule('fetch-reels');
+  END IF;
+END $$;
 
 select cron.schedule(
   'fetch-reels',

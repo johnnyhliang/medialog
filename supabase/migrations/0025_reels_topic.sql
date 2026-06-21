@@ -9,7 +9,13 @@ declare
 begin
   select id into v_id from topics where user_id = p_user_id and name = 'Reels' limit 1;
   if v_id is null then
-    insert into topics (user_id, name) values (p_user_id, 'Reels') returning id into v_id;
+    insert into topics (user_id, name) values (p_user_id, 'Reels')
+      on conflict do nothing
+      returning id into v_id;
+    -- if concurrent insert won the race, fetch the existing row
+    if v_id is null then
+      select id into v_id from topics where user_id = p_user_id and name = 'Reels' limit 1;
+    end if;
   end if;
   return v_id;
 end;

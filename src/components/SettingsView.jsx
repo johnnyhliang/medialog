@@ -452,6 +452,7 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
             </p>
             <h3 style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>Setup (one-time)</h3>
             <ol style={{ fontSize: 13, lineHeight: 1.9, paddingLeft: 20, marginBottom: 0 }}>
+              <li>Set <code>CRON_SECRET</code> in Supabase Secrets dashboard (same value as your existing cron secret) — the fetch-reels function will reject calls without it</li>
               <li>Deploy the edge function:<br /><code style={{ fontSize: 11 }}>npx supabase functions deploy fetch-reels --no-verify-jwt</code></li>
               <li>Apply the cron migration:<br /><code style={{ fontSize: 11 }}>npx supabase db push</code></li>
               <li>
