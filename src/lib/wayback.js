@@ -9,6 +9,7 @@ export async function checkArchive(url) {
   const res = await fetch(
     `https://archive.org/wayback/available?url=${encodeURIComponent(url)}`
   )
+  if (!res.ok) throw new Error(`Wayback API failed: ${res.status}`)
   const data = await res.json()
   const closest = data?.archived_snapshots?.closest
   if (!closest?.available) {
@@ -29,6 +30,6 @@ export async function submitArchive(url) {
   const loc = res.headers.get('Content-Location')
   const snapshotUrl = loc
     ? `https://web.archive.org${loc}`
-    : `https://web.archive.org/web/*/${url}`
+    : `https://web.archive.org/web/*/${encodeURIComponent(url)}`
   return { snapshotUrl }
 }

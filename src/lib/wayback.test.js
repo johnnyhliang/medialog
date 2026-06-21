@@ -42,6 +42,15 @@ test('checkArchive throws when fetch fails', async () => {
   await expect(checkArchive('https://example.com')).rejects.toThrow('network error')
 })
 
+test('checkArchive throws on non-2xx response', async () => {
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+    ok: false,
+    status: 503,
+  }))
+
+  await expect(checkArchive('https://example.com')).rejects.toThrow('503')
+})
+
 test('submitArchive returns snapshotUrl parsed from Content-Location header', async () => {
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
     ok: true,
