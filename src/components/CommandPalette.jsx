@@ -54,11 +54,11 @@ export default function CommandPalette({ open, onClose, commands, topics = [] })
 
   function handleKey(e) {
     if (e.key === 'Escape') { onClose(); return }
-    if (e.key === 'ArrowDown' || e.key === 'j') {
+    if (e.key === 'ArrowDown' || (e.key === 'j' && !query)) {
       e.preventDefault()
       setSelectedIdx((i) => Math.min(i + 1, flat.length - 1))
     }
-    if (e.key === 'ArrowUp' || e.key === 'k') {
+    if (e.key === 'ArrowUp' || (e.key === 'k' && !query)) {
       e.preventDefault()
       setSelectedIdx((i) => Math.max(i - 1, 0))
     }
