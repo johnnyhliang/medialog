@@ -20,6 +20,7 @@ export async function listEntriesByTopic(supabase, topicId) {
     .select(TAG_SELECT)
     .eq('topic_id', topicId)
     .is('deleted_at', null)
+    .or('surface_after.is.null,surface_after.lte.now()')
     .order('pinned', { ascending: false })
     .order('created_at', { ascending: false })
   if (error) throw new Error(error.message)
@@ -74,6 +75,7 @@ export async function searchEntries(supabase, query) {
     .select(`${TAG_SELECT}, topics(name)`)
     .is('deleted_at', null)
     .or(buildSearchFilter(query))
+    .or('surface_after.is.null,surface_after.lte.now()')
     .order('created_at', { ascending: false })
   if (error) throw new Error(error.message)
   return data.map((row) => ({ ...flattenTags(row), topicName: row.topics?.name ?? null }))
@@ -84,6 +86,7 @@ export async function listForRevisit(supabase, limit) {
     .from('entries')
     .select(TAG_SELECT)
     .is('deleted_at', null)
+    .or('surface_after.is.null,surface_after.lte.now()')
     .order('last_surfaced_at', { ascending: true, nullsFirst: true })
     .limit(limit)
   if (error) throw new Error(error.message)
@@ -95,6 +98,7 @@ export async function listRecentActivity(supabase, limit = 30) {
     .from('entries')
     .select(`${TAG_SELECT}, topics(name)`)
     .is('deleted_at', null)
+    .or('surface_after.is.null,surface_after.lte.now()')
     .order('updated_at', { ascending: false })
     .limit(limit)
   if (error) throw new Error(error.message)
@@ -107,6 +111,7 @@ export async function listReadingQueue(supabase) {
     .select(`${TAG_SELECT}, topics(name)`)
     .is('deleted_at', null)
     .in('status', ['active', 'backlog'])
+    .or('surface_after.is.null,surface_after.lte.now()')
     .order('pinned', { ascending: false })
     .order('created_at', { ascending: false })
   if (error) throw new Error(error.message)
@@ -215,4 +220,20 @@ export async function listArchivedEntriesByTopic(supabase, topicId) {
     .order('created_at', { ascending: false })
   if (error) throw new Error(error.message)
   return data.map(flattenTags)
+}
+
+export async function snoozeEntry(supabase, id, isoDate) {
+  const { error } = await supabase
+    .from('entries')
+    .update({ surface_after: isoDate })
+    .eq('id', id)
+  if (error) throw new Error(error.message)
+}
+
+export async function unsnoozeEntry(supabase, id) {
+  const { error } = await supabase
+    .from('entries')
+    .update({ surface_after: null })
+    .eq('id', id)
+  if (error) throw new Error(error.message)
 }
