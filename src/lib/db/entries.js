@@ -156,6 +156,42 @@ export async function emptyTrash(supabase) {
   if (error) throw new Error(error.message)
 }
 
+export async function searchSemantic(supabase, query) {
+  const { data: { session } } = await supabase.auth.getSession()
+  const token = session?.access_token
+  if (!token) return []
+
+  const embedRes = await supabase.functions.invoke('embed-entry', {
+    body: { text: query },
+  })
+  if (embedRes.error) throw new Error(embedRes.error.message)
+  const embedding = embedRes.data?.embedding
+  if (!embedding) return []
+
+  const { data: matches, error } = await supabase.rpc('match_entries', {
+    query_embedding: embedding,
+    match_threshold: 0.3,
+    match_count: 20,
+  })
+  if (error) throw new Error(error.message)
+  if (!matches?.length) return []
+
+  const ids = matches.map((m) => m.entry_id)
+  const { data: entries, error: eErr } = await supabase
+    .from('entries')
+    .select('*, entry_tags(tags(name)), topics(name)')
+    .in('id', ids)
+    .is('deleted_at', null)
+  if (eErr) throw new Error(eErr.message)
+
+  return entries.map((e) => {
+    const match = matches.find((m) => m.entry_id === e.id)
+    const tags = (e.entry_tags || []).map((et) => et.tags?.name).filter(Boolean)
+    const { entry_tags, topics, ...rest } = e
+    return { ...rest, tags, topicName: topics?.name ?? '', similarity: match?.similarity ?? 0 }
+  }).sort((a, b) => b.similarity - a.similarity)
+}
+
 export async function listAllArchivedEntries(supabase) {
   const { data, error } = await supabase
     .from('entries')

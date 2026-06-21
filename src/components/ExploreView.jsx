@@ -1,17 +1,20 @@
 import { useEffect, useRef, useState } from 'react'
-import { searchEntries, listReadingQueue } from '../lib/db/entries.js'
+import { searchEntries, searchSemantic, listReadingQueue } from '../lib/db/entries.js'
 import { Search, BookOpen, Clock } from 'lucide-react'
 
 const STATUS_LABEL = { active: 'active', backlog: 'backlog' }
 const STATUS_CLASS = { active: 'status-active', backlog: 'status-backlog' }
 
-function EntryRow({ entry, onSelect }) {
+function EntryRow({ entry, onSelect, showSimilarity }) {
   return (
     <div className="explore-row" onClick={() => onSelect?.(entry)}>
       <div className="explore-row-main">
         <span className="explore-row-title">
           {entry.title || entry.url || 'Untitled'}
         </span>
+        {showSimilarity && entry.similarity != null && (
+          <span className="explore-similarity">{Math.round(entry.similarity * 100)}%</span>
+        )}
         <span className={`entry-status-chip ${STATUS_CLASS[entry.status] || ''}`}>
           {STATUS_LABEL[entry.status] || entry.status}
         </span>
@@ -43,6 +46,8 @@ export default function ExploreView({ supabase, topics, onSelectEntry }) {
   const [queue, setQueue] = useState([])
   const [queueLoading, setQueueLoading] = useState(true)
   const [searching, setSearching] = useState(false)
+  const [semanticMode, setSemanticMode] = useState(false)
+  const [semanticError, setSemanticError] = useState(null)
   const [statusFilter, setStatusFilter] = useState('all')
   const [topicFilter, setTopicFilter] = useState('all')
   const timerRef = useRef(null)
@@ -58,18 +63,27 @@ export default function ExploreView({ supabase, topics, onSelectEntry }) {
 
   useEffect(() => {
     if (timerRef.current) clearTimeout(timerRef.current)
-    if (!query.trim()) { setSearchResults(null); return }
+    if (!query.trim()) { setSearchResults(null); setSemanticError(null); return }
     setSearching(true)
+    setSemanticError(null)
+    const delay = semanticMode ? 600 : 300
     timerRef.current = setTimeout(async () => {
       try {
-        const results = await searchEntries(supabase, query.trim())
+        const results = semanticMode
+          ? await searchSemantic(supabase, query.trim())
+          : await searchEntries(supabase, query.trim())
         setSearchResults(results)
+      } catch (e) {
+        if (semanticMode) {
+          setSemanticError(e.message || 'semantic search failed')
+          setSearchResults([])
+        }
       } finally {
         setSearching(false)
       }
-    }, 300)
+    }, delay)
     return () => clearTimeout(timerRef.current)
-  }, [query, supabase])
+  }, [query, supabase, semanticMode])
 
   const displayItems = searchResults ?? queue
   const isSearching = query.trim().length > 0
@@ -107,7 +121,16 @@ export default function ExploreView({ supabase, topics, onSelectEntry }) {
         />
         {searching && <span className="explore-search-spinner" />}
         {query && (
-          <button className="explore-clear-btn" onClick={() => setQuery('')}>×</button>
+          <button
+            className={`explore-semantic-btn${semanticMode ? ' explore-semantic-btn--on' : ''}`}
+            onClick={() => setSemanticMode((m) => !m)}
+            title="Toggle semantic search"
+          >
+            semantic
+          </button>
+        )}
+        {query && (
+          <button className="explore-clear-btn" onClick={() => { setQuery(''); setSemanticMode(false) }}>×</button>
         )}
       </div>
 
@@ -138,6 +161,9 @@ export default function ExploreView({ supabase, topics, onSelectEntry }) {
       </div>
 
       <div className="explore-results">
+        {semanticError && (
+          <p className="explore-semantic-error">{semanticError}</p>
+        )}
         {queueLoading && !isSearching ? (
           <p className="muted" style={{ padding: '24px 0' }}>loading…</p>
         ) : filtered.length === 0 ? (
@@ -146,7 +172,7 @@ export default function ExploreView({ supabase, topics, onSelectEntry }) {
           </p>
         ) : isSearching ? (
           filtered.map((e) => (
-            <EntryRow key={e.id} entry={e} onSelect={onSelectEntry} />
+            <EntryRow key={e.id} entry={e} onSelect={onSelectEntry} showSimilarity={semanticMode} />
           ))
         ) : (
           Object.entries(grouped).sort(([a], [b]) => a.localeCompare(b)).map(([topic, entries]) => (
