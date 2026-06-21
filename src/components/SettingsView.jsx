@@ -182,13 +182,14 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
   if (loading) return <p>Loading settings...</p>
 
   const TABS = [
-    { id: 'github',    label: 'GitHub' },
-    { id: 'twitter',   label: 'Twitter' },
-    { id: 'behavior',  label: 'Behavior' },
-    { id: 'tags',      label: 'Tag Colors' },
-    { id: 'companies', label: 'Companies' },
-    { id: 'keywords',  label: 'Keywords' },
-    { id: 'programs',  label: 'Programs' },
+    { id: 'github',      label: 'GitHub' },
+    { id: 'twitter',     label: 'Twitter' },
+    { id: 'behavior',    label: 'Behavior' },
+    { id: 'tags',        label: 'Tag Colors' },
+    { id: 'companies',   label: 'Companies' },
+    { id: 'keywords',    label: 'Keywords' },
+    { id: 'programs',    label: 'Programs' },
+    { id: 'bookmarklet', label: 'Bookmarklet' },
   ]
 
   return (
@@ -333,6 +334,63 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
       {tab === 'companies' && <CompaniesTab supabase={supabase} />}
       {tab === 'keywords' && <KeywordsTab supabase={supabase} />}
       {tab === 'programs' && <ProgramsTab supabase={supabase} />}
+
+      {tab === 'bookmarklet' && (
+        <section>
+          <h2>Bookmarklet</h2>
+          <div className="card">
+            <p className="muted">Drag the link below to your bookmarks bar. Click on any page to save it to your MediaLog inbox.</p>
+            {!import.meta.env.VITE_CAPTURE_SECRET ? (
+              <div style={{ padding: '12px 16px', background: 'var(--surface-2)', borderRadius: 6, marginTop: 16, marginBottom: 16 }}>
+                <p style={{ fontSize: 13, margin: 0, color: 'var(--text-secondary)' }}>
+                  <strong>Setup required:</strong> Add <code>VITE_CAPTURE_SECRET</code> to your <code>.env.local</code> file with the same value as your <code>CAPTURE_SECRET</code> Supabase secret.
+                </p>
+              </div>
+            ) : (
+              (() => {
+                const bookmarkletCode = `(function(){var url=location.href;var title=document.title;fetch('${import.meta.env.VITE_SUPABASE_URL}/functions/v1/capture',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({secret:'${import.meta.env.VITE_CAPTURE_SECRET}',url:url,note:title})}).then(function(r){alert(r.ok?'Saved to MediaLog ✓':'Failed: '+r.status)}).catch(function(){alert('MediaLog: network error')})})()`
+                return (
+                  <>
+                    <div style={{ marginTop: 16, marginBottom: 16 }}>
+                      <a
+                        href={`javascript:${bookmarkletCode}`}
+                        className="bookmarklet-link"
+                        draggable
+                        onDragStart={(e) => {
+                          e.dataTransfer.effectAllowed = 'move'
+                        }}
+                        style={{
+                          display: 'inline-block',
+                          padding: '10px 16px',
+                          background: 'var(--accent)',
+                          color: 'var(--bg)',
+                          borderRadius: 6,
+                          textDecoration: 'none',
+                          fontWeight: 500,
+                          fontSize: 14,
+                          cursor: 'move',
+                          userSelect: 'none',
+                        }}
+                      >
+                        📎 Save to MediaLog
+                      </a>
+                    </div>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(`javascript:${bookmarkletCode}`)
+                        addToast('Bookmarklet copied to clipboard', 'success')
+                      }}
+                      style={{ fontSize: 13 }}
+                    >
+                      Copy Bookmarklet Code
+                    </button>
+                  </>
+                )
+              })()
+            )}
+          </div>
+        </section>
+      )}
 
       <section style={{ marginTop: 32, borderTop: '1px solid var(--border)', paddingTop: 24 }}>
         <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 4, marginTop: 0 }}>Bulk archive to Wayback Machine</h3>
