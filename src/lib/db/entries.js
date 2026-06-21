@@ -71,12 +71,12 @@ export async function bulkCreateEntries(supabase, topicId, items) {
 export async function searchEntries(supabase, query) {
   const { data, error } = await supabase
     .from('entries')
-    .select(TAG_SELECT)
+    .select(`${TAG_SELECT}, topics(name)`)
     .is('deleted_at', null)
     .or(buildSearchFilter(query))
     .order('created_at', { ascending: false })
   if (error) throw new Error(error.message)
-  return data.map(flattenTags)
+  return data.map((row) => ({ ...flattenTags(row), topicName: row.topics?.name ?? null }))
 }
 
 export async function listForRevisit(supabase, limit) {

@@ -827,7 +827,7 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
 
 /* ── Responsive ─────────────────────────────────────────────────────────────── */
 @media (max-width: 680px) {
-  .app { flex-direction: column; }
+  .app { flex-direction: column; height: 100dvh; overflow: hidden; }
 
   .mobile-topbar {
     display: flex;
@@ -879,7 +879,7 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
   }
   .sidebar-overlay.visible { display: block; }
 
-  .main { padding: 16px; }
+  .main { padding: 16px; flex: 1; min-height: 0; overflow-y: auto; }
 }
 
 @media (min-width: 681px) {
