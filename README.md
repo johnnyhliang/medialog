@@ -40,19 +40,16 @@ Open the deployed URL in Safari -> Share -> Add to Home Screen.
 
 ### Activate
 - [ ] **Twitter agent** — get `auth_token` cookie from twitter.com DevTools, then `npx supabase secrets set TWITTER_AUTH_TOKEN=<value>` + redeploy `fetch-opportunities`
-- [ ] **Apply migration 0016** — `0016_companies.sql` needs to be pushed (`npx supabase db push`) for the Companies settings tab to work
+- [ ] **Apply migrations 0016, 0019, 0020, 0021** — run `npx supabase db push` to apply Companies tab (0016), cron secret header (0019), DB length constraints (0020), private attachments bucket (0021)
+- [ ] **CRON_SECRET setup (do together with db push)** — (1) `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` to generate, (2) `npx supabase secrets set CRON_SECRET=<value>`, (3) in Supabase SQL editor: `alter database postgres set app.cron_secret = '<same-value>';`, (4) `npx supabase db push` — steps 2 and 4 must happen together or cron gets 403s
 - [ ] **Deploy fetch-opportunities** — `npx supabase functions deploy fetch-opportunities` after setting Twitter secret
 
-### Security (fix before shipping publicly)
-- [ ] **`enrich` has no auth** — anyone on the internet can call it and use your Supabase compute/network as a proxy. Add JWT verification (check `Authorization` header via `supabase.auth.getUser()`) or restrict to anon key + RLS
-- [ ] **`ai` has no auth** — same issue; anyone can call your AI proxy and burn your AI API credits. Add auth header check
+### Security (remaining)
 - [ ] **`enrich` CORS is `*`** — fine for a personal tool, but means any site can call it if they know the URL
 - [ ] **`capture` SSRF** — the `capture` function inserts whatever `url` the caller sends directly into the DB without `isSafeUrl` validation (unlike `enrich` which does validate). Low risk since it's secret-gated, but worth noting
-- [ ] **`dangerouslySetInnerHTML` in SettingsView** — the inline `<style>` block (line 218) is static string so not exploitable now, but move it to CSS to avoid the pattern
+- [ ] **`dangerouslySetInnerHTML` in SettingsView** — the inline `<style>` block is static string so not exploitable now, but move it to CSS to avoid the pattern
 
 ### Features
 - [ ] **Archive browsing view** — dedicated view of `status=done` entries grouped by topic; add nav button
-- [ ] **Topic deletion confirm dialog** — currently soft-deletes immediately on click
-- [ ] **Mobile topic menu** — hover-based three-dot menu doesn't trigger on touch; swap to tap/long-press
 - [ ] **Worktree cleanup** — `git worktree remove` the 3 merged worktrees under `.claude/worktrees/`
 - [ ] **Instagram Reels ingestion** — future: DM → alt account → cron edge function → Claude summary → entry (needs `INSTAGRAM_SESSION_ID` + `ANTHROPIC_API_KEY`)
