@@ -1,5 +1,5 @@
 import { describe, test, expect, vi } from 'vitest'
-import { listTopics, createTopic, getTopicByName } from './topics.js'
+import { listTopics, createTopic, getTopicByName, listDeletedTopics, archiveTopic, unarchiveTopic, softDeleteTopic, restoreDeletedTopic } from './topics.js'
 
 function mockClient(result) {
   const chain = {
@@ -45,6 +45,71 @@ describe('topics db', () => {
     const result = await getTopicByName(client, 'Inbox')
     expect(client._chain.eq).toHaveBeenCalledWith('name', 'Inbox')
     expect(result).toEqual(row)
+  })
+})
+
+describe('topic lifecycle', () => {
+  function makeChain(resolveWith) {
+    const chain = {
+      select: vi.fn(() => chain),
+      is: vi.fn(() => chain),
+      not: vi.fn(() => chain),
+      eq: vi.fn(() => chain),
+      order: vi.fn(() => Promise.resolve(resolveWith)),
+      update: vi.fn(() => chain),
+      single: vi.fn(() => Promise.resolve(resolveWith)),
+    }
+    return chain
+  }
+
+  test('listTopics filters deleted_at IS NULL', async () => {
+    const chain = makeChain({ data: [{ id: 't1', name: 'AI', entries: [{ count: 2 }] }], error: null })
+    const sb = { from: vi.fn(() => chain) }
+    const result = await listTopics(sb)
+    expect(chain.is).toHaveBeenCalledWith('deleted_at', null)
+    expect(result[0].entry_count).toBe(2)
+  })
+
+  test('listDeletedTopics filters NOT NULL deleted_at', async () => {
+    const chain = makeChain({ data: [{ id: 't2', name: 'Old', deleted_at: '2026-06-01', entries: [{ count: 0 }] }], error: null })
+    const sb = { from: vi.fn(() => chain) }
+    const result = await listDeletedTopics(sb)
+    expect(chain.not).toHaveBeenCalledWith('deleted_at', 'is', null)
+    expect(result[0].name).toBe('Old')
+  })
+
+  test('archiveTopic sets archived_at', async () => {
+    const chain = makeChain({ data: { id: 't1', archived_at: '2026-06-20' }, error: null })
+    const sb = { from: vi.fn(() => chain) }
+    await archiveTopic(sb, 't1')
+    expect(chain.update).toHaveBeenCalledWith(expect.objectContaining({ archived_at: expect.any(String) }))
+  })
+
+  test('unarchiveTopic clears archived_at', async () => {
+    const chain = makeChain({ data: { id: 't1', archived_at: null }, error: null })
+    const sb = { from: vi.fn(() => chain) }
+    await unarchiveTopic(sb, 't1')
+    expect(chain.update).toHaveBeenCalledWith({ archived_at: null })
+  })
+
+  test('softDeleteTopic updates entries then topic', async () => {
+    const entriesChain = makeChain({ error: null })
+    const topicsChain = makeChain({ error: null })
+    let call = 0
+    const sb = { from: vi.fn(() => call++ === 0 ? entriesChain : topicsChain) }
+    await softDeleteTopic(sb, 't1')
+    expect(entriesChain.update).toHaveBeenCalled()
+    expect(topicsChain.update).toHaveBeenCalled()
+  })
+
+  test('restoreDeletedTopic clears deleted_at on entries and topic', async () => {
+    const entriesChain = makeChain({ error: null })
+    const topicsChain = makeChain({ error: null })
+    let call = 0
+    const sb = { from: vi.fn(() => call++ === 0 ? entriesChain : topicsChain) }
+    await restoreDeletedTopic(sb, 't1')
+    expect(entriesChain.update).toHaveBeenCalledWith({ deleted_at: null })
+    expect(topicsChain.update).toHaveBeenCalledWith({ deleted_at: null })
   })
 })
 

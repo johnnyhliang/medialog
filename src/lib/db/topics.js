@@ -3,9 +3,20 @@ export async function listTopics(supabase) {
     .from('topics')
     .select('*, entries!entries_topic_id_fkey(count)')
     .is('entries.deleted_at', null)
+    .is('deleted_at', null)
     .order('name', { ascending: true })
   if (error) throw new Error(error.message)
-  // Flatten embedded count: [{ count: N }] → entry_count: N
+  return (data ?? []).map((t) => ({ ...t, entry_count: t.entries?.[0]?.count ?? 0 }))
+}
+
+export async function listDeletedTopics(supabase) {
+  const { data, error } = await supabase
+    .from('topics')
+    .select('*, entries!entries_topic_id_fkey(count)')
+    .is('entries.deleted_at', null)
+    .not('deleted_at', 'is', null)
+    .order('deleted_at', { ascending: false })
+  if (error) throw new Error(error.message)
   return (data ?? []).map((t) => ({ ...t, entry_count: t.entries?.[0]?.count ?? 0 }))
 }
 
@@ -49,4 +60,53 @@ export async function updateTopicDoc(supabase, topicId, masterDoc) {
     .single()
   if (error) throw new Error(error.message)
   return data
+}
+
+export async function archiveTopic(supabase, id) {
+  const { data, error } = await supabase
+    .from('topics')
+    .update({ archived_at: new Date().toISOString() })
+    .eq('id', id)
+    .select()
+    .single()
+  if (error) throw new Error(error.message)
+  return data
+}
+
+export async function unarchiveTopic(supabase, id) {
+  const { data, error } = await supabase
+    .from('topics')
+    .update({ archived_at: null })
+    .eq('id', id)
+    .select()
+    .single()
+  if (error) throw new Error(error.message)
+  return data
+}
+
+export async function softDeleteTopic(supabase, id) {
+  const now = new Date().toISOString()
+  await supabase
+    .from('entries')
+    .update({ deleted_at: now })
+    .eq('topic_id', id)
+    .is('deleted_at', null)
+  const { error } = await supabase
+    .from('topics')
+    .update({ deleted_at: now })
+    .eq('id', id)
+  if (error) throw new Error(error.message)
+}
+
+export async function restoreDeletedTopic(supabase, id) {
+  await supabase
+    .from('entries')
+    .update({ deleted_at: null })
+    .eq('topic_id', id)
+    .not('deleted_at', 'is', null)
+  const { error } = await supabase
+    .from('topics')
+    .update({ deleted_at: null })
+    .eq('id', id)
+  if (error) throw new Error(error.message)
 }
