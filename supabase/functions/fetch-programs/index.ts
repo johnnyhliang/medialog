@@ -11,7 +11,18 @@ const OPEN_PATTERNS = [
 
 const DEADLINE_PATTERN = /deadline[:\s]+(\w+ \d+,?\s*\d{4})/i
 
-serve(async () => {
+serve(async (req) => {
+  // Guard: only accept calls from pg_cron (which sends X-Cron-Secret)
+  const cronSecret = Deno.env.get('CRON_SECRET')
+  if (cronSecret) {
+    const incoming = req.headers.get('X-Cron-Secret')
+    if (incoming !== cronSecret) {
+      return new Response(JSON.stringify({ error: 'forbidden' }), {
+        status: 403, headers: { 'Content-Type': 'application/json' },
+      })
+    }
+  }
+
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL')!,
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
