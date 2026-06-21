@@ -191,6 +191,7 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
     { id: 'programs',    label: 'Programs' },
     { id: 'bookmarklet', label: 'Bookmarklet' },
     { id: 'mobile',      label: 'iOS Shortcut' },
+    { id: 'instagram',   label: 'Instagram' },
   ]
 
   return (
@@ -437,6 +438,32 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
                 Add <code>VITE_CAPTURE_SECRET</code> to your <code>.env.local</code> to see the pre-filled JSON body.
               </p>
             )}
+          </div>
+        </section>
+      )}
+
+      {tab === 'instagram' && (
+        <section>
+          <h2>Instagram Reels</h2>
+          <div className="card">
+            <p className="muted" style={{ fontSize: 13, marginBottom: 16 }}>
+              Reels sent to your Instagram DMs are automatically fetched every 15 minutes and saved to your MediaLog inbox.
+              No configuration is needed here — setup is done once via Supabase secrets.
+            </p>
+            <h3 style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>Setup (one-time)</h3>
+            <ol style={{ fontSize: 13, lineHeight: 1.9, paddingLeft: 20, marginBottom: 0 }}>
+              <li>Deploy the edge function:<br /><code style={{ fontSize: 11 }}>npx supabase functions deploy fetch-reels --no-verify-jwt</code></li>
+              <li>Apply the cron migration:<br /><code style={{ fontSize: 11 }}>npx supabase db push</code></li>
+              <li>
+                Set your Instagram session cookie (from instagram.com DevTools → Application → Cookies → <code>sessionid</code>):<br />
+                <code style={{ fontSize: 11 }}>npx supabase secrets set INSTAGRAM_SESSION_ID=&lt;value&gt;</code>
+              </li>
+              <li>Set your Anthropic API key (used for caption tagging):<br /><code style={{ fontSize: 11 }}>npx supabase secrets set ANTHROPIC_API_KEY=&lt;key&gt;</code></li>
+              <li>Set your Supabase user ID (from Auth dashboard):<br /><code style={{ fontSize: 11 }}>npx supabase secrets set CAPTURE_USER_ID=&lt;uuid&gt;</code></li>
+            </ol>
+            <p className="muted" style={{ fontSize: 12, marginTop: 16, marginBottom: 0 }}>
+              <strong>Note:</strong> The <code>sessionid</code> cookie expires periodically. If reels stop appearing, re-run the <code>secrets set</code> command with a fresh value from DevTools.
+            </p>
           </div>
         </section>
       )}
