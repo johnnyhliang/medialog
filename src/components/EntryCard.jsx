@@ -6,6 +6,7 @@ import MarkdownView from './MarkdownView.jsx'
 import ConfirmModal from './ConfirmModal.jsx'
 import Modal from './Modal.jsx'
 import { supabase } from '../lib/supabaseClient.js'
+import { snoozeEntry, unsnoozeEntry } from '../lib/db/entries.js'
 import { fetchTitle } from '../lib/enrich.js'
 import { getYouTubeThumbnail } from '../lib/youtube.js'
 import { classifyUrl } from '../lib/classifyUrl.js'
@@ -62,6 +63,7 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
   const [takeaway, setTakeaway] = useState('')
   const [fetchingTitle, setFetchingTitle] = useState(false)
   const [showWayback, setShowWayback] = useState(false)
+  const [showSnoozePicker, setShowSnoozePicker] = useState(false)
   const timer = useRef(null)
   const statusClass = entry.status ? `status-${entry.status}` : 'status-backlog'
   const thumb = getYouTubeThumbnail(entry.url)
@@ -158,6 +160,20 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
     if (!topicId) return
     e.target.value = ''
     onMove?.(entry.id, topicId)
+  }
+
+  async function handleSnooze(dateStr) {
+    const client = supabaseClient || supabase
+    await snoozeEntry(client, entry.id, dateStr + 'T00:00:00Z')
+    onEntryUpdate?.({ ...entry, surface_after: dateStr + 'T00:00:00Z' })
+    setShowSnoozePicker(false)
+    setShowSecondaryActions(false)
+  }
+
+  async function handleUnsnooze() {
+    const client = supabaseClient || supabase
+    await unsnoozeEntry(client, entry.id)
+    onEntryUpdate?.({ ...entry, surface_after: null })
   }
 
   const moveSelect = moveTargets?.length > 0 && (
@@ -340,6 +356,17 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
 
         {age && <span className="card-age">{age}</span>}
 
+        {entry.surface_after && (
+          <button
+            className="snooze-indicator"
+            onClick={(e) => { e.stopPropagation(); handleUnsnooze() }}
+            title={`Snoozed until ${new Date(entry.surface_after).toLocaleDateString()} — click to unsnooze`}
+          >
+            <Clock size={12} />
+            <span>{new Date(entry.surface_after).toLocaleDateString()}</span>
+          </button>
+        )}
+
         <div className="card-actions-right">
           {/* Secondary actions */}
           <div className="card-secondary-actions" style={{ display: showSecondaryActions ? 'flex' : undefined, gap: 'inherit' }}>
@@ -366,7 +393,27 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
               </button>
             )}
             {moveSelect}
+            <button
+              className="icon-btn"
+              aria-label="snooze"
+              title="Snooze"
+              onClick={(e) => { e.stopPropagation(); setShowSnoozePicker(p => !p) }}
+            >
+              <Clock size={15} />
+            </button>
           </div>
+
+          {showSnoozePicker && (
+            <div className="snooze-picker" onClick={(e) => e.stopPropagation()}>
+              <input
+                type="date"
+                min={new Date().toISOString().split('T')[0]}
+                onChange={(e) => { if (e.target.value) handleSnooze(e.target.value) }}
+                autoFocus
+                onBlur={() => setShowSnoozePicker(false)}
+              />
+            </div>
+          )}
 
           <button
             className="card-overflow-btn"
@@ -449,6 +496,16 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
           >#{t}</span>
         ))}
         {age && <span style={{ marginLeft: 'auto' }}>{age}</span>}
+        {entry.surface_after && (
+          <button
+            className="snooze-indicator"
+            onClick={(e) => { e.stopPropagation(); handleUnsnooze() }}
+            title={`Snoozed until ${new Date(entry.surface_after).toLocaleDateString()} — click to unsnooze`}
+          >
+            <Clock size={12} />
+            <span>{new Date(entry.surface_after).toLocaleDateString()}</span>
+          </button>
+        )}
       </div>
     </>
   )
