@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { Inbox, MoreVertical, ChevronDown, ChevronRight } from 'lucide-react'
+import ConfirmModal from './ConfirmModal.jsx'
 
 export default function TopicList({
   topics,
@@ -15,6 +16,7 @@ export default function TopicList({
 }) {
   const [name, setName] = useState('')
   const [openMenuId, setOpenMenuId] = useState(null)
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null)
   const [archiveSectionOpen, setArchiveSectionOpen] = useState(() => {
     try { return localStorage.getItem('medialog_archive_section_open') === 'true' } catch { return false }
   })
@@ -92,7 +94,7 @@ export default function TopicList({
                 <button className="topic-menu-item" onClick={() => { onArchive?.(t.id); setOpenMenuId(null) }}>
                   Archive
                 </button>
-                <button className="topic-menu-item danger" onClick={() => { onDeleteTopic?.(t.id); setOpenMenuId(null) }}>
+                <button className="topic-menu-item danger" onClick={() => { setConfirmDeleteId(t.id); setOpenMenuId(null) }}>
                   Delete
                 </button>
               </div>
@@ -142,7 +144,7 @@ export default function TopicList({
                       <button className="topic-menu-item" onClick={() => { onUnarchive?.(t.id); setOpenMenuId(null) }}>
                         Unarchive
                       </button>
-                      <button className="topic-menu-item danger" onClick={() => { onDeleteTopic?.(t.id); setOpenMenuId(null) }}>
+                      <button className="topic-menu-item danger" onClick={() => { setConfirmDeleteId(t.id); setOpenMenuId(null) }}>
                         Delete
                       </button>
                     </div>
@@ -152,6 +154,14 @@ export default function TopicList({
             </ul>
           )}
         </>
+      )}
+      {confirmDeleteId && (
+        <ConfirmModal
+          message="Permanently delete this topic and move all its entries to trash?"
+          confirmLabel="Delete"
+          onConfirm={() => { onDeleteTopic?.(confirmDeleteId); setConfirmDeleteId(null) }}
+          onCancel={() => setConfirmDeleteId(null)}
+        />
       )}
     </nav>
   )

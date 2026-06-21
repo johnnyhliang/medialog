@@ -70,5 +70,29 @@ test('clicking delete in menu calls onDeleteTopic', async () => {
   await userEvent.hover(screen.getByRole('button', { name: 'AI' }))
   await userEvent.click(screen.getByRole('button', { name: /topic menu/i }))
   await userEvent.click(screen.getByRole('button', { name: /delete/i }))
+  // Confirm modal appears; confirm to proceed
+  await userEvent.click(screen.getByRole('button', { name: /^delete$/i }))
+  expect(onDeleteTopic).toHaveBeenCalledWith('a1')
+})
+
+test('topic delete requires confirmation — cancel does not delete', async () => {
+  const onDeleteTopic = vi.fn()
+  render(<TopicList {...baseProps} onDeleteTopic={onDeleteTopic} />)
+  await userEvent.hover(screen.getByRole('button', { name: 'AI' }))
+  await userEvent.click(screen.getByRole('button', { name: /topic menu/i }))
+  await userEvent.click(screen.getByRole('button', { name: /delete/i }))
+  // Confirm modal should appear
+  expect(screen.getByText(/permanently delete/i)).toBeInTheDocument()
+  await userEvent.click(screen.getByRole('button', { name: /cancel/i }))
+  expect(onDeleteTopic).not.toHaveBeenCalled()
+})
+
+test('topic delete confirm dialog calls onDeleteTopic on confirm', async () => {
+  const onDeleteTopic = vi.fn()
+  render(<TopicList {...baseProps} onDeleteTopic={onDeleteTopic} />)
+  await userEvent.hover(screen.getByRole('button', { name: 'AI' }))
+  await userEvent.click(screen.getByRole('button', { name: /topic menu/i }))
+  await userEvent.click(screen.getByRole('button', { name: /delete/i }))
+  await userEvent.click(screen.getByRole('button', { name: /^delete$/i }))
   expect(onDeleteTopic).toHaveBeenCalledWith('a1')
 })
