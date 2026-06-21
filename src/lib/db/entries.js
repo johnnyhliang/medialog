@@ -158,8 +158,7 @@ export async function emptyTrash(supabase) {
 
 export async function searchSemantic(supabase, query) {
   const { data: { session } } = await supabase.auth.getSession()
-  const token = session?.access_token
-  if (!token) return []
+  if (!session?.access_token) return []
 
   const embedRes = await supabase.functions.invoke('embed-entry', {
     body: { text: query },
