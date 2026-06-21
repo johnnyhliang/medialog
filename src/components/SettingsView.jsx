@@ -1,5 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabaseClient.js'
+import { submitArchive } from '../lib/wayback.js'
+import { listEntriesByTopic, updateEntry } from '../lib/db/entries.js'
 import CompaniesTab from './settings/CompaniesTab.jsx'
 import KeywordsTab from './settings/KeywordsTab.jsx'
 import ProgramsTab from './settings/ProgramsTab.jsx'
@@ -10,6 +12,13 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
   const [saving, setSaving] = useState(false)
   const [pendingColors, setPendingColors] = useState({})
   const [tab, setTab] = useState('github')
+  const [bulkTopic, setBulkTopic] = useState('')
+  const [skipSubmitted, setSkipSubmitted] = useState(true)
+  const [bulkRunning, setBulkRunning] = useState(false)
+  const [bulkPaused, setBulkPaused] = useState(false)
+  const [bulkProgress, setBulkProgress] = useState(null)
+  const bulkPausedRef = useRef(false)
+  const bulkCancelledRef = useRef(false)
 
   useEffect(() => {
     loadConfig()
@@ -94,6 +103,64 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
     } catch (err) {
       addToast(`Restore failed: ${err.message}`, 'error')
     }
+  }
+
+  async function handleBulkArchive() {
+    if (!bulkTopic) return
+    setBulkRunning(true)
+    setBulkPaused(false)
+    bulkPausedRef.current = false
+    bulkCancelledRef.current = false
+
+    const entries = await listEntriesByTopic(supabase, bulkTopic)
+    let queue = entries.filter((e) => e.url)
+    if (skipSubmitted) queue = queue.filter((e) => !e.wayback_submitted_at)
+
+    setBulkProgress({ done: 0, total: queue.length, errors: [] })
+
+    for (let i = 0; i < queue.length; i++) {
+      if (bulkCancelledRef.current) break
+
+      while (bulkPausedRef.current) {
+        await new Promise((r) => setTimeout(r, 200))
+        if (bulkCancelledRef.current) break
+      }
+      if (bulkCancelledRef.current) break
+
+      const entry = queue[i]
+      try {
+        await submitArchive(entry.url)
+        await updateEntry(supabase, entry.id, { wayback_submitted_at: new Date().toISOString() })
+      } catch {
+        setBulkProgress((p) => ({ ...p, errors: [...p.errors, entry.url] }))
+      }
+
+      setBulkProgress((p) => ({ ...p, done: i + 1 }))
+
+      if (i < queue.length - 1) {
+        await new Promise((r) => setTimeout(r, 5000))
+      }
+    }
+
+    setBulkRunning(false)
+  }
+
+  function handlePause() {
+    bulkPausedRef.current = true
+    setBulkPaused(true)
+  }
+
+  function handleResume() {
+    bulkPausedRef.current = false
+    setBulkPaused(false)
+  }
+
+  function handleCancel() {
+    bulkCancelledRef.current = true
+    bulkPausedRef.current = false
+    setBulkRunning(false)
+    setBulkPaused(false)
+    setBulkProgress(null)
   }
 
   if (loading) return <p>Loading settings...</p>
@@ -214,6 +281,83 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
       {tab === 'companies' && <CompaniesTab supabase={supabase} />}
       {tab === 'keywords' && <KeywordsTab supabase={supabase} />}
       {tab === 'programs' && <ProgramsTab supabase={supabase} />}
+
+      <section style={{ marginTop: 32, borderTop: '1px solid var(--border)', paddingTop: 24 }}>
+        <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 4, marginTop: 0 }}>Bulk archive to Wayback Machine</h3>
+        <p className="muted" style={{ fontSize: 13, marginBottom: 16 }}>
+          Submits all URLs in a topic to archive.org one at a time, with a 5-second gap to stay within rate limits.
+        </p>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 360 }}>
+          <select
+            className="explore-filter-select"
+            value={bulkTopic}
+            onChange={(e) => setBulkTopic(e.target.value)}
+            disabled={bulkRunning}
+          >
+            <option value="">Select a topic…</option>
+            {topics.map((t) => (
+              <option key={t.id} value={t.id}>{t.name}</option>
+            ))}
+          </select>
+
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer' }}>
+            <input
+              type="checkbox"
+              checked={skipSubmitted}
+              onChange={(e) => setSkipSubmitted(e.target.checked)}
+              disabled={bulkRunning}
+            />
+            Skip already submitted entries
+          </label>
+
+          {!bulkRunning && (
+            <button
+              className="btn-small"
+              onClick={handleBulkArchive}
+              disabled={!bulkTopic}
+              style={{ alignSelf: 'flex-start' }}
+            >
+              Start archiving
+            </button>
+          )}
+
+          {bulkRunning && bulkProgress && (
+            <>
+              <div style={{ fontSize: 13 }}>
+                {bulkProgress.done} / {bulkProgress.total} submitted
+              </div>
+              <div style={{ background: 'var(--surface-2)', borderRadius: 4, height: 6, overflow: 'hidden' }}>
+                <div
+                  style={{
+                    background: 'var(--accent)',
+                    height: '100%',
+                    width: `${bulkProgress.total > 0 ? (bulkProgress.done / bulkProgress.total) * 100 : 0}%`,
+                    transition: 'width 0.3s ease',
+                  }}
+                />
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {bulkPaused ? (
+                  <button className="btn-small" onClick={handleResume}>Resume</button>
+                ) : (
+                  <button className="btn-small btn-ghost" onClick={handlePause}>Pause</button>
+                )}
+                <button className="btn-small btn-ghost" onClick={handleCancel}>Cancel</button>
+              </div>
+            </>
+          )}
+
+          {!bulkRunning && bulkProgress && bulkProgress.done === bulkProgress.total && (
+            <p style={{ fontSize: 13, color: 'var(--accent)', margin: 0 }}>
+              Done — {bulkProgress.total} URLs submitted.
+              {bulkProgress.errors.length > 0 && (
+                <> {bulkProgress.errors.length} failed: {bulkProgress.errors.join(', ')}</>
+              )}
+            </p>
+          )}
+        </div>
+      </section>
 
       <style dangerouslySetInnerHTML={{ __html: `
         .settings-view { max-width: 700px; margin: 0 auto; padding: 2rem; }
