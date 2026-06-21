@@ -54,7 +54,7 @@ export async function uploadAttachment(supabase, file) {
 
   const { data: origData, error: signErr } = await supabase.storage
     .from(BUCKET)
-    .createSignedUrl(path, 60 * 60 * 24 * 7) // 7-day expiry
+    .createSignedUrl(path, 60 * 60 * 24 * 365 * 10) // 10-year expiry for Markdown embedding
   if (signErr) throw signErr
   const url = origData.signedUrl
 
