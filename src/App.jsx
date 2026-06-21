@@ -2,7 +2,7 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { Search, Upload, Inbox, RotateCcw, BarChart2, Settings2, Trash2 as TrashIcon, Download, Menu, Home, FolderOpen, Rss, Briefcase } from 'lucide-react'
 import { supabase } from './lib/supabaseClient.js'
-import { listTopics, createTopic, getTopicByName } from './lib/db/topics.js'
+import { listTopics, createTopic, getTopicByName, listDeletedTopics, archiveTopic, unarchiveTopic, softDeleteTopic, restoreDeletedTopic } from './lib/db/topics.js'
 import {
   listEntriesByTopic, createEntry, updateEntry, searchEntries,
   bulkCreateEntries, listForRevisit, markSurfaced, listRecentActivity,
@@ -46,7 +46,8 @@ import { useArchiveToast } from './hooks/useArchiveToast.js'
 const FilePreviewModal = lazy(() => import('./components/FilePreviewModal.jsx'))
 
 function Workspace() {
-  const { topics, setTopics, selectedId, setSelectedId, inboxCount, setInboxCount, selectedTopic, inboxTopic, applyAddTopic } = useTopics()
+  const { topics, setTopics, activeTopics, archivedTopics, selectedId, setSelectedId, inboxCount, setInboxCount, selectedTopic, inboxTopic, applyAddTopic, applyArchiveTopic, applyUnarchiveTopic, applyDeleteTopic, applyRestoreDeletedTopic } = useTopics()
+  const [deletedTopics, setDeletedTopics] = useState([])
   const { entries, setEntries, globalSearchResults, setGlobalSearchResults, applyUpdateEntry, applyDeleteEntry, applyMoveEntry } = useEntries()
   const { pendingArchiveIds, addPending, removePending } = usePendingArchive(selectedId)
   const { inboxEntries, setInboxEntries, applyAssign, applySortDelete } = useInbox()
@@ -439,7 +440,36 @@ function Workspace() {
   }
 
   async function loadTrash() {
-    setTrashEntries(await listTrashedEntries(supabase))
+    const [entries, topics] = await Promise.all([listTrashedEntries(supabase), listDeletedTopics(supabase)])
+    setTrashEntries(entries)
+    setDeletedTopics(topics)
+  }
+
+  async function handleArchiveTopic(id) {
+    const updated = await archiveTopic(supabase, id)
+    applyArchiveTopic(id, updated)
+    if (selectedId === id) { setSelectedId(inboxTopic?.id ?? null); setView('browse') }
+  }
+
+  async function handleUnarchiveTopic(id) {
+    const updated = await unarchiveTopic(supabase, id)
+    applyUnarchiveTopic(id, updated)
+  }
+
+  async function handleDeleteTopic(id) {
+    await softDeleteTopic(supabase, id)
+    applyDeleteTopic(id)
+    if (selectedId === id) { setSelectedId(inboxTopic?.id ?? null); setView('browse') }
+    addToast('Topic moved to trash', 'info')
+  }
+
+  async function handleRestoreTopic(id) {
+    await restoreDeletedTopic(supabase, id)
+    const allTopics = await listTopics(supabase)
+    const restored = allTopics.find(t => t.id === id)
+    if (restored) applyRestoreDeletedTopic(restored)
+    setDeletedTopics(prev => prev.filter(t => t.id !== id))
+    addToast('Topic restored to Inbox', 'success')
   }
 
   async function handleRestore(entryId) {
@@ -577,10 +607,15 @@ function Workspace() {
         </ul>
         <TopicList
           topics={topics}
+          activeTopics={activeTopics}
+          archivedTopics={archivedTopics}
           selectedId={selectedId}
           onSelect={(id) => { setSelectedId(id); setGlobalSearchResults(null); setView('browse') }}
           onAdd={handleAddTopic}
           sidebarCollapsed={!sidebarOpen}
+          onArchive={handleArchiveTopic}
+          onUnarchive={handleUnarchiveTopic}
+          onDeleteTopic={handleDeleteTopic}
         />
         <button className="sidebar-toggle" onClick={toggleSidebar} title={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}>
           <span className="sidebar-toggle-icon" style={{ transform: sidebarOpen ? 'rotate(0deg)' : 'rotate(180deg)' }}>‹</span>
@@ -682,7 +717,9 @@ function Workspace() {
           {view === 'trash' && (
             <TrashView
               entries={trashEntries}
+              deletedTopics={deletedTopics}
               onRestore={handleRestore}
+              onRestoreTopic={handleRestoreTopic}
               onEmptyTrash={handleEmptyTrash}
             />
           )}
