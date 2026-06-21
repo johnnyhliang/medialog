@@ -6,9 +6,12 @@ import { listTopics, createTopic, getTopicByName, listDeletedTopics, archiveTopi
 import {
   listEntriesByTopic, createEntry, updateEntry, searchEntries,
   bulkCreateEntries, listForRevisit, markSurfaced, listRecentActivity,
-  softDeleteEntry, listTrashedEntries, restoreEntry, emptyTrash,
+  softDeleteEntry, listTrashedEntries, restoreEntry, emptyTrash, snoozeEntry,
 } from './lib/db/entries.js'
 import { setEntryTags, listTags, updateTagColor } from './lib/db/tags.js'
+import { getCommands } from './lib/commands.js'
+import { resolveBindings, eventToKey } from './lib/keybindings.js'
+import CommandPalette from './components/CommandPalette.jsx'
 import { listVersions, createVersion } from './lib/db/versions.js'
 import { fetchTitle } from './lib/enrich.js'
 import { embedEntryAsync } from './lib/embedEntry.js'
@@ -69,6 +72,56 @@ function Workspace() {
 
   const [view, setView] = useState('home')
   const [trackPrefill, setTrackPrefill] = useState(null)
+  const [paletteOpen, setPaletteOpen] = useState(false)
+  const [focusedEntryId, setFocusedEntryId] = useState(null)
+  const [orderedEntryIds, setOrderedEntryIds] = useState([])
+  const [snoozeTarget, setSnoozeTarget] = useState(null)
+  const [editTargetId, setEditTargetId] = useState(null)
+
+  const focusedEntry = focusedEntryId
+    ? (entries.find((e) => e.id === focusedEntryId) ?? null)
+    : null
+
+  const pendingKeyRef = useRef(null)
+  const pendingKeyTimerRef = useRef(null)
+
+  function focusNextEntry() {
+    if (!orderedEntryIds.length) return
+    const idx = orderedEntryIds.indexOf(focusedEntryId)
+    const next = orderedEntryIds[idx + 1] ?? orderedEntryIds[0]
+    setFocusedEntryId(next)
+  }
+
+  function focusPrevEntry() {
+    if (!orderedEntryIds.length) return
+    const idx = orderedEntryIds.indexOf(focusedEntryId)
+    const prev = orderedEntryIds[idx - 1] ?? orderedEntryIds[orderedEntryIds.length - 1]
+    setFocusedEntryId(prev)
+  }
+
+  function editFocusedEntry() {
+    setEditTargetId(focusedEntryId)
+  }
+
+  async function cycleFocusedStatus() {
+    if (!focusedEntry) return
+    const cycle = { backlog: 'active', active: 'done', done: 'backlog' }
+    const next = cycle[focusedEntry.status] ?? 'backlog'
+    const updated = await updateEntry(supabase, focusedEntry.id, { status: next })
+    applyUpdateEntry(focusedEntry.id, updated)
+  }
+
+  function navigateTo(v) {
+    setView(v)
+    setFocusedEntryId(null)
+    setOrderedEntryIds([])
+  }
+
+  async function handleSnoozeFromPalette(entry, dateStr) {
+    await snoozeEntry(supabase, entry.id, dateStr)
+    applyUpdateEntry(entry.id, { ...entry, surface_after: dateStr })
+    setSnoozeTarget(null)
+  }
 
   function handleTrack(opportunity) {
     setTrackPrefill(opportunity)
@@ -168,6 +221,73 @@ function Workspace() {
       setEntries([])
     }
   }, [selectedId])
+
+  useEffect(() => {
+    if (navigator.maxTouchPoints > 0) return
+
+    const ctx = {
+      setView,
+      setSelectedId,
+      inboxTopic,
+      topics,
+      focusedEntry,
+      openPalette: () => setPaletteOpen(true),
+      closePalette: () => setPaletteOpen(false),
+      focusNextEntry,
+      focusPrevEntry,
+      editFocusedEntry,
+      cycleFocusedStatus,
+      openSnooze: (entry) => entry && setSnoozeTarget(entry),
+    }
+
+    const commands = getCommands(ctx)
+    const bindings = resolveBindings(commands)
+
+    function handleKeyDown(e) {
+      const tag = document.activeElement?.tagName?.toLowerCase()
+      const isEditing = tag === 'input' || tag === 'textarea' ||
+        document.activeElement?.closest('[data-codemirror]') ||
+        document.activeElement?.closest('.cm-editor')
+
+      const key = eventToKey(e)
+
+      if (key === 'ctrl+k') {
+        if (bindings.has('ctrl+k')) {
+          e.preventDefault()
+          bindings.get('ctrl+k').handler()
+          return
+        }
+      }
+
+      if (isEditing) return
+
+      if (pendingKeyRef.current) {
+        const chord = `${pendingKeyRef.current} ${key}`
+        clearTimeout(pendingKeyTimerRef.current)
+        pendingKeyRef.current = null
+        if (bindings.has(chord)) {
+          e.preventDefault()
+          bindings.get(chord).handler()
+        }
+        return
+      }
+
+      const startsChord = [...bindings.keys()].some((k) => k.startsWith(key + ' '))
+      if (startsChord) {
+        pendingKeyRef.current = key
+        pendingKeyTimerRef.current = setTimeout(() => { pendingKeyRef.current = null }, 500)
+        return
+      }
+
+      if (bindings.has(key)) {
+        e.preventDefault()
+        bindings.get(key).handler()
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [view, focusedEntry, focusedEntryId, orderedEntryIds, topics, inboxTopic, paletteOpen])
 
   async function refreshTags() {
     const tags = await listTags(supabase)
@@ -598,72 +718,72 @@ function Workspace() {
         </div>
         <ul className="nav">
           <li>
-            <button className={view === 'home' ? 'active' : ''} onClick={() => setView('home')} title="Home">
+            <button className={view === 'home' ? 'active' : ''} onClick={() => navigateTo('home')} title="Home">
               <Home size={16} /><span>Home</span>
             </button>
           </li>
           <li>
-            <button className={view === 'explore' ? 'active' : ''} onClick={() => setView('explore')} title="Explore">
+            <button className={view === 'explore' ? 'active' : ''} onClick={() => navigateTo('explore')} title="Explore">
               <Search size={16} /><span>Explore</span>
             </button>
           </li>
           <li>
-            <button className={view === 'bulk' ? 'active' : ''} onClick={() => setView('bulk')} title="Bulk Import">
+            <button className={view === 'bulk' ? 'active' : ''} onClick={() => navigateTo('bulk')} title="Bulk Import">
               <Upload size={16} /><span>Bulk Import</span>
             </button>
           </li>
           <li>
-            <button className={view === 'migration' ? 'active' : ''} onClick={() => setView('migration')} title="Import">
+            <button className={view === 'migration' ? 'active' : ''} onClick={() => navigateTo('migration')} title="Import">
               <PackageOpen size={16} /><span>Import</span>
             </button>
           </li>
           <li>
-            <button className={view === 'archive' ? 'active' : ''} onClick={() => setView('archive')} title="Archive">
+            <button className={view === 'archive' ? 'active' : ''} onClick={() => navigateTo('archive')} title="Archive">
               <Archive size={16} /><span>Archive</span>
             </button>
           </li>
           <li>
-            <button className={view === 'sort' ? 'active' : ''} onClick={() => { setView('sort'); loadInbox() }} title="Sort Inbox">
+            <button className={view === 'sort' ? 'active' : ''} onClick={() => { navigateTo('sort'); loadInbox() }} title="Sort Inbox">
               <Inbox size={16} /><span>Sort Inbox</span>
             </button>
           </li>
           <li>
-            <button className={view === 'revisit' ? 'active' : ''} onClick={() => { setView('revisit'); loadRevisit() }} title="Revisit">
+            <button className={view === 'revisit' ? 'active' : ''} onClick={() => { navigateTo('revisit'); loadRevisit() }} title="Revisit">
               <RotateCcw size={16} /><span>Revisit</span>
             </button>
           </li>
           <li>
-            <button className={view === 'progress' ? 'active' : ''} onClick={() => setView('progress')} title="Progress">
+            <button className={view === 'progress' ? 'active' : ''} onClick={() => navigateTo('progress')} title="Progress">
               <BarChart2 size={16} /><span>Progress</span>
             </button>
           </li>
           <li>
-            <button className={view === 'settings' ? 'active' : ''} onClick={() => setView('settings')} title="Settings">
+            <button className={view === 'settings' ? 'active' : ''} onClick={() => navigateTo('settings')} title="Settings">
               <Settings2 size={16} /><span>Settings</span>
             </button>
           </li>
           <li>
-            <button className={view === 'trash' ? 'active' : ''} onClick={() => { setView('trash'); loadTrash() }} title="Trash">
+            <button className={view === 'trash' ? 'active' : ''} onClick={() => { navigateTo('trash'); loadTrash() }} title="Trash">
               <TrashIcon size={16} /><span>Trash</span>
             </button>
           </li>
           <li>
-            <button className={view === 'files' ? 'active' : ''} onClick={() => setView('files')} title="Files">
+            <button className={view === 'files' ? 'active' : ''} onClick={() => navigateTo('files')} title="Files">
               <FolderOpen size={16} /><span>Files</span>
             </button>
           </li>
           <li>
-            <button className={view === 'feed' ? 'active' : ''} onClick={() => setView('feed')} title="Feed">
+            <button className={view === 'feed' ? 'active' : ''} onClick={() => navigateTo('feed')} title="Feed">
               <Rss size={16} /><span>Feed</span>
             </button>
           </li>
           <li>
-            <button className={view === 'applications' ? 'active' : ''} onClick={() => setView('applications')} title="Applications">
+            <button className={view === 'applications' ? 'active' : ''} onClick={() => navigateTo('applications')} title="Applications">
               <Briefcase size={16} /><span>Applications</span>
             </button>
           </li>
           <li>
-            <button className={view === 'digest' ? 'active' : ''} onClick={() => setView('digest')} title="Digest" style={{ position: 'relative' }}>
+            <button className={view === 'digest' ? 'active' : ''} onClick={() => navigateTo('digest')} title="Digest" style={{ position: 'relative' }}>
               <ScrollText size={16} /><span>Digest</span>
               {(() => {
                 try {
@@ -686,7 +806,7 @@ function Workspace() {
           topics={topics}
           activeTopics={activeTopics}
           archivedTopics={archivedTopics}
-          selectedId={selectedId}
+          selectedId={view === 'browse' ? selectedId : null}
           onSelect={(id) => { setSelectedId(id); setGlobalSearchResults(null); setView('browse') }}
           onAdd={handleAddTopic}
           sidebarCollapsed={!sidebarOpen}
@@ -723,6 +843,7 @@ function Workspace() {
                 setSelectedId(entry.topic_id)
                 setView('browse')
               }}
+              onOrderedIds={setOrderedEntryIds}
             />
           )}
           {view === 'browse' && selectedTopic && (
@@ -757,6 +878,10 @@ function Workspace() {
               onArchiveTopic={handleArchiveTopic}
               onUnarchiveTopic={handleUnarchiveTopic}
               onDeleteTopic={handleDeleteTopic}
+              focusedEntryId={focusedEntryId}
+              editTargetId={editTargetId}
+              onClearEditTarget={() => setEditTargetId(null)}
+              onOrderedIds={setOrderedEntryIds}
             />
           )}
           {view === 'bulk' && (
@@ -869,6 +994,43 @@ function Workspace() {
           onRestore={handleRestoreVersion}
           onClose={closeHistory}
         />
+      )}
+      <CommandPalette
+        open={paletteOpen}
+        onClose={() => setPaletteOpen(false)}
+        commands={getCommands({
+          setView,
+          setSelectedId,
+          inboxTopic,
+          topics,
+          focusedEntry,
+          openPalette: () => setPaletteOpen(true),
+          closePalette: () => setPaletteOpen(false),
+          focusNextEntry,
+          focusPrevEntry,
+          editFocusedEntry,
+          cycleFocusedStatus,
+          openSnooze: (entry) => entry && setSnoozeTarget(entry),
+        })}
+        topics={topics}
+      />
+      {snoozeTarget && (
+        <div className="palette-overlay" onClick={() => setSnoozeTarget(null)}>
+          <div className="palette-box" style={{ padding: 20 }} onClick={(e) => e.stopPropagation()}>
+            <p style={{ margin: '0 0 12px', fontSize: 14 }}>
+              Snooze <strong>{snoozeTarget.title || 'entry'}</strong> until:
+            </p>
+            <input
+              type="date"
+              min={new Date().toISOString().split('T')[0]}
+              autoFocus
+              style={{ fontSize: 14, padding: '4px 8px' }}
+              onChange={(e) => {
+                if (e.target.value) handleSnoozeFromPalette(snoozeTarget, e.target.value + 'T00:00:00Z')
+              }}
+            />
+          </div>
+        </div>
       )}
     </div>
   )
