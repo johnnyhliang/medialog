@@ -1,11 +1,15 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient.js'
+import CompaniesTab from './settings/CompaniesTab.jsx'
+import KeywordsTab from './settings/KeywordsTab.jsx'
+import ProgramsTab from './settings/ProgramsTab.jsx'
 
 export default function SettingsView({ topics, onRefreshData, addToast, allTags = [], onUpdateTagColor, archiveToast, onToggleArchiveToast, trashToast, onToggleTrashToast }) {
   const [config, setConfig] = useState(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [pendingColors, setPendingColors] = useState({})
+  const [tab, setTab] = useState('github')
 
   useEffect(() => {
     loadConfig()
@@ -94,136 +98,131 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
 
   if (loading) return <p>Loading settings...</p>
 
+  const TABS = [
+    { id: 'github',    label: 'GitHub' },
+    { id: 'behavior',  label: 'Behavior' },
+    { id: 'tags',      label: 'Tag Colors' },
+    { id: 'companies', label: 'Companies' },
+    { id: 'keywords',  label: 'Keywords' },
+    { id: 'programs',  label: 'Programs' },
+  ]
+
   return (
     <div className="settings-view">
-      <section>
-        <h2>GitHub Backup</h2>
-        {!config?.github_user ? (
-          <div className="card">
-            <p className="muted">Connect your GitHub account to enable automatic backups in Markdown format.</p>
-            <button onClick={handleConnect}>Connect GitHub</button>
-          </div>
-        ) : (
-          <div className="card">
-            <p>Connected as <strong>{config.github_user}</strong></p>
-            
-            <div className="form-group">
-              <label>Repository Name</label>
-              <input 
-                type="text" 
-                value={config.repo_name} 
-                onChange={e => setConfig({...config, repo_name: e.target.value})}
-              />
-            </div>
+      <div className="settings-tabs">
+        {TABS.map((t) => (
+          <button
+            key={t.id}
+            className={`settings-tab ${tab === t.id ? 'active' : ''}`}
+            onClick={() => setTab(t.id)}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
 
-            <div className="form-group inline">
-              <label>
-                <input 
-                  type="checkbox" 
-                  checked={config.is_private} 
-                  onChange={e => setConfig({...config, is_private: e.target.checked})}
-                />
-                Private Repository
-              </label>
+      {tab === 'github' && (
+        <section>
+          <h2>GitHub Backup</h2>
+          {!config?.github_user ? (
+            <div className="card">
+              <p className="muted">Connect your GitHub account to enable automatic backups in Markdown format.</p>
+              <button onClick={handleConnect}>Connect GitHub</button>
             </div>
-
-            <div className="form-group inline">
-              <label>
-                <input 
-                  type="checkbox" 
-                  checked={config.auto_backup} 
-                  onChange={e => setConfig({...config, auto_backup: e.target.checked})}
-                />
-                Automatic Backups
-              </label>
-            </div>
-
-            <div className="actions">
-              <button className="primary" onClick={handleSave} disabled={saving}>
-                {saving ? 'Saving...' : 'Save Settings'}
-              </button>
-              <button onClick={handleBackup}>Backup Now</button>
-              <button className="danger" onClick={handleRestore}>Restore from GitHub</button>
-            </div>
-
-            {config.last_backup_at && (
-              <p className="muted" style={{ marginTop: '1rem' }}>
-                Last backup: {new Date(config.last_backup_at).toLocaleString()}
+          ) : (
+            <div className="card">
+              <p>Connected as <strong>{config.github_user}</strong></p>
+              <div className="form-group">
+                <label>Repository Name</label>
+                <input type="text" value={config.repo_name} onChange={e => setConfig({...config, repo_name: e.target.value})} />
+              </div>
+              <div className="form-group inline">
+                <label>
+                  <input type="checkbox" checked={config.is_private} onChange={e => setConfig({...config, is_private: e.target.checked})} />
+                  Private Repository
+                </label>
+              </div>
+              <div className="form-group inline">
+                <label>
+                  <input type="checkbox" checked={config.auto_backup} onChange={e => setConfig({...config, auto_backup: e.target.checked})} />
+                  Automatic Backups
+                </label>
+              </div>
+              <div className="actions">
+                <button className="primary" onClick={handleSave} disabled={saving}>{saving ? 'Saving...' : 'Save Settings'}</button>
+                <button onClick={handleBackup}>Backup Now</button>
+                <button className="danger" onClick={handleRestore}>Restore from GitHub</button>
+              </div>
+              {config.last_backup_at && (
+                <p className="muted" style={{ marginTop: '1rem' }}>
+                  Last backup: {new Date(config.last_backup_at).toLocaleString()}
+                </p>
+              )}
+              <p className="backup-note">
+                <strong>Note:</strong> The GitHub backup contains your entry text and metadata only.
+                File attachments are stored in Supabase storage and are <em>not</em> committed to git.
               </p>
-            )}
-
-            <p className="backup-note">
-              <strong>Note:</strong> The GitHub backup contains your entry text and metadata only.
-              File attachments (images, PDFs) are stored in Supabase storage and are <em>not</em> committed
-              to git. To preserve attachments, keep your Supabase project active.
-            </p>
-          </div>
-        )}
-      </section>
-
-      <section>
-        <h3 className="section-label">Behavior</h3>
-        <label style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13 }}>
-          <input
-            type="checkbox"
-            checked={archiveToast ?? true}
-            onChange={(e) => onToggleArchiveToast(e.target.checked)}
-          />
-          Show undo notification when archiving done entries (3 seconds)
-        </label>
-        <label style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, marginTop: 10 }}>
-          <input
-            type="checkbox"
-            checked={trashToast ?? true}
-            onChange={(e) => onToggleTrashToast(e.target.checked)}
-          />
-          Show undo notification when moving entries to trash (5 seconds)
-        </label>
-      </section>
-
-      <section>
-        <h3 className="section-label">Tag Colors</h3>
-        {allTags.length === 0 && <p className="muted" style={{ fontSize: 13 }}>No tags yet. Add tags to entries to see them here.</p>}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {allTags.map(tag => (
-            <div key={tag.id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span style={{
-                flex: 1,
-                fontSize: 13,
-                padding: '2px 8px',
-                borderRadius: 5,
-                background: tag.color || 'var(--surface-3)',
-              }}>#{tag.name}</span>
-              <input
-                type="color"
-                value={pendingColors[tag.name] ?? tag.color ?? '#e8e3d8'}
-                onChange={(e) => setPendingColors(prev => ({ ...prev, [tag.name]: e.target.value }))}
-                onBlur={(e) => {
-                  const c = e.target.value
-                  if (c !== (tag.color || '#e8e3d8')) onUpdateTagColor(tag.name, c)
-                }}
-                style={{ width: 32, height: 28, border: 'none', cursor: 'pointer', borderRadius: 4 }}
-                title={`Color for #${tag.name}`}
-              />
-              <button
-                style={{ fontSize: 11, padding: '3px 8px' }}
-                onClick={() => onUpdateTagColor(tag.name, null)}
-                title="Remove color"
-              >✕</button>
             </div>
-          ))}
-        </div>
-      </section>
+          )}
+        </section>
+      )}
+
+      {tab === 'behavior' && (
+        <section>
+          <h3 className="section-label">Behavior</h3>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13 }}>
+            <input
+              type="checkbox"
+              checked={archiveToast ?? true}
+              onChange={(e) => onToggleArchiveToast(e.target.checked)}
+            />
+            Show undo notification when archiving done entries (3 seconds)
+          </label>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, marginTop: 10 }}>
+            <input
+              type="checkbox"
+              checked={trashToast ?? true}
+              onChange={(e) => onToggleTrashToast(e.target.checked)}
+            />
+            Show undo notification when moving entries to trash (5 seconds)
+          </label>
+        </section>
+      )}
+
+      {tab === 'tags' && (
+        <section>
+          <h3 className="section-label">Tag Colors</h3>
+          {allTags.length === 0 && <p className="muted" style={{ fontSize: 13 }}>No tags yet.</p>}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {allTags.map(tag => (
+              <div key={tag.id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ flex: 1, fontSize: 13, padding: '2px 8px', borderRadius: 5, background: tag.color || 'var(--surface-3)' }}>#{tag.name}</span>
+                <input
+                  type="color"
+                  value={pendingColors[tag.name] ?? tag.color ?? '#e8e3d8'}
+                  onChange={(e) => setPendingColors(prev => ({ ...prev, [tag.name]: e.target.value }))}
+                  onBlur={(e) => { const c = e.target.value; if (c !== (tag.color || '#e8e3d8')) onUpdateTagColor(tag.name, c) }}
+                  style={{ width: 32, height: 28, border: 'none', cursor: 'pointer', borderRadius: 4 }}
+                />
+                <button style={{ fontSize: 11, padding: '3px 8px' }} onClick={() => onUpdateTagColor(tag.name, null)}>✕</button>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {tab === 'companies' && <CompaniesTab supabase={supabase} />}
+      {tab === 'keywords' && <KeywordsTab supabase={supabase} />}
+      {tab === 'programs' && <ProgramsTab supabase={supabase} />}
 
       <style dangerouslySetInnerHTML={{ __html: `
-        .settings-view { max-width: 600px; margin: 0 auto; padding: 2rem; }
+        .settings-view { max-width: 700px; margin: 0 auto; padding: 2rem; }
         .card { background: var(--bg-card); padding: 1.5rem; border-radius: 8px; border: 1px solid var(--border); }
         .form-group { margin-bottom: 1.5rem; }
         .form-group label { display: block; margin-bottom: 0.5rem; font-weight: 600; }
         .form-group.inline label { display: flex; align-items: center; gap: 0.5rem; font-weight: 400; cursor: pointer; }
         .form-group input[type="text"] { width: 100%; }
         .actions { display: flex; gap: 1rem; margin-top: 2rem; }
-        .status-msg { margin-top: 1rem; padding: 1rem; border-radius: 4px; background: var(--bg-highlight); border: 1px solid var(--border); }
         .section-label { font-size: 1rem; font-weight: 600; margin-bottom: 1rem; }
       `}} />
     </div>

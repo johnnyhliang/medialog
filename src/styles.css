@@ -2846,6 +2846,166 @@ a.activity-title:hover { color: var(--accent); }
 }
 .apps-confirm button { font-size: var(--text-xs); padding: 3px 8px; }
 
+/* ── Settings tabs ───────────────────────────────────────────────────────────── */
+.settings-tabs {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 24px;
+  padding-bottom: 8px;
+}
+.settings-tab {
+  font-size: var(--text-sm);
+  padding: 6px 14px;
+  border-radius: 7px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+.settings-tab:hover { background: var(--surface-2); color: var(--text); }
+.settings-tab.active { background: var(--accent-weak); color: var(--accent); border-color: var(--accent); font-weight: 600; }
+
+/* ── Settings companies table ────────────────────────────────────────────────── */
+.settings-companies-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+  margin-bottom: 16px;
+}
+.settings-companies-table th {
+  text-align: left;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--muted);
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+}
+.settings-companies-table td {
+  padding: 8px 8px;
+  border-bottom: 1px solid var(--surface-2);
+  vertical-align: middle;
+}
+.settings-companies-table tr:last-child td { border-bottom: none; }
+.settings-company-slug { font-family: monospace; font-size: 12px; color: var(--muted); }
+.settings-company-ats {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--surface-2);
+  color: var(--muted);
+}
+.settings-company-tags { font-size: 11px; color: var(--muted); }
+.settings-enabled-toggle { cursor: pointer; width: 16px; height: 16px; }
+.settings-delete-btn {
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 13px;
+  padding: 2px 4px;
+}
+.settings-delete-btn:hover { color: var(--danger); }
+
+.settings-add-form {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  margin-top: 8px;
+}
+.settings-add-form > div { display: flex; flex-direction: column; gap: 4px; }
+.settings-add-form label { font-size: var(--text-xs); color: var(--muted); font-weight: 500; }
+.settings-add-form input,
+.settings-add-form select { font-size: var(--text-sm); min-width: 120px; }
+.settings-add-form button[type="submit"] {
+  padding: 7px 14px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 7px;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  align-self: flex-end;
+}
+
+/* ── Settings keywords ───────────────────────────────────────────────────────── */
+.settings-keywords-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.settings-keyword-chip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 3px 10px;
+  font-size: var(--text-sm);
+}
+.settings-keyword-remove {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 13px;
+  padding: 0 2px;
+  line-height: 1;
+}
+.settings-keyword-remove:hover { color: var(--danger); }
+.settings-keyword-add { display: flex; gap: 6px; }
+.settings-keyword-add input { flex: 1; font-size: var(--text-sm); }
+.settings-keyword-add button {
+  padding: 6px 12px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 7px;
+  font-size: var(--text-sm);
+}
+
+/* ── Settings programs table ─────────────────────────────────────────────────── */
+.settings-programs-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+.settings-programs-table th {
+  text-align: left;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--muted);
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+}
+.settings-programs-table td { padding: 8px 8px; border-bottom: 1px solid var(--surface-2); vertical-align: middle; }
+.settings-programs-table tr:last-child td { border-bottom: none; }
+.settings-program-name { font-weight: 500; }
+.settings-program-deadline input { font-size: var(--text-sm); border: 1px solid var(--border); border-radius: 5px; padding: 3px 6px; }
+.settings-open-badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 10px;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+.settings-open-badge.open { background: #DCFCE7; color: #15803D; }
+.settings-open-badge.closed { background: var(--surface-2); color: var(--muted); border-color: var(--border); }
+
 /* ── Feed Widget ─────────────────────────────────────────────────────────────── */
 .fw-widget { display: flex; flex-direction: column; }
 .fw-header {
