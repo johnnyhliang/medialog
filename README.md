@@ -50,6 +50,7 @@ Open the deployed URL in Safari -> Share -> Add to Home Screen.
 - [ ] **`dangerouslySetInnerHTML` in SettingsView** — the inline `<style>` block is static string so not exploitable now, but move it to CSS to avoid the pattern
 
 ### Features
-- [ ] **Archive browsing view** — dedicated view of `status=done` entries grouped by topic; add nav button
-- [ ] **Worktree cleanup** — `git worktree remove` the 3 merged worktrees under `.claude/worktrees/`
-- [ ] **Instagram Reels ingestion** — future: DM → alt account → cron edge function → Claude summary → entry (needs `INSTAGRAM_SESSION_ID` + `ANTHROPIC_API_KEY`)
+- [ ] **Archive browsing view** — dedicated view of `status=done` entries grouped by topic; add nav button. Plan: `docs/superpowers/plans/2026-06-21-archive-browsing-view.md`
+- [ ] **`capture` SSRF fix** — add `isSafeUrl` validation to the capture edge function before inserting `url` into DB. Low priority (secret-gated) but clean it up before wider use
+- [ ] **Instagram Reels ingestion** — DM reel link to configured alt account → cron edge fn polls DM inbox → fetches caption via private API → Claude Haiku summary → creates entry in "Reels" topic. Needs: `INSTAGRAM_SESSION_ID`, `ANTHROPIC_API_KEY`. Video transcription (Whisper) is v2. Plan: `docs/superpowers/plans/2026-06-21-instagram-reels.md`
+- [ ] **From roadmap (other agent)** — migration assistant, conversation capture, weekly digest, semantic search, MCP v2. See `docs/superpowers/specs/` for specs
