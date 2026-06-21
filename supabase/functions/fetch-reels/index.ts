@@ -16,7 +16,7 @@ Deno.serve(async (req) => {
   }
 
   const sessionId = Deno.env.get('INSTAGRAM_SESSION_ID')
-  const anthropicKey = Deno.env.get('ANTHROPIC_API_KEY')
+  const geminiKey = Deno.env.get('GEMINI_API_KEY')
   if (!sessionId) return json({ error: 'INSTAGRAM_SESSION_ID not set' }, 500)
 
   const ownerId = Deno.env.get('CAPTURE_USER_ID')
@@ -50,7 +50,7 @@ Deno.serve(async (req) => {
 
     let note = ''
     try {
-      note = anthropicKey ? await summarizeReel(reel.caption, anthropicKey) : reel.caption.slice(0, 300)
+      note = geminiKey ? await summarizeReel(reel.caption, geminiKey) : reel.caption.slice(0, 300)
     } catch {
       note = reel.caption.slice(0, 300)
     }
