@@ -38,13 +38,18 @@ export async function fetchInboxReels(sessionId: string): Promise<ReelItem[]> {
         const lc = link.link_context as Record<string, unknown>
         const url = lc.link_url as string | undefined
         if (url?.includes('/reel/') || url?.includes('/p/')) {
-          items.push({ reelUrl: url, caption: (lc.link_title as string) ?? '', mediaType: 'reel' })
+          const mediaType = url.includes('/reel/') ? 'reel' : 'video'
+          items.push({ reelUrl: url, caption: (lc.link_title as string) ?? '', mediaType })
         }
       } else if (clip) {
-        const media = (clip as Record<string, unknown>).clip as Record<string, unknown>
+        const media = clip as Record<string, unknown>
         const code = media?.code as string | undefined
         const caption = ((media?.caption as Record<string, unknown>)?.text as string) ?? ''
-        if (code) items.push({ reelUrl: `https://www.instagram.com/reel/${code}/`, caption, mediaType: 'reel' })
+        if (code) {
+          const reelUrl = `https://www.instagram.com/reel/${code}/`
+          const mediaType = reelUrl.includes('/reel/') ? 'reel' : 'video'
+          items.push({ reelUrl, caption, mediaType })
+        }
       }
     }
   }
