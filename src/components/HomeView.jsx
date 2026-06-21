@@ -3,7 +3,7 @@ import InboxCard from './InboxCard.jsx'
 import TopicsGrid from './TopicsGrid.jsx'
 import WidgetPanel from './WidgetPanel.jsx'
 
-export default function HomeView({ topics, inboxCount, onSelectTopic, onSortInbox, onTopicIconChange, supabase, onTrack }) {
+export default function HomeView({ topics, inboxCount, onSelectTopic, onSortInbox, onTopicIconChange, supabase, onTrack, onSaveFeedItem, onGoToFeed }) {
   const nonInbox = topics.filter((t) => t.name !== 'Inbox')
 
   return (
@@ -14,7 +14,7 @@ export default function HomeView({ topics, inboxCount, onSelectTopic, onSortInbo
         <TopicsGrid topics={nonInbox} onSelectTopic={onSelectTopic} onTopicIconChange={onTopicIconChange} supabase={supabase} />
       </div>
       <div className="home-right">
-        <WidgetPanel supabase={supabase} onTrack={onTrack} />
+        <WidgetPanel supabase={supabase} onTrack={onTrack} onSaveFeedItem={onSaveFeedItem} onGoToFeed={onGoToFeed} />
       </div>
     </div>
   )

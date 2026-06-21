@@ -599,6 +599,8 @@ function Workspace() {
               onTopicIconChange={handleTopicIconChange}
               supabase={supabase}
               onTrack={handleTrack}
+              onSaveFeedItem={(item) => handleSaveFromFeed(item, inboxTopic?.id ?? topics[0]?.id)}
+              onGoToFeed={() => setView('feed')}
             />
           )}
           {view === 'explore' && (
