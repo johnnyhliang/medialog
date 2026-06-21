@@ -1,14 +1,17 @@
 import { useState, useRef, useEffect } from 'react'
+import { fetchTitle } from '../lib/enrich.js'
 
 function formatDate(dateStr) {
   return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
-export default function QuickAdd({ onAdd, disabled, onCheckDuplicate }) {
+export default function QuickAdd({ onAdd, disabled, onCheckDuplicate, supabase }) {
   const [url, setUrl] = useState('')
   const [note, setNote] = useState('')
   const [dupWarning, setDupWarning] = useState(null)
   const [showNudge, setShowNudge] = useState(false)
+  const [fetchedTitle, setFetchedTitle] = useState(null)
+  const [fetchingTitle, setFetchingTitle] = useState(false)
   const textareaRef = useRef(null)
 
   useEffect(() => {
@@ -20,12 +23,17 @@ export default function QuickAdd({ onAdd, disabled, onCheckDuplicate }) {
 
   async function handleUrlBlur() {
     const u = url.trim()
-    if (!u || !onCheckDuplicate) { setDupWarning(null); return }
-    try {
-      const dup = await onCheckDuplicate(u)
-      setDupWarning(dup || null)
-    } catch {
-      setDupWarning(null)
+    if (!u) { setDupWarning(null); setFetchedTitle(null); return }
+    // Dup check
+    if (onCheckDuplicate) {
+      try { setDupWarning(await onCheckDuplicate(u) || null) } catch { setDupWarning(null) }
+    }
+    // Title prefetch
+    if (supabase && !fetchedTitle) {
+      setFetchingTitle(true)
+      const title = await fetchTitle(supabase, u)
+      setFetchedTitle(title || null)
+      setFetchingTitle(false)
     }
   }
 
@@ -37,9 +45,10 @@ export default function QuickAdd({ onAdd, disabled, onCheckDuplicate }) {
     if (u && !n) setShowNudge(true)
     else setShowNudge(false)
     setDupWarning(null)
-    await onAdd({ url: u || null, note: n })
+    await onAdd({ url: u || null, note: n, title: fetchedTitle || undefined })
     setUrl('')
     setNote('')
+    setFetchedTitle(null)
   }
 
   return (
@@ -48,9 +57,15 @@ export default function QuickAdd({ onAdd, disabled, onCheckDuplicate }) {
         placeholder="Paste a link (optional)"
         maxLength={2000}
         value={url}
-        onChange={(e) => { setUrl(e.target.value); setDupWarning(null) }}
+        onChange={(e) => { setUrl(e.target.value); setDupWarning(null); setFetchedTitle(null) }}
         onBlur={handleUrlBlur}
       />
+      {fetchingTitle && <p style={{ fontSize: 'var(--text-xs)', color: 'var(--muted)', margin: '2px 0 0' }}>fetching title…</p>}
+      {fetchedTitle && !fetchingTitle && (
+        <p style={{ fontSize: 'var(--text-xs)', color: 'var(--muted)', margin: '2px 0 0', display: 'flex', alignItems: 'center', gap: 4 }}>
+          <span style={{ color: 'var(--done)' }}>✓</span> {fetchedTitle}
+        </p>
+      )}
       {dupWarning && (
         <p className="quickadd-dup-warning">
           You saved this on {formatDate(dupWarning.created_at)} in <strong>{dupWarning.topic_name}</strong>.{' '}
