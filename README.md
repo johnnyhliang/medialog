@@ -56,6 +56,5 @@ Open the deployed URL in Safari -> Share -> Add to Home Screen.
 - [ ] **OneTab bulk import fix** — bulk importer currently expects bare URLs; OneTab exports `title - url` per line. Small parser fix in bulk importer, then the tab-dump migration path works today.
 
 ### Tech Debt
-- [ ] **Prune stale git worktrees** — `feat/ai-infra`, `worktree-feat+feed-widget`, `worktree-feat+opportunity-radar-backend` are orphaned. Run `git worktree prune` and delete the branches if not needed.
 - [ ] **MCP server is stale** — `mcp-server/` was built for an older schema. Does not know about RSS feeds, files, topic lifecycle, Wayback data, or the current DB shape. Don't wire it to Claude Desktop until v2 is built (Phase C, after semantic search). Spec: `docs/superpowers/specs/2026-06-21-mcp-v2-design.md`
 - [ ] **`frontend-design` plugin** — shows as `unknown` version in Claude Code; may be broken. Low priority.
