@@ -1,3 +1,4 @@
+import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { extractMetadata } from '../_shared/extractTitle.ts'
 import { isSafeUrl } from '../_shared/isSafeUrl.ts'
 
@@ -6,16 +7,9 @@ const TIMEOUT_MS = 6000
 
 const BROWSER_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
 
-// Known oEmbed providers — returns { title, thumbnail_url, author_name, ... }
 const OEMBED_PROVIDERS: Array<{ test: RegExp; endpoint: string }> = [
-  {
-    test: /youtube\.com\/watch|youtu\.be\//,
-    endpoint: 'https://www.youtube.com/oembed',
-  },
-  {
-    test: /vimeo\.com\//,
-    endpoint: 'https://vimeo.com/api/oembed.json',
-  },
+  { test: /youtube\.com\/watch|youtu\.be\//, endpoint: 'https://www.youtube.com/oembed' },
+  { test: /vimeo\.com\//, endpoint: 'https://vimeo.com/api/oembed.json' },
 ]
 
 async function tryOembed(url: string, controller: AbortController): Promise<{ title: string | null; image: string | null; description: string | null } | null> {
@@ -31,9 +25,7 @@ async function tryOembed(url: string, controller: AbortController): Promise<{ ti
       image: json.thumbnail_url ?? null,
       description: json.author_name ? `by ${json.author_name}` : null,
     }
-  } catch {
-    return null
-  }
+  } catch { return null }
 }
 
 const cors = {
@@ -42,8 +34,25 @@ const cors = {
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
 }
 
+function unauthorized() {
+  return new Response(JSON.stringify({ error: 'unauthorized' }), {
+    status: 401, headers: { ...cors, 'Content-Type': 'application/json' },
+  })
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
+
+  // Verify caller is a logged-in Supabase user
+  const authHeader = req.headers.get('Authorization')
+  if (!authHeader) return unauthorized()
+  const sb = createClient(
+    Deno.env.get('SUPABASE_URL')!,
+    Deno.env.get('SUPABASE_ANON_KEY')!,
+    { global: { headers: { Authorization: authHeader } } }
+  )
+  const { data: { user }, error: authErr } = await sb.auth.getUser()
+  if (authErr || !user) return unauthorized()
 
   let url: string | null = new URL(req.url).searchParams.get('url')
   if (!url && req.method === 'POST') {
@@ -66,11 +75,8 @@ Deno.serve(async (req) => {
   try {
     const controller = new AbortController()
     const timer = setTimeout(() => controller.abort(), TIMEOUT_MS)
-
     let result: { title: string | null; site: string; image: string | null; description: string | null }
-
     try {
-      // Try oEmbed first for known providers (YouTube, Vimeo, etc.)
       const oembed = await tryOembed(url, controller)
       if (oembed) {
         result = { ...oembed, site }
@@ -91,7 +97,6 @@ Deno.serve(async (req) => {
     } finally {
       clearTimeout(timer)
     }
-
     return new Response(JSON.stringify(result), {
       headers: { ...cors, 'Content-Type': 'application/json' },
     })

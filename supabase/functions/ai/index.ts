@@ -1,3 +1,5 @@
+import { createClient } from 'jsr:@supabase/supabase-js@2'
+
 const cors = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -6,14 +8,24 @@ const cors = {
 
 function json(obj: unknown, status = 200) {
   return new Response(JSON.stringify(obj), {
-    status,
-    headers: { ...cors, 'Content-Type': 'application/json' },
+    status, headers: { ...cors, 'Content-Type': 'application/json' },
   })
 }
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
   if (req.method !== 'POST') return new Response('method not allowed', { status: 405, headers: cors })
+
+  // Verify caller is a logged-in Supabase user
+  const authHeader = req.headers.get('Authorization')
+  if (!authHeader) return json({ error: 'unauthorized' }, 401)
+  const sb = createClient(
+    Deno.env.get('SUPABASE_URL')!,
+    Deno.env.get('SUPABASE_ANON_KEY')!,
+    { global: { headers: { Authorization: authHeader } } }
+  )
+  const { data: { user }, error: authErr } = await sb.auth.getUser()
+  if (authErr || !user) return json({ error: 'unauthorized' }, 401)
 
   const body = await req.json().catch(() => null)
   if (!body || (!body.messages && !body.prompt)) {
@@ -43,9 +55,7 @@ Deno.serve(async (req) => {
         body: JSON.stringify(payload),
         signal: controller.signal,
       })
-    } finally {
-      clearTimeout(timer)
-    }
+    } finally { clearTimeout(timer) }
     if (!res.ok) {
       const text = await res.text()
       return json({ error: `provider ${res.status}`, detail: text.slice(0, 500) }, 502)
