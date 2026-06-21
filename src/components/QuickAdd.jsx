@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 
 function formatDate(dateStr) {
   return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
@@ -9,6 +9,14 @@ export default function QuickAdd({ onAdd, disabled, onCheckDuplicate }) {
   const [note, setNote] = useState('')
   const [dupWarning, setDupWarning] = useState(null)
   const [showNudge, setShowNudge] = useState(false)
+  const textareaRef = useRef(null)
+
+  useEffect(() => {
+    const el = textareaRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = `${el.scrollHeight}px`
+  }, [note])
 
   async function handleUrlBlur() {
     const u = url.trim()
@@ -24,7 +32,7 @@ export default function QuickAdd({ onAdd, disabled, onCheckDuplicate }) {
   async function handleSubmit(e) {
     e.preventDefault()
     const u = url.trim()
-    const n = note.trim()
+    const n = note.replace(/^\n+|\n+$/g, '').trim()
     if (!u && !n) return
     if (u && !n) setShowNudge(true)
     else setShowNudge(false)
@@ -50,9 +58,11 @@ export default function QuickAdd({ onAdd, disabled, onCheckDuplicate }) {
         </p>
       )}
       <textarea
+        ref={textareaRef}
         placeholder="What's worth remembering about this?"
         maxLength={10000}
         rows={2}
+        style={{ resize: 'none', overflow: 'hidden' }}
         value={note}
         onChange={(e) => { setNote(e.target.value); if (e.target.value) setShowNudge(false) }}
       />
