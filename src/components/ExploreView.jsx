@@ -40,7 +40,7 @@ function EntryRow({ entry, onSelect, showSimilarity }) {
   )
 }
 
-export default function ExploreView({ supabase, topics, onSelectEntry }) {
+export default function ExploreView({ supabase, topics, onSelectEntry, onOrderedIds }) {
   const [query, setQuery] = useState('')
   const [searchResults, setSearchResults] = useState(null)
   const [queue, setQueue] = useState([])
@@ -104,6 +104,10 @@ export default function ExploreView({ supabase, topics, onSelectEntry }) {
     if (topicFilter !== 'all' && e.topic_id !== topicFilter) return false
     return true
   })
+
+  useEffect(() => {
+    onOrderedIds?.(filtered.map((e) => e.id))
+  }, [filtered])
 
   const grouped = !isSearching
     ? filtered.reduce((acc, e) => {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, useCallback, useId } from 'react'
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import TopicDocEditor from './TopicDocEditor.jsx'
 import MarkdownView from './MarkdownView.jsx'
 import EntryList from './EntryList.jsx'

@@ -13,15 +13,11 @@ function fuzzy(str, query) {
   return true
 }
 
-function getKeyLabel(cmd) {
-  const overrides = loadOverrides()
-  return overrides[cmd.id] ?? cmd.defaultKey ?? ''
-}
-
-export default function CommandPalette({ open, onClose, commands, topics = [] }) {
+export default function CommandPalette({ open, onClose, commands, topics = [], onSelectTopic }) {
   const [query, setQuery] = useState('')
   const [selectedIdx, setSelectedIdx] = useState(0)
   const inputRef = useRef(null)
+  const overrides = loadOverrides()
 
   useEffect(() => {
     if (open) { setQuery(''); setSelectedIdx(0); setTimeout(() => inputRef.current?.focus(), 0) }
@@ -32,7 +28,7 @@ export default function CommandPalette({ open, onClose, commands, topics = [] })
     label: `Go to ${t.name}`,
     category: 'Topics',
     defaultKey: '',
-    handler: () => {},
+    handler: () => onSelectTopic?.(t.id),
     _topicId: t.id,
   }))
 
@@ -109,8 +105,8 @@ export default function CommandPalette({ open, onClose, commands, topics = [] })
                     onMouseEnter={() => setSelectedIdx(idx)}
                   >
                     <span className="palette-row-label">{cmd.label}</span>
-                    {getKeyLabel(cmd) && (
-                      <kbd className="palette-row-kbd">{getKeyLabel(cmd)}</kbd>
+                    {(overrides[cmd.id] ?? cmd.defaultKey ?? '') && (
+                      <kbd className="palette-row-kbd">{overrides[cmd.id] ?? cmd.defaultKey ?? ''}</kbd>
                     )}
                   </div>
                 )

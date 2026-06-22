@@ -111,10 +111,30 @@ function Workspace() {
     applyUpdateEntry(focusedEntry.id, updated)
   }
 
+  const paletteCommands = useMemo(() => getCommands({
+    setView,
+    setSelectedId,
+    inboxTopic,
+    topics,
+    focusedEntry,
+    openPalette: () => setPaletteOpen(true),
+    closePalette: () => setPaletteOpen(false),
+    focusNextEntry,
+    focusPrevEntry,
+    editFocusedEntry,
+    cycleFocusedStatus,
+    openSnooze: (entry) => entry && setSnoozeTarget(entry),
+  }), [view, focusedEntry, topics, inboxTopic])
+
   function navigateTo(v) {
     setView(v)
     setFocusedEntryId(null)
     setOrderedEntryIds([])
+  }
+
+  function navigateToTopic(topicId) {
+    setSelectedId(topicId)
+    navigateTo('browse')
   }
 
   async function handleSnoozeFromPalette(entry, dateStr) {
@@ -225,23 +245,7 @@ function Workspace() {
   useEffect(() => {
     if (navigator.maxTouchPoints > 0) return
 
-    const ctx = {
-      setView,
-      setSelectedId,
-      inboxTopic,
-      topics,
-      focusedEntry,
-      openPalette: () => setPaletteOpen(true),
-      closePalette: () => setPaletteOpen(false),
-      focusNextEntry,
-      focusPrevEntry,
-      editFocusedEntry,
-      cycleFocusedStatus,
-      openSnooze: (entry) => entry && setSnoozeTarget(entry),
-    }
-
-    const commands = getCommands(ctx)
-    const bindings = resolveBindings(commands)
+    const bindings = resolveBindings(paletteCommands)
 
     function handleKeyDown(e) {
       const tag = document.activeElement?.tagName?.toLowerCase()
@@ -287,7 +291,7 @@ function Workspace() {
 
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [view, focusedEntry, focusedEntryId, orderedEntryIds, topics, inboxTopic, paletteOpen])
+  }, [paletteCommands, focusedEntryId, orderedEntryIds])
 
   async function refreshTags() {
     const tags = await listTags(supabase)
@@ -998,21 +1002,9 @@ function Workspace() {
       <CommandPalette
         open={paletteOpen}
         onClose={() => setPaletteOpen(false)}
-        commands={getCommands({
-          setView,
-          setSelectedId,
-          inboxTopic,
-          topics,
-          focusedEntry,
-          openPalette: () => setPaletteOpen(true),
-          closePalette: () => setPaletteOpen(false),
-          focusNextEntry,
-          focusPrevEntry,
-          editFocusedEntry,
-          cycleFocusedStatus,
-          openSnooze: (entry) => entry && setSnoozeTarget(entry),
-        })}
+        commands={paletteCommands}
         topics={topics}
+        onSelectTopic={navigateToTopic}
       />
       {snoozeTarget && (
         <div className="palette-overlay" onClick={() => setSnoozeTarget(null)}>
