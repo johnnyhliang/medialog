@@ -50,8 +50,18 @@ export default function ExploreView({ supabase, topics, onSelectEntry }) {
   const [semanticError, setSemanticError] = useState(null)
   const [statusFilter, setStatusFilter] = useState('all')
   const [topicFilter, setTopicFilter] = useState('all')
+  const [recentSearches, setRecentSearches] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('medialog_recent_searches') ?? '[]') } catch { return [] }
+  })
+  const [showRecent, setShowRecent] = useState(false)
   const timerRef = useRef(null)
   const inputRef = useRef(null)
+
+  function saveRecentSearch(q) {
+    const next = [q, ...recentSearches.filter((s) => s !== q)].slice(0, 5)
+    setRecentSearches(next)
+    localStorage.setItem('medialog_recent_searches', JSON.stringify(next))
+  }
 
   useEffect(() => {
     listReadingQueue(supabase).then((rows) => {
@@ -73,6 +83,7 @@ export default function ExploreView({ supabase, topics, onSelectEntry }) {
           ? await searchSemantic(supabase, query.trim())
           : await searchEntries(supabase, query.trim())
         setSearchResults(results)
+        saveRecentSearch(query.trim())
       } catch (e) {
         if (semanticMode) {
           setSemanticError(e.message || 'semantic search failed')
@@ -118,7 +129,26 @@ export default function ExploreView({ supabase, topics, onSelectEntry }) {
           placeholder="search titles, urls, notes, tags…"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
+          onFocus={() => setShowRecent(true)}
+          onBlur={() => setTimeout(() => setShowRecent(false), 150)}
         />
+        {showRecent && !query && recentSearches.length > 0 && (
+          <div className="recent-searches-dropdown">
+            {recentSearches.map((s) => (
+              <button
+                key={s}
+                className="recent-search-item"
+                onMouseDown={(e) => {
+                  e.preventDefault()
+                  setQuery(s)
+                  setShowRecent(false)
+                }}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+        )}
         {searching && <span className="explore-search-spinner" />}
         {query && (
           <button
