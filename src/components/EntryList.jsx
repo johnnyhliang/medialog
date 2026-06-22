@@ -5,7 +5,7 @@ import EmptyState from './EmptyState.jsx'
 
 const PAGE_SIZE = 50
 
-export default function EntryList({ entries, onDelete, onStatusChange, onTagsChange, onTogglePin, onNoteSave, onPreview, onNoteVersion, onShowHistory, onTitleChange, moveTargets, onMove, tagColors, onEntryUpdate }) {
+export default function EntryList({ entries, onDelete, onStatusChange, onTagsChange, onTogglePin, onNoteSave, onPreview, onNoteVersion, onShowHistory, onTitleChange, moveTargets, onMove, tagColors, onEntryUpdate, focusedEntryId, editTargetId, onClearEditTarget }) {
   const [limit, setLimit] = useState(PAGE_SIZE)
 
   if (entries.length === 0) return <EmptyState message="No entries yet." />
@@ -34,6 +34,9 @@ export default function EntryList({ entries, onDelete, onStatusChange, onTagsCha
             tagColors={tagColors}
             onEntryUpdate={onEntryUpdate}
             supabase={supabaseClient}
+            focused={focusedEntryId === e.id}
+            forceExpand={editTargetId === e.id}
+            onForceExpandDone={editTargetId === e.id ? onClearEditTarget : undefined}
           />
         ))}
       </div>

@@ -255,11 +255,11 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
 }
 .topics button:hover { background: var(--surface-3); }
 .topics button.selected {
-  background: var(--surface);
+  background: transparent;
   font-weight: 600;
-  border-color: var(--border);
+  border-color: transparent;
   border-left-color: var(--accent);
-  color: var(--text);
+  color: var(--accent);
 }
 .topic-add { display: flex; gap: 6px; margin-top: 8px; }
 .topic-add input { flex: 1; min-width: 0; font-size: 13px; }
@@ -1130,6 +1130,48 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
   .toast-container { left: 8px; right: 8px; transform: none; bottom: 12px; }
   .toast { max-width: 100%; }
 }
+
+/* ── Topic ⋯ menu ────────────────────────────────────────────────────────────── */
+.topic-more-menu { position: relative; }
+.topic-more-trigger {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  padding: 4px 8px;
+  color: var(--text-muted);
+  border-radius: 6px;
+  letter-spacing: 2px;
+}
+.topic-more-trigger:hover { background: var(--surface-2); color: var(--text); }
+.topic-more-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  min-width: 160px;
+  z-index: 200;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.topic-more-dropdown button {
+  background: none;
+  border: none;
+  text-align: left;
+  padding: 10px 16px;
+  font-size: 13px;
+  cursor: pointer;
+  color: var(--text);
+  width: 100%;
+}
+.topic-more-dropdown button:hover { background: var(--surface-2); }
+.topic-more-danger { color: var(--danger) !important; }
+.topic-more-danger:hover { background: #FEE2E2 !important; }
 
 /* ── Topic action buttons (archive / delete in topic header) ────────────────── */
 .topic-action-btn {
@@ -3439,4 +3481,9 @@ a.digest-item-title:hover { text-decoration: underline; }
   padding: 16px 14px;
   color: var(--text-muted);
   font-size: 14px;
+}
+
+.entry-card--focused {
+  outline: 2px solid color-mix(in srgb, var(--accent) 60%, transparent);
+  outline-offset: 1px;
 }

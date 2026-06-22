@@ -48,7 +48,7 @@ function daysOld(dateStr) {
   return Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000)
 }
 
-export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChange, onTogglePin, onNoteSave, onPreview, onNoteVersion, onShowHistory, onTitleChange, moveTargets, onMove, tagColors, onEntryUpdate, supabase: supabaseClient }) {
+export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChange, onTogglePin, onNoteSave, onPreview, onNoteVersion, onShowHistory, onTitleChange, moveTargets, onMove, tagColors, onEntryUpdate, supabase: supabaseClient, focused, forceExpand, onForceExpandDone }) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(entry.note || '')
   const [editingTitle, setEditingTitle] = useState(false)
@@ -58,6 +58,13 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
   const [saveStatus, setSaveStatus] = useState('idle')
   const [expanded, setExpanded] = useState(false)
   const [showSheet, setShowSheet] = useState(false)
+
+  useEffect(() => {
+    if (forceExpand) {
+      setExpanded(true)
+      onForceExpandDone?.()
+    }
+  }, [forceExpand])
   const [showSecondaryActions, setShowSecondaryActions] = useState(false)
   const [takeawayPrompt, setTakeawayPrompt] = useState(false)
   const [takeaway, setTakeaway] = useState('')
@@ -513,7 +520,7 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
   return (
     <>
       <div
-        className={`card ${entry.status ? `card-status-${entry.status}` : 'card-status-backlog'}${entry.pinned ? ' pinned' : ''}${expanded ? '' : ' card-collapsed'}${noNoteAged ? ' card-aged-no-note' : ''}`}
+        className={`card ${entry.status ? `card-status-${entry.status}` : 'card-status-backlog'}${entry.pinned ? ' pinned' : ''}${expanded ? '' : ' card-collapsed'}${noNoteAged ? ' card-aged-no-note' : ''}${focused ? ' entry-card--focused' : ''}`}
         id={`entry-${entry.id}`}
         onClick={handleCardClick}
       >

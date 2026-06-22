@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
+import { useEffect, useMemo, useRef, useState, useCallback, useId } from 'react'
 import TopicDocEditor from './TopicDocEditor.jsx'
 import MarkdownView from './MarkdownView.jsx'
 import EntryList from './EntryList.jsx'
 import QuickAdd from './QuickAdd.jsx'
 import ReturnButton from './ReturnButton.jsx'
 import ArchiveSection from './ArchiveSection.jsx'
+import ConfirmModal from './ConfirmModal.jsx'
 import { fuzzyFind } from '../lib/fuzzyFind.js'
 import { extractEmbedIds } from '../lib/embeds.js'
 
@@ -25,7 +26,27 @@ export default function TopicView({
   supabase,
   onCheckDuplicate,
   onEntryUpdate,
+  onArchiveTopic,
+  onUnarchiveTopic,
+  onDeleteTopic,
+  focusedEntryId,
+  editTargetId,
+  onClearEditTarget,
+  onOrderedIds,
 }) {
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const menuRef = useRef(null)
+
+  useEffect(() => {
+    if (!menuOpen) return
+    function handleClick(e) {
+      if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false)
+    }
+    document.addEventListener('mousedown', handleClick)
+    document.addEventListener('touchstart', handleClick)
+    return () => { document.removeEventListener('mousedown', handleClick); document.removeEventListener('touchstart', handleClick) }
+  }, [menuOpen])
   const storageKey = `medialog_topic_view_${topic.id}`
   const [mode, setMode] = useState(() => {
     try {
@@ -137,6 +158,10 @@ export default function TopicView({
     return result.filter(e => e.status !== 'done' || pendingArchiveIds.has(e.id))
   }, [entries, query, scope, docEmbedIds, globalSearchResults, filteredByTag, pendingArchiveIds])
 
+  useEffect(() => {
+    onOrderedIds?.(filtered.map((e) => e.id))
+  }, [filtered])
+
   function handleJump(entryId) {
     setReturnY(window.scrollY)
     const el = document.getElementById(`entry-${entryId}`)
@@ -162,6 +187,29 @@ export default function TopicView({
       <div className="topic-header">
         <h2>{topic.name}</h2>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          {topic.name !== 'Inbox' && (
+            <div className="topic-more-menu" ref={menuRef}>
+              <button
+                className="topic-more-trigger"
+                onClick={() => setMenuOpen((v) => !v)}
+                aria-label="Topic actions"
+                aria-expanded={menuOpen}
+              >⋯</button>
+              {menuOpen && (
+                <div className="topic-more-dropdown">
+                  {topic.archived_at ? (
+                    <button onClick={() => { setMenuOpen(false); onUnarchiveTopic?.(topic.id) }}>Unarchive topic</button>
+                  ) : (
+                    <button onClick={() => { setMenuOpen(false); onArchiveTopic?.(topic.id) }}>Archive topic</button>
+                  )}
+                  <button
+                    className="topic-more-danger"
+                    onClick={() => { setMenuOpen(false); setConfirmDelete(true) }}
+                  >Delete topic…</button>
+                </div>
+              )}
+            </div>
+          )}
           {mode === 'doc' && (
             <div className="doc-width-btns">
               {[
@@ -308,6 +356,9 @@ export default function TopicView({
           onMove={onMove}
           tagColors={tagColors}
           onEntryUpdate={onEntryUpdate}
+          focusedEntryId={focusedEntryId}
+          editTargetId={editTargetId}
+          onClearEditTarget={onClearEditTarget}
         />
       </div>
 
@@ -320,6 +371,15 @@ export default function TopicView({
       />
 
       {returnY != null && <ReturnButton onReturn={handleReturn} />}
+
+      {confirmDelete && (
+        <ConfirmModal
+          message={`Permanently delete "${topic.name}" and move all its entries to trash?`}
+          confirmLabel="Delete"
+          onConfirm={() => { setConfirmDelete(false); onDeleteTopic?.(topic.id) }}
+          onCancel={() => setConfirmDelete(false)}
+        />
+      )}
     </>
   )
 }
