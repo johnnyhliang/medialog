@@ -3514,3 +3514,75 @@ a.digest-item-title:hover { text-decoration: underline; }
   outline: 2px solid color-mix(in srgb, var(--accent) 60%, transparent);
   outline-offset: 1px;
 }
+
+.keybinds-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.keybind-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+.keybind-label {
+  color: var(--text);
+}
+.keybind-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.keybind-kbd {
+  font-family: monospace;
+  font-size: 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 2px 7px;
+  cursor: pointer;
+  color: var(--text);
+  min-width: 40px;
+  text-align: center;
+}
+.keybind-kbd--overridden {
+  border-color: var(--accent);
+}
+.keybind-kbd--capturing {
+  border-color: var(--accent);
+  color: var(--text-muted);
+  outline: none;
+  cursor: default;
+}
+.keybind-reset {
+  font-size: 12px;
+  color: var(--text-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+}
+.keybind-conflict {
+  margin-top: 12px;
+  padding: 10px 14px;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.keybind-conflict button {
+  font-size: 12px;
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  cursor: pointer;
+  color: var(--text);
+}

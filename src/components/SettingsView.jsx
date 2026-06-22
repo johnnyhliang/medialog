@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabaseClient.js'
 import { submitArchive } from '../lib/wayback.js'
 import { listEntriesByTopic, updateEntry } from '../lib/db/entries.js'
 import CompaniesTab from './settings/CompaniesTab.jsx'
+import KeybindsTab from './settings/KeybindsTab.jsx'
 import KeywordsTab from './settings/KeywordsTab.jsx'
 import ProgramsTab from './settings/ProgramsTab.jsx'
 
@@ -192,6 +193,7 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
     { id: 'bookmarklet', label: 'Bookmarklet' },
     { id: 'mobile',      label: 'iOS Shortcut' },
     { id: 'instagram',   label: 'Instagram' },
+    { id: 'keybinds',   label: 'Keybinds' },
   ]
 
   return (
@@ -468,6 +470,8 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
           </div>
         </section>
       )}
+
+      {tab === 'keybinds' && <KeybindsTab />}
 
       {tab === 'behavior' && <section style={{ marginTop: 32, borderTop: '1px solid var(--border)', paddingTop: 24 }}>
         <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 4, marginTop: 0 }}>Bulk archive to Wayback Machine</h3>
