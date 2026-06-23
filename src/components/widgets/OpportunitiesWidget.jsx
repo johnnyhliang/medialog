@@ -11,7 +11,28 @@ const SOURCE_COLORS = {
   'program-alert': 'amber',
 }
 
-const FILTERS = ['All', 'SWE', 'Quant', 'Fellowship', 'Twitter', 'Saved']
+const FILTERS = ['All', 'SWE', 'Quant', 'Fellowship', 'HN', 'Twitter', 'Saved']
+
+const SOURCE_PRIORITY = { 'program-alert': 0, twitter: 1, hn: 2, manual: 3, lever: 4, ashby: 4, greenhouse: 4, github: 5 }
+
+function interleaved(items) {
+  const buckets = {}
+  for (const item of items) {
+    const src = item.source
+    if (!buckets[src]) buckets[src] = []
+    buckets[src].push(item)
+  }
+  const sources = Object.keys(buckets).sort((a, b) => (SOURCE_PRIORITY[a] ?? 9) - (SOURCE_PRIORITY[b] ?? 9))
+  const result = []
+  let added = true
+  while (added) {
+    added = false
+    for (const src of sources) {
+      if (buckets[src].length) { result.push(buckets[src].shift()); added = true }
+    }
+  }
+  return result
+}
 
 function formatAge(date) {
   const diff = Date.now() - date.getTime()
@@ -109,6 +130,7 @@ export default function OpportunitiesWidget({ supabase, onTrack }) {
   const filtered = items.filter((i) => {
     if (filter === 'Saved') return i.is_saved
     if (filter === 'Twitter') return i.source === 'twitter'
+    if (filter === 'HN') return i.source === 'hn'
     if (filter === 'SWE') return i.tags?.some((t) => ['swe', 'startup', 'big-tech'].includes(t))
     if (filter === 'Quant') return i.tags?.includes('quant')
     if (filter === 'Fellowship') return i.tags?.some((t) => ['fellowship', 'program', 'program-alert'].includes(t))
@@ -117,7 +139,7 @@ export default function OpportunitiesWidget({ supabase, onTrack }) {
 
   const unread = filtered.filter((i) => !i.is_read)
   const read = filtered.filter((i) => i.is_read && !i.is_saved)
-  const visible = showMore ? filtered : unread.slice(0, 20)
+  const visible = showMore ? filtered : (filter === 'All' ? interleaved(unread).slice(0, 20) : unread.slice(0, 20))
   const minutesAgo = lastChecked ? Math.floor((Date.now() - lastChecked.getTime()) / 60000) : null
 
   return (
