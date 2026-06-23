@@ -65,20 +65,24 @@ export function useTheme() {
 
   function setPalette(p) {
     if (!VALID_PALETTES.includes(p)) return
-    const next = { palette: p, style: theme.style }
-    applyToHtml(next.palette, next.style)
-    writeLocal(next.palette, next.style)
-    setThemeState(next)
-    syncToDb(next.palette, next.style)
+    setThemeState(prev => {
+      const next = { palette: p, style: prev.style }
+      applyToHtml(next.palette, next.style)
+      writeLocal(next.palette, next.style)
+      syncToDb(next.palette, next.style)
+      return next
+    })
   }
 
   function setStyle(s) {
     if (!VALID_STYLES.includes(s)) return
-    const next = { palette: theme.palette, style: s }
-    applyToHtml(next.palette, next.style)
-    writeLocal(next.palette, next.style)
-    setThemeState(next)
-    syncToDb(next.palette, next.style)
+    setThemeState(prev => {
+      const next = { palette: prev.palette, style: s }
+      applyToHtml(next.palette, next.style)
+      writeLocal(next.palette, next.style)
+      syncToDb(next.palette, next.style)
+      return next
+    })
   }
 
   return { palette: theme.palette, style: theme.style, setPalette, setStyle }
