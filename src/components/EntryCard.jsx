@@ -461,11 +461,89 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
     </>
   )
 
-  const ogImage = entry.og_image || (thumb ? null : null) // YouTube thumb handled separately below
   const previewImage = thumb || entry.og_image || null
   const domain = (() => { try { return new URL(entry.url).hostname.replace(/^www\./, '') } catch { return null } })()
+  // Link-only entries (a saved URL with no takeaway yet) get the full
+  // Notion-style bookmark card. Once a note is written it reverts to the
+  // compact card so the list stays scannable.
+  const linkOnly = entry.url && !entry.note
+  const richEmbed = linkOnly && (entry.og_image || entry.og_description || entry.title)
 
-  const collapsedBody = (
+  const metaRow = (
+    <div className="card-compact-meta">
+      {!domain && entry.status && (
+        <span className={`status-dot dot-${entry.status}`} title={entry.status} />
+      )}
+      {(entry.tags || []).map((t) => (
+        <span
+          key={t}
+          style={{
+            opacity: 0.85,
+            background: tagColors?.[t] || 'transparent',
+            padding: tagColors?.[t] ? '1px 5px' : undefined,
+            borderRadius: tagColors?.[t] ? '4px' : undefined,
+          }}
+        >#{t}</span>
+      ))}
+      {age && <span style={{ marginLeft: 'auto' }}>{age}</span>}
+      {entry.surface_after && (
+        <button
+          className="snooze-indicator"
+          onClick={(e) => { e.stopPropagation(); handleUnsnooze() }}
+          title={`Snoozed until ${new Date(entry.surface_after).toLocaleDateString()} — click to unsnooze`}
+        >
+          <Clock size={12} />
+          <span>{new Date(entry.surface_after).toLocaleDateString()}</span>
+        </button>
+      )}
+    </div>
+  )
+
+  const bookmarkBody = (
+    <div className="card-bookmark-wrap">
+      <a
+        href={entry.url}
+        className="card-bookmark"
+        target="_blank"
+        rel="noreferrer"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="card-bookmark-text">
+          <span className="card-bookmark-title">{entry.title || entry.url}</span>
+          {entry.og_description && (
+            <span className="card-bookmark-desc">{entry.og_description.slice(0, 180)}</span>
+          )}
+          <span className="card-bookmark-domain">
+            <img
+              src={faviconUrl(entry.url)}
+              alt=""
+              width={14}
+              height={14}
+              style={{ borderRadius: 2, flexShrink: 0 }}
+              onError={(e) => { e.target.style.display = 'none' }}
+            />
+            {domain}
+            {entry.status && (
+              <span className={`status-dot dot-${entry.status}`} title={entry.status} style={{ marginLeft: 8 }} />
+            )}
+          </span>
+        </div>
+        {previewImage && (
+          <div className="card-bookmark-img">
+            <img
+              src={previewImage}
+              alt=""
+              loading="lazy"
+              onError={(e) => { const p = e.target.parentElement; if (p) p.style.display = 'none' }}
+            />
+          </div>
+        )}
+      </a>
+      {metaRow}
+    </div>
+  )
+
+  const compactBody = (
     <div className="card-collapsed-inner">
       {previewImage && (
         <img
@@ -511,42 +589,15 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
         {entry.note && (
           <p className="card-preview-note">{entry.note.replace(/[#*`[\]]/g, '').slice(0, 200)}</p>
         )}
-        {!entry.note && (entry.og_description) && (
-          <p className="card-preview-note card-og-desc">{entry.og_description.slice(0, 160)}</p>
-        )}
         {noNoteAged && (
           <span className="card-no-note-chip">no notes · {days}d</span>
         )}
-        <div className="card-compact-meta">
-          {!domain && entry.status && (
-            <span className={`status-dot dot-${entry.status}`} title={entry.status} />
-          )}
-          {(entry.tags || []).map((t) => (
-            <span
-              key={t}
-              style={{
-                opacity: 0.85,
-                background: tagColors?.[t] || 'transparent',
-                padding: tagColors?.[t] ? '1px 5px' : undefined,
-                borderRadius: tagColors?.[t] ? '4px' : undefined,
-              }}
-            >#{t}</span>
-          ))}
-          {age && <span style={{ marginLeft: 'auto' }}>{age}</span>}
-          {entry.surface_after && (
-            <button
-              className="snooze-indicator"
-              onClick={(e) => { e.stopPropagation(); handleUnsnooze() }}
-              title={`Snoozed until ${new Date(entry.surface_after).toLocaleDateString()} — click to unsnooze`}
-            >
-              <Clock size={12} />
-              <span>{new Date(entry.surface_after).toLocaleDateString()}</span>
-            </button>
-          )}
-        </div>
+        {metaRow}
       </div>
     </div>
   )
+
+  const collapsedBody = richEmbed ? bookmarkBody : compactBody
 
   return (
     <>
