@@ -23,7 +23,7 @@ function domain(url) {
   try { return new URL(url).hostname.replace(/^www\./, '') } catch { return url }
 }
 
-export default function FeedView({ supabase, topics, onSaveItem }) {
+export default function FeedView({ supabase, topics, onSaveItem, addToast }) {
   const [feeds, setFeeds] = useState([])
   const [counts, setCounts] = useState({})
   const [selectedFeedId, setSelectedFeedId] = useState(null) // null = all
@@ -110,7 +110,13 @@ export default function FeedView({ supabase, topics, onSaveItem }) {
 
   async function handleDismiss(item) {
     setItems((prev) => prev.filter((x) => x.id !== item.id))
-    await dismissFeedItem(supabase, item.id)
+    try {
+      await dismissFeedItem(supabase, item.id)
+    } catch {
+      addToast?.('Failed to dismiss item', 'error')
+      setItems((prev) => [item, ...prev])
+      return
+    }
     setCounts((prev) => ({ ...prev, [item.feed_id]: Math.max(0, (prev[item.feed_id] || 1) - 1) }))
   }
 
@@ -118,8 +124,14 @@ export default function FeedView({ supabase, topics, onSaveItem }) {
     if (!topicId) return
     setSavingItem(null)
     setItems((prev) => prev.filter((x) => x.id !== item.id))
-    await markFeedItemSaved(supabase, item.id)
-    await onSaveItem({ url: item.url, title: item.title, note: '' }, topicId)
+    try {
+      await markFeedItemSaved(supabase, item.id)
+      await onSaveItem({ url: item.url, title: item.title, note: '' }, topicId)
+    } catch {
+      addToast?.('Failed to save item', 'error')
+      setItems((prev) => [item, ...prev])
+      return
+    }
     setCounts((prev) => ({ ...prev, [item.feed_id]: Math.max(0, (prev[item.feed_id] || 1) - 1) }))
   }
 

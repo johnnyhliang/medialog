@@ -10,7 +10,7 @@ const STATUS_LABELS = {
   interview: 'Interview', offer: 'Offer', rejected: 'Rejected', ghosted: 'Ghosted',
 }
 
-export default function ApplicationsView({ supabase, prefill, onClearPrefill }) {
+export default function ApplicationsView({ supabase, prefill, onClearPrefill, addToast }) {
   const [apps, setApps] = useState([])
   const [statusFilter, setStatusFilter] = useState('applied')
   const [showAdd, setShowAdd] = useState(!!prefill)
@@ -52,11 +52,12 @@ export default function ApplicationsView({ supabase, prefill, onClearPrefill }) 
 
   async function handleAdd(e) {
     e.preventDefault()
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('applications')
       .insert({ ...form, applied_at: form.applied_at || null, deadline: form.deadline || null })
       .select()
       .single()
+    if (error) { addToast?.('Failed to save application', 'error'); return }
     if (data) { setApps((prev) => [data, ...prev]); setShowAdd(false); onClearPrefill?.() }
   }
 
@@ -64,18 +65,28 @@ export default function ApplicationsView({ supabase, prefill, onClearPrefill }) 
     const next = STATUS_NEXT[current]
     if (next === current) return
     const now = new Date().toISOString()
-    setApps((prev) => prev.map((a) => a.id === id ? { ...a, status: next, updated_at: now } : a))
-    await supabase.from('applications').update({ status: next, updated_at: now }).eq('id', id)
+    const prev = apps.find((a) => a.id === id)
+    setApps((apps) => apps.map((a) => a.id === id ? { ...a, status: next, updated_at: now } : a))
+    const { error } = await supabase.from('applications').update({ status: next, updated_at: now }).eq('id', id)
+    if (error) {
+      addToast?.('Failed to update status', 'error')
+      setApps((apps) => apps.map((a) => a.id === id ? { ...a, status: prev?.status ?? current, updated_at: prev?.updated_at } : a))
+    }
   }
 
   async function updateNotes(id, notes) {
     setApps((prev) => prev.map((a) => a.id === id ? { ...a, notes } : a))
-    await supabase.from('applications').update({ notes, updated_at: new Date().toISOString() }).eq('id', id)
+    const { error } = await supabase.from('applications').update({ notes, updated_at: new Date().toISOString() }).eq('id', id)
+    if (error) addToast?.('Failed to save notes', 'error')
   }
 
   async function deleteApp(id) {
     setApps((prev) => prev.filter((a) => a.id !== id))
-    await supabase.from('applications').delete().eq('id', id)
+    const { error } = await supabase.from('applications').delete().eq('id', id)
+    if (error) {
+      addToast?.('Failed to delete application', 'error')
+      load()
+    }
     setConfirmDelete(null)
   }
 

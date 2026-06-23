@@ -64,6 +64,22 @@ test('prefill opens add form with company + role', async () => {
   })
 })
 
+test('shows error toast when status update fails', async () => {
+  const failSupabase = {
+    from: vi.fn(() => ({
+      select: vi.fn(() => ({ order: vi.fn(() => Promise.resolve({ data: [mockApp()], error: null })) })),
+      update: vi.fn(() => ({ eq: vi.fn(() => Promise.resolve({ error: { message: 'network error' } })) })),
+    })),
+  }
+  const addToast = vi.fn()
+  render(<ApplicationsView supabase={failSupabase} prefill={null} onClearPrefill={vi.fn()} addToast={addToast} />)
+  await userEvent.click(await screen.findByRole('button', { name: /Applied/ }))
+  await userEvent.click(screen.getByRole('button', { name: 'Applied' }))
+  await waitFor(() => {
+    expect(addToast).toHaveBeenCalledWith('Failed to update status', 'error')
+  })
+})
+
 test('delete requires confirmation', async () => {
   const sb = mockSupabase([mockApp()])
   render(<ApplicationsView supabase={sb} prefill={null} onClearPrefill={vi.fn()} />)
