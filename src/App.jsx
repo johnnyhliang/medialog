@@ -13,7 +13,7 @@ import { getCommands } from './lib/commands.js'
 import { resolveBindings, eventToKey } from './lib/keybindings.js'
 import CommandPalette from './components/CommandPalette.jsx'
 import { listVersions, createVersion } from './lib/db/versions.js'
-import { fetchTitle } from './lib/enrich.js'
+import { fetchTitle, fetchLinkPreview } from './lib/enrich.js'
 import { embedEntryAsync } from './lib/embedEntry.js'
 import { buildMarkdownFiles } from './lib/exportMarkdown.js'
 import { buildZip, downloadBlob } from './lib/buildZip.js'
@@ -376,15 +376,18 @@ function Workspace() {
       if (url) {
         onTitleStatus?.('fetching')
         try {
-          const title = prefetchedTitle ?? await fetchTitle(supabase, url)
-          if (title) {
-            const updated = await updateEntry(supabase, e.id, { title })
+          const meta = await fetchLinkPreview(supabase, url)
+          const title = prefetchedTitle ?? meta?.title ?? null
+          const patch = {}
+          if (title) patch.title = title
+          if (meta?.image) patch.og_image = meta.image
+          if (meta?.description) patch.og_description = meta.description
+          if (Object.keys(patch).length > 0) {
+            const updated = await updateEntry(supabase, e.id, patch)
             applyUpdateEntry(e.id, updated)
             finalEntry = updated
-            onTitleStatus?.('done')
-          } else {
-            onTitleStatus?.('done')
           }
+          onTitleStatus?.('done')
         } catch {
           onTitleStatus?.('failed')
         }
@@ -540,9 +543,17 @@ function Workspace() {
 
   async function enrichEntries(created) {
     for (const e of created) {
-      if (e.url && !e.title) {
-        const title = await fetchTitle(supabase, e.url)
-        if (title) await updateEntry(supabase, e.id, { title })
+      if (e.url && (!e.title || !e.og_image)) {
+        const meta = await fetchLinkPreview(supabase, e.url)
+        if (!meta) continue
+        const patch = {}
+        if (!e.title && meta.title) patch.title = meta.title
+        if (!e.og_image && meta.image) patch.og_image = meta.image
+        if (!e.og_description && meta.description) patch.og_description = meta.description
+        if (Object.keys(patch).length > 0) {
+          const updated = await updateEntry(supabase, e.id, patch)
+          applyUpdateEntry(e.id, updated)
+        }
       }
     }
   }
