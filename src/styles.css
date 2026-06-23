@@ -2649,8 +2649,12 @@ a.activity-title:hover { color: var(--accent); }
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.topic-pin-btn {
-  flex-shrink: 0;
+/* Scoped to .topic-row so width:auto beats `.topics button { width:100% }`.
+   Without this the pin button inherits width:100% and, with flex-shrink:0,
+   eats the whole row — clipping the topic name down to one letter. */
+.topic-row .topic-pin-btn {
+  flex: 0 0 auto;
+  width: auto;
   background: none;
   border: none;
   padding: 4px 5px;
@@ -2662,7 +2666,7 @@ a.activity-title:hover { color: var(--accent); }
   border-radius: 4px;
   opacity: 0.55;
 }
-.topic-pin-btn:hover { opacity: 1; color: var(--accent); background: var(--border); }
+.topic-row .topic-pin-btn:hover { opacity: 1; color: var(--accent); background: var(--border); }
 
 /* Mobile: stack columns */
 @media (max-width: 640px) {
