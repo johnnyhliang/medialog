@@ -1,6 +1,5 @@
-import { useState, useRef, useEffect } from 'react'
-import { Inbox, MoreVertical, ChevronDown, ChevronRight } from 'lucide-react'
-import ConfirmModal from './ConfirmModal.jsx'
+import { useState } from 'react'
+import { Inbox, ChevronDown, ChevronRight } from 'lucide-react'
 
 export default function TopicList({
   topics,
@@ -10,17 +9,11 @@ export default function TopicList({
   onSelect,
   onAdd,
   sidebarCollapsed,
-  onArchive,
-  onUnarchive,
-  onDeleteTopic,
 }) {
   const [name, setName] = useState('')
-  const [openMenuId, setOpenMenuId] = useState(null)
-  const [confirmDeleteId, setConfirmDeleteId] = useState(null)
   const [archiveSectionOpen, setArchiveSectionOpen] = useState(() => {
     try { return localStorage.getItem('medialog_archive_section_open') === 'true' } catch { return false }
   })
-  const menuRef = useRef(null)
 
   const allTopics = topics ?? []
   const allActive = activeTopics ?? allTopics.filter(t => !t.archived_at)
@@ -29,14 +22,6 @@ export default function TopicList({
   const activeNonInbox = allActive
     .filter(t => t.name !== 'Inbox')
     .sort((a, b) => a.name.localeCompare(b.name))
-
-  useEffect(() => {
-    function handleClick(e) {
-      if (menuRef.current && !menuRef.current.contains(e.target)) setOpenMenuId(null)
-    }
-    document.addEventListener('mousedown', handleClick)
-    return () => document.removeEventListener('mousedown', handleClick)
-  }, [])
 
   function toggleArchiveSection() {
     const next = !archiveSectionOpen
@@ -72,7 +57,7 @@ export default function TopicList({
         {inboxTopic && activeNonInbox.length > 0 && <li><hr className="topic-divider" /></li>}
 
         {activeNonInbox.map((t) => (
-          <li key={t.id} className="topic-item" ref={openMenuId === t.id ? menuRef : null}>
+          <li key={t.id}>
             <button
               className={t.id === selectedId ? 'selected' : ''}
               onClick={() => onSelect(t.id)}
@@ -80,25 +65,6 @@ export default function TopicList({
             >
               {sidebarCollapsed ? t.name.slice(0, 2).toUpperCase() : t.name}
             </button>
-            {!sidebarCollapsed && (
-              <button
-                className="topic-menu-btn"
-                aria-label="topic menu"
-                onClick={(e) => { e.stopPropagation(); setOpenMenuId(openMenuId === t.id ? null : t.id) }}
-              >
-                <MoreVertical size={12} />
-              </button>
-            )}
-            {openMenuId === t.id && (
-              <div className="topic-menu-popover">
-                <button className="topic-menu-item" onClick={() => { onArchive?.(t.id); setOpenMenuId(null) }}>
-                  Archive
-                </button>
-                <button className="topic-menu-item danger" onClick={() => { setConfirmDeleteId(t.id); setOpenMenuId(null) }}>
-                  Delete
-                </button>
-              </div>
-            )}
           </li>
         ))}
       </ul>
@@ -122,7 +88,7 @@ export default function TopicList({
           {archiveSectionOpen && (
             <ul className="topics-archived-list">
               {[...allArchived].sort((a, b) => a.name.localeCompare(b.name)).map((t) => (
-                <li key={t.id} className="topic-item" ref={openMenuId === t.id ? menuRef : null}>
+                <li key={t.id}>
                   <button
                     className={`topic-archived-btn${t.id === selectedId ? ' selected' : ''}`}
                     onClick={() => onSelect(t.id)}
@@ -130,38 +96,11 @@ export default function TopicList({
                   >
                     {sidebarCollapsed ? t.name.slice(0, 2).toUpperCase() : t.name}
                   </button>
-                  {!sidebarCollapsed && (
-                    <button
-                      className="topic-menu-btn"
-                      aria-label="topic menu"
-                      onClick={(e) => { e.stopPropagation(); setOpenMenuId(openMenuId === t.id ? null : t.id) }}
-                    >
-                      <MoreVertical size={12} />
-                    </button>
-                  )}
-                  {openMenuId === t.id && (
-                    <div className="topic-menu-popover">
-                      <button className="topic-menu-item" onClick={() => { onUnarchive?.(t.id); setOpenMenuId(null) }}>
-                        Unarchive
-                      </button>
-                      <button className="topic-menu-item danger" onClick={() => { setConfirmDeleteId(t.id); setOpenMenuId(null) }}>
-                        Delete
-                      </button>
-                    </div>
-                  )}
                 </li>
               ))}
             </ul>
           )}
         </>
-      )}
-      {confirmDeleteId && (
-        <ConfirmModal
-          message="Permanently delete this topic and move all its entries to trash?"
-          confirmLabel="Delete"
-          onConfirm={() => { onDeleteTopic?.(confirmDeleteId); setConfirmDeleteId(null) }}
-          onCancel={() => setConfirmDeleteId(null)}
-        />
       )}
     </nav>
   )
