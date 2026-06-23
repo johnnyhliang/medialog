@@ -879,6 +879,7 @@ function Workspace() {
               onSaveFeedItem={(item) => handleSaveFromFeed(item, inboxTopic?.id ?? topics[0]?.id)}
               onGoToFeed={() => setView('feed')}
               onOpenEntry={handleSelectEntry}
+              onGoToDigest={() => navigateTo('digest')}
             />
           )}
           {view === 'explore' && (
