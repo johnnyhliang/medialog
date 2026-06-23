@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Inbox, ChevronDown, ChevronRight } from 'lucide-react'
+import { Inbox, ChevronDown, ChevronRight, Pin, PinOff } from 'lucide-react'
 
 export default function TopicList({
   topics,
@@ -8,6 +8,7 @@ export default function TopicList({
   selectedId,
   onSelect,
   onAdd,
+  onPinToggle,
   sidebarCollapsed,
 }) {
   const [name, setName] = useState('')
@@ -19,9 +20,9 @@ export default function TopicList({
   const allActive = activeTopics ?? allTopics.filter(t => !t.archived_at)
   const allArchived = archivedTopics ?? allTopics.filter(t => t.archived_at)
   const inboxTopic = allActive.find(t => t.name === 'Inbox')
-  const activeNonInbox = allActive
-    .filter(t => t.name !== 'Inbox')
-    .sort((a, b) => a.name.localeCompare(b.name))
+  const nonInbox = allActive.filter(t => t.name !== 'Inbox')
+  const pinnedTopics = nonInbox.filter(t => t.pinned).sort((a, b) => a.name.localeCompare(b.name))
+  const regularTopics = nonInbox.filter(t => !t.pinned).sort((a, b) => a.name.localeCompare(b.name))
 
   function toggleArchiveSection() {
     const next = !archiveSectionOpen
@@ -35,6 +36,36 @@ export default function TopicList({
     if (!trimmed) return
     onAdd(trimmed)
     setName('')
+  }
+
+  function TopicBtn({ t }) {
+    const [hovering, setHovering] = useState(false)
+    return (
+      <li
+        key={t.id}
+        style={{ position: 'relative' }}
+        onMouseEnter={() => setHovering(true)}
+        onMouseLeave={() => setHovering(false)}
+      >
+        <button
+          className={t.id === selectedId ? 'selected' : ''}
+          onClick={() => onSelect(t.id)}
+          title={t.name}
+          style={{ paddingRight: hovering && !sidebarCollapsed ? '28px' : undefined }}
+        >
+          {sidebarCollapsed ? t.name.slice(0, 2).toUpperCase() : t.name}
+        </button>
+        {hovering && !sidebarCollapsed && onPinToggle && (
+          <button
+            className="topic-pin-btn"
+            onClick={(e) => { e.stopPropagation(); onPinToggle(t.id, !t.pinned) }}
+            title={t.pinned ? 'Unpin' : 'Pin to top'}
+          >
+            {t.pinned ? <PinOff size={11} /> : <Pin size={11} />}
+          </button>
+        )}
+      </li>
+    )
   }
 
   return (
@@ -54,19 +85,22 @@ export default function TopicList({
             </button>
           </li>
         )}
-        {inboxTopic && activeNonInbox.length > 0 && <li><hr className="topic-divider" /></li>}
 
-        {activeNonInbox.map((t) => (
-          <li key={t.id}>
-            <button
-              className={t.id === selectedId ? 'selected' : ''}
-              onClick={() => onSelect(t.id)}
-              title={t.name}
-            >
-              {sidebarCollapsed ? t.name.slice(0, 2).toUpperCase() : t.name}
-            </button>
-          </li>
-        ))}
+        {pinnedTopics.length > 0 && (
+          <>
+            {inboxTopic && <li><hr className="topic-divider" /></li>}
+            {pinnedTopics.map((t) => <TopicBtn key={t.id} t={t} />)}
+          </>
+        )}
+
+        {regularTopics.length > 0 && (
+          <>
+            <li><hr className="topic-divider" /></li>
+            {regularTopics.map((t) => <TopicBtn key={t.id} t={t} />)}
+          </>
+        )}
+
+        {pinnedTopics.length === 0 && regularTopics.length === 0 && inboxTopic && null}
       </ul>
 
       <form className="topic-add" onSubmit={handleAdd}>

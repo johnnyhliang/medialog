@@ -1,6 +1,20 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient.js'
 
+function passwordStrength(pw) {
+  if (!pw) return { score: 0, label: '', color: 'transparent' }
+  let score = 0
+  if (pw.length >= 8) score++
+  if (pw.length >= 12) score++
+  if (/[A-Z]/.test(pw)) score++
+  if (/[0-9]/.test(pw)) score++
+  if (/[^A-Za-z0-9]/.test(pw)) score++
+  if (score <= 1) return { score, label: 'weak', color: '#d9534f' }
+  if (score <= 2) return { score, label: 'fair', color: '#e8a838' }
+  if (score <= 3) return { score, label: 'good', color: '#5b9bd5' }
+  return { score, label: 'strong', color: '#3D5A4A' }
+}
+
 export default function LandingPage() {
   const [authOpen, setAuthOpen] = useState(false)
   const [mode, setMode] = useState('auth') // 'auth' | 'reset'
@@ -9,6 +23,7 @@ export default function LandingPage() {
   const [confirmed, setConfirmed] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [isNewUser, setIsNewUser] = useState(false)
 
   useEffect(() => {
     const { data: sub } = supabase.auth.onAuthStateChange((_, session) => {
@@ -39,7 +54,7 @@ export default function LandingPage() {
         password,
         options: { emailRedirectTo: window.location.origin + '/app' },
       })
-      if (!signUpErr) { setConfirmed(true) }
+      if (!signUpErr) { setIsNewUser(true); setConfirmed(true) }
       else if (signUpErr.message.toLowerCase().includes('already registered')) {
         setError('Wrong password.')
       } else {
@@ -138,6 +153,14 @@ export default function LandingPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') handleSubmit() }}
               />
+              {password && (() => { const s = passwordStrength(password); return (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '-4px' }}>
+                  <div style={{ flex: 1, height: '3px', borderRadius: '2px', background: 'rgba(0,0,0,0.1)', overflow: 'hidden' }}>
+                    <div style={{ height: '100%', borderRadius: '2px', width: `${(s.score / 4) * 100}%`, background: s.color, transition: 'width 0.2s, background 0.2s' }} />
+                  </div>
+                  <span style={{ fontSize: '11px', color: s.color, minWidth: '38px' }}>{s.label}</span>
+                </div>
+              )})()}
               <button className="auth-btn-magic" onClick={handleSubmit} disabled={loading || !email || !password}>
                 {loading ? '…' : 'continue'}
               </button>

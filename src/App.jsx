@@ -2,7 +2,7 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { Search, Upload, Inbox, RotateCcw, BarChart2, Settings2, Trash2 as TrashIcon, Download, Menu, Home, FolderOpen, Rss, Briefcase, PackageOpen, Archive, ScrollText } from 'lucide-react'
 import { supabase } from './lib/supabaseClient.js'
-import { listTopics, createTopic, getTopicByName, listDeletedTopics, archiveTopic, unarchiveTopic, softDeleteTopic, restoreDeletedTopic } from './lib/db/topics.js'
+import { listTopics, createTopic, getTopicByName, listDeletedTopics, archiveTopic, unarchiveTopic, softDeleteTopic, restoreDeletedTopic, togglePinTopic } from './lib/db/topics.js'
 import {
   listEntriesByTopic, createEntry, updateEntry, searchEntries,
   bulkCreateEntries, listForRevisit, markSurfaced, listRecentActivity,
@@ -865,6 +865,10 @@ function Workspace() {
           selectedId={view === 'browse' ? selectedId : null}
           onSelect={(id) => { setSelectedId(id); setGlobalSearchResults(null); setView('browse') }}
           onAdd={handleAddTopic}
+          onPinToggle={async (id, pinned) => {
+            const updated = await togglePinTopic(supabase, id, pinned)
+            setTopics((prev) => prev.map((t) => t.id === id ? { ...t, pinned: updated.pinned } : t))
+          }}
           sidebarCollapsed={!sidebarOpen}
           onArchive={handleArchiveTopic}
           onUnarchive={handleUnarchiveTopic}

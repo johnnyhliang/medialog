@@ -1399,6 +1399,7 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
   border-radius: var(--radius);
   padding: 18px 22px;
   box-shadow: var(--shadow-card);
+  margin-bottom: 20px;
 }
 
 .doc-width-narrow   { max-width: 640px;  margin: 0 auto; }
@@ -2635,6 +2636,23 @@ a.activity-title:hover { color: var(--accent); }
   border-top: 1px solid var(--border);
   margin: 4px 8px;
 }
+
+.topic-pin-btn {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  padding: 3px;
+  cursor: pointer;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  border-radius: 3px;
+  opacity: 0.6;
+}
+.topic-pin-btn:hover { opacity: 1; color: var(--accent); background: var(--border); }
 
 /* Mobile: stack columns */
 @media (max-width: 640px) {

@@ -40,6 +40,17 @@ export async function createTopic(supabase, name) {
   return data
 }
 
+export async function togglePinTopic(supabase, topicId, pinned) {
+  const { data, error } = await supabase
+    .from('topics')
+    .update({ pinned })
+    .eq('id', topicId)
+    .select()
+    .single()
+  if (error) throw new Error(error.message)
+  return data
+}
+
 export async function updateTopicIcon(supabase, topicId, icon) {
   const { data, error } = await supabase
     .from('topics')
