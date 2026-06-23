@@ -358,29 +358,46 @@ function Workspace() {
     applyAddTopic(t)
   }
 
-  async function handleAddEntry({ url, note, title: prefetchedTitle, tags = [] }) {
+  async function handleAddEntry({ url, note, title: prefetchedTitle, tags = [], onTitleStatus, onEmbedStatus }) {
     let e
     try {
       e = await createEntry(supabase, { topicId: selectedId, url, note })
-    } catch {
-      addToast('Failed to save entry', 'error')
-      return
+    } catch (err) {
+      return { ok: false, error: err }
     }
     setEntries((prev) => [{ ...e, tags: [] }, ...prev])
     if (tags.length > 0) {
       await setEntryTags(supabase, e.id, tags)
       setEntries((prev) => prev.map((entry) => entry.id === e.id ? { ...entry, tags } : entry))
     }
-    let finalEntry = e
-    if (url) {
-      const title = prefetchedTitle ?? await fetchTitle(supabase, url)
-      if (title) {
-        const updated = await updateEntry(supabase, e.id, { title })
-        applyUpdateEntry(e.id, updated)
-        finalEntry = updated
+    // Enrichment runs after returning success to caller
+    ;(async () => {
+      let finalEntry = e
+      if (url) {
+        onTitleStatus?.('fetching')
+        try {
+          const title = prefetchedTitle ?? await fetchTitle(supabase, url)
+          if (title) {
+            const updated = await updateEntry(supabase, e.id, { title })
+            applyUpdateEntry(e.id, updated)
+            finalEntry = updated
+            onTitleStatus?.('done')
+          } else {
+            onTitleStatus?.('done')
+          }
+        } catch {
+          onTitleStatus?.('failed')
+        }
       }
-    }
-    embedEntryAsync(supabase, { ...finalEntry, note })
+      onEmbedStatus?.('indexing')
+      try {
+        await embedEntryAsync(supabase, { ...finalEntry, note })
+        onEmbedStatus?.('done')
+      } catch {
+        onEmbedStatus?.('failed')
+      }
+    })()
+    return { ok: true }
   }
 
   function handleToggleTrashToast(val) {
