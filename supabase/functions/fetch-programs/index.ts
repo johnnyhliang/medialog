@@ -35,6 +35,8 @@ serve(async (req) => {
 
   const results: { name: string; window_open: boolean; deadline: string | null }[] = []
 
+  const today = new Date().toISOString().split('T')[0]
+
   for (const program of programs) {
     try {
       const r = await fetch(program.url, {
@@ -43,7 +45,6 @@ serve(async (req) => {
       if (!r.ok) continue
       const text = await r.text()
       const wasOpen: boolean = program.window_open
-      const isOpen = OPEN_PATTERNS.some((p) => p.test(text))
       const deadlineMatch = text.match(DEADLINE_PATTERN)
       const deadline: string | null = deadlineMatch
         ? (() => {
@@ -52,13 +53,17 @@ serve(async (req) => {
           })()
         : program.deadline
 
+      // Deadline in the past overrides page-content detection
+      const deadlinePassed = deadline && deadline < today
+      const isOpen = !deadlinePassed && OPEN_PATTERNS.some((p) => p.test(text))
+
       await supabase
         .from('programs')
         .update({ window_open: isOpen, deadline, last_checked: new Date().toISOString() })
         .eq('id', program.id)
 
-      // Insert synthetic opportunity when window flips open
       if (isOpen && !wasOpen) {
+        // Window just opened — insert synthetic opportunity
         await supabase.from('opportunities').upsert(
           {
             source: 'program-alert',
@@ -72,6 +77,12 @@ serve(async (req) => {
           },
           { onConflict: 'source,url', ignoreDuplicates: false }
         )
+      } else if (!isOpen && wasOpen) {
+        // Window just closed — remove the stale alert
+        await supabase.from('opportunities')
+          .delete()
+          .eq('source', 'program-alert')
+          .eq('url', program.url)
       }
 
       results.push({ name: program.name, window_open: isOpen, deadline })
