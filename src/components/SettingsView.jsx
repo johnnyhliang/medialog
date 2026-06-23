@@ -452,7 +452,7 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
               </div>
             ) : (
               (() => {
-                const bookmarkletCode = `(function(){var url=location.href;var title=document.title;fetch('${import.meta.env.VITE_SUPABASE_URL}/functions/v1/capture',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({secret:'${import.meta.env.VITE_CAPTURE_SECRET}',url:url,note:title})}).then(function(r){alert(r.ok?'Saved to MediaLog ✓':'Failed: '+r.status)}).catch(function(){alert('MediaLog: network error')})})()`
+                const bookmarkletCode = `(function(){var url=location.href;var title=document.title;fetch('${import.meta.env.VITE_SUPABASE_URL}/functions/v1/capture',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({secret:'${import.meta.env.VITE_CAPTURE_SECRET}',url:url,note:title})}).then(function(r){return r.json()}).then(function(d){var m=document.createElement('div');m.textContent=d.duplicate?'Already saved ✓':'Saved ✓';m.style.cssText='position:fixed;top:16px;right:16px;background:#222;color:#fff;padding:8px 16px;border-radius:6px;font:14px sans-serif;z-index:999999';document.body.appendChild(m);setTimeout(function(){m.remove()},2500)}).catch(function(){alert('MediaLog: save failed — check console')})})()`
                 return (
                   <>
                     <div style={{ marginTop: 16, marginBottom: 16 }}>
@@ -488,6 +488,9 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
                     >
                       Copy Bookmarklet Code
                     </button>
+                    <p className="muted" style={{ fontSize: 12, marginTop: 12, marginBottom: 0 }}>
+                      When saved, the bookmarklet shows a brief <strong>'Saved ✓'</strong> or <strong>'Already saved ✓'</strong> confirmation in the page.
+                    </p>
                   </>
                 )
               })()

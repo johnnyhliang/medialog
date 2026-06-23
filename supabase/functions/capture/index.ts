@@ -38,21 +38,38 @@ const cors = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
+function json(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...cors, 'content-type': 'application/json' },
+  })
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
   if (req.method !== 'POST') return new Response('method not allowed', { status: 405, headers: cors })
 
   const body = await req.json().catch(() => ({}))
+
   if (body.secret !== Deno.env.get('CAPTURE_SECRET')) {
-    return new Response(JSON.stringify({ error: 'unauthorized' }), {
-      status: 401, headers: { ...cors, 'Content-Type': 'application/json' },
-    })
+    return json(
+      { ok: false, error: 'unauthorized', message: 'Invalid or missing capture secret' },
+      401,
+    )
   }
 
-  if (body.url && !isSafeUrl(body.url)) {
-    return new Response(JSON.stringify({ error: 'unsafe url' }), {
-      status: 400, headers: { ...cors, 'Content-Type': 'application/json' },
-    })
+  if (!body.url) {
+    return json(
+      { ok: false, error: 'bad_request', message: 'url is required' },
+      400,
+    )
+  }
+
+  if (!isSafeUrl(body.url)) {
+    return json(
+      { ok: false, error: 'bad_request', message: 'URL must be a public http(s) address' },
+      400,
+    )
   }
 
   const supabase = createClient(
@@ -61,26 +78,46 @@ Deno.serve(async (req) => {
   )
   const userId = Deno.env.get('CAPTURE_USER_ID')!
 
-  const { data: inbox } = await supabase
-    .from('topics').select('id').eq('user_id', userId).eq('name', 'Inbox').single()
-  if (!inbox) {
-    return new Response(JSON.stringify({ error: 'no inbox' }), {
-      status: 500, headers: { ...cors, 'Content-Type': 'application/json' },
+  // Duplicate check: if a non-deleted entry with this URL already exists, return early.
+  const { data: existing } = await supabase
+    .from('entries')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('url', body.url)
+    .is('deleted_at', null)
+    .maybeSingle()
+
+  if (existing) {
+    return json({
+      ok: true,
+      duplicate: true,
+      entry_id: existing.id,
+      message: 'duplicate — already saved',
     })
   }
 
-  const { error } = await supabase.from('entries').insert({
+  const { data: inbox } = await supabase
+    .from('topics').select('id').eq('user_id', userId).eq('name', 'Inbox').single()
+  if (!inbox) {
+    return json(
+      { ok: false, error: 'internal', message: 'Inbox topic not found for this user' },
+      500,
+    )
+  }
+
+  const { data: inserted, error } = await supabase.from('entries').insert({
     user_id: userId,
     topic_id: inbox.id,
-    url: body.url ?? null,
+    url: body.url,
     note: body.note ?? '',
-  })
+  }).select('id').single()
+
   if (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500, headers: { ...cors, 'Content-Type': 'application/json' },
-    })
+    return json(
+      { ok: false, error: 'internal', message: error.message },
+      500,
+    )
   }
-  return new Response(JSON.stringify({ ok: true }), {
-    headers: { ...cors, 'Content-Type': 'application/json' },
-  })
+
+  return json({ ok: true, entry_id: inserted.id, message: 'saved' })
 })
