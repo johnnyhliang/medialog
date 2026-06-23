@@ -227,3 +227,52 @@ test('skips takeaway prompt when transitioning to done with existing note', asyn
   expect(screen.queryByText(/any final takeaway/i)).not.toBeInTheDocument()
   expect(onStatusChange).toHaveBeenCalledWith('x', 'done')
 })
+
+test('autosave failure shows Save failed text', async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true })
+  const onNoteSave = vi.fn().mockRejectedValue(new Error('network error'))
+  const { container } = render(<EntryCard entry={base} {...handlers} onNoteSave={onNoteSave} />)
+  await expandCard(container)
+  await userEvent.click(screen.getByRole('button', { name: /edit note/i }))
+  const editor = await screen.findByLabelText('note editor')
+  await userEvent.type(editor, 'x')
+  await vi.runAllTimersAsync()
+  expect(screen.getByText(/save failed/i)).toBeInTheDocument()
+  vi.useRealTimers()
+})
+
+test('successful save after failure clears Save failed', async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true })
+  const onNoteSave = vi.fn().mockRejectedValueOnce(new Error('network error')).mockResolvedValue()
+  const { container } = render(<EntryCard entry={base} {...handlers} onNoteSave={onNoteSave} />)
+  await expandCard(container)
+  await userEvent.click(screen.getByRole('button', { name: /edit note/i }))
+  const editor = await screen.findByLabelText('note editor')
+  await userEvent.type(editor, 'x')
+  await vi.runAllTimersAsync()
+  expect(screen.getByText(/save failed/i)).toBeInTheDocument()
+  // next keystroke triggers new autosave that succeeds
+  await userEvent.type(editor, 'y')
+  await vi.runAllTimersAsync()
+  expect(screen.queryByText(/save failed/i)).not.toBeInTheDocument()
+  vi.useRealTimers()
+})
+
+test('Done button retries save when status is failed and keeps editor open on failure', async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true })
+  const onNoteSave = vi.fn().mockRejectedValue(new Error('network error'))
+  const { container } = render(<EntryCard entry={base} {...handlers} onNoteSave={onNoteSave} />)
+  await expandCard(container)
+  await userEvent.click(screen.getByRole('button', { name: /edit note/i }))
+  const editor = await screen.findByLabelText('note editor')
+  await userEvent.type(editor, 'x')
+  await vi.runAllTimersAsync()
+  expect(screen.getByText(/save failed/i)).toBeInTheDocument()
+  const callsBefore = onNoteSave.mock.calls.length
+  // Click Done — should call save again, not close
+  await userEvent.click(screen.getByRole('button', { name: /done/i }))
+  expect(onNoteSave.mock.calls.length).toBeGreaterThan(callsBefore)
+  // editor still open because save failed
+  expect(screen.getByLabelText('note editor')).toBeInTheDocument()
+  vi.useRealTimers()
+})

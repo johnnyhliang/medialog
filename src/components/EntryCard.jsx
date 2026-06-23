@@ -89,17 +89,22 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
         setSaveStatus('saved')
         setTimeout(() => setSaveStatus('idle'), 1500)
       } catch {
-        setSaveStatus('idle')
+        setSaveStatus('failed')
       }
     }, 800)
     return () => clearTimeout(timer.current)
   }, [draft, editing])
 
-  function finishEditing() {
+  async function finishEditing() {
     if (timer.current) clearTimeout(timer.current)
-    onNoteSave(entry.id, draft)
-    onNoteVersion?.(entry.id, draft) // commit a version snapshot on Done
-    setEditing(false)
+    try {
+      await onNoteSave(entry.id, draft)
+      onNoteVersion?.(entry.id, draft) // commit a version snapshot on Done
+      setEditing(false)
+    } catch {
+      setSaveStatus('failed')
+      // keep editing open so the user sees the failure
+    }
   }
 
   function saveTitle() {
@@ -435,6 +440,7 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
             <>
               {saveStatus === 'saving' && <span className="save-status">Saving…</span>}
               {saveStatus === 'saved' && <span className="save-status">Saved</span>}
+              {saveStatus === 'failed' && <span className="save-status save-status--failed">Save failed</span>}
               <button className="btn-small" onClick={finishEditing}>Done</button>
             </>
           ) : (
