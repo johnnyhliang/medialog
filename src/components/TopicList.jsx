@@ -41,28 +41,29 @@ export default function TopicList({
   function TopicBtn({ t }) {
     const [hovering, setHovering] = useState(false)
     return (
-      <li
-        key={t.id}
-        className="topic-row"
-        onMouseEnter={() => setHovering(true)}
-        onMouseLeave={() => setHovering(false)}
-      >
-        <button
-          className={t.id === selectedId ? 'selected topic-row-btn' : 'topic-row-btn'}
-          onClick={() => onSelect(t.id)}
-          title={t.name}
+      <li key={t.id}>
+        <div
+          className="topic-row"
+          onMouseEnter={() => setHovering(true)}
+          onMouseLeave={() => setHovering(false)}
         >
-          {sidebarCollapsed ? t.name.slice(0, 2).toUpperCase() : t.name}
-        </button>
-        {hovering && !sidebarCollapsed && onPinToggle && (
           <button
-            className="topic-pin-btn"
-            onClick={(e) => { e.stopPropagation(); onPinToggle(t.id, !t.pinned) }}
-            title={t.pinned ? 'Unpin' : 'Pin to top'}
+            className={t.id === selectedId ? 'selected topic-row-btn' : 'topic-row-btn'}
+            onClick={() => onSelect(t.id)}
+            title={t.name}
           >
-            {t.pinned ? <PinOff size={11} /> : <Pin size={11} />}
+            {sidebarCollapsed ? t.name.slice(0, 2).toUpperCase() : t.name}
           </button>
-        )}
+          {hovering && !sidebarCollapsed && onPinToggle && (
+            <button
+              className="topic-pin-btn"
+              onClick={(e) => { e.stopPropagation(); onPinToggle(t.id, !t.pinned) }}
+              title={t.pinned ? 'Unpin' : 'Pin to top'}
+            >
+              {t.pinned ? <PinOff size={11} /> : <Pin size={11} />}
+            </button>
+          )}
+        </div>
       </li>
     )
   }

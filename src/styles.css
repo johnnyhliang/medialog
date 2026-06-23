@@ -2641,9 +2641,9 @@ a.activity-title:hover { color: var(--accent); }
   display: flex;
   align-items: center;
 }
-.topic-row-btn {
+.topic-row .topic-row-btn {
   flex: 1;
-  width: auto !important;
+  width: auto;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
