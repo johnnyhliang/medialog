@@ -6,13 +6,16 @@ import WeatherWidget from './widgets/WeatherWidget.jsx'
 import DeadlineAlertBanner from './widgets/DeadlineAlertBanner.jsx'
 import OpportunitiesWidget from './widgets/OpportunitiesWidget.jsx'
 import FeedWidget from './widgets/FeedWidget.jsx'
+import FocusWidget from './widgets/FocusWidget.jsx'
 
-export default function WidgetPanel({ supabase, onTrack, onSaveFeedItem, onGoToFeed }) {
+export default function WidgetPanel({ supabase, onTrack, onSaveFeedItem, onGoToFeed, onOpenEntry }) {
   return (
     <div className="widget-panel">
       <DeadlineAlertBanner supabase={supabase} />
       <ClockWidget />
       <WeatherWidget />
+      <div className="kw-divider" />
+      <FocusWidget supabase={supabase} onOpenEntry={onOpenEntry} />
       <div className="kw-divider" />
       <SearchWidget />
       <div className="kw-divider" />
