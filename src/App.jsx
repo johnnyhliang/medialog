@@ -50,6 +50,7 @@ import { useTags } from './hooks/useTags.js'
 import { useVersions } from './hooks/useVersions.js'
 import { useExport } from './hooks/useExport.js'
 import { useArchiveToast } from './hooks/useArchiveToast.js'
+import { useTheme } from './hooks/useTheme.js'
 const FilePreviewModal = lazy(() => import('./components/FilePreviewModal.jsx'))
 
 function Workspace() {
@@ -64,6 +65,7 @@ function Workspace() {
   const { historyFor, versions, openHistory, closeHistory } = useVersions()
   const { exportModal, openExportLoading, setExportResult, closeExportModal } = useExport()
   const { archiveToast, setArchiveToast } = useArchiveToast()
+  const { palette: themePalette, style: themeStyle, setPalette, setStyle } = useTheme()
   const [trashToast, setTrashToast] = useState(() => {
     try { return localStorage.getItem('medialog_trash_toast') !== 'false' } catch { return true }
   })
@@ -837,6 +839,7 @@ function Workspace() {
               onTrack={handleTrack}
               onSaveFeedItem={(item) => handleSaveFromFeed(item, inboxTopic?.id ?? topics[0]?.id)}
               onGoToFeed={() => setView('feed')}
+              onOpenEntry={handleSelectEntry}
             />
           )}
           {view === 'explore' && (
@@ -924,6 +927,10 @@ function Workspace() {
               onToggleArchiveToast={handleToggleArchiveToast}
               trashToast={trashToast}
               onToggleTrashToast={handleToggleTrashToast}
+              themePalette={themePalette}
+              themeStyle={themeStyle}
+              onSetPalette={setPalette}
+              onSetStyle={setStyle}
             />
           )}
           {view === 'trash' && (

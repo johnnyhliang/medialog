@@ -7,12 +7,12 @@ import KeybindsTab from './settings/KeybindsTab.jsx'
 import KeywordsTab from './settings/KeywordsTab.jsx'
 import ProgramsTab from './settings/ProgramsTab.jsx'
 
-export default function SettingsView({ topics, onRefreshData, addToast, allTags = [], onUpdateTagColor, archiveToast, onToggleArchiveToast, trashToast, onToggleTrashToast }) {
+export default function SettingsView({ topics, onRefreshData, addToast, allTags = [], onUpdateTagColor, archiveToast, onToggleArchiveToast, trashToast, onToggleTrashToast, themePalette, themeStyle, onSetPalette, onSetStyle }) {
   const [config, setConfig] = useState(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [pendingColors, setPendingColors] = useState({})
-  const [tab, setTab] = useState('github')
+  const [tab, setTab] = useState('appearance')
   const [twitterToken, setTwitterToken] = useState('')
   const [twitterSaving, setTwitterSaving] = useState(false)
   const [bulkTopic, setBulkTopic] = useState('')
@@ -183,6 +183,7 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
   if (loading) return <p>Loading settings...</p>
 
   const TABS = [
+    { id: 'appearance',  label: 'Appearance' },
     { id: 'github',      label: 'GitHub' },
     { id: 'twitter',     label: 'Twitter' },
     { id: 'behavior',    label: 'Behavior' },
@@ -209,6 +210,105 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
           </button>
         ))}
       </div>
+
+      {tab === 'appearance' && (
+  <section>
+    <h2>Appearance</h2>
+    <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+
+      <div>
+        <p style={{ margin: '0 0 12px', fontWeight: 600, fontSize: 13 }}>Color Palette</p>
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+          {[
+            { id: 'warm',            name: 'Warm Parchment', bg: '#F8F5EE', accent: '#3D5A4A' },
+            { id: 'catppuccin-mocha',name: 'Catppuccin Mocha', bg: '#1e1e2e', accent: '#cba6f7' },
+            { id: 'tokyo-night',     name: 'Tokyo Night',    bg: '#1a1b26', accent: '#7aa2f7' },
+            { id: 'nord',            name: 'Nord',           bg: '#2e3440', accent: '#88c0d0' },
+            { id: 'rose-pine',       name: 'Rosé Pine',      bg: '#191724', accent: '#eb6f92' },
+          ].map(({ id, name, bg, accent }) => (
+            <button
+              key={id}
+              title={name}
+              onClick={() => onSetPalette(id)}
+              style={{
+                width: 44, height: 44, borderRadius: '50%', padding: 0, cursor: 'pointer',
+                border: themePalette === id ? `3px solid ${accent}` : '2px solid transparent',
+                outline: themePalette === id ? `2px solid ${accent}` : 'none',
+                outlineOffset: 2,
+                background: `conic-gradient(${bg} 0deg 180deg, ${accent} 180deg 360deg)`,
+                flexShrink: 0,
+              }}
+            />
+          ))}
+        </div>
+        <p style={{ margin: '8px 0 0', fontSize: 12, color: 'var(--muted)' }}>
+          {[
+            { id: 'warm', name: 'Warm Parchment' },
+            { id: 'catppuccin-mocha', name: 'Catppuccin Mocha' },
+            { id: 'tokyo-night', name: 'Tokyo Night' },
+            { id: 'nord', name: 'Nord' },
+            { id: 'rose-pine', name: 'Rosé Pine' },
+          ].find(p => p.id === themePalette)?.name ?? themePalette}
+        </p>
+      </div>
+
+      <div>
+        <p style={{ margin: '0 0 12px', fontWeight: 600, fontSize: 13 }}>Style</p>
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+          {[
+            {
+              id: 'default', name: 'Default',
+              preview: (
+                <div style={{ width: 64, height: 40, borderRadius: 6, background: 'var(--surface-2)', border: '1px solid var(--border)', boxShadow: '0 2px 6px rgba(0,0,0,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{ width: 40, height: 6, borderRadius: 3, background: 'var(--muted)', opacity: 0.5 }} />
+                </div>
+              ),
+            },
+            {
+              id: 'brutalist', name: 'Neobrutalism',
+              preview: (
+                <div style={{ width: 64, height: 40, borderRadius: 2, background: 'var(--surface-2)', border: '2px solid var(--text)', boxShadow: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{ width: 40, height: 6, borderRadius: 0, background: 'var(--text)', opacity: 0.7 }} />
+                </div>
+              ),
+            },
+            {
+              id: 'glass', name: 'Glassmorphism',
+              preview: (
+                <div style={{ width: 64, height: 40, borderRadius: 6, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden' }}>
+                  <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, transparent 100%)' }} />
+                  <div style={{ width: 40, height: 6, borderRadius: 3, background: 'rgba(255,255,255,0.3)' }} />
+                </div>
+              ),
+            },
+          ].map(({ id, name, preview }) => (
+            <button
+              key={id}
+              title={name}
+              onClick={() => onSetStyle(id)}
+              style={{
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+                padding: '8px 10px', borderRadius: 8, cursor: 'pointer',
+                border: themeStyle === id ? '2px solid var(--accent)' : '1px solid var(--border)',
+                background: themeStyle === id ? 'var(--accent-weak)' : 'var(--surface)',
+                fontSize: 11, color: 'var(--text)', fontWeight: themeStyle === id ? 600 : 400,
+              }}
+            >
+              {preview}
+              {name}
+            </button>
+          ))}
+        </div>
+        {themeStyle === 'glass' && themePalette === 'warm' && (
+          <p style={{ margin: '8px 0 0', fontSize: 11, color: 'var(--muted)' }}>
+            Glassmorphism is most visible on dark palettes.
+          </p>
+        )}
+      </div>
+
+    </div>
+  </section>
+)}
 
       {tab === 'github' && (
         <section>
