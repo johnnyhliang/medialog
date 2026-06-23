@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabaseClient.js'
 
 export default function LandingPage() {
   const [authOpen, setAuthOpen] = useState(false)
-  const [mode, setMode] = useState('signin') // 'signin' | 'signup' | 'reset'
+  const [mode, setMode] = useState('auth') // 'auth' | 'reset'
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmed, setConfirmed] = useState(false)
@@ -27,18 +27,26 @@ export default function LandingPage() {
   async function handleSubmit() {
     setError('')
     setLoading(true)
-    if (mode === 'signin') {
-      const { error: err } = await supabase.auth.signInWithPassword({ email, password })
-      if (err) setError(err.message)
-      // success → onAuthStateChange redirects to /app
-    } else {
-      const { error: err } = await supabase.auth.signUp({
+    // Try sign in first. If credentials are wrong for an existing account that's a real error.
+    // If the account doesn't exist, Supabase returns the same "Invalid login credentials" —
+    // disambiguate by attempting sign up and checking the response.
+    const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password })
+    if (!signInErr) { setLoading(false); return } // success → onAuthStateChange redirects
+
+    if (signInErr.message === 'Invalid login credentials') {
+      const { error: signUpErr } = await supabase.auth.signUp({
         email,
         password,
         options: { emailRedirectTo: window.location.origin + '/app' },
       })
-      if (err) setError(err.message)
-      else setConfirmed(true)
+      if (!signUpErr) { setConfirmed(true) }
+      else if (signUpErr.message.toLowerCase().includes('already registered')) {
+        setError('Wrong password.')
+      } else {
+        setError(signUpErr.message)
+      }
+    } else {
+      setError(signInErr.message)
     }
     setLoading(false)
   }
@@ -103,30 +111,17 @@ export default function LandingPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter' && email) sendReset() }}
               />
-              <button
-                className="auth-btn-magic"
-                onClick={sendReset}
-                disabled={loading || !email}
-              >
+              <button className="auth-btn-magic" onClick={sendReset} disabled={loading || !email}>
                 {loading ? '…' : 'send reset link'}
               </button>
-              <button className="auth-link" onClick={() => { setMode('signin'); setError('') }}>
+              <button className="auth-link" onClick={() => { setMode('auth'); setError('') }}>
                 back to sign in
               </button>
               {error && <p className="auth-error">{error}</p>}
             </>
           ) : (
             <>
-              <div className="auth-tabs">
-                <button
-                  className={`auth-tab${mode === 'signin' ? ' active' : ''}`}
-                  onClick={() => { setMode('signin'); setError('') }}
-                >sign in</button>
-                <button
-                  className={`auth-tab${mode === 'signup' ? ' active' : ''}`}
-                  onClick={() => { setMode('signup'); setError('') }}
-                >create account</button>
-              </div>
+              <p className="auth-sub">sign in or create an account.</p>
               <input
                 className="auth-input"
                 type="email"
@@ -143,18 +138,12 @@ export default function LandingPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') handleSubmit() }}
               />
-              <button
-                className="auth-btn-magic"
-                onClick={handleSubmit}
-                disabled={loading || !email || !password}
-              >
-                {loading ? '…' : mode === 'signin' ? 'sign in' : 'create account'}
+              <button className="auth-btn-magic" onClick={handleSubmit} disabled={loading || !email || !password}>
+                {loading ? '…' : 'continue'}
               </button>
-              {mode === 'signin' && (
-                <button className="auth-link" onClick={() => { setMode('reset'); setError('') }}>
-                  forgot password?
-                </button>
-              )}
+              <button className="auth-link" onClick={() => { setMode('reset'); setError('') }}>
+                forgot password?
+              </button>
               <div className="auth-divider">or</div>
               <button className="auth-btn-github" onClick={signInGitHub}>
                 continue with github
