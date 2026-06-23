@@ -16,6 +16,11 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      devOptions: {
+        // Never run the service worker in dev — it precaches the bundle and
+        // serves stale JS/CSS, making source edits/HMR appear to do nothing.
+        enabled: false,
+      },
       manifest: {
         name: 'MediaLog',
         short_name: 'MediaLog',
