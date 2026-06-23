@@ -7,12 +7,12 @@ export function useSession() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session)
-      setLoading(false)
-    })
+    // Rely solely on onAuthStateChange (fires INITIAL_SESSION on load).
+    // This avoids a race where getSession() resolves before magic-link token
+    // exchange completes, causing AuthGate to redirect to / prematurely.
     const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
       setSession(s)
+      setLoading(false)
     })
     return () => sub.subscription.unsubscribe()
   }, [])
