@@ -3,31 +3,55 @@ import { supabase } from '../lib/supabaseClient.js'
 
 export default function LandingPage() {
   const [authOpen, setAuthOpen] = useState(false)
+  const [mode, setMode] = useState('signin') // 'signin' | 'signup' | 'reset'
   const [email, setEmail] = useState('')
-  const [sent, setSent] = useState(false)
+  const [password, setPassword] = useState('')
+  const [confirmed, setConfirmed] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) window.location.replace('/app')
-    })
     const { data: sub } = supabase.auth.onAuthStateChange((_, session) => {
       if (session) window.location.replace('/app')
     })
     return () => sub.subscription.unsubscribe()
   }, [])
 
-  async function sendMagicLink() {
+  function openAuth(initialMode = 'signin') {
+    setMode(initialMode)
+    setError('')
+    setConfirmed(false)
+    setAuthOpen(true)
+  }
+
+  async function handleSubmit() {
     setError('')
     setLoading(true)
-    const { error: err } = await supabase.auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: window.location.origin + '/app' },
+    if (mode === 'signin') {
+      const { error: err } = await supabase.auth.signInWithPassword({ email, password })
+      if (err) setError(err.message)
+      // success → onAuthStateChange redirects to /app
+    } else {
+      const { error: err } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { emailRedirectTo: window.location.origin + '/app' },
+      })
+      if (err) setError(err.message)
+      else setConfirmed(true)
+    }
+    setLoading(false)
+  }
+
+  async function sendReset() {
+    setError('')
+    setLoading(true)
+    const { error: err } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin + '/app',
     })
     setLoading(false)
     if (err) setError(err.message)
-    else setSent(true)
+    else setConfirmed(true)
   }
 
   async function signInGitHub() {
@@ -51,8 +75,8 @@ export default function LandingPage() {
           <a href="#">docs</a>
         </div>
         <div className="nav-right">
-          <a href="#" onClick={(e) => { e.preventDefault(); setAuthOpen(true) }}>sign in</a>
-          <a href="#" onClick={(e) => { e.preventDefault(); setAuthOpen(true) }} className="nav-signup">sign up →</a>
+          <a href="#" onClick={(e) => { e.preventDefault(); openAuth('signin') }}>sign in</a>
+          <a href="#" onClick={(e) => { e.preventDefault(); openAuth('signup') }} className="nav-signup">sign up →</a>
         </div>
       </nav>
 
@@ -64,29 +88,76 @@ export default function LandingPage() {
         <div className="auth-modal">
           <button className="auth-close" onClick={() => setAuthOpen(false)}>×</button>
           <p className="auth-title">medialog.</p>
-          <p className="auth-sub">enter your email to sign in or create an account.</p>
-          {sent ? (
-            <p className="auth-sent">check your email for a magic link ✓</p>
-          ) : (
+          {confirmed ? (
+            <p className="auth-sent">
+              {mode === 'reset' ? 'check your email for a password reset link ✓' : 'check your email to confirm your account ✓'}
+            </p>
+          ) : mode === 'reset' ? (
             <>
+              <p className="auth-sub">enter your email and we'll send a reset link.</p>
               <input
                 className="auth-input"
                 type="email"
                 placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter' && email) sendMagicLink() }}
+                onKeyDown={(e) => { if (e.key === 'Enter' && email) sendReset() }}
               />
               <button
                 className="auth-btn-magic"
-                onClick={sendMagicLink}
+                onClick={sendReset}
                 disabled={loading || !email}
               >
-                {loading ? 'sending…' : 'send magic link'}
+                {loading ? '…' : 'send reset link'}
               </button>
+              <button className="auth-link" onClick={() => { setMode('signin'); setError('') }}>
+                back to sign in
+              </button>
+              {error && <p className="auth-error">{error}</p>}
+            </>
+          ) : (
+            <>
+              <div className="auth-tabs">
+                <button
+                  className={`auth-tab${mode === 'signin' ? ' active' : ''}`}
+                  onClick={() => { setMode('signin'); setError('') }}
+                >sign in</button>
+                <button
+                  className={`auth-tab${mode === 'signup' ? ' active' : ''}`}
+                  onClick={() => { setMode('signup'); setError('') }}
+                >create account</button>
+              </div>
+              <input
+                className="auth-input"
+                type="email"
+                placeholder="you@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleSubmit() }}
+              />
+              <input
+                className="auth-input"
+                type="password"
+                placeholder="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleSubmit() }}
+              />
+              <button
+                className="auth-btn-magic"
+                onClick={handleSubmit}
+                disabled={loading || !email || !password}
+              >
+                {loading ? '…' : mode === 'signin' ? 'sign in' : 'create account'}
+              </button>
+              {mode === 'signin' && (
+                <button className="auth-link" onClick={() => { setMode('reset'); setError('') }}>
+                  forgot password?
+                </button>
+              )}
               <div className="auth-divider">or</div>
               <button className="auth-btn-github" onClick={signInGitHub}>
-                sign in with github
+                continue with github
               </button>
               {error && <p className="auth-error">{error}</p>}
             </>
@@ -105,7 +176,7 @@ export default function LandingPage() {
         <h1 className="hero-display">medialog.</h1>
         <p className="hero-tagline">for people who save too much and retain too little. capture, triage, consume, retain.</p>
         <div className="hero-cta">
-          <a href="#" onClick={(e) => { e.preventDefault(); setAuthOpen(true) }} className="btn-primary">get started free →</a>
+          <a href="#" onClick={(e) => { e.preventDefault(); openAuth('signup') }} className="btn-primary">get started free →</a>
           <a href="https://github.com" target="_blank" rel="noopener" className="btn-link">github ↗</a>
         </div>
       </section>
@@ -448,7 +519,7 @@ export default function LandingPage() {
       <div className="cta-strip">
         <p className="cta-display">start logging<br/>what matters.</p>
         <p className="cta-note">free. mit licensed. export everything, anytime.</p>
-        <a href="#" onClick={(e) => { e.preventDefault(); setAuthOpen(true) }} className="btn-cream">get started →</a>
+        <a href="#" onClick={(e) => { e.preventDefault(); openAuth('signup') }} className="btn-cream">get started →</a>
       </div>
 
       {/* ══════════════════════════════════════
