@@ -359,7 +359,13 @@ function Workspace() {
   }
 
   async function handleAddEntry({ url, note, title: prefetchedTitle, tags = [] }) {
-    const e = await createEntry(supabase, { topicId: selectedId, url, note })
+    let e
+    try {
+      e = await createEntry(supabase, { topicId: selectedId, url, note })
+    } catch {
+      addToast('Failed to save entry', 'error')
+      return
+    }
     setEntries((prev) => [{ ...e, tags: [] }, ...prev])
     if (tags.length > 0) {
       await setEntryTags(supabase, e.id, tags)
@@ -391,7 +397,12 @@ function Workspace() {
 
   async function handleDelete(id) {
     const entry = entries.find((e) => e.id === id)
-    await softDeleteEntry(supabase, id)
+    try {
+      await softDeleteEntry(supabase, id)
+    } catch {
+      addToast('Failed to delete entry', 'error')
+      return
+    }
     applyDeleteEntry(id)
     if (trashToast && entry) {
       addToast('Moved to trash', 'info', {
@@ -404,7 +415,13 @@ function Workspace() {
   async function handleStatusChange(entryId, status) {
     const entry = entries.find(e => e.id === entryId)
     const prevStatus = entry?.status || null
-    const updated = await updateEntry(supabase, entryId, { status })
+    let updated
+    try {
+      updated = await updateEntry(supabase, entryId, { status })
+    } catch {
+      addToast('Failed to update status', 'error')
+      return
+    }
     applyUpdateEntry(entryId, updated)
 
     if (status === 'done') {
@@ -457,7 +474,12 @@ function Workspace() {
   }
 
   async function handleMove(entryId, newTopicId) {
-    await updateEntry(supabase, entryId, { topic_id: newTopicId })
+    try {
+      await updateEntry(supabase, entryId, { topic_id: newTopicId })
+    } catch {
+      addToast('Failed to move entry', 'error')
+      return
+    }
     applyMoveEntry(entryId)
   }
 
@@ -954,6 +976,7 @@ function Workspace() {
               supabase={supabase}
               topics={topics}
               onSaveItem={handleSaveFromFeed}
+              addToast={addToast}
             />
           )}
           {view === 'archive' && (
@@ -977,6 +1000,7 @@ function Workspace() {
               supabase={supabase}
               prefill={trackPrefill}
               onClearPrefill={() => setTrackPrefill(null)}
+              addToast={addToast}
             />
           )}
           {view === 'digest' && (
