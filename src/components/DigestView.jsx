@@ -11,7 +11,7 @@ function shortDate(str) {
   return new Date(str).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
 }
 
-export default function DigestView({ topics, inboxTopicId }) {
+export default function DigestView({ topics, inboxTopicId, onSortInbox, onGoToView, onOpenEntry, onStatusChange }) {
   const [timeWindow, setTimeWindow] = useState('7d')
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -47,6 +47,23 @@ export default function DigestView({ topics, inboxTopicId }) {
 
       {!loading && data && (
         <div className="digest-body">
+
+          {/* CTAs */}
+          {(data.oldInbox.length > 0 || data.readingQueue.length > 3) && (
+            <div className="digest-ctas">
+              {data.oldInbox.length > 0 && onSortInbox && (
+                <button className="digest-cta digest-cta--warn" onClick={onSortInbox}>
+                  Sort Inbox ({data.oldInbox.length} old item{data.oldInbox.length === 1 ? '' : 's'})
+                </button>
+              )}
+              {data.readingQueue.length > 3 && onGoToView && (
+                <button className="digest-cta digest-cta--active" onClick={() => onGoToView('browse')}>
+                  Review active queue ({data.readingQueue.length} active)
+                </button>
+              )}
+            </div>
+          )}
+
           <section className="digest-section">
             <h3>This period</h3>
             <p className="digest-stat">{data.captured.length} entries captured</p>
@@ -76,6 +93,10 @@ export default function DigestView({ topics, inboxTopicId }) {
                     <li key={e.id}>
                       <span className="digest-item-title">{entryLabel(e)}</span>
                       <span className="digest-item-date">{shortDate(e.created_at)}</span>
+                      <span className="digest-item-actions">
+                        {onOpenEntry && <button className="digest-action-btn" onClick={() => onOpenEntry(e)}>Open</button>}
+                        {onStatusChange && <button className="digest-action-btn digest-action-btn--done" onClick={() => onStatusChange(e.id, 'done')}>Mark Done</button>}
+                      </span>
                     </li>
                   ))}
                 </ul>
@@ -90,6 +111,10 @@ export default function DigestView({ topics, inboxTopicId }) {
                     <li key={e.id}>
                       <span className="digest-item-title">{entryLabel(e)}</span>
                       <span className="digest-item-date">{shortDate(e.created_at)}</span>
+                      <span className="digest-item-actions">
+                        {onOpenEntry && <button className="digest-action-btn" onClick={() => onOpenEntry(e)}>Open</button>}
+                        {onStatusChange && <button className="digest-action-btn digest-action-btn--done" onClick={() => onStatusChange(e.id, 'done')}>Mark Done</button>}
+                      </span>
                     </li>
                   ))}
                 </ul>
@@ -124,6 +149,10 @@ export default function DigestView({ topics, inboxTopicId }) {
                       : <span className="digest-item-title">{entryLabel(e)}</span>
                     }
                     <span className="digest-item-date">{shortDate(e.created_at)}</span>
+                    <span className="digest-item-actions">
+                      {onOpenEntry && <button className="digest-action-btn" onClick={() => onOpenEntry(e)}>Open</button>}
+                      {onStatusChange && <button className="digest-action-btn digest-action-btn--done" onClick={() => onStatusChange(e.id, 'done')}>Mark Done</button>}
+                    </span>
                   </li>
                 ))}
               </ul>

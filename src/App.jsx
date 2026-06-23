@@ -1022,7 +1022,14 @@ function Workspace() {
             />
           )}
           {view === 'digest' && (
-            <DigestView topics={topics} inboxTopicId={inboxTopic?.id} />
+            <DigestView
+              topics={topics}
+              inboxTopicId={inboxTopic?.id}
+              onSortInbox={handleSortInbox}
+              onGoToView={navigateTo}
+              onOpenEntry={handleSelectEntry}
+              onStatusChange={handleStatusChange}
+            />
           )}
         </div>
       </main>
