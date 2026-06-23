@@ -43,15 +43,14 @@ export default function TopicList({
     return (
       <li
         key={t.id}
-        style={{ position: 'relative' }}
+        className="topic-row"
         onMouseEnter={() => setHovering(true)}
         onMouseLeave={() => setHovering(false)}
       >
         <button
-          className={t.id === selectedId ? 'selected' : ''}
+          className={t.id === selectedId ? 'selected topic-row-btn' : 'topic-row-btn'}
           onClick={() => onSelect(t.id)}
           title={t.name}
-          style={{ paddingRight: hovering && !sidebarCollapsed ? '28px' : undefined }}
         >
           {sidebarCollapsed ? t.name.slice(0, 2).toUpperCase() : t.name}
         </button>

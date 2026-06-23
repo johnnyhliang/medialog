@@ -2637,20 +2637,29 @@ a.activity-title:hover { color: var(--accent); }
   margin: 4px 8px;
 }
 
+.topic-row {
+  display: flex;
+  align-items: center;
+}
+.topic-row-btn {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .topic-pin-btn {
-  position: absolute;
-  right: 6px;
-  top: 50%;
-  transform: translateY(-50%);
+  flex-shrink: 0;
   background: none;
   border: none;
-  padding: 3px;
+  padding: 4px 5px;
+  margin-right: 2px;
   cursor: pointer;
   color: var(--muted);
   display: flex;
   align-items: center;
-  border-radius: 3px;
-  opacity: 0.6;
+  border-radius: 4px;
+  opacity: 0.55;
 }
 .topic-pin-btn:hover { opacity: 1; color: var(--accent); background: var(--border); }
 
