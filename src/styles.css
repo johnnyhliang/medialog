@@ -2643,6 +2643,7 @@ a.activity-title:hover { color: var(--accent); }
 }
 .topic-row-btn {
   flex: 1;
+  width: auto !important;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
