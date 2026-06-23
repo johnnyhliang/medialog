@@ -1839,6 +1839,56 @@ a.activity-title:hover { color: var(--accent); }
   margin: 8px 0 4px;
 }
 
+/* ── Home Review Summary ─────────────────────── */
+.home-review-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.hrs-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.hrs-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text);
+  transition: opacity 0.15s;
+}
+
+.hrs-badge:hover { opacity: 0.75; }
+
+.hrs-badge--warn { border-color: var(--danger); color: var(--danger); }
+.hrs-badge--active { border-color: var(--accent); color: var(--accent); }
+.hrs-badge--stale { border-color: var(--muted); }
+.hrs-badge--dormant { border-color: var(--muted); }
+.hrs-badge--clear { cursor: default; color: var(--muted); }
+.hrs-badge--clear:hover { opacity: 1; }
+
+.hrs-count { font-weight: 600; }
+.hrs-label { opacity: 0.85; }
+
+.hrs-action {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
 /* ── Inbox Card ──────────────────────────────── */
 .inbox-card {
   display: flex;
