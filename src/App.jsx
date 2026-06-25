@@ -383,6 +383,7 @@ function Workspace() {
           if (title) patch.title = title
           if (meta?.image) patch.og_image = meta.image
           if (meta?.description) patch.og_description = meta.description
+          if (meta?.full_text) patch.full_text = meta.full_text
           if (Object.keys(patch).length > 0) {
             const updated = await updateEntry(supabase, e.id, patch)
             applyUpdateEntry(e.id, updated)

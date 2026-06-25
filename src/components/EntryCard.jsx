@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
-import { ChevronUp, Clock, MoreVertical, Pencil, Pin, PinOff, Plus, Trash2, Archive } from 'lucide-react'
+import { ChevronUp, Clock, MoreVertical, Pencil, Pin, PinOff, Plus, Trash2, Archive, BookOpen } from 'lucide-react'
 import WaybackPopup from './WaybackPopup.jsx'
+import ReaderModal from './ReaderModal.jsx'
 import TagInput from './TagInput.jsx'
 import MarkdownView from './MarkdownView.jsx'
 import ConfirmModal from './ConfirmModal.jsx'
@@ -71,6 +72,7 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
   const [fetchingTitle, setFetchingTitle] = useState(false)
   const [showWayback, setShowWayback] = useState(false)
   const [showSnoozePicker, setShowSnoozePicker] = useState(false)
+  const [showReader, setShowReader] = useState(false)
   const timer = useRef(null)
   const statusClass = entry.status ? `status-${entry.status}` : 'status-backlog'
   const thumb = getYouTubeThumbnail(entry.url)
@@ -404,6 +406,16 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
                 <Archive size={15} />
               </button>
             )}
+            {entry.full_text && (
+              <button
+                className="icon-btn"
+                aria-label="reader mode"
+                title="Reader mode"
+                onClick={(e) => { e.stopPropagation(); setShowReader(true) }}
+              >
+                <BookOpen size={15} />
+              </button>
+            )}
             {moveSelect}
             <button
               className="icon-btn"
@@ -636,6 +648,9 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
           onClose={() => setShowWayback(false)}
           onEntryUpdate={(updated) => { onEntryUpdate?.(updated); setShowWayback(false) }}
         />
+      )}
+      {showReader && (
+        <ReaderModal entry={entry} onClose={() => setShowReader(false)} />
       )}
     </>
   )

@@ -1,5 +1,5 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2'
-import { extractMetadata } from '../_shared/extractTitle.ts'
+import { extractMetadata, extractReadableText } from '../_shared/extractTitle.ts'
 import { isSafeUrl } from '../_shared/isSafeUrl.ts'
 
 const MAX_BYTES = 512 * 1024
@@ -79,7 +79,7 @@ Deno.serve(async (req) => {
     try {
       const oembed = await tryOembed(url, controller)
       if (oembed) {
-        result = { ...oembed, site }
+        result = { ...oembed, site, full_text: null }
       } else {
         const res = await fetch(url, {
           headers: {
@@ -92,7 +92,9 @@ Deno.serve(async (req) => {
         })
         const buf = new Uint8Array(await res.arrayBuffer())
         const html = new TextDecoder().decode(buf.slice(0, MAX_BYTES))
-        result = extractMetadata(html, url)
+        const meta = extractMetadata(html, url)
+        const fullText = extractReadableText(html)
+        result = { ...meta, full_text: fullText || null }
       }
     } finally {
       clearTimeout(timer)
@@ -101,7 +103,7 @@ Deno.serve(async (req) => {
       headers: { ...cors, 'Content-Type': 'application/json' },
     })
   } catch (_e) {
-    return new Response(JSON.stringify({ title: null, site, image: null, description: null }), {
+    return new Response(JSON.stringify({ title: null, site, image: null, description: null, full_text: null }), {
       headers: { ...cors, 'Content-Type': 'application/json' },
     })
   }

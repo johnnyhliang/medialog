@@ -64,4 +64,35 @@ function decodeEntities(s: string): string {
     .replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&#\d+;/g, '')
+}
+
+const MAX_FULL_TEXT = 60_000
+
+export function extractReadableText(html: string): string {
+  // Drop scripts, styles, nav chrome
+  let h = html
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/<(nav|header|footer|aside)[^>]*>[\s\S]*?<\/\1>/gi, '')
+
+  // Prefer article or main body
+  const articleM = h.match(/<article[^>]*>([\s\S]*?)<\/article>/i)
+  const mainM = h.match(/<main[^>]*>([\s\S]*?)<\/main>/i)
+  const bodyM = h.match(/<body[^>]*>([\s\S]*?)<\/body>/i)
+  const content = articleM?.[1] ?? mainM?.[1] ?? bodyM?.[1] ?? h
+
+  const withBreaks = content
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n\n')
+    .replace(/<\/h[1-6]>/gi, '\n\n')
+    .replace(/<\/li>/gi, '\n')
+    .replace(/<\/div>/gi, '\n')
+
+  const stripped = withBreaks.replace(/<[^>]+>/g, '')
+  const decoded = decodeEntities(stripped)
+  const normalized = decoded.replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim()
+  return normalized.slice(0, MAX_FULL_TEXT)
 }
