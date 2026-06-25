@@ -8,12 +8,13 @@ const entries = [
   { id: 'b', url: null, title: null, note: 'note b', tags: [] },
 ]
 
-test('shows the first entry and advances on "seen"', async () => {
+test('shows the first entry and advances on rating', async () => {
   const onSeen = vi.fn(() => Promise.resolve())
-  render(<Revisit entries={entries} onSeen={onSeen} />)
+  const onRate = vi.fn(() => Promise.resolve())
+  render(<Revisit entries={entries} onSeen={onSeen} onRate={onRate} />)
   expect(screen.getByText('note a')).toBeInTheDocument()
-  await userEvent.click(screen.getByRole('button', { name: /seen/i }))
-  expect(onSeen).toHaveBeenCalledWith('a')
+  await userEvent.click(screen.getByRole('button', { name: /good/i }))
+  expect(onRate).toHaveBeenCalledWith(entries[0], 4)
   expect(screen.getByText('note b')).toBeInTheDocument()
 })
 

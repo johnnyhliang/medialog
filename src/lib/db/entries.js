@@ -84,7 +84,7 @@ export async function searchEntries(supabase, query) {
 export async function listForRevisit(supabase, limit) {
   const { data, error } = await supabase
     .from('entries')
-    .select(TAG_SELECT)
+    .select(`${TAG_SELECT}, srs_interval, srs_reps, srs_ef`)
     .is('deleted_at', null)
     .or('surface_after.is.null,surface_after.lte.now()')
     .order('last_surfaced_at', { ascending: true, nullsFirst: true })
@@ -124,6 +124,35 @@ export async function markSurfaced(supabase, id) {
     .update({ last_surfaced_at: new Date().toISOString() })
     .eq('id', id)
   if (error) throw new Error(error.message)
+}
+
+// SM-2 grades: 3 = Hard, 4 = Good, 5 = Easy
+function sm2(reps, ef, interval, grade) {
+  if (grade < 3) {
+    return { srs_reps: 0, srs_ef: Math.max(1.3, ef - 0.2), srs_interval: 1 }
+  }
+  const newEf = Math.max(1.3, ef + 0.1 - (5 - grade) * (0.08 + (5 - grade) * 0.02))
+  let newInterval
+  if (reps === 0) newInterval = 1
+  else if (reps === 1) newInterval = 6
+  else newInterval = Math.max(1, Math.round(interval * ef))
+  return { srs_reps: reps + 1, srs_ef: newEf, srs_interval: newInterval }
+}
+
+export async function rateRevisit(supabase, entry, grade) {
+  const { srs_reps = 0, srs_ef = 2.5, srs_interval = 1 } = entry
+  const next = sm2(srs_reps, srs_ef, srs_interval, grade)
+  const nextDate = new Date(Date.now() + next.srs_interval * 86400000).toISOString()
+  const { error } = await supabase
+    .from('entries')
+    .update({
+      last_surfaced_at: new Date().toISOString(),
+      surface_after: nextDate,
+      ...next,
+    })
+    .eq('id', entry.id)
+  if (error) throw new Error(error.message)
+  return { ...next, surface_after: nextDate }
 }
 
 export async function softDeleteEntry(supabase, id) {

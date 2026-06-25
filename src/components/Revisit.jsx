@@ -15,6 +15,25 @@ function timeAgo(dateStr) {
   return `${Math.floor(d / 365)}y ago`
 }
 
+function nextIntervalLabel(entry, grade) {
+  const ef = entry.srs_ef ?? 2.5
+  const reps = entry.srs_reps ?? 0
+  const interval = entry.srs_interval ?? 1
+  if (grade < 3) return '1d'
+  let newInterval
+  if (reps === 0) newInterval = 1
+  else if (reps === 1) newInterval = 6
+  else newInterval = Math.max(1, Math.round(interval * ef))
+  if (grade === 5) newInterval = Math.max(1, Math.round(newInterval * 1.3))
+  return newInterval >= 365
+    ? `${Math.round(newInterval / 365)}y`
+    : newInterval >= 30
+    ? `${Math.round(newInterval / 30)}mo`
+    : newInterval >= 7
+    ? `${Math.round(newInterval / 7)}w`
+    : `${newInterval}d`
+}
+
 function ActivityItem({ entry }) {
   const age = timeAgo(entry.updated_at)
   const displayTitle = entry.title || entry.url || 'Untitled'
@@ -42,14 +61,18 @@ function ActivityItem({ entry }) {
   )
 }
 
-export default function Revisit({ entries, onSeen, recentActivity = [] }) {
+export default function Revisit({ entries, onSeen, onRate, recentActivity = [] }) {
   const [index, setIndex] = useState(0)
   const current = entries[index]
 
-  async function handleSeen() {
-    await onSeen(current.id)
+  async function handleRate(grade) {
+    if (onRate) await onRate(current, grade)
+    else await onSeen(current.id)
     setIndex((i) => i + 1)
   }
+
+  const interval = current?.srs_interval ?? 1
+  const reps = current?.srs_reps ?? 0
 
   return (
     <div className="revisit-view">
@@ -69,7 +92,43 @@ export default function Revisit({ entries, onSeen, recentActivity = [] }) {
                 {current.tags.map(t => <span key={t} className="activity-tag">#{t}</span>)}
               </div>
             )}
-            <button className="btn-small" style={{ marginTop: 10 }} onClick={handleSeen}>Seen — next</button>
+            <div className="revisit-srs-row">
+              <span className="revisit-srs-label">
+                {reps === 0 ? 'First review' : `Review #${reps + 1} · current interval ${interval}d`}
+              </span>
+            </div>
+            <div className="revisit-rating-row">
+              <div className="revisit-rating-btns">
+                <button
+                  className="revisit-rate-btn revisit-rate-btn--hard"
+                  onClick={() => handleRate(3)}
+                  title="Hard — see again soon"
+                >
+                  Hard <span className="revisit-rate-interval">{nextIntervalLabel(current, 3)}</span>
+                </button>
+                <button
+                  className="revisit-rate-btn revisit-rate-btn--good"
+                  onClick={() => handleRate(4)}
+                  title="Good"
+                >
+                  Good <span className="revisit-rate-interval">{nextIntervalLabel(current, 4)}</span>
+                </button>
+                <button
+                  className="revisit-rate-btn revisit-rate-btn--easy"
+                  onClick={() => handleRate(5)}
+                  title="Easy — schedule further out"
+                >
+                  Easy <span className="revisit-rate-interval">{nextIntervalLabel(current, 5)}</span>
+                </button>
+              </div>
+              <button
+                className="btn-small revisit-skip-btn"
+                onClick={() => setIndex((i) => i + 1)}
+                title="Skip without rating"
+              >
+                Skip
+              </button>
+            </div>
           </div>
         ) : (
           <p className="muted" style={{ fontSize: 13 }}>Nothing to resurface right now.</p>

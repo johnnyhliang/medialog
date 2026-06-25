@@ -6,7 +6,7 @@ import { listTopics, createTopic, getTopicByName, listDeletedTopics, archiveTopi
 import {
   listEntriesByTopic, createEntry, updateEntry, searchEntries,
   bulkCreateEntries, listForRevisit, markSurfaced, listRecentActivity,
-  softDeleteEntry, listTrashedEntries, restoreEntry, emptyTrash, snoozeEntry,
+  softDeleteEntry, listTrashedEntries, restoreEntry, emptyTrash, snoozeEntry, rateRevisit,
 } from './lib/db/entries.js'
 import { setEntryTags, listTags, updateTagColor } from './lib/db/tags.js'
 import { getCommands } from './lib/commands.js'
@@ -725,6 +725,11 @@ function Workspace() {
     applySeen(entryId)
   }
 
+  async function handleRateRevisit(entry, grade) {
+    await rateRevisit(supabase, entry, grade)
+    applySeen(entry.id)
+  }
+
   async function handleExportClick() {
     openExportLoading()
     try {
@@ -976,7 +981,7 @@ function Workspace() {
             />
           )}
           {view === 'revisit' && (
-            <Revisit entries={revisitEntries} onSeen={handleSeen} recentActivity={recentActivity} />
+            <Revisit entries={revisitEntries} onSeen={handleSeen} onRate={handleRateRevisit} recentActivity={recentActivity} />
           )}
           {view === 'settings' && (
             <SettingsView
