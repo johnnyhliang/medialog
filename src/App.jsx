@@ -1056,6 +1056,7 @@ function Workspace() {
               onGoToView={navigateTo}
               onOpenEntry={handleSelectEntry}
               onStatusChange={handleStatusChange}
+              onDelete={handleDelete}
             />
           )}
         </div>

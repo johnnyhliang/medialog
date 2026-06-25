@@ -3837,6 +3837,26 @@ a.digest-item-title:hover { text-decoration: underline; }
   color: var(--muted);
 }
 
+.digest-item-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.digest-action-btn {
+  font-size: 11px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text-2);
+  cursor: pointer;
+  line-height: 1.6;
+}
+.digest-action-btn:hover { background: var(--surface-3); }
+.digest-action-btn--done { color: var(--success, #38a169); border-color: var(--success, #38a169); }
+.digest-action-btn--del { color: var(--error, #e53e3e); border-color: var(--error, #e53e3e); }
+
 .palette-overlay {
   position: fixed;
   inset: 0;

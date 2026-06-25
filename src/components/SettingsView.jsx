@@ -22,10 +22,21 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
   const [bulkProgress, setBulkProgress] = useState(null)
   const bulkPausedRef = useRef(false)
   const bulkCancelledRef = useRef(false)
+  const [captureLog, setCaptureLog] = useState(null)
 
   useEffect(() => {
     loadConfig()
   }, [])
+
+  useEffect(() => {
+    if (tab !== 'mobile') return
+    supabase
+      .from('capture_log')
+      .select('id, url, ok, message, created_at')
+      .order('created_at', { ascending: false })
+      .limit(8)
+      .then(({ data }) => setCaptureLog(data ?? []))
+  }, [tab])
 
   async function loadConfig() {
     const { data: { user } } = await supabase.auth.getUser()
@@ -544,6 +555,41 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
               </p>
             )}
           </div>
+          {captureLog !== null && (
+            <div style={{ marginTop: 24 }}>
+              <h3 className="section-label">Recent Captures</h3>
+              {captureLog.length === 0 ? (
+                <p className="muted" style={{ fontSize: 13 }}>No captures yet.</p>
+              ) : (
+                <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse' }}>
+                  <tbody>
+                    {captureLog.map((row) => {
+                      const d = new Date(row.created_at)
+                      const label = d.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+                      let domain = row.url
+                      try { domain = new URL(row.url).hostname } catch {}
+                      return (
+                        <tr key={row.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                          <td style={{ padding: '6px 0', width: 16 }}>
+                            <span style={{ color: row.ok ? 'var(--success, #38a169)' : 'var(--error, #e53e3e)', fontSize: 10 }}>
+                              {row.ok ? '●' : '✕'}
+                            </span>
+                          </td>
+                          <td style={{ padding: '6px 8px', maxWidth: 240, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            <a href={row.url} target="_blank" rel="noreferrer" style={{ color: 'var(--fg)' }}>{domain}</a>
+                          </td>
+                          <td style={{ padding: '6px 0', color: 'var(--muted)', whiteSpace: 'nowrap' }}>{label}</td>
+                          {!row.ok && (
+                            <td style={{ padding: '6px 0 6px 8px', color: 'var(--error, #e53e3e)' }}>{row.message}</td>
+                          )}
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          )}
         </section>
       )}
 

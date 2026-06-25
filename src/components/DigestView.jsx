@@ -11,7 +11,7 @@ function shortDate(str) {
   return new Date(str).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
 }
 
-export default function DigestView({ topics, inboxTopicId, onSortInbox, onGoToView, onOpenEntry, onStatusChange }) {
+export default function DigestView({ topics, inboxTopicId, onSortInbox, onGoToView, onOpenEntry, onStatusChange, onDelete }) {
   const [timeWindow, setTimeWindow] = useState('7d')
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -87,7 +87,17 @@ export default function DigestView({ topics, inboxTopicId, onSortInbox, onGoToVi
 
             {data.staleBacklog.length > 0 && (
               <div className="digest-subsection">
-                <p className="digest-stat">{data.staleBacklog.length} stale backlog items (60+ days)</p>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
+                  <p className="digest-stat">{data.staleBacklog.length} stale backlog items (60+ days)</p>
+                  {onStatusChange && (
+                    <button
+                      className="digest-action-btn digest-action-btn--done"
+                      onClick={() => data.staleBacklog.forEach(e => onStatusChange(e.id, 'done'))}
+                    >
+                      Mark all done
+                    </button>
+                  )}
+                </div>
                 <ul className="digest-list">
                   {data.staleBacklog.map(e => (
                     <li key={e.id}>
@@ -95,7 +105,8 @@ export default function DigestView({ topics, inboxTopicId, onSortInbox, onGoToVi
                       <span className="digest-item-date">{shortDate(e.created_at)}</span>
                       <span className="digest-item-actions">
                         {onOpenEntry && <button className="digest-action-btn" onClick={() => onOpenEntry(e)}>Open</button>}
-                        {onStatusChange && <button className="digest-action-btn digest-action-btn--done" onClick={() => onStatusChange(e.id, 'done')}>Mark Done</button>}
+                        {onStatusChange && <button className="digest-action-btn digest-action-btn--done" onClick={() => onStatusChange(e.id, 'done')}>Done</button>}
+                        {onDelete && <button className="digest-action-btn digest-action-btn--del" onClick={() => onDelete(e.id)}>Delete</button>}
                       </span>
                     </li>
                   ))}

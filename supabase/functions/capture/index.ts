@@ -78,6 +78,26 @@ Deno.serve(async (req) => {
   )
   const userId = Deno.env.get('CAPTURE_USER_ID')!
 
+  async function log(ok: boolean, message: string, entryId?: string) {
+    await supabase.from('capture_log').insert({
+      user_id: userId,
+      url: body.url,
+      ok,
+      message,
+      entry_id: entryId ?? null,
+    })
+    // Prune: keep only the 100 most recent rows for this user
+    const { data: old } = await supabase
+      .from('capture_log')
+      .select('id')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .range(100, 10000)
+    if (old && old.length > 0) {
+      await supabase.from('capture_log').delete().in('id', old.map((r: { id: string }) => r.id))
+    }
+  }
+
   // Duplicate check: if a non-deleted entry with this URL already exists, return early.
   const { data: existing } = await supabase
     .from('entries')
@@ -88,6 +108,7 @@ Deno.serve(async (req) => {
     .maybeSingle()
 
   if (existing) {
+    await log(true, 'duplicate — already saved', existing.id)
     return json({
       ok: true,
       duplicate: true,
@@ -99,6 +120,7 @@ Deno.serve(async (req) => {
   const { data: inbox } = await supabase
     .from('topics').select('id').eq('user_id', userId).eq('name', 'Inbox').single()
   if (!inbox) {
+    await log(false, 'Inbox topic not found for this user')
     return json(
       { ok: false, error: 'internal', message: 'Inbox topic not found for this user' },
       500,
@@ -113,11 +135,13 @@ Deno.serve(async (req) => {
   }).select('id').single()
 
   if (error) {
+    await log(false, error.message)
     return json(
       { ok: false, error: 'internal', message: error.message },
       500,
     )
   }
 
+  await log(true, 'saved', inserted.id)
   return json({ ok: true, entry_id: inserted.id, message: 'saved' })
 })
