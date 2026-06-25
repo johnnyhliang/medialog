@@ -63,9 +63,9 @@ describe('entries db', () => {
     const rows = [{ id: 'a', note: 'react', entry_tags: [] }]
     const client = mockClient({ data: rows, error: null })
     const result = await searchEntries(client, 'react')
-    expect(client._chain.select).toHaveBeenCalledWith('*, entry_tags(tags(name))')
+    expect(client._chain.select).toHaveBeenCalledWith('*, entry_tags(tags(name)), topics(name)')
     expect(client._chain.or).toHaveBeenCalledWith('note.ilike.%react%,title.ilike.%react%')
-    expect(result).toEqual([{ id: 'a', note: 'react', tags: [] }])
+    expect(result).toEqual([{ id: 'a', note: 'react', tags: [], topicName: null }])
   })
 
   test('bulkCreateEntries inserts all items under a topic', async () => {

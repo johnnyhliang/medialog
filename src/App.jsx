@@ -1,6 +1,6 @@
 // src/App.jsx
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
-import { Search, Upload, Inbox, RotateCcw, BarChart2, Settings2, Trash2 as TrashIcon, Download, Menu, Home, FolderOpen, Rss, Briefcase, PackageOpen, Archive, ScrollText } from 'lucide-react'
+import { Search, Upload, Inbox, RotateCcw, BarChart2, Settings2, Trash2 as TrashIcon, Download, Menu, Home, FolderOpen, Rss, Briefcase, PackageOpen, Archive, ScrollText, Target } from 'lucide-react'
 import { supabase } from './lib/supabaseClient.js'
 import { listTopics, createTopic, getTopicByName, listDeletedTopics, archiveTopic, unarchiveTopic, softDeleteTopic, restoreDeletedTopic, togglePinTopic } from './lib/db/topics.js'
 import {
@@ -30,6 +30,7 @@ import SettingsView from './components/SettingsView.jsx'
 import TrashView from './components/TrashView.jsx'
 import FeedView from './components/FeedView.jsx'
 import ApplicationsView from './components/ApplicationsView.jsx'
+import OpportunityView from './components/OpportunityView.jsx'
 import DigestView from './components/DigestView.jsx'
 import ExploreView from './components/ExploreView.jsx'
 import HomeView from './components/HomeView.jsx'
@@ -834,6 +835,11 @@ function Workspace() {
             </button>
           </li>
           <li>
+            <button className={view === 'opportunities' ? 'active' : ''} onClick={() => navigateTo('opportunities')} title="Opportunities">
+              <Target size={16} /><span>Opportunities</span>
+            </button>
+          </li>
+          <li>
             <button className={view === 'applications' ? 'active' : ''} onClick={() => navigateTo('applications')} title="Applications">
               <Briefcase size={16} /><span>Applications</span>
             </button>
@@ -1026,6 +1032,12 @@ function Workspace() {
               topics={topics}
               onImportEntries={handleMigrationImport}
               addToast={addToast}
+            />
+          )}
+          {view === 'opportunities' && (
+            <OpportunityView
+              supabase={supabase}
+              onTrack={handleTrack}
             />
           )}
           {view === 'applications' && (

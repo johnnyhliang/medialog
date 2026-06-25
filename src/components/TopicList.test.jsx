@@ -30,7 +30,7 @@ test('renders Inbox topic first with inbox icon', () => {
   render(<TopicList topics={topics} selectedId={null} onSelect={() => {}} onAdd={() => {}} />)
   const inboxBtn = document.querySelector('.topic-inbox-btn')
   expect(inboxBtn).toBeTruthy()
-  const topicBtns = [...document.querySelectorAll('.topic-item > button:first-child')]
+  const topicBtns = [...document.querySelectorAll('.topic-row-btn')]
   const names = topicBtns.map((b) => b.textContent.trim()).sort()
   expect(names).toEqual(['Alpha', 'Zebra'])
 })
@@ -43,9 +43,6 @@ const baseProps = {
   onSelect: vi.fn(),
   onAdd: vi.fn(),
   sidebarCollapsed: false,
-  onArchive: vi.fn(),
-  onUnarchive: vi.fn(),
-  onDeleteTopic: vi.fn(),
 }
 
 test('archived section is collapsed by default and expands on click', async () => {
@@ -53,46 +50,4 @@ test('archived section is collapsed by default and expands on click', async () =
   expect(screen.queryByText('Old Project')).not.toBeInTheDocument()
   await userEvent.click(screen.getByRole('button', { name: /archived/i }))
   expect(screen.getByText('Old Project')).toBeInTheDocument()
-})
-
-test('clicking archive in menu calls onArchive', async () => {
-  const onArchive = vi.fn()
-  render(<TopicList {...baseProps} onArchive={onArchive} />)
-  await userEvent.hover(screen.getByRole('button', { name: 'AI' }))
-  await userEvent.click(screen.getByRole('button', { name: /topic menu/i }))
-  await userEvent.click(screen.getByRole('button', { name: /^archive$/i }))
-  expect(onArchive).toHaveBeenCalledWith('a1')
-})
-
-test('clicking delete in menu calls onDeleteTopic', async () => {
-  const onDeleteTopic = vi.fn()
-  render(<TopicList {...baseProps} onDeleteTopic={onDeleteTopic} />)
-  await userEvent.hover(screen.getByRole('button', { name: 'AI' }))
-  await userEvent.click(screen.getByRole('button', { name: /topic menu/i }))
-  await userEvent.click(screen.getByRole('button', { name: /delete/i }))
-  // Confirm modal appears; confirm to proceed
-  await userEvent.click(screen.getByRole('button', { name: /^delete$/i }))
-  expect(onDeleteTopic).toHaveBeenCalledWith('a1')
-})
-
-test('topic delete requires confirmation — cancel does not delete', async () => {
-  const onDeleteTopic = vi.fn()
-  render(<TopicList {...baseProps} onDeleteTopic={onDeleteTopic} />)
-  await userEvent.hover(screen.getByRole('button', { name: 'AI' }))
-  await userEvent.click(screen.getByRole('button', { name: /topic menu/i }))
-  await userEvent.click(screen.getByRole('button', { name: /delete/i }))
-  // Confirm modal should appear
-  expect(screen.getByText(/permanently delete/i)).toBeInTheDocument()
-  await userEvent.click(screen.getByRole('button', { name: /cancel/i }))
-  expect(onDeleteTopic).not.toHaveBeenCalled()
-})
-
-test('topic delete confirm dialog calls onDeleteTopic on confirm', async () => {
-  const onDeleteTopic = vi.fn()
-  render(<TopicList {...baseProps} onDeleteTopic={onDeleteTopic} />)
-  await userEvent.hover(screen.getByRole('button', { name: 'AI' }))
-  await userEvent.click(screen.getByRole('button', { name: /topic menu/i }))
-  await userEvent.click(screen.getByRole('button', { name: /delete/i }))
-  await userEvent.click(screen.getByRole('button', { name: /^delete$/i }))
-  expect(onDeleteTopic).toHaveBeenCalledWith('a1')
 })

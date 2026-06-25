@@ -1,18 +1,9 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { fetchHN } from './hn.ts'
-import { fetchCareers } from './careers.ts'
 import { fetchTwitter } from './twitter.ts'
 import { fetchGithub } from './github.ts'
 import type { Opportunity } from './hn.ts'
-
-// Strict student-level keywords matched against title only (for structured career pages)
-const STUDENT_TITLE_KEYWORDS = [
-  'intern', 'internship', 'fellowship', 'fellow', 'new grad', 'new graduate',
-  'entry level', 'entry-level', 'early career', 'university', 'student',
-  'cohort', 'rotational', 'explore', 'focus', 'step', 'university grad',
-  'associate', 'junior',
-]
 
 // Broader keywords for unstructured sources (HN, Twitter) matched against full text
 const BROAD_KEYWORDS = [
@@ -21,24 +12,8 @@ const BROAD_KEYWORDS = [
   'phd', 'hiring', 'opportunity', 'apply', 'forms.gle', 'google form',
 ]
 
-// Exclude senior/leadership titles that slip through on structured career pages
-const EXCLUDE_TITLE_KEYWORDS = [
-  'senior', 'staff', 'principal', 'lead ', 'head of', 'director', 'manager',
-  'vp ', 'vice president', 'partner', 'distinguished',
-]
-
 function matchesRoleFilter(item: Opportunity): boolean {
-  const title = item.title.toLowerCase()
   const fullText = `${item.title} ${item.body ?? ''}`.toLowerCase()
-
-  // Structured career-page sources: match title against student keywords, exclude senior titles
-  const isCareerSource = ['greenhouse', 'lever', 'ashby'].includes(item.source)
-  if (isCareerSource) {
-    if (EXCLUDE_TITLE_KEYWORDS.some((k) => title.includes(k))) return false
-    return STUDENT_TITLE_KEYWORDS.some((k) => title.includes(k))
-  }
-
-  // Unstructured sources (HN, Twitter): broader full-text match
   return BROAD_KEYWORDS.some((k) => fullText.includes(k))
 }
 
@@ -59,24 +34,22 @@ serve(async (req) => {
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
   )
 
-  const [hn, careers, twitter, github] = await Promise.allSettled([
+  const [hn, twitter, github] = await Promise.allSettled([
     fetchHN(),
-    fetchCareers(),
     fetchTwitter(supabase),
     fetchGithub(),
   ])
 
-  const all: Opportunity[] = [
+  const githubItems: Opportunity[] = github.status === 'fulfilled' ? github.value : []
+  const otherItems: Opportunity[] = [
     ...(hn.status === 'fulfilled' ? hn.value : []),
-    ...(careers.status === 'fulfilled' ? careers.value : []),
     ...(twitter.status === 'fulfilled' ? twitter.value : []),
-    ...(github.status === 'fulfilled' ? github.value : []),
   ]
 
-  // GitHub skips role filter — it's a weak signal source, we want all trending repos
-  const filtered = all.filter(
-    (item) => item.source === 'github' || matchesRoleFilter(item)
-  )
+  const filtered: Opportunity[] = [
+    ...githubItems, // GitHub boards already filtered to internship/fellowship rows
+    ...otherItems.filter(matchesRoleFilter),
+  ]
 
   let inserted = 0
   if (filtered.length > 0) {
@@ -87,15 +60,33 @@ serve(async (req) => {
     else inserted = count ?? 0
   }
 
+  // Clean up stale github entries not in this fetch (excluding user-saved items)
+  if (githubItems.length > 0) {
+    const currentUrlSet = new Set(githubItems.map((i) => i.url))
+    const { data: existingGithub } = await supabase
+      .from('opportunities')
+      .select('id, url')
+      .eq('source', 'github')
+      .eq('is_saved', false)
+    if (existingGithub) {
+      const staleIds = existingGithub
+        .filter((e) => !currentUrlSet.has(e.url))
+        .map((e) => e.id)
+      if (staleIds.length > 0) {
+        await supabase.from('opportunities').delete().in('id', staleIds)
+        console.log(`cleaned up ${staleIds.length} stale github entries`)
+      }
+    }
+  }
+
   const sourceCounts = {
     hn: hn.status === 'fulfilled' ? hn.value.length : 'error',
-    careers: careers.status === 'fulfilled' ? careers.value.length : 'error',
     twitter: twitter.status === 'fulfilled' ? twitter.value.length : 'error',
-    github: github.status === 'fulfilled' ? github.value.length : 'error',
+    github: githubItems.length,
   }
 
   return new Response(
-    JSON.stringify({ fetched: all.length, filtered: filtered.length, inserted, sources: sourceCounts }),
+    JSON.stringify({ fetched: filtered.length + otherItems.filter(i => !matchesRoleFilter(i)).length, filtered: filtered.length, inserted, sources: sourceCounts }),
     { headers: { 'Content-Type': 'application/json' } }
   )
 })

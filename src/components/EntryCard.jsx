@@ -539,6 +539,9 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
           </div>
         )}
       </a>
+      {noNoteAged && (
+        <span className="card-no-note-chip">no notes · {days}d</span>
+      )}
       {metaRow}
     </div>
   )

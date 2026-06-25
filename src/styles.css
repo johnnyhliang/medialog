@@ -3223,6 +3223,76 @@ a.activity-title:hover { color: var(--accent); }
 .opp-chip-slate   { background: var(--surface-2); color: var(--muted); }
 .opp-chip-amber   { background: #FEF3C7; color: #92400E; }
 
+/* ── Opportunity View (full page) ────────────────────────────────────────────── */
+.opp-view {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+.opp-view-header {
+  padding: 20px 28px 0;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.opp-view-title-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.opp-view-title {
+  font-size: var(--text-xl);
+  font-weight: 700;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.opp-view-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.opp-last-checked { font-size: 11px; color: var(--muted); }
+.opp-mark-all-btn, .opp-refresh-btn {
+  font-size: var(--text-sm);
+  padding: 4px 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--text);
+}
+.opp-mark-all-btn:hover, .opp-refresh-btn:hover { background: var(--surface-3); }
+.opp-refresh-btn:disabled { opacity: 0.5; cursor: default; }
+.opp-view-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 28px 24px;
+}
+.opp-empty { color: var(--muted); font-size: var(--text-sm); padding: 16px 0; }
+.opp-location {
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 180px;
+}
+.opp-read-section { margin-top: 16px; }
+.opp-read-toggle {
+  font-size: var(--text-sm);
+  color: var(--muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 0;
+}
+.opp-read-toggle:hover { color: var(--text); }
+.opp-rows-read { opacity: 0.65; }
+
 /* ── Applications View ───────────────────────────────────────────────────────── */
 .apps-view {
   display: flex;
