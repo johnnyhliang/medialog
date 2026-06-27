@@ -9,7 +9,11 @@ function formatOpensAt(dateStr) {
 
 function StatusBadge({ program }) {
   if (program.window_open) return <span className="watchlist-badge watchlist-badge--open">open</span>
-  if (program.opens_at) return <span className="watchlist-badge watchlist-badge--scheduled">Opens {formatOpensAt(program.opens_at)}</span>
+  if (program.opens_at) {
+    const isPast = program.opens_at < new Date().toISOString().split('T')[0]
+    if (isPast) return <span className="watchlist-badge watchlist-badge--unknown">closed</span>
+    return <span className="watchlist-badge watchlist-badge--scheduled">Opens {formatOpensAt(program.opens_at)}</span>
+  }
   return <span className="watchlist-badge watchlist-badge--unknown">unknown</span>
 }
 
@@ -43,6 +47,7 @@ export default function WatchlistTab({ supabase }) {
         notes: form.notes.trim() || null,
         opens_at: form.opens_at || null,
       })
+      .select()
       .single()
     if (data) setPrograms((prev) => [...prev, data])
     setForm({ name: '', url: '', notes: '', opens_at: '' })

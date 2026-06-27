@@ -2813,6 +2813,21 @@ a.activity-title:hover { color: var(--accent); }
 }
 .career-tab:hover { color: var(--text); }
 .career-tab--active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 500; }
+.career-tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  margin-left: 5px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: white;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+}
 .career-tab-panel { flex: 1; overflow-y: auto; }
 
 /* Watchlist */

@@ -9,6 +9,7 @@ function makeSupabase(programs = []) {
     eq: vi.fn().mockReturnThis(),
     order: vi.fn().mockResolvedValue({ data: programs, error: null }),
     insert: vi.fn().mockReturnThis(),
+    select: vi.fn().mockReturnThis(),
     single: vi.fn().mockResolvedValue({
       data: { id: 'new-1', name: 'New Program', url: 'https://example.com', notes: '', opens_at: null, window_open: false },
       error: null,

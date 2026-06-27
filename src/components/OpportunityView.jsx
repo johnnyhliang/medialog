@@ -8,7 +8,7 @@ const SOURCE_COLORS = {
   'program-alert': 'amber',
 }
 
-const FILTERS = ['All', 'SWE', 'Quant', 'Fellowship', 'HN', 'Twitter', 'Saved', 'Unread']
+const FILTERS = ['All', 'SWE', 'Quant', 'PM', 'Fellowship', 'Saved', 'Unread']
 
 const SOURCE_PRIORITY = { 'program-alert': 0, twitter: 1, hn: 2, manual: 3, github: 4 }
 
@@ -71,7 +71,7 @@ function OppRow({ item, onRead, onSave, onTrack }) {
   )
 }
 
-export default function OpportunityView({ supabase, onTrack }) {
+export default function OpportunityView({ supabase, onTrack, onUnreadCount }) {
   const [items, setItems] = useState([])
   const [filter, setFilter] = useState('All')
   const [showAdd, setShowAdd] = useState(false)
@@ -89,7 +89,11 @@ export default function OpportunityView({ supabase, onTrack }) {
       .select('*')
       .order('posted_at', { ascending: false })
       .limit(300)
-    if (data) setItems(data)
+    if (data) {
+      setItems(data)
+      const unreadCount = data.filter(i => !i.is_read).length
+      onUnreadCount?.(unreadCount)
+    }
     setLastChecked(new Date())
     setLoading(false)
   }, [supabase])
@@ -140,6 +144,7 @@ export default function OpportunityView({ supabase, onTrack }) {
     if (filter === 'HN') return i.source === 'hn'
     if (filter === 'SWE') return i.tags?.some((t) => ['swe', 'startup', 'big-tech', 'internship'].includes(t))
     if (filter === 'Quant') return i.tags?.includes('quant')
+    if (filter === 'PM') return i.tags?.includes('pm')
     if (filter === 'Fellowship') return i.tags?.some((t) => ['fellowship', 'program', 'program-alert'].includes(t))
     return true
   })
