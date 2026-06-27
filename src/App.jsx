@@ -1,6 +1,6 @@
 // src/App.jsx
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
-import { Search, Upload, Inbox, RotateCcw, BarChart2, Settings2, Trash2 as TrashIcon, Download, Menu, Home, FolderOpen, Rss, Briefcase, PackageOpen, Archive, ScrollText, Target } from 'lucide-react'
+import { Search, Upload, Inbox, RotateCcw, BarChart2, Settings2, Trash2 as TrashIcon, Download, Menu, Home, FolderOpen, Rss, Briefcase, PackageOpen, Archive, ScrollText } from 'lucide-react'
 import { supabase } from './lib/supabaseClient.js'
 import { listTopics, createTopic, getTopicByName, listDeletedTopics, archiveTopic, unarchiveTopic, softDeleteTopic, restoreDeletedTopic, togglePinTopic } from './lib/db/topics.js'
 import {
@@ -31,6 +31,7 @@ import TrashView from './components/TrashView.jsx'
 import FeedView from './components/FeedView.jsx'
 import ApplicationsView from './components/ApplicationsView.jsx'
 import OpportunityView from './components/OpportunityView.jsx'
+import CareerView from './components/CareerView.jsx'
 import DigestView from './components/DigestView.jsx'
 import ExploreView from './components/ExploreView.jsx'
 import HomeView from './components/HomeView.jsx'
@@ -74,7 +75,7 @@ function Workspace() {
   const { toasts, addToast, dismissToast } = useToast()
 
   const [view, setView] = useState('home')
-  const [trackPrefill, setTrackPrefill] = useState(null)
+
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [focusedEntryId, setFocusedEntryId] = useState(null)
   const [orderedEntryIds, setOrderedEntryIds] = useState([])
@@ -146,10 +147,6 @@ function Workspace() {
     setSnoozeTarget(null)
   }
 
-  function handleTrack(opportunity) {
-    setTrackPrefill(opportunity)
-    setView('applications')
-  }
   const [sidebarOpen, setSidebarOpen] = useState(() => {
     try {
       // v2: sidebar defaults open; only respect a stored 'false' if user explicitly set it post-fix
@@ -841,16 +838,6 @@ function Workspace() {
             </button>
           </li>
           <li>
-            <button className={view === 'opportunities' ? 'active' : ''} onClick={() => navigateTo('opportunities')} title="Opportunities">
-              <Target size={16} /><span>Opportunities</span>
-            </button>
-          </li>
-          <li>
-            <button className={view === 'applications' ? 'active' : ''} onClick={() => navigateTo('applications')} title="Applications">
-              <Briefcase size={16} /><span>Applications</span>
-            </button>
-          </li>
-          <li>
             <button className={view === 'digest' ? 'active' : ''} onClick={() => navigateTo('digest')} title="Digest" style={{ position: 'relative' }}>
               <ScrollText size={16} /><span>Digest</span>
               {(() => {
@@ -870,6 +857,17 @@ function Workspace() {
             </button>
           </li>
         </ul>
+        <div className="career-sidebar-item">
+          <button
+            className={`career-sidebar-btn${view === 'career' ? ' selected' : ''}`}
+            onClick={() => navigateTo('career')}
+            title="Career"
+          >
+            <Briefcase size={14} className="career-sidebar-icon" />
+            {sidebarOpen && <span>Career</span>}
+          </button>
+          <hr className="topic-divider" />
+        </div>
         <TopicList
           topics={topics}
           activeTopics={activeTopics}
@@ -902,7 +900,7 @@ function Workspace() {
               onSortInbox={handleSortInbox}
               onTopicIconChange={handleTopicIconChange}
               supabase={supabase}
-              onTrack={handleTrack}
+
               onSaveFeedItem={(item) => handleSaveFromFeed(item, inboxTopic?.id ?? topics[0]?.id)}
               onGoToFeed={() => setView('feed')}
               onOpenEntry={handleSelectEntry}
@@ -1040,17 +1038,9 @@ function Workspace() {
               addToast={addToast}
             />
           )}
-          {view === 'opportunities' && (
-            <OpportunityView
+          {view === 'career' && (
+            <CareerView
               supabase={supabase}
-              onTrack={handleTrack}
-            />
-          )}
-          {view === 'applications' && (
-            <ApplicationsView
-              supabase={supabase}
-              prefill={trackPrefill}
-              onClearPrefill={() => setTrackPrefill(null)}
               addToast={addToast}
             />
           )}
