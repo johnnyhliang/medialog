@@ -171,8 +171,10 @@ cd ~/videoarchiver && uvicorn main:app --host 0.0.0.0 --port 8765
 
 ---
 
-## Open Questions
+## Open Questions / Deferred Decisions
 
-- Should archived videos show an inline `<video>` player in the entry card, or just a link to R2?
-- Should the Pi URL be per-user in `user_configs` or hardcoded in `.env`? (Per-user is cleaner for the existing pattern.)
-- yt-dlp can take 2–10 minutes for long videos — should the API be async (return a job ID, poll for completion) or just block until done?
+**YouTube embed vs. download:** For "watch without leaving the app," a YouTube iframe embed (`youtube.com/embed/VIDEO_ID`) is strictly better — zero storage, zero Pi infrastructure, fast load. Embed breaks if the video is deleted, but so does the link. The Pi/R2 download approach only makes sense for truly preserving videos before they disappear (different, harder problem). Build YouTube embed first; revisit Pi pipeline only if preservation is the explicit goal.
+
+**Pi URL / token (if Pi pipeline is ever built):** The Pi base URL is the Tailscale IP of the Raspberry Pi (e.g. `http://100.x.x.x:8765`) — a stable private address only accessible from your Tailscale devices. The token is a shared secret (any random string) sent in the `Authorization: Bearer <token>` header so random internet requests can't trigger downloads. Both stored in `user_configs` table, editable in Settings — same pattern as the GitHub token config.
+
+**Async vs. blocking downloads (if Pi pipeline is ever built):** Blocking is simpler but long videos (2–10 min download) will leave the UI spinning. Async with a job ID + polling is better UX but more complex. Decision deferred until Pi pipeline is actually scoped.
