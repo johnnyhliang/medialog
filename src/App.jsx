@@ -826,6 +826,11 @@ function Workspace() {
             </button>
           </li>
           <li>
+            <button className={view === 'career' ? 'active' : ''} onClick={() => navigateTo('career')} title="Career">
+              <Briefcase size={16} /><span>Career</span>
+            </button>
+          </li>
+          <li>
             <button className={view === 'revisit' ? 'active' : ''} onClick={() => { navigateTo('revisit'); loadRevisit() }} title="Revisit">
               <RotateCcw size={16} /><span>Revisit</span>
             </button>
@@ -875,17 +880,7 @@ function Workspace() {
             </button>
           </li>
         </ul>
-        <div className="career-sidebar-item">
-          <button
-            className={`career-sidebar-btn${view === 'career' ? ' selected' : ''}`}
-            onClick={() => navigateTo('career')}
-            title="Career"
-          >
-            <Briefcase size={14} className="career-sidebar-icon" />
-            {sidebarOpen && <span>Career</span>}
-          </button>
-          <hr className="topic-divider" />
-        </div>
+        <hr className="topic-divider" />
         <TopicList
           topics={topics}
           activeTopics={activeTopics}

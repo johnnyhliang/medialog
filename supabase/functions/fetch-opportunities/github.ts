@@ -16,7 +16,7 @@ const BOARDS: BoardConfig[] = [
   { owner: 'northwesternfintech', repo: '2026QuantInternships',   branch: 'main', file: 'README.md',         tags: ['quant', 'internship'] },
   { owner: 'northwesternfintech', repo: '2027QuantInternships',   branch: 'main', file: 'README.md',         tags: ['quant', 'internship'] },
   { owner: 'zapplyjobs',   repo: 'underclassmen-internships',     branch: 'main', file: 'README.md',         tags: ['swe', 'internship', 'underclassmen'] },
-  { owner: 'LuisaE',       repo: 'opportunities',                 branch: 'main', file: 'README.md',         tags: ['fellowship', 'program'] },
+  { owner: 'LuisaE',       repo: 'opportunities',                 branch: 'master', file: 'README.md',         tags: ['fellowship', 'program'] },
   { owner: 'Julian048',    repo: 'CS-Everything-but-Internships', branch: 'main', file: 'README.md',         tags: ['fellowship', 'program'] },
 ]
 
