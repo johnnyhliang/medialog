@@ -6,30 +6,30 @@ function parseWaybackTimestamp(ts) {
 }
 
 export async function checkArchive(url) {
-  const res = await fetch(
-    `https://archive.org/wayback/available?url=${encodeURIComponent(url)}`
-  )
-  if (!res.ok) throw new Error(`Wayback API failed: ${res.status}`)
-  const data = await res.json()
-  const closest = data?.archived_snapshots?.closest
-  if (!closest?.available) {
-    return { archived: false, timestamp: null, snapshotUrl: null }
-  }
-  return {
-    archived: true,
-    timestamp: parseWaybackTimestamp(closest.timestamp),
-    snapshotUrl: closest.url,
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), 5000)
+  try {
+    const res = await fetch(
+      `https://archive.org/wayback/available?url=${encodeURIComponent(url)}`,
+      { signal: controller.signal }
+    )
+    if (!res.ok) throw new Error(`Wayback API failed: ${res.status}`)
+    const data = await res.json()
+    const closest = data?.archived_snapshots?.closest
+    if (!closest?.available) {
+      return { archived: false, timestamp: null, snapshotUrl: null }
+    }
+    return {
+      archived: true,
+      timestamp: parseWaybackTimestamp(closest.timestamp),
+      snapshotUrl: closest.url,
+    }
+  } finally {
+    clearTimeout(timer)
   }
 }
 
-export async function submitArchive(url) {
-  const res = await fetch(`https://web.archive.org/save/${encodeURIComponent(url)}`, {
-    method: 'POST',
-  })
-  if (!res.ok) throw new Error(`Save Page Now failed: ${res.status}`)
-  const loc = res.headers.get('Content-Location')
-  const snapshotUrl = loc
-    ? `https://web.archive.org${loc}`
-    : `https://web.archive.org/web/*/${encodeURIComponent(url)}`
-  return { snapshotUrl }
+export function submitArchive(url) {
+  // Open archive.org's save page in a new tab — avoids CORS restrictions
+  window.open(`https://web.archive.org/save/${url}`, '_blank', 'noopener,noreferrer')
 }

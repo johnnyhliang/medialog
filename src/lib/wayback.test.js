@@ -51,23 +51,15 @@ test('checkArchive throws on non-2xx response', async () => {
   await expect(checkArchive('https://example.com')).rejects.toThrow('503')
 })
 
-test('submitArchive returns snapshotUrl parsed from Content-Location header', async () => {
-  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-    ok: true,
-    headers: { get: (h) => h === 'Content-Location' ? '/web/20260620120000/https://example.com' : null },
-  }))
+test('submitArchive opens archive.org save URL in new tab', () => {
+  const openSpy = vi.fn()
+  vi.stubGlobal('window', { open: openSpy })
 
-  const result = await submitArchive('https://example.com')
+  submitArchive('https://example.com')
 
-  expect(result.snapshotUrl).toBe('https://web.archive.org/web/20260620120000/https://example.com')
-})
-
-test('submitArchive throws on non-2xx response', async () => {
-  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-    ok: false,
-    status: 429,
-    headers: { get: () => null },
-  }))
-
-  await expect(submitArchive('https://example.com')).rejects.toThrow('429')
+  expect(openSpy).toHaveBeenCalledWith(
+    'https://web.archive.org/save/https://example.com',
+    '_blank',
+    'noopener,noreferrer'
+  )
 })

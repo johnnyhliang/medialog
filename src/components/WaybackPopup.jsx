@@ -22,15 +22,14 @@ export default function WaybackPopup({ entry, supabase, onClose, onEntryUpdate }
 
   async function handleSubmit() {
     setSubmitting(true)
-    setSubmitError(null)
+    submitArchive(entry.url)
     try {
-      await submitArchive(entry.url)
       const now = new Date().toISOString()
       const updated = await updateEntry(supabase, entry.id, { wayback_submitted_at: now })
       onEntryUpdate(updated)
       setSubmitted(true)
     } catch {
-      setSubmitError('Submission failed — try again')
+      setSubmitError('Could not save submission date')
     } finally {
       setSubmitting(false)
     }
@@ -77,7 +76,7 @@ export default function WaybackPopup({ entry, supabase, onClose, onEntryUpdate }
                 disabled={submitting}
                 style={{ alignSelf: 'flex-start' }}
               >
-                {submitting ? 'Submitting…' : 'Archive now'}
+                {submitting ? 'Opening…' : 'Archive now ↗'}
               </button>
             )}
 
