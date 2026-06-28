@@ -460,34 +460,54 @@ function Workspace() {
   }
 
   async function handleUndoArchive(entryId, prevStatus) {
-    const updated = await updateEntry(supabase, entryId, { status: prevStatus })
-    applyUpdateEntry(entryId, updated)
-    removePending(entryId)
+    try {
+      const updated = await updateEntry(supabase, entryId, { status: prevStatus })
+      applyUpdateEntry(entryId, updated)
+      removePending(entryId)
+    } catch {
+      addToast('Failed to undo archive', 'error')
+    }
   }
 
   async function handleTagsChange(entryId, tags) {
-    await setEntryTags(supabase, entryId, tags)
-    setEntries((prev) => prev.map((e) => (e.id === entryId ? { ...e, tags } : e)))
+    try {
+      await setEntryTags(supabase, entryId, tags)
+      setEntries((prev) => prev.map((e) => (e.id === entryId ? { ...e, tags } : e)))
+    } catch {
+      addToast('Failed to update tags', 'error')
+    }
   }
 
   async function handleTogglePin(entryId, pinned) {
-    const updated = await updateEntry(supabase, entryId, { pinned })
-    setEntries((prev) => {
-      const next = prev.map((e) => (e.id === entryId ? { ...updated, tags: e.tags } : e))
-      return [...next].sort((a, b) => (b.pinned === a.pinned ? 0 : b.pinned ? 1 : -1))
-    })
+    try {
+      const updated = await updateEntry(supabase, entryId, { pinned })
+      setEntries((prev) => {
+        const next = prev.map((e) => (e.id === entryId ? { ...updated, tags: e.tags } : e))
+        return [...next].sort((a, b) => (b.pinned === a.pinned ? 0 : b.pinned ? 1 : -1))
+      })
+    } catch {
+      addToast('Failed to pin entry', 'error')
+    }
   }
 
   async function handleNoteSave(entryId, note) {
-    const updated = await updateEntry(supabase, entryId, { note })
-    applyUpdateEntry(entryId, updated)
-    embedEntryAsync(supabase, updated)
+    try {
+      const updated = await updateEntry(supabase, entryId, { note })
+      applyUpdateEntry(entryId, updated)
+      embedEntryAsync(supabase, updated)
+    } catch {
+      addToast('Note failed to save', 'error')
+    }
   }
 
   async function handleTitleChange(entryId, title, url) {
     const patch = url !== undefined ? { title, url } : { title }
-    const updated = await updateEntry(supabase, entryId, patch)
-    applyUpdateEntry(entryId, updated)
+    try {
+      const updated = await updateEntry(supabase, entryId, patch)
+      applyUpdateEntry(entryId, updated)
+    } catch {
+      addToast('Failed to save title', 'error')
+    }
   }
 
   async function handleMove(entryId, newTopicId) {
