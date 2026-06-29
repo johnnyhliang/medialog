@@ -1,6 +1,6 @@
 // src/App.jsx
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
-import { Search, Upload, Inbox, RotateCcw, BarChart2, Settings2, Trash2 as TrashIcon, Download, Menu, Home, FolderOpen, Rss, Briefcase, PackageOpen, Archive, ScrollText } from 'lucide-react'
+import { Search, Upload, Inbox, RotateCcw, BarChart2, Settings2, Trash2 as TrashIcon, Download, Menu, Home, FolderOpen, Rss, Briefcase, PackageOpen, Archive, ScrollText, Highlighter } from 'lucide-react'
 import { supabase } from './lib/supabaseClient.js'
 import { listTopics, createTopic, getTopicByName, listDeletedTopics, archiveTopic, unarchiveTopic, softDeleteTopic, restoreDeletedTopic, togglePinTopic } from './lib/db/topics.js'
 import {
@@ -30,6 +30,7 @@ import SettingsView from './components/SettingsView.jsx'
 import TrashView from './components/TrashView.jsx'
 import FeedView from './components/FeedView.jsx'
 import CareerView from './components/CareerView.jsx'
+import HighlightsView from './components/HighlightsView.jsx'
 import DigestView from './components/DigestView.jsx'
 import ExploreView from './components/ExploreView.jsx'
 import HomeView from './components/HomeView.jsx'
@@ -831,6 +832,11 @@ function Workspace() {
             </button>
           </li>
           <li>
+            <button className={view === 'highlights' ? 'active' : ''} onClick={() => navigateTo('highlights')} title="Highlights">
+              <Highlighter size={16} /><span>Highlights</span>
+            </button>
+          </li>
+          <li>
             <button className={view === 'revisit' ? 'active' : ''} onClick={() => { navigateTo('revisit'); loadRevisit() }} title="Revisit">
               <RotateCcw size={16} /><span>Revisit</span>
             </button>
@@ -1056,6 +1062,9 @@ function Workspace() {
               supabase={supabase}
               addToast={addToast}
             />
+          )}
+          {view === 'highlights' && (
+            <HighlightsView supabase={supabase} />
           )}
           {view === 'digest' && (
             <DigestView
