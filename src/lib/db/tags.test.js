@@ -1,18 +1,7 @@
 import { describe, test, expect, vi } from 'vitest'
 import { getOrCreateTag, setEntryTags, listTags } from './tags.js'
 
-function mockClient(result) {
-  const chain = {
-    select: vi.fn(() => Object.assign(Promise.resolve(result), chain)),
-    insert: vi.fn(() => chain),
-    upsert: vi.fn(() => chain),
-    delete: vi.fn(() => chain),
-    eq: vi.fn(() => Object.assign(Promise.resolve(result), chain)),
-    order: vi.fn(() => Promise.resolve(result)),
-    single: vi.fn(() => Promise.resolve(result)),
-  }
-  return { from: vi.fn(() => chain), _chain: chain }
-}
+import { mockSupabase as mockClient } from '../../test/mockSupabase.js'
 
 describe('tags db', () => {
   test('getOrCreateTag upserts by name and returns the row', async () => {

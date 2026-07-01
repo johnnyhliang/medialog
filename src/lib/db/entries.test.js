@@ -9,23 +9,7 @@ import {
   markSurfaced,
 } from './entries.js'
 import { computeTitle } from '../entryTitle.js'
-
-function mockClient(result) {
-  const chain = {
-    select: vi.fn(() => Object.assign(Promise.resolve(result), chain)),
-    insert: vi.fn(() => chain),
-    update: vi.fn(() => chain),
-    delete: vi.fn(() => chain),
-    eq: vi.fn(() => Object.assign(Promise.resolve(result), chain)),
-    or: vi.fn(() => chain),
-    is: vi.fn(() => Object.assign(Promise.resolve(result), chain)),
-    not: vi.fn(() => Object.assign(Promise.resolve(result), chain)),
-    order: vi.fn(() => Object.assign(Promise.resolve(result), chain)),
-    limit: vi.fn(() => Promise.resolve(result)),
-    single: vi.fn(() => Promise.resolve(result)),
-  }
-  return { from: vi.fn(() => chain), _chain: chain }
-}
+import { mockSupabase as mockClient } from '../../test/mockSupabase.js'
 
 describe('entries db', () => {
   test('listEntriesByTopic orders pinned first then newest, flattening tags', async () => {

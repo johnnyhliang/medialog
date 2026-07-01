@@ -1,4 +1,5 @@
 import { useMemo, useState, useRef } from 'react'
+import { Bold, Italic, Heading, List, ListChecks, Link2, Quote, Code } from 'lucide-react'
 import CodeMirror from '@uiw/react-codemirror'
 import { markdown, markdownLanguage, insertNewlineContinueMarkup, deleteMarkupBackward } from '@codemirror/lang-markdown'
 import { languages } from '@codemirror/language-data'
@@ -103,11 +104,54 @@ function insertAtCursor(value, snippet) {
   return trimmed ? `${trimmed}\n\n${snippet}` : snippet
 }
 
+// Format actions operate directly on the CodeMirror view so they work
+// identically on mobile (where typing `*` or `#` by hand is painful) and desktop.
+function wrapSelection(view, open, close = open) {
+  const { state } = view
+  const sel = state.selection.main
+  const selected = state.sliceDoc(sel.from, sel.to)
+  view.dispatch(state.update({
+    changes: { from: sel.from, to: sel.to, insert: `${open}${selected}${close}` },
+    selection: selected
+      ? EditorSelection.range(sel.from + open.length, sel.from + open.length + selected.length)
+      : EditorSelection.cursor(sel.from + open.length),
+  }))
+  view.focus()
+}
+
+function prefixLines(view, prefix, { numbered = false } = {}) {
+  const { state } = view
+  const sel = state.selection.main
+  const fromLine = state.doc.lineAt(sel.from)
+  const toLine = state.doc.lineAt(sel.to)
+  const changes = []
+  let n = 1
+  for (let ln = fromLine.number; ln <= toLine.number; ln++) {
+    const line = state.doc.line(ln)
+    const mark = numbered ? `${n++}. ` : prefix
+    changes.push({ from: line.from, to: line.from, insert: mark })
+  }
+  view.dispatch(state.update({ changes }))
+  view.focus()
+}
+
 export default function NoteEditor({ value, onChange, supabase, extraExtensions = NO_EXTENSIONS }) {
   const extensions = useMemo(
     () => [mdLang, mdKeymap, pairKeymap, ...extraExtensions],
     [extraExtensions],
   )
+  const viewRef = useRef(null)
+  const fmt = (fn) => () => { if (viewRef.current) fn(viewRef.current) }
+  const FORMATS = [
+    { icon: Bold, label: 'Bold', run: (v) => wrapSelection(v, '**') },
+    { icon: Italic, label: 'Italic', run: (v) => wrapSelection(v, '_') },
+    { icon: Heading, label: 'Heading', run: (v) => prefixLines(v, '## ') },
+    { icon: List, label: 'Bullet list', run: (v) => prefixLines(v, '- ') },
+    { icon: ListChecks, label: 'Checklist', run: (v) => prefixLines(v, '- [ ] ') },
+    { icon: Quote, label: 'Quote', run: (v) => prefixLines(v, '> ') },
+    { icon: Code, label: 'Code', run: (v) => wrapSelection(v, '`') },
+    { icon: Link2, label: 'Link', run: (v) => wrapSelection(v, '[', '](url)') },
+  ]
   const [mode, setMode] = useState('write')
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState(null)
@@ -179,6 +223,22 @@ export default function NoteEditor({ value, onChange, supabase, extraExtensions 
             </button>
           ))}
         </div>
+        {showEditor && (
+          <div className="note-editor-format" role="toolbar" aria-label="Formatting">
+            {FORMATS.map(({ icon: Icon, label, run }) => (
+              <button
+                key={label}
+                type="button"
+                title={label}
+                aria-label={label}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={fmt(run)}
+              >
+                <Icon size={16} strokeWidth={2} />
+              </button>
+            ))}
+          </div>
+        )}
         {supabase && (
           <div className="note-editor-attach">
             <input
@@ -220,7 +280,8 @@ export default function NoteEditor({ value, onChange, supabase, extraExtensions 
               extensions={extensions}
               onChange={onChange}
               height="auto"
-              minHeight="120px"
+              minHeight="160px"
+              onCreateEditor={(view) => { viewRef.current = view }}
               basicSetup={{ lineNumbers: false, foldGutter: false, highlightActiveLine: false }}
             />
           </div>

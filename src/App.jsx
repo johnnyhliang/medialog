@@ -1,6 +1,6 @@
 // src/App.jsx
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
-import { Search, Upload, Inbox, RotateCcw, BarChart2, Settings2, Trash2 as TrashIcon, Download, Menu, Home, FolderOpen, Rss, Briefcase, PackageOpen, Archive, ScrollText, Highlighter } from 'lucide-react'
+import { Search, Upload, Inbox, RotateCcw, BarChart2, Settings2, Trash2 as TrashIcon, Download, Menu, Home, FolderOpen, Rss, Briefcase, PackageOpen, Archive, ScrollText, Highlighter, BookOpen } from 'lucide-react'
 import { supabase } from './lib/supabaseClient.js'
 import { listTopics, createTopic, getTopicByName, listDeletedTopics, archiveTopic, unarchiveTopic, softDeleteTopic, restoreDeletedTopic, togglePinTopic } from './lib/db/topics.js'
 import {
@@ -20,21 +20,25 @@ import { buildZip, downloadBlob } from './lib/buildZip.js'
 import AuthGate from './components/AuthGate.jsx'
 import TopicList from './components/TopicList.jsx'
 import QuickAdd from './components/QuickAdd.jsx'
-import BulkImport from './components/BulkImport.jsx'
-import MigrationView from './components/MigrationView.jsx'
-import ArchiveView from './components/ArchiveView.jsx'
 import SortInbox from './components/SortInbox.jsx'
 import ProgressView from './components/ProgressView.jsx'
 import Revisit from './components/Revisit.jsx'
-import SettingsView from './components/SettingsView.jsx'
 import TrashView from './components/TrashView.jsx'
-import FeedView from './components/FeedView.jsx'
-import CareerView from './components/CareerView.jsx'
-import HighlightsView from './components/HighlightsView.jsx'
-import DigestView from './components/DigestView.jsx'
-import ExploreView from './components/ExploreView.jsx'
 import HomeView from './components/HomeView.jsx'
-import FilesView from './components/FilesView.jsx'
+import GuideView from './components/GuideView.jsx'
+import NavSidebar from './components/NavSidebar.jsx'
+// Heavy / infrequently-opened views are code-split so they don't bloat the
+// initial bundle. They render inside the <Suspense> around the view area.
+const BulkImport = lazy(() => import('./components/BulkImport.jsx'))
+const MigrationView = lazy(() => import('./components/MigrationView.jsx'))
+const ArchiveView = lazy(() => import('./components/ArchiveView.jsx'))
+const SettingsView = lazy(() => import('./components/SettingsView.jsx'))
+const FeedView = lazy(() => import('./components/FeedView.jsx'))
+const CareerView = lazy(() => import('./components/CareerView.jsx'))
+const HighlightsView = lazy(() => import('./components/HighlightsView.jsx'))
+const DigestView = lazy(() => import('./components/DigestView.jsx'))
+const ExploreView = lazy(() => import('./components/ExploreView.jsx'))
+const FilesView = lazy(() => import('./components/FilesView.jsx'))
 import TopicView from './components/TopicView.jsx'
 import ExportModal from './components/ExportModal.jsx'
 import VersionHistoryModal from './components/VersionHistoryModal.jsx'
@@ -795,97 +799,12 @@ function Workspace() {
           <h1>MediaLog</h1>
           <button className="signout" onClick={() => supabase.auth.signOut()}>Sign out</button>
         </div>
-        <ul className="nav">
-          <li>
-            <button className={view === 'home' ? 'active' : ''} onClick={() => navigateTo('home')} title="Home">
-              <Home size={16} /><span>Home</span>
-            </button>
-          </li>
-          <li>
-            <button className={view === 'explore' ? 'active' : ''} onClick={() => navigateTo('explore')} title="Explore">
-              <Search size={16} /><span>Explore</span>
-            </button>
-          </li>
-          <li>
-            <button className={view === 'bulk' ? 'active' : ''} onClick={() => navigateTo('bulk')} title="Bulk Import">
-              <Upload size={16} /><span>Bulk Import</span>
-            </button>
-          </li>
-          <li>
-            <button className={view === 'migration' ? 'active' : ''} onClick={() => navigateTo('migration')} title="Import">
-              <PackageOpen size={16} /><span>Import</span>
-            </button>
-          </li>
-          <li>
-            <button className={view === 'archive' ? 'active' : ''} onClick={() => navigateTo('archive')} title="Archive">
-              <Archive size={16} /><span>Archive</span>
-            </button>
-          </li>
-          <li>
-            <button className={view === 'sort' ? 'active' : ''} onClick={() => { navigateTo('sort'); loadInbox() }} title="Sort Inbox">
-              <Inbox size={16} /><span>Sort Inbox</span>
-            </button>
-          </li>
-          <li>
-            <button className={view === 'career' ? 'active' : ''} onClick={() => navigateTo('career')} title="Career">
-              <Briefcase size={16} /><span>Career</span>
-            </button>
-          </li>
-          <li>
-            <button className={view === 'highlights' ? 'active' : ''} onClick={() => navigateTo('highlights')} title="Highlights">
-              <Highlighter size={16} /><span>Highlights</span>
-            </button>
-          </li>
-          <li>
-            <button className={view === 'revisit' ? 'active' : ''} onClick={() => { navigateTo('revisit'); loadRevisit() }} title="Revisit">
-              <RotateCcw size={16} /><span>Revisit</span>
-            </button>
-          </li>
-          <li>
-            <button className={view === 'progress' ? 'active' : ''} onClick={() => navigateTo('progress')} title="Progress">
-              <BarChart2 size={16} /><span>Progress</span>
-            </button>
-          </li>
-          <li>
-            <button className={view === 'settings' ? 'active' : ''} onClick={() => navigateTo('settings')} title="Settings">
-              <Settings2 size={16} /><span>Settings</span>
-            </button>
-          </li>
-          <li>
-            <button className={view === 'trash' ? 'active' : ''} onClick={() => { navigateTo('trash'); loadTrash() }} title="Trash">
-              <TrashIcon size={16} /><span>Trash</span>
-            </button>
-          </li>
-          <li>
-            <button className={view === 'files' ? 'active' : ''} onClick={() => navigateTo('files')} title="Files">
-              <FolderOpen size={16} /><span>Files</span>
-            </button>
-          </li>
-          <li>
-            <button className={view === 'feed' ? 'active' : ''} onClick={() => navigateTo('feed')} title="Feed">
-              <Rss size={16} /><span>Feed</span>
-            </button>
-          </li>
-          <li>
-            <button className={view === 'digest' ? 'active' : ''} onClick={() => navigateTo('digest')} title="Digest" style={{ position: 'relative' }}>
-              <ScrollText size={16} /><span>Digest</span>
-              {(() => {
-                try {
-                  const last = localStorage.getItem('medialog_digest_last_viewed')
-                  if (!last || Date.now() - Number(last) > 7 * 24 * 60 * 60 * 1000) {
-                    return <span className="nav-dot" />
-                  }
-                } catch {}
-                return null
-              })()}
-            </button>
-          </li>
-          <li>
-            <button onClick={handleExportClick} title="Export">
-              <Download size={16} /><span>Export</span>
-            </button>
-          </li>
-        </ul>
+        <NavSidebar
+          view={view}
+          navigateTo={navigateTo}
+          sideEffects={{ loadInbox, loadRevisit, loadTrash }}
+          onExport={handleExportClick}
+        />
         <hr className="topic-divider" />
         <TopicList
           topics={topics}
@@ -911,6 +830,7 @@ function Workspace() {
 
       <main className="main">
         <div key={view === 'browse' ? `browse-${selectedId}` : view === 'explore' ? 'explore' : view} className="view-enter">
+         <Suspense fallback={<div className="view-loading" />}>
           {view === 'home' && (
             <HomeView
               topics={topics}
@@ -1017,6 +937,7 @@ function Workspace() {
               onSetStyle={setStyle}
             />
           )}
+          {view === 'guide' && <GuideView />}
           {view === 'trash' && (
             <TrashView
               entries={trashEntries}
@@ -1077,6 +998,7 @@ function Workspace() {
               onDelete={handleDelete}
             />
           )}
+         </Suspense>
         </div>
       </main>
 

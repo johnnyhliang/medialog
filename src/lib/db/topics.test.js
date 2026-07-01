@@ -1,17 +1,7 @@
 import { describe, test, expect, vi } from 'vitest'
 import { listTopics, createTopic, getTopicByName, listDeletedTopics, archiveTopic, unarchiveTopic, softDeleteTopic, restoreDeletedTopic } from './topics.js'
 
-function mockClient(result) {
-  const chain = {
-    select: vi.fn(() => chain),
-    order: vi.fn(() => Promise.resolve(result)),
-    insert: vi.fn(() => chain),
-    eq: vi.fn(() => chain),
-    is: vi.fn(() => chain),
-    single: vi.fn(() => Promise.resolve(result)),
-  }
-  return { from: vi.fn(() => chain), _chain: chain }
-}
+import { mockSupabase as mockClient } from '../../test/mockSupabase.js'
 
 describe('topics db', () => {
   test('listTopics returns rows ordered by name with entry_count', async () => {

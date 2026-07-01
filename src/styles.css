@@ -811,6 +811,44 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
   border-color: var(--accent);
 }
 .note-editor-attach button { font-size: 12px; padding: 3px 10px; }
+
+/* In-app user guide page */
+.guide-view { max-width: 760px; margin: 0 auto; padding: 8px 4px 64px; }
+.guide-doc { font-size: 15px; line-height: 1.7; }
+.guide-doc h1 { margin-top: 0; }
+.guide-doc h2 { margin-top: 2em; }
+.guide-doc table { width: 100%; }
+
+/* Formatting bar — tap to insert markdown instead of typing */
+/* `*`, `#` by hand (esp. on mobile). */
+.note-editor-format {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-wrap: wrap;
+}
+.note-editor-format button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--muted);
+  width: 34px;
+  height: 34px;
+  border-radius: 7px;
+  cursor: pointer;
+}
+.note-editor-format button:hover {
+  background: var(--accent-weak);
+  color: var(--accent);
+}
+@media (max-width: 680px) {
+  /* Bigger, more legible text + finger-sized format targets on phones */
+  .note-editor .cm-content { font-size: 16px; padding: 12px 14px; }
+  .note-editor-format { width: 100%; justify-content: space-between; gap: 0; }
+  .note-editor-format button { width: 40px; height: 40px; }
+}
 .note-editor-error { color: var(--danger); font-size: 12px; margin: 0; }
 .note-editor-panes { display: flex; flex-direction: column; gap: 8px; }
 .note-editor-panes.mode-split {

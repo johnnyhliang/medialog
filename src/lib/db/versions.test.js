@@ -1,16 +1,7 @@
 import { describe, test, expect, vi } from 'vitest'
 import { listVersions, createVersion } from './versions.js'
 
-function mockClient(result) {
-  const chain = {
-    select: vi.fn(() => chain),
-    insert: vi.fn(() => chain),
-    eq: vi.fn(() => chain),
-    order: vi.fn(() => Promise.resolve(result)),
-    single: vi.fn(() => Promise.resolve(result)),
-  }
-  return { from: vi.fn(() => chain), _chain: chain }
-}
+import { mockSupabase as mockClient } from '../../test/mockSupabase.js'
 
 describe('versions db', () => {
   test('listVersions returns snapshots newest first', async () => {
