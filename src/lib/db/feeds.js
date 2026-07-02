@@ -12,13 +12,27 @@ export async function listFeeds(supabase) {
   return data
 }
 
-export async function createFeed(supabase, { url, name, category = null }) {
+export async function createFeed(supabase, { url, name, category = null, kind = 'rss', min_score = null }) {
   const { data: { user } } = await supabase.auth.getUser()
   const { data, error } = await supabase
     .from('feeds')
-    .insert({ user_id: user.id, url, name, category })
+    .insert({ user_id: user.id, url, name, category, kind, min_score })
     .select()
     .single()
+  if (error) throw new Error(error.message)
+  return data
+}
+
+// Insert curated starter sources, skipping any URL the user already follows.
+export async function addStarterFeeds(supabase, pack) {
+  const { data: { user } } = await supabase.auth.getUser()
+  const existing = await listFeeds(supabase)
+  const have = new Set(existing.map((f) => f.url))
+  const rows = pack
+    .filter((f) => !have.has(f.url))
+    .map((f) => ({ user_id: user.id, ...f, min_score: f.min_score ?? null }))
+  if (rows.length === 0) return []
+  const { data, error } = await supabase.from('feeds').insert(rows).select()
   if (error) throw new Error(error.message)
   return data
 }

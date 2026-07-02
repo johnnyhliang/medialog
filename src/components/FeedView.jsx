@@ -4,7 +4,9 @@ import {
   listFeeds, createFeed, deleteFeed, markFeedFetched,
   listFeedItems, upsertFeedItems, dismissFeedItem,
   markFeedItemSaved, cullExpiredItems, getFeedItemCounts,
+  addStarterFeeds,
 } from '../lib/db/feeds.js'
+import { STARTER_PACK } from '../lib/feedStarterPack.js'
 
 const STALE_MS = 60 * 60 * 1000 // re-fetch if older than 1 hour
 
@@ -39,6 +41,7 @@ export default function FeedView({ supabase, topics, onSaveItem, addToast }) {
   const [newCategory, setNewCategory] = useState('')
   const [addBusy, setAddBusy] = useState(false)
   const [addError, setAddError] = useState(null)
+  const [packBusy, setPackBusy] = useState(false)
   const fetchedRef = useRef(new Set()) // feed ids fetched this session
 
   const nonInbox = topics.filter((t) => t.name !== 'Inbox')
@@ -83,6 +86,7 @@ export default function FeedView({ supabase, topics, onSaveItem, addToast }) {
       : feeds
 
     for (const feed of toRefresh) {
+      if (feed.kind === 'reddit') continue // server-polled only (score filter)
       const stale = !feed.last_fetched_at ||
         Date.now() - new Date(feed.last_fetched_at).getTime() > STALE_MS
       if (!stale || fetchedRef.current.has(feed.id)) continue
@@ -140,10 +144,14 @@ export default function FeedView({ supabase, topics, onSaveItem, addToast }) {
     setAddBusy(true)
     setAddError(null)
     try {
+      const url = newUrl.trim()
+      const isReddit = /reddit\.com\/r\//i.test(url)
       const feed = await createFeed(supabase, {
-        url: newUrl.trim(),
+        url,
         name: newName.trim(),
         category: newCategory.trim() || null,
+        kind: isReddit ? 'reddit' : 'rss',
+        min_score: isReddit ? 100 : null,
       })
       setFeeds((prev) => [...prev, feed].sort((a, b) => a.name.localeCompare(b.name)))
       setNewUrl(''); setNewName(''); setNewCategory('')
@@ -152,6 +160,19 @@ export default function FeedView({ supabase, topics, onSaveItem, addToast }) {
       setAddError(err.message)
     }
     setAddBusy(false)
+  }
+
+  async function handleAddStarterPack() {
+    if (packBusy) return
+    setPackBusy(true)
+    try {
+      const added = await addStarterFeeds(supabase, STARTER_PACK)
+      addToast?.(added.length ? `Added ${added.length} sources — items arrive on the next poll` : 'Already following all starter sources')
+      await loadFeeds()
+    } catch (err) {
+      addToast?.(`Failed to add starter pack: ${err.message}`, 'error')
+    }
+    setPackBusy(false)
   }
 
   async function handleDeleteFeed(feed) {
@@ -263,9 +284,14 @@ export default function FeedView({ supabase, topics, onSaveItem, addToast }) {
           <div className="feed-empty">
             <p className="muted">
               {feeds.length === 0
-                ? 'no feeds yet — add one to start.'
+                ? 'no feeds yet — add one, or start with the curated pack.'
                 : 'nothing new. check back later or refresh a feed.'}
             </p>
+            {feeds.length === 0 && (
+              <button onClick={handleAddStarterPack} disabled={packBusy}>
+                {packBusy ? 'adding…' : `add starter pack (${STARTER_PACK.length} sources)`}
+              </button>
+            )}
           </div>
         )}
 
