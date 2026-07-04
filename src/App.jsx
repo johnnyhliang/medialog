@@ -39,7 +39,9 @@ const HighlightsView = lazy(() => import('./components/HighlightsView.jsx'))
 const DigestView = lazy(() => import('./components/DigestView.jsx'))
 const ExploreView = lazy(() => import('./components/ExploreView.jsx'))
 const FilesView = lazy(() => import('./components/FilesView.jsx'))
+const TidyView = lazy(() => import('./components/TidyView.jsx'))
 import TopicView from './components/TopicView.jsx'
+import CatchOverlay from './components/CatchOverlay.jsx'
 import ExportModal from './components/ExportModal.jsx'
 import VersionHistoryModal from './components/VersionHistoryModal.jsx'
 import { useFilePreview } from './hooks/useFilePreview.js'
@@ -78,6 +80,7 @@ function Workspace() {
   const { toasts, addToast, dismissToast } = useToast()
 
   const [view, setView] = useState('home')
+  const [catchOpen, setCatchOpen] = useState(false)
 
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [focusedEntryId, setFocusedEntryId] = useState(null)
@@ -131,6 +134,7 @@ function Workspace() {
     editFocusedEntry,
     cycleFocusedStatus,
     openSnooze: (entry) => entry && setSnoozeTarget(entry),
+    openCatch: () => setCatchOpen(true),
   }), [view, focusedEntry, topics, inboxTopic])
 
   function navigateTo(v) {
@@ -404,6 +408,69 @@ function Workspace() {
     })()
     return { ok: true }
   }
+
+  // Catch mode: like handleAddEntry but always lands in Inbox, from anywhere.
+  async function handleCatchEntry({ url, note, title: prefetchedTitle, onTitleStatus, onEmbedStatus }) {
+    if (!inboxTopic) return { ok: false, error: new Error('no inbox') }
+    let e
+    try {
+      e = await createEntry(supabase, { topicId: inboxTopic.id, url, note })
+    } catch (err) {
+      return { ok: false, error: err }
+    }
+    setInboxCount((c) => c + 1)
+    if (selectedId === inboxTopic.id) setEntries((prev) => [{ ...e, tags: [] }, ...prev])
+    ;(async () => {
+      let finalEntry = e
+      if (url) {
+        onTitleStatus?.('fetching')
+        try {
+          const meta = await fetchLinkPreview(supabase, url)
+          const title = prefetchedTitle ?? meta?.title ?? null
+          const patch = {}
+          if (title) patch.title = title
+          if (meta?.image) patch.og_image = meta.image
+          if (meta?.description) patch.og_description = meta.description
+          if (meta?.full_text) patch.full_text = meta.full_text
+          if (Object.keys(patch).length > 0) {
+            const updated = await updateEntry(supabase, e.id, patch)
+            finalEntry = updated
+          }
+          onTitleStatus?.('done')
+        } catch {
+          onTitleStatus?.('failed')
+        }
+      }
+      onEmbedStatus?.('indexing')
+      try {
+        await embedEntryAsync(supabase, { ...finalEntry, note })
+        onEmbedStatus?.('done')
+      } catch {
+        onEmbedStatus?.('failed')
+      }
+    })()
+    return { ok: true }
+  }
+
+  // PWA share target: /app.html?url=…&title=…&text=… from the OS share sheet
+  // lands here. Save straight to Inbox, then clean the URL.
+  useEffect(() => {
+    if (!inboxTopic) return
+    const params = new URLSearchParams(window.location.search)
+    const sharedUrl = params.get('url') || null
+    const sharedText = params.get('text') || ''
+    const sharedTitle = params.get('title') || ''
+    if (!sharedUrl && !sharedText && !sharedTitle) return
+    // Android often puts the URL in `text`
+    const urlFromText = !sharedUrl && /https?:\/\/\S+/.test(sharedText)
+      ? sharedText.match(/https?:\/\/\S+/)[0]
+      : null
+    const note = [sharedTitle, urlFromText ? sharedText.replace(urlFromText, '').trim() : sharedText]
+      .filter(Boolean).join(' — ')
+    window.history.replaceState({}, '', window.location.pathname)
+    handleCatchEntry({ url: sharedUrl || urlFromText, note })
+      .then((r) => addToast(r?.ok !== false ? 'Saved to Inbox' : 'Share save failed', r?.ok !== false ? undefined : 'error'))
+  }, [inboxTopic?.id])
 
   function handleToggleTrashToast(val) {
     setTrashToast(val)
@@ -911,6 +978,15 @@ function Workspace() {
               onDelete={handleSortDelete}
             />
           )}
+          {view === 'tidy' && (
+            <TidyView
+              supabase={supabase}
+              topics={topics}
+              inboxTopicId={inboxTopic?.id ?? null}
+              onOpenEntry={handleSelectEntry}
+              addToast={addToast}
+            />
+          )}
           {view === 'progress' && (
             <ProgressView
               topicName={topics.find((t) => t.id === selectedId)?.name || ''}
@@ -1023,6 +1099,13 @@ function Workspace() {
           onClose={closeHistory}
         />
       )}
+      <CatchOverlay
+        open={catchOpen}
+        onClose={() => setCatchOpen(false)}
+        onAdd={handleCatchEntry}
+        onCheckDuplicate={handleCheckDuplicate}
+        supabase={supabase}
+      />
       <CommandPalette
         open={paletteOpen}
         onClose={() => setPaletteOpen(false)}

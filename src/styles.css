@@ -2871,6 +2871,157 @@ a.activity-title:hover { color: var(--accent); }
 .topic-row .topic-pin-btn:hover { opacity: 1; color: var(--accent); background: var(--accent-weak); }
 .topic-row .topic-row-btn--pinned + .topic-pin-btn { opacity: 0.35; }
 
+/* Tidy queue — one-card-at-a-time maintenance */
+.tidy-view {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 48px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.tidy-progress {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+.tidy-progress-bar {
+  flex: 1;
+  height: 3px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.tidy-progress-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 2px;
+  transition: width 0.25s ease;
+}
+.tidy-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 22px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-shadow: var(--shadow-card-hover);
+}
+.tidy-reason {
+  align-self: flex-start;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--accent);
+  background: var(--accent-weak);
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+.tidy-card-title {
+  background: none;
+  border: none;
+  padding: 0;
+  text-align: left;
+  font-size: var(--text-lg, 1.05rem);
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+  line-height: 1.35;
+}
+.tidy-card-title:hover { color: var(--accent); }
+.tidy-card-url { font-size: var(--text-sm); color: var(--muted); }
+.tidy-card-note {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--text-secondary, var(--muted));
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.tidy-card-topic {
+  align-self: flex-start;
+  font-size: var(--text-xs);
+  color: var(--muted);
+  border: 1px solid var(--border);
+  padding: 1px 8px;
+  border-radius: 10px;
+}
+.tidy-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+.tidy-move { display: flex; gap: 6px; }
+.tidy-move select { font-size: var(--text-sm); padding: 5px 8px; border-radius: 6px; }
+.tidy-trash { color: var(--error, #e53e3e); }
+.tidy-skip { margin-left: auto; color: var(--muted); }
+.tidy-done {
+  text-align: center;
+  padding: 64px 0;
+  color: var(--accent);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.tidy-done h2 { margin: 0; font-size: 1.2rem; color: var(--text); }
+
+/* Catch overlay — quick save to Inbox from anywhere */
+.catch-overlay {
+  position: fixed;
+  inset: 0;
+  background: color-mix(in srgb, var(--bg, #000) 55%, transparent);
+  backdrop-filter: blur(2px);
+  z-index: 300;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 14vh;
+}
+.catch-panel {
+  width: min(520px, calc(100vw - 32px));
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-card-hover);
+  padding: 16px 18px;
+  animation: catch-in 0.14s ease;
+}
+@keyframes catch-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .catch-panel { animation: none; }
+}
+.catch-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.catch-close {
+  background: none;
+  border: none;
+  font-size: 18px;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0 4px;
+  border-radius: 4px;
+}
+.catch-close:hover { color: var(--text); }
+.catch-hint {
+  margin: 10px 0 0;
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+
 /* Resurface widget — archive highlights on the home panel */
 .rsf-widget { display: flex; flex-direction: column; gap: 8px; }
 .rsf-card {

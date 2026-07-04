@@ -2,7 +2,7 @@ import { useState } from 'react'
 import {
   Home, Search, Upload, PackageOpen, Archive, Inbox, Briefcase, Highlighter,
   RotateCcw, BarChart2, BookOpen, Settings2, Trash2 as TrashIcon, FolderOpen,
-  Rss, ScrollText, Download, ChevronRight,
+  Rss, ScrollText, Download, ChevronRight, Sparkles,
 } from 'lucide-react'
 
 // Declarative nav config, grouped by how often each view is reached for.
@@ -17,6 +17,7 @@ const SECTIONS = [
       { view: 'explore', label: 'Explore', icon: Search },
       { view: 'feed', label: 'Feed', icon: Rss },
       { view: 'sort', label: 'Sort Inbox', icon: Inbox, side: 'loadInbox' },
+      { view: 'tidy', label: 'Tidy', icon: Sparkles },
       { view: 'career', label: 'Career', icon: Briefcase },
     ],
   },

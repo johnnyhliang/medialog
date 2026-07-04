@@ -10,7 +10,21 @@ export function getCommands(ctx) {
       defaultKey: 'ctrl+k',
       handler: () => ctx.openPalette?.(),
     },
+    {
+      id: 'app.catch',
+      label: 'Catch a thought (quick save to Inbox)',
+      category: 'App',
+      defaultKey: 'c',
+      handler: () => ctx.openCatch?.(),
+    },
     // Navigation
+    {
+      id: 'nav.tidy',
+      label: 'Go to Tidy queue',
+      category: 'Navigation',
+      defaultKey: 'g y',
+      handler: () => ctx.setView?.('tidy'),
+    },
     {
       id: 'nav.home',
       label: 'Go to Home',
