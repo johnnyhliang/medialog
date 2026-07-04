@@ -17,6 +17,11 @@ const mockSupabase = {
     return {
       select: vi.fn(() => ({
         eq: vi.fn(() => Promise.resolve({ data: [], error: null })),
+        lt: vi.fn(() => ({
+          order: vi.fn(() => ({
+            limit: vi.fn(() => Promise.resolve({ data: [], error: null })),
+          })),
+        })),
         order: vi.fn(() => ({ limit: vi.fn(() => Promise.resolve({ data: [], error: null })) })),
         is: vi.fn(() => ({
           is: vi.fn(() => ({

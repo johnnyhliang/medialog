@@ -7,6 +7,7 @@ import DeadlineAlertBanner from './widgets/DeadlineAlertBanner.jsx'
 import OpportunitiesWidget from './widgets/OpportunitiesWidget.jsx'
 import FeedWidget from './widgets/FeedWidget.jsx'
 import FocusWidget from './widgets/FocusWidget.jsx'
+import ResurfaceWidget from './widgets/ResurfaceWidget.jsx'
 
 export default function WidgetPanel({ supabase, onTrack, onSaveFeedItem, onGoToFeed, onOpenEntry }) {
   return (
@@ -17,6 +18,7 @@ export default function WidgetPanel({ supabase, onTrack, onSaveFeedItem, onGoToF
       <div className="kw-divider" />
       <FocusWidget supabase={supabase} onOpenEntry={onOpenEntry} />
       <div className="kw-divider" />
+      <ResurfaceWidget supabase={supabase} onOpenEntry={onOpenEntry} />
       <SearchWidget />
       <div className="kw-divider" />
       <p className="kw-label">quick links</p>

@@ -373,6 +373,46 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
 .nav button:active { transform: scale(0.98); }
 .nav button.active { background: var(--accent-weak); color: var(--accent); font-weight: 600; }
 
+/* Grouped nav sections */
+.nav-section { margin: 0; }
+.nav-section + .nav-section { margin-top: 10px; }
+.nav-section-items { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 1px; }
+.nav-section-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--muted);
+  opacity: 0.7;
+  margin: 0 0 3px;
+  padding: 0 10px;
+}
+.nav-section-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  border: none;
+  padding: 3px 6px;
+  margin-bottom: 2px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--muted);
+  opacity: 0.7;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: opacity 0.12s;
+}
+.nav-section-toggle:hover { opacity: 1; }
+.nav-section-chevron { transition: transform 0.15s ease; }
+.nav-section-chevron.open { transform: rotate(90deg); }
+.app.sidebar-collapsed .nav-section-label,
+.app.sidebar-collapsed .nav-section-toggle span { display: none; }
+.app.sidebar-collapsed .nav-section-toggle { justify-content: center; }
+
 .section-label {
   font-size: var(--text-xs);
   font-weight: 600;
@@ -2705,8 +2745,26 @@ a.activity-title:hover { color: var(--accent); }
   cursor: pointer;
   transition: background 0.12s;
 }
-.explore-row:hover { background: var(--surface-2); }
+.explore-row:hover {
+  background: var(--surface-2);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
 .explore-row-main { display: flex; align-items: center; gap: 8px; }
+.explore-favicon {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+.explore-favicon--note {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: var(--muted);
+  background: var(--surface-2);
+}
+.explore-row-meta { padding-left: 24px; }
 .explore-row-title {
   font-size: var(--text-base);
   font-weight: 500;
@@ -2793,19 +2851,63 @@ a.activity-title:hover { color: var(--accent); }
    eats the whole row — clipping the topic name down to one letter. */
 .topic-row .topic-pin-btn {
   flex: 0 0 auto;
-  width: auto;
+  width: 22px;
+  height: 22px;
   background: none;
   border: none;
-  padding: 4px 5px;
+  padding: 0;
   margin-right: 2px;
   cursor: pointer;
   color: var(--muted);
   display: flex;
   align-items: center;
-  border-radius: 4px;
-  opacity: 0.55;
+  justify-content: center;
+  border-radius: 50%;
+  opacity: 0;
+  transition: opacity 0.12s, background 0.12s, color 0.12s;
 }
-.topic-row .topic-pin-btn:hover { opacity: 1; color: var(--accent); background: var(--border); }
+.topic-row:hover .topic-pin-btn,
+.topic-row .topic-pin-btn:focus-visible { opacity: 0.6; }
+.topic-row .topic-pin-btn:hover { opacity: 1; color: var(--accent); background: var(--accent-weak); }
+.topic-row .topic-row-btn--pinned + .topic-pin-btn { opacity: 0.35; }
+
+/* Resurface widget — archive highlights on the home panel */
+.rsf-widget { display: flex; flex-direction: column; gap: 8px; }
+.rsf-card {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  text-align: left;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 2px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.rsf-card:hover {
+  border-color: color-mix(in srgb, var(--border) 50%, var(--accent) 50%);
+  box-shadow: var(--shadow-card-hover);
+}
+.rsf-quote {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-style: italic;
+  color: var(--text);
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.rsf-source {
+  font-size: var(--text-xs);
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
 /* Career sidebar item */
 .career-sidebar-item { padding: 0 8px; }

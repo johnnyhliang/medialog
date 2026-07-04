@@ -39,26 +39,23 @@ export default function TopicList({
   }
 
   function TopicBtn({ t }) {
-    const [hovering, setHovering] = useState(false)
     return (
       <li key={t.id}>
-        <div
-          className="topic-row"
-          onMouseEnter={() => setHovering(true)}
-          onMouseLeave={() => setHovering(false)}
-        >
+        <div className="topic-row">
           <button
-            className={t.id === selectedId ? 'selected topic-row-btn' : 'topic-row-btn'}
+            className={`topic-row-btn${t.id === selectedId ? ' selected' : ''}${t.pinned ? ' topic-row-btn--pinned' : ''}`}
             onClick={() => onSelect(t.id)}
             title={t.name}
           >
+            {t.pinned && !sidebarCollapsed && <Pin size={9} className="topic-pin-indicator" />}
             {sidebarCollapsed ? t.name.slice(0, 2).toUpperCase() : t.name}
           </button>
-          {hovering && !sidebarCollapsed && onPinToggle && (
+          {!sidebarCollapsed && onPinToggle && (
             <button
               className="topic-pin-btn"
               onClick={(e) => { e.stopPropagation(); onPinToggle(t.id, !t.pinned) }}
               title={t.pinned ? 'Unpin' : 'Pin to top'}
+              aria-label={t.pinned ? `Unpin ${t.name}` : `Pin ${t.name} to top`}
             >
               {t.pinned ? <PinOff size={11} /> : <Pin size={11} />}
             </button>

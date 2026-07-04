@@ -5,10 +5,26 @@ import { Search, BookOpen, Clock } from 'lucide-react'
 const STATUS_LABEL = { active: 'active', backlog: 'backlog' }
 const STATUS_CLASS = { active: 'status-active', backlog: 'status-backlog' }
 
+function faviconUrl(url) {
+  try { return `https://www.google.com/s2/favicons?domain=${new URL(url).hostname}&sz=32` } catch { return null }
+}
+
 function EntryRow({ entry, onSelect, showSimilarity }) {
+  const favicon = entry.url ? faviconUrl(entry.url) : null
   return (
     <div className="explore-row" onClick={() => onSelect?.(entry)}>
       <div className="explore-row-main">
+        {favicon ? (
+          <img
+            className="explore-favicon"
+            src={favicon}
+            alt=""
+            loading="lazy"
+            onError={(e) => { e.currentTarget.style.visibility = 'hidden' }}
+          />
+        ) : (
+          <span className="explore-favicon explore-favicon--note">✎</span>
+        )}
         <span className="explore-row-title">
           {entry.title || entry.url || 'Untitled'}
         </span>
