@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useLayoutEffect } from 'react'
+import anime from 'animejs'
 import { supabase } from '../lib/supabaseClient.js'
 
 function passwordStrength(pw) {
@@ -15,7 +16,87 @@ function passwordStrength(pw) {
   return { score, label: 'strong', color: '#3D5A4A' }
 }
 
+// Scroll reveals: elements with [data-reveal] fade/rise in once; sketches
+// ([data-reveal] .sketch paths) draw themselves via pathLength/dashoffset.
+function useReveals() {
+  useEffect(() => {
+    const els = document.querySelectorAll('[data-reveal]')
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      els.forEach((el) => el.classList.add('revealed'))
+      return
+    }
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((en) => {
+        if (en.isIntersecting) {
+          en.target.classList.add('revealed')
+          io.unobserve(en.target)
+        }
+      })
+    }, { threshold: 0.2 })
+    els.forEach((el) => io.observe(el))
+    return () => io.disconnect()
+  }, [])
+}
+
+// The hero gets a hand-authored anime.js timeline instead of the generic
+// reveal: eyebrow → wordmark → tagline → cta settle in, THEN the circle
+// draws around "retain", THEN the margin note appears. This is the one place
+// BRAND.md says to spend the animation budget. useLayoutEffect sets the
+// hidden start state before paint so there's no flash.
+function useHeroTimeline() {
+  useLayoutEffect(() => {
+    const hero = document.querySelector('.hero')
+    if (!hero) return
+    const marginalia = hero.querySelector('.marginalia--hero')
+    const sketch = hero.querySelector('.circled-sketch .sketch')
+    const children = ['.hero-eyebrow', '.hero-display', '.hero-tagline', '.hero-cta']
+
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      if (sketch) sketch.style.strokeDashoffset = '0'
+      return
+    }
+
+    anime.set(children, { opacity: 0, translateY: 16 })
+    if (marginalia) anime.set(marginalia, { opacity: 0 })
+    if (sketch) anime.set(sketch, { strokeDashoffset: 1 })
+
+    const tl = anime.timeline({ easing: 'easeOutCubic' })
+    tl.add({ targets: '.hero-eyebrow', opacity: [0, 1], translateY: [16, 0], duration: 500 })
+      .add({ targets: '.hero-display', opacity: [0, 1], translateY: [16, 0], duration: 650 }, '-=280')
+      .add({ targets: '.hero-tagline', opacity: [0, 1], translateY: [16, 0], duration: 560 }, '-=420')
+      .add({ targets: '.hero-cta', opacity: [0, 1], translateY: [16, 0], duration: 500 }, '-=360')
+    if (sketch) {
+      tl.add({ targets: sketch, strokeDashoffset: [1, 0], duration: 720, easing: 'easeInOutSine' }, '+=120')
+    }
+    if (marginalia) {
+      tl.add({ targets: marginalia, opacity: [0, 1], translateY: [6, 0], duration: 460 }, '-=160')
+    }
+
+    return () => tl.pause()
+  }, [])
+}
+
+// A hand-drawn pencil stroke. pathLength=1 lets CSS animate the draw-on
+// with a single dasharray rule regardless of real path length.
+function Sketch({ d, viewBox, className = '', pine = false, strokeWidth = 2, delay = 0 }) {
+  return (
+    <svg className={`sketch-svg ${className}`} viewBox={viewBox} fill="none" aria-hidden="true">
+      <path
+        className={`sketch${pine ? ' sketch--pine' : ''}`}
+        d={d}
+        pathLength="1"
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        style={delay ? { transitionDelay: `${delay}ms` } : undefined}
+      />
+    </svg>
+  )
+}
+
 export default function LandingPage() {
+  useReveals()
+  useHeroTimeline()
   const [authOpen, setAuthOpen] = useState(false)
   const [mode, setMode] = useState('auth') // 'auth' | 'reset'
   const [email, setEmail] = useState('')
@@ -186,7 +267,20 @@ export default function LandingPage() {
           personal knowledge, revisited
         </p>
         <h1 className="hero-display">medialog.</h1>
-        <p className="hero-tagline">for people who save too much and retain too little. capture, triage, consume, retain.</p>
+        <p className="hero-tagline">
+          for people who save too much and retain too little.
+          {' '}capture, triage, consume,{' '}
+          <span className="circled">
+            retain
+            <Sketch
+              className="circled-sketch"
+              viewBox="0 0 150 60"
+              pine
+              d="M28 14 C60 4 128 6 140 24 C150 40 108 54 62 52 C24 50 6 40 12 26 C16 16 34 11 58 9"
+            />
+            <span className="marginalia marginalia--hero">the part everyone skips</span>
+          </span>.
+        </p>
         <div className="hero-cta">
           <a href="#" onClick={(e) => { e.preventDefault(); openAuth('signup') }} className="btn-primary">get started free →</a>
           <a href="https://github.com" target="_blank" rel="noopener" className="btn-link">github ↗</a>
@@ -283,38 +377,66 @@ export default function LandingPage() {
       </div>
 
       {/* ══════════════════════════════════════
-           § 2  STATS  — kernel.sh-style strip
+           § 2  THE PROBLEM  — told as a story
       ══════════════════════════════════════ */}
-      <div className="stats">
-        <div className="stat-item">
-          <div className="stat-value">5</div>
-          <div className="stat-label">stages in the loop</div>
-        </div>
-        <div className="stat-item">
-          <div className="stat-value">mit</div>
-          <div className="stat-label">open source license</div>
-        </div>
-        <div className="stat-item">
-          <div className="stat-value">.md</div>
-          <div className="stat-label">plain markdown export</div>
-        </div>
-        <div className="stat-item">
-          <div className="stat-value">∞</div>
-          <div className="stat-label">self-hostable, your data</div>
-        </div>
-      </div>
+      <section className="problem">
+        <p className="problem-line" data-reveal>
+          37 open tabs you're{' '}
+          <span className="struck">
+            coming back to
+            <Sketch
+              className="struck-sketch"
+              viewBox="0 0 200 20"
+              d="M4 12 C50 8 120 14 196 9 M8 15 C70 18 140 10 192 14"
+              strokeWidth={2}
+            />
+          </span>.
+        </p>
+        <p className="problem-line" data-reveal>
+          412 bookmarks. you've reopened <em>nine</em>.
+        </p>
+        <p className="problem-line" data-reveal>
+          that great article from march? <span className="problem-gone">gone.</span>
+        </p>
+        <p className="problem-turn" data-reveal>
+          <span className="underlined">
+            saving was never the problem. returning is.
+            <Sketch
+              className="underline-sketch"
+              viewBox="0 0 400 14"
+              pine
+              d="M4 8 C60 3 130 11 200 6 C270 2 340 10 396 5"
+              strokeWidth={2.5}
+            />
+          </span>
+        </p>
+      </section>
 
       {/* ══════════════════════════════════════
            § 3  FEATURES  — alternating blocks
       ══════════════════════════════════════ */}
+      <div className="loop-intro" data-reveal>
+        <h2 className="loop-title">the loop</h2>
+        <span className="marginalia marginalia--loop">
+          this is the whole trick
+          <Sketch
+            className="loop-arrow-sketch"
+            viewBox="0 0 60 46"
+            d="M52 4 C40 20 28 30 10 36 M10 36 L20 30 M10 36 L18 42"
+            strokeWidth={2}
+          />
+        </span>
+      </div>
+
       <section className="features">
 
         {/* capture + triage */}
-        <div className="feat-block">
+        <div className="feat-block" data-reveal>
           <div className="feat-text">
-            <p className="feat-stage">capture → triage</p>
+            <p className="feat-stage"><span className="feat-step">1</span> capture → triage</p>
             <h3 className="feat-head">everything in.<br/>nothing unsorted.</h3>
-            <p className="feat-copy">paste a link, type a note, bulk import from pocket or notion. inbox forces triage — every item gets a topic before it disappears.</p>
+            <p className="feat-copy">paste a link, type a note, share from your phone. it all lands in one inbox — and the inbox forces a decision, so nothing rots unsorted.</p>
+            <p className="marginalia marginalia--feat">3 seconds. zero decisions at save time.</p>
           </div>
           <div className="feat-visual">
             <svg viewBox="0 0 480 360" fill="none" preserveAspectRatio="xMidYMid slice">
@@ -362,11 +484,12 @@ export default function LandingPage() {
         </div>
 
         {/* consume + retain */}
-        <div className="feat-block reverse">
+        <div className="feat-block reverse" data-reveal>
           <div className="feat-text">
-            <p className="feat-stage">consume → retain</p>
+            <p className="feat-stage"><span className="feat-step">2</span> consume → retain</p>
             <h3 className="feat-head">read it once.<br/>remember it longer.</h3>
-            <p className="feat-copy">reader mode strips distractions. srs scheduling resurfaces entries at the right interval — so what you read doesn't evaporate.</p>
+            <p className="feat-copy">reader mode strips distractions. highlights become flashcards, and spaced repetition brings them back right before you'd forget.</p>
+            <p className="marginalia marginalia--feat">it comes back. that's the point.</p>
           </div>
           <div className="feat-visual">
             <svg viewBox="0 0 480 360" fill="none" preserveAspectRatio="xMidYMid slice">
@@ -409,11 +532,12 @@ export default function LandingPage() {
         </div>
 
         {/* synthesize */}
-        <div className="feat-block">
+        <div className="feat-block" data-reveal>
           <div className="feat-text">
-            <p className="feat-stage">synthesize</p>
+            <p className="feat-stage"><span className="feat-step">3</span> synthesize</p>
             <h3 className="feat-head">your topics<br/>write themselves.</h3>
             <p className="feat-copy">a running document per topic, built from every entry you've consumed. a reference that grows as you read, not one you have to maintain.</p>
+            <p className="marginalia marginalia--feat">three months later: an actual body of knowledge</p>
           </div>
           <div className="feat-visual">
             <svg viewBox="0 0 480 360" fill="none" preserveAspectRatio="xMidYMid slice">
@@ -454,18 +578,53 @@ export default function LandingPage() {
       </section>
 
       {/* ══════════════════════════════════════
-           § 4  QUOTE  — centered
+           § 4  STATS  — receipts, after the story
       ══════════════════════════════════════ */}
-      <section className="quote-section">
-        <p className="quote-text">"a source is not a system."</p>
-        <p className="quote-cap">notion stores. obsidian links. pocket saves. none of them surface things back to you on a schedule. that's the gap medialog fills.</p>
+      <div className="stats" data-reveal>
+        <div className="stat-item">
+          <div className="stat-value">3s</div>
+          <div className="stat-label">to save from anywhere</div>
+        </div>
+        <div className="stat-item">
+          <div className="stat-value">mit</div>
+          <div className="stat-label">open source license</div>
+        </div>
+        <div className="stat-item">
+          <div className="stat-value">.md</div>
+          <div className="stat-label">plain markdown export</div>
+        </div>
+        <div className="stat-item">
+          <div className="stat-value">∞</div>
+          <div className="stat-label">self-hostable, your data</div>
+        </div>
+      </div>
+
+      {/* ══════════════════════════════════════
+           § 5  QUOTE  — centered
+      ══════════════════════════════════════ */}
+      <section className="quote-section" data-reveal>
+        <p className="quote-text">
+          "a source is not a{' '}
+          <span className="circled circled--quote">
+            system
+            <Sketch
+              className="circled-sketch"
+              viewBox="0 0 150 60"
+              d="M26 12 C58 3 130 5 142 22 C152 38 112 55 64 53 C26 51 4 42 10 27 C14 17 32 12 54 9"
+            />
+          </span>."
+        </p>
+        <p className="quote-cap">notion stores. obsidian links. pocket saves. none of them bring anything <em>back</em>. that's the gap medialog fills.</p>
       </section>
 
       {/* ══════════════════════════════════════
            § 5  MIGRATION  — 2×2 grid
       ══════════════════════════════════════ */}
-      <section className="migration">
-        <p className="migration-eyebrow">coming from another tool?</p>
+      <section className="migration" data-reveal>
+        <p className="migration-eyebrow">
+          coming from another tool?
+          <span className="marginalia marginalia--mig">escape routes, all markdown →</span>
+        </p>
         <div className="migration-grid">
           <div className="mig-card">
             <p className="mig-from">from notion</p>
@@ -528,10 +687,18 @@ export default function LandingPage() {
       {/* ══════════════════════════════════════
            § 7  CTA STRIP  — centered on dark
       ══════════════════════════════════════ */}
-      <div className="cta-strip">
+      <div className="cta-strip" data-reveal>
         <p className="cta-display">start logging<br/>what matters.</p>
         <p className="cta-note">free. mit licensed. export everything, anytime.</p>
-        <a href="#" onClick={(e) => { e.preventDefault(); openAuth('signup') }} className="btn-cream">get started →</a>
+        <span className="cta-btn-wrap">
+          <a href="#" onClick={(e) => { e.preventDefault(); openAuth('signup') }} className="btn-cream">get started →</a>
+          <Sketch
+            className="cta-sketch"
+            viewBox="0 0 220 80"
+            d="M40 18 C90 4 190 8 204 38 C216 64 130 76 66 70 C20 66 4 50 14 32 C20 21 38 15 62 12"
+            strokeWidth={2.5}
+          />
+        </span>
       </div>
 
       {/* ══════════════════════════════════════

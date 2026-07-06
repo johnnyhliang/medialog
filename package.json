@@ -20,6 +20,7 @@
     "@codemirror/view": "^6.43.1",
     "@supabase/supabase-js": "^2.45.0",
     "@uiw/react-codemirror": "^4.25.10",
+    "animejs": "^3.2.2",
     "jszip": "^3.10.1",
     "lucide-react": "^1.20.0",
     "pdfjs-dist": "^4.10.38",
