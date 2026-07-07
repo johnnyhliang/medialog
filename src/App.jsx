@@ -40,6 +40,7 @@ const DigestView = lazy(() => import('./components/DigestView.jsx'))
 const ExploreView = lazy(() => import('./components/ExploreView.jsx'))
 const FilesView = lazy(() => import('./components/FilesView.jsx'))
 const TidyView = lazy(() => import('./components/TidyView.jsx'))
+const InterviewView = lazy(() => import('./components/InterviewView.jsx'))
 import TopicView from './components/TopicView.jsx'
 import CatchOverlay from './components/CatchOverlay.jsx'
 import ExportModal from './components/ExportModal.jsx'
@@ -986,6 +987,9 @@ function Workspace() {
               onOpenEntry={handleSelectEntry}
               addToast={addToast}
             />
+          )}
+          {view === 'interview' && (
+            <InterviewView supabase={supabase} addToast={addToast} />
           )}
           {view === 'progress' && (
             <ProgressView

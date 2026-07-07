@@ -4,6 +4,7 @@ export async function listTopics(supabase) {
     .select('*, entries!entries_topic_id_fkey(count)')
     .is('entries.deleted_at', null)
     .is('deleted_at', null)
+    .is('pattern_target', null) // interview pattern-topics live in their own view
     .order('name', { ascending: true })
   if (error) throw new Error(error.message)
   return (data ?? []).map((t) => ({ ...t, entry_count: t.entries?.[0]?.count ?? 0 }))
