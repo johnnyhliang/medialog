@@ -65,6 +65,14 @@ is committed work. Promote items into `docs/superpowers/specs/` when they get re
   owns retention/resume.
 - Export parity as a loud landing promise: leave anytime, everything in markdown.
 
+## Known follow-ups
+
+- **SimplifyJobs boards use HTML `<table>`, not markdown** — the github.ts parser
+  (markdown-pipe + heading-company) recovers vanshb03 + northwesternfintech but skips
+  SimplifyJobs Summer2026/New-Grad entirely (the biggest SWE boards). Add an HTML-table
+  branch: match `<tr>…</tr>`, pull `<td>` cells, reuse cellText/extractLink. Fixed 2026-07-06:
+  HTML `<a href>` links + `##`-heading companies; SimplifyJobs HTML tables still TODO.
+
 ## Cuts / quiet retirements
 
 - Market, weather, clock widgets — dashboard filler diluting the Today thesis.

@@ -24,8 +24,24 @@ const BOARDS: BoardConfig[] = [
 const CLOSED_RE = /🔒|closed|no longer available|\[closed\]/i
 
 function extractLink(cell: string): string | null {
-  const m = cell.match(/\[.*?\]\((https?:\/\/[^)]+)\)/)
-  return m ? m[1] : null
+  // markdown link [text](url) …
+  const md = cell.match(/\[.*?\]\((https?:\/\/[^)]+)\)/)
+  if (md) return md[1]
+  // … or an HTML anchor <a href="url"> (vanshb03/SimplifyJobs use image buttons)
+  const html = cell.match(/href=["'](https?:\/\/[^"']+)["']/i)
+  return html ? html[1] : null
+}
+
+// Convert a markdown table cell to plain text, KEEPING link text.
+// `[Stripe](https://…)` → `Stripe` (the old code stripped the whole link,
+// which erased company names that boards wrap in a link).
+function cellText(cell: string): string {
+  return cell
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1') // [text](url) → text
+    .replace(/<[^>]+>/g, ' ')                // strip HTML (SimplifyJobs <details>/<br>)
+    .replace(/[*_`]/g, '')                   // strip emphasis / code ticks
+    .replace(/\s+/g, ' ')
+    .trim()
 }
 
 function parseMarkdownTable(markdown: string, tags: string[]): Opportunity[] {
@@ -34,9 +50,23 @@ function parseMarkdownTable(markdown: string, tags: string[]): Opportunity[] {
 
   let inTable = false
   let headers: string[] = []
+  // Some boards (northwesternfintech) put the company as a `## Heading` above a
+  // bare Role|Links table rather than in a column. Track the latest heading so
+  // those rows can still be attributed to a company.
+  let headingCompany = ''
 
   for (const raw of lines) {
     const line = raw.trim()
+
+    // Company headings (## / ###). Skip obvious section headings.
+    const heading = line.match(/^#{2,3}\s+(.+)/)
+    if (heading) {
+      const h = cellText(heading[1])
+      if (h && !/^(off[-\s]?season|table of contents|contents|internships?|new\s?grad|faq)/i.test(h)) {
+        headingCompany = h
+      }
+      continue
+    }
 
     // Detect table header row
     if (!inTable && line.startsWith('|') && line.includes('|')) {
@@ -75,22 +105,22 @@ function parseMarkdownTable(markdown: string, tags: string[]): Opportunity[] {
     const locationRaw = get(['location'])
     const linkRaw = get(['link', 'apply', 'application', 'url'])
 
-    const company = companyRaw.replace(/\[.*?\]\(.*?\)/g, '').replace(/[*_]/g, '').trim()
-    const role = roleRaw.replace(/\[.*?\]\(.*?\)/g, '').replace(/[*_]/g, '').trim()
+    // Prefer an explicit company column; fall back to the section heading.
+    const company = cellText(companyRaw) || headingCompany
+    const role = cellText(roleRaw)
+    // Link can live in the apply column or be wrapped around company/role.
     const url = extractLink(linkRaw) ?? extractLink(companyRaw) ?? extractLink(roleRaw)
 
     if (!url || !role) continue
-    // Skip if company or role cell is blank/whitespace (table section headers)
-    if (!company && !role) continue
 
-    const label = role || company
-    const title = company ? `${company} — ${label}` : label
-    const location = locationRaw.replace(/\[.*?\]\(.*?\)/g, '').trim() || null
+    // Bare role in `title`; keep `company` separate. The widget composes
+    // "Company — Role", so embedding the company here double-prints it.
+    const location = cellText(locationRaw) || null
 
     results.push({
       source: 'github',
       company: company || null,
-      title,
+      title: role,
       body: location,
       url,
       author: null,
