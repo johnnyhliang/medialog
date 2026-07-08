@@ -158,8 +158,9 @@ Order matters so every FK target exists first.
 
 - **Gains Feed (Spec 2):** one-at-a-time "when bored" pull across active resources; menus-as-
   fridges, dead-day floor, two-active cap, capture-to-shelf; absorbs the interview tracker.
-- **Phase B — AI auto-chunking:** derive the section outline from a PDF TOC / article headings / an
-  AI section list, so manual outlining disappears.
+- **Phase B — AI/algorithmic auto-chunking (confirmed direction):** derive/suggest the section
+  outline from a PDF TOC, a `web` source's headings, or an AI section list, so manual outlining
+  disappears. User likes auto-suggest but wants it here, not in the MVP.
 - **Phase C — AI-gathered resources:** "give a topic → AI assembles resources + chunks + draft
   takeaways."
 - **Unified Gains home** with easy back-navigation across resources (user's stated future want).
@@ -167,7 +168,7 @@ Order matters so every FK target exists first.
 ## Open questions
 
 - Nav name: "Reading" vs "Resources" vs "Deep" for the MVP surface (cosmetic; decide at build).
-- Should `web` sources auto-suggest sections from the reader text's headings even in the manual
-  MVP? Leaning **no** — that's phase B; keep the MVP purely manual.
+- ~~Auto-suggest sections from headings in the MVP?~~ **Resolved: no.** Auto-suggest is wanted but
+  deferred to phase B (see future work); the MVP is purely manual outlining.
 - PDF page-range as a section hint (e.g. "§ = pages 40–58")? Optional `note` on the section for now;
   no dedicated field in v1.
