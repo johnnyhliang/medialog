@@ -101,6 +101,13 @@ describe('topic lifecycle', () => {
     expect(entriesChain.update).toHaveBeenCalledWith({ deleted_at: null })
     expect(topicsChain.update).toHaveBeenCalledWith({ deleted_at: null })
   })
+
+  test('listTopics filters kind = note (excludes deep topics)', async () => {
+    const chain = makeChain({ data: [{ id: 't1', name: 'AI', entries: [{ count: 1 }] }], error: null })
+    const sb = { from: vi.fn(() => chain) }
+    await listTopics(sb)
+    expect(chain.eq).toHaveBeenCalledWith('kind', 'note')
+  })
 })
 
 describe('updateTopicDoc', () => {

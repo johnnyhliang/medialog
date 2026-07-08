@@ -5,6 +5,7 @@ export async function listTopics(supabase) {
     .is('entries.deleted_at', null)
     .is('deleted_at', null)
     .is('pattern_target', null) // interview pattern-topics live in their own view
+    .eq('kind', 'note')         // deep topics live in the Reading view
     .order('name', { ascending: true })
   if (error) throw new Error(error.message)
   return (data ?? []).map((t) => ({ ...t, entry_count: t.entries?.[0]?.count ?? 0 }))
