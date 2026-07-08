@@ -57,8 +57,7 @@ topics are untouched.
 |---|---|---|
 | `kind` | `text not null default 'note'` | `'note'` = breadth (Keep grid, existing) · `'deep'` = resource |
 | `source_kind` | `text` | `'book' \| 'web' \| 'paper' \| 'pdf'` (null for breadth). `'book'` = no digital file: outline + notes only |
-| `source_url` | `text` | URL for `web`/`paper` sources (null otherwise) |
-| `source_path` | `text` | storage key for an uploaded `pdf` (reuses the existing private attachments bucket) |
+| `source_url` | `text` | URL for `web`/`paper`; for `pdf`, the long-lived signed URL returned by `uploadAttachment` (reuses the existing attachments bucket) |
 | `cursor_section_id` | `uuid` | the section the reader is currently on (nullable) |
 
 Existing `master_doc` is unused by deep topics for now (kept for breadth living-docs). `full_text`
@@ -105,9 +104,10 @@ This *is* the "consume content the right way" workflow:
 1. **Add a resource** — name it, choose a source: paste a URL (`web`/`paper`), upload a PDF
    (`pdf`), or just name a book (`book` — no file). Optionally type the first section; usually leave
    the outline empty.
-2. **Open it** — a two-pane reading view: the **source** on one side (reader text for `web`, the
-   existing `PdfViewer` for `pdf`, nothing for `book`), the **section outline** + your
-   **cursor** on the other.
+2. **Open it** — a two-pane reading view: the **source** on one side (the existing `PdfViewer` for
+   `pdf`; an "open source ↗" link for `web`/`paper`; nothing for `book`), the **section outline** +
+   your **cursor** on the other. *(Inline reader text for `web`/`paper` is deferred — topic sources
+   don't carry `full_text` yet; you read in the opened tab and take takeaways in-app.)*
 3. **Read the chunk at the cursor**, then write **one takeaway** (primary). Summary/quote optional.
 4. **Advance the cursor** to the next section — adding that section in one line if it doesn't exist.
 5. **Tangent?** Add a takeaway nested (`parent_id`) under the current one — depth-first, without
@@ -124,10 +124,11 @@ one section is "current" at a time, and the outline only ever grows from where y
 - **`DeepTopicView.jsx`** (new, lazy-loaded) — the two-pane reading/notes view for `kind:'deep'`
   topics. Renders source pane + outline + cursor + current-section takeaways + "add takeaway" +
   "advance cursor" + nested-tangent add. A "what I learned" tab lists all takeaways in order.
-- **Source panes (reuse):** `ReaderModal`/reader text for `web`/`paper` (existing `full_text`
-  extraction via `enrich`); `PdfViewer` for `pdf`; none for `book`.
-- **PDF upload (reuse):** existing private attachments storage bucket; store the key in
-  `topics.source_path`.
+- **Source panes (reuse):** `PdfViewer` for `pdf`; an "open source ↗" link for `web`/`paper`; none
+  for `book`. Inline reader text for `web`/`paper` is a later phase (needs `full_text` on the
+  source, which the enrich pipeline currently only populates on entries).
+- **PDF upload (reuse):** `uploadAttachment(supabase, file)` (existing attachments bucket) returns a
+  10-year signed URL; store it in `topics.source_url` and pass it straight to `PdfViewer url=…`.
 - **`src/lib/db/deepTopics.js`** (new) — helpers: `createDeepTopic`, `listDeepTopics`,
   `getDeepTopic` (topic + sections + takeaways), `addSection`, `setCursor`, `setSectionStatus`,
   `addTakeaway`, `updateTakeaway`. Takeaway writes reuse the `entries` table.
@@ -140,10 +141,10 @@ one section is "current" at a time, and the outline only ever grows from where y
 ### Schema migration
 
 `supabase/migrations/0042_deep_topics.sql`, in order: (1) add the `topics` columns *except*
-`cursor_section_id`; (2) create `resource_sections` + RLS + `topic_id` index; (3) add
-`topics.cursor_section_id uuid references resource_sections(id) on delete set null`; (4) add the
-`entries` columns (`section_id` FK → `resource_sections`, `takeaway`, `parent_id` FK → `entries`).
-Order matters so every FK target exists first.
+`cursor_section_id` (`kind`, `source_kind`, `source_url`); (2) create `resource_sections` + RLS +
+`topic_id` index; (3) add `topics.cursor_section_id uuid references resource_sections(id) on delete
+set null`; (4) add the `entries` columns (`section_id` FK → `resource_sections`, `takeaway`,
+`parent_id` FK → `entries`). Order matters so every FK target exists first.
 
 ### Testing
 
