@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { ArrowLeft, Plus, CornerDownRight } from 'lucide-react'
 import { getDeepTopic, addSection, setCursor, setSectionStatus, addTakeaway } from '../lib/db/deepTopics.js'
+import PdfViewer from './PdfViewer.jsx'
 
 export default function DeepTopicView({ supabase, topicId, onBack, addToast }) {
   const [data, setData] = useState(null)
@@ -73,7 +74,12 @@ export default function DeepTopicView({ supabase, topicId, onBack, addToast }) {
       </div>
 
       <div className="dt-body">
-        <div className="dt-source" />
+        <div className="dt-source">
+          {topic.source_kind === 'pdf' && topic.source_url && <PdfViewer url={topic.source_url} />}
+          {(topic.source_kind === 'web' || topic.source_kind === 'paper') && topic.source_url && (
+            <a className="dt-source-link" href={topic.source_url} target="_blank" rel="noreferrer">open source ↗</a>
+          )}
+        </div>
 
         <div className="dt-main">
           {tab === 'read' ? (

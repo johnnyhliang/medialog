@@ -22,6 +22,8 @@ vi.mock('../lib/db/deepTopics.js', () => ({
   updateTakeaway: vi.fn(async () => {}),
 }))
 
+vi.mock('./PdfViewer.jsx', () => ({ default: ({ url }) => <div data-testid="pdf">{url}</div> }))
+
 beforeEach(() => vi.clearAllMocks())
 
 test('renders sections and the cursor takeaway', async () => {
@@ -52,4 +54,24 @@ test('adds a section and advances the cursor to it', async () => {
     expect.anything(),
     expect.objectContaining({ topicId: 't1', title: 'Ch.3 Inventory', position: 3 }),
   ))
+})
+
+test('renders a PDF source pane for pdf resources', async () => {
+  const { getDeepTopic } = await import('../lib/db/deepTopics.js')
+  getDeepTopic.mockResolvedValueOnce({
+    ...state,
+    topic: { ...state.topic, source_kind: 'pdf', source_url: 'https://x/f.pdf' },
+  })
+  render(<DeepTopicView supabase={{}} topicId="t1" onBack={vi.fn()} addToast={vi.fn()} />)
+  expect(await screen.findByTestId('pdf')).toHaveTextContent('https://x/f.pdf')
+})
+
+test('renders an open-source link for web resources', async () => {
+  const { getDeepTopic } = await import('../lib/db/deepTopics.js')
+  getDeepTopic.mockResolvedValueOnce({
+    ...state,
+    topic: { ...state.topic, source_kind: 'web', source_url: 'https://example.com/a' },
+  })
+  render(<DeepTopicView supabase={{}} topicId="t1" onBack={vi.fn()} addToast={vi.fn()} />)
+  expect(await screen.findByRole('link', { name: /open source/i })).toHaveAttribute('href', 'https://example.com/a')
 })
