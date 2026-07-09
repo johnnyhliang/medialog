@@ -2,7 +2,7 @@ import { useState } from 'react'
 import {
   Home, Search, Upload, PackageOpen, Archive, Inbox, Briefcase, Highlighter,
   RotateCcw, BarChart2, BookOpen, Settings2, Trash2 as TrashIcon, FolderOpen,
-  Rss, ScrollText, Download, ChevronRight, Sparkles, GraduationCap,
+  Rss, ScrollText, Download, ChevronRight, Sparkles, GraduationCap, BookMarked,
 } from 'lucide-react'
 
 // Declarative nav config, grouped by how often each view is reached for.
@@ -26,6 +26,7 @@ const SECTIONS = [
     id: 'library',
     label: 'library',
     items: [
+      { view: 'reading', label: 'Reading', icon: BookMarked },
       { view: 'highlights', label: 'Highlights', icon: Highlighter },
       { view: 'revisit', label: 'Revisit', icon: RotateCcw, side: 'loadRevisit' },
       { view: 'digest', label: 'Digest', icon: ScrollText, badge: 'digestStale' },

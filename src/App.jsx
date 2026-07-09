@@ -41,6 +41,8 @@ const ExploreView = lazy(() => import('./components/ExploreView.jsx'))
 const FilesView = lazy(() => import('./components/FilesView.jsx'))
 const TidyView = lazy(() => import('./components/TidyView.jsx'))
 const InterviewView = lazy(() => import('./components/InterviewView.jsx'))
+const ReadingView = lazy(() => import('./components/ReadingView.jsx'))
+const DeepTopicView = lazy(() => import('./components/DeepTopicView.jsx'))
 import TopicView from './components/TopicView.jsx'
 import CatchOverlay from './components/CatchOverlay.jsx'
 import ExportModal from './components/ExportModal.jsx'
@@ -81,6 +83,7 @@ function Workspace() {
   const { toasts, addToast, dismissToast } = useToast()
 
   const [view, setView] = useState('home')
+  const [deepTopicId, setDeepTopicId] = useState(null)
   const [catchOpen, setCatchOpen] = useState(false)
 
   const [paletteOpen, setPaletteOpen] = useState(false)
@@ -990,6 +993,21 @@ function Workspace() {
           )}
           {view === 'interview' && (
             <InterviewView supabase={supabase} addToast={addToast} />
+          )}
+          {view === 'reading' && (
+            <ReadingView
+              supabase={supabase}
+              addToast={addToast}
+              onOpenTopic={(id) => { setDeepTopicId(id); setView('deeptopic') }}
+            />
+          )}
+          {view === 'deeptopic' && deepTopicId && (
+            <DeepTopicView
+              supabase={supabase}
+              topicId={deepTopicId}
+              addToast={addToast}
+              onBack={() => setView('reading')}
+            />
           )}
           {view === 'progress' && (
             <ProgressView
