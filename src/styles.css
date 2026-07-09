@@ -4878,3 +4878,4 @@ a.digest-item-title:hover { text-decoration: underline; }
 .dt-learned-item.child { margin-left: 16px; color: var(--muted); font-size: var(--text-sm); }
 @media (max-width: 720px) { .dt-body { grid-template-columns: 1fr; } }
 .dt-source-link { display: inline-block; font-size: var(--text-sm); color: var(--accent); padding: 8px 0; }
+.dt-body--no-source { grid-template-columns: 1fr; }

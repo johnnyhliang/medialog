@@ -32,6 +32,8 @@ export async function getDeepTopic(supabase, topicId) {
       .eq('topic_id', topicId).is('deleted_at', null).order('created_at', { ascending: true }),
   ])
   if (topicRes.error) throw new Error(topicRes.error.message)
+  if (sectionsRes.error) throw new Error(sectionsRes.error.message)
+  if (takeawaysRes.error) throw new Error(takeawaysRes.error.message)
   return {
     topic: topicRes.data,
     sections: sectionsRes.data ?? [],
