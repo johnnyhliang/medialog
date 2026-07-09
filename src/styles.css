@@ -4840,3 +4840,40 @@ a.digest-item-title:hover { text-decoration: underline; }
 .rd-card:hover { border-color: color-mix(in srgb, var(--border) 50%, var(--accent) 50%); box-shadow: var(--shadow-card-hover); }
 .rd-card-name { font-weight: 500; color: var(--text); }
 .rd-card-kind { font-size: var(--text-xs); color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+
+/* ── Deep topic reader ── */
+.dt-view { max-width: 1100px; margin: 0 auto; padding: 24px; }
+.dt-header { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; }
+.dt-back { display: inline-flex; align-items: center; gap: 6px; background: none; border: none; color: var(--muted); cursor: pointer; font-size: var(--text-sm); }
+.dt-back:hover { color: var(--text); }
+.dt-title { font-size: 1.15rem; margin: 0; flex: 1; }
+.dt-tabs { display: flex; gap: 4px; }
+.dt-tabs button { background: none; border: 1px solid var(--border); border-radius: 6px; padding: 5px 10px; font-size: var(--text-sm); color: var(--muted); cursor: pointer; }
+.dt-tabs button.active { background: var(--accent-weak); color: var(--accent); border-color: var(--accent); }
+.dt-body { display: grid; grid-template-columns: 1fr 1.2fr; gap: 20px; }
+.dt-source:empty { display: none; }
+.dt-main { min-width: 0; }
+.dt-outline { display: flex; flex-direction: column; gap: 3px; margin-bottom: 20px; }
+.dt-section { text-align: left; background: none; border: none; border-left: 2px solid transparent; padding: 6px 10px; border-radius: 4px; color: var(--muted); cursor: pointer; font-size: var(--text-sm); }
+.dt-section:hover { background: var(--surface-2); }
+.dt-section.current { color: var(--text); border-left-color: var(--accent); background: var(--accent-weak); font-weight: 500; }
+.dt-section--done { text-decoration: line-through; opacity: 0.6; }
+.dt-add-section { display: flex; gap: 6px; margin-top: 6px; }
+.dt-add-section input { flex: 1; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); font-size: var(--text-sm); }
+.dt-add-section button, .dt-add-takeaway button, .dt-done-btn { padding: 6px 12px; border-radius: 6px; border: 1px solid var(--accent); background: var(--accent); color: #fff; cursor: pointer; font-size: var(--text-sm); }
+.dt-current-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.dt-current-title { font-weight: 600; font-size: var(--text-base); }
+.dt-done-btn { background: none; color: var(--muted); border-color: var(--border); }
+.dt-takeaway { border-left: 2px solid var(--accent); padding: 4px 0 4px 12px; margin-bottom: 12px; }
+.dt-takeaway-text { margin: 0; font-size: var(--text-base); color: var(--text); }
+.dt-takeaway-note { margin: 4px 0 0; font-size: var(--text-sm); color: var(--muted); }
+.dt-tangent { display: flex; gap: 6px; margin: 8px 0 0 12px; color: var(--muted); }
+.dt-tangent-btn { background: none; border: none; color: var(--muted); font-size: var(--text-xs); cursor: pointer; padding: 4px 0; }
+.dt-tangent-btn:hover { color: var(--accent); }
+.dt-add-takeaway { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
+.dt-add-takeaway input { padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); font-size: var(--text-sm); }
+.dt-learned-section { margin-bottom: 18px; }
+.dt-learned-title { font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); margin: 0 0 6px; }
+.dt-learned-item { margin: 0 0 6px; font-size: var(--text-base); color: var(--text); }
+.dt-learned-item.child { margin-left: 16px; color: var(--muted); font-size: var(--text-sm); }
+@media (max-width: 720px) { .dt-body { grid-template-columns: 1fr; } }
