@@ -21,7 +21,7 @@ export default function DeepTopicView({ supabase, topicId, onBack, addToast }) {
   if (!data) return <div className="dt-view"><p className="muted">loading…</p></div>
 
   const { topic, sections, takeaways } = data
-  const hasSource = !!topic.source_url && ['pdf', 'web', 'paper'].includes(topic.source_kind)
+  const hasSource = !!topic.source_url
   const cursor = sections.find((s) => s.id === topic.cursor_section_id) || sections[0] || null
   const cursorTakeaways = cursor ? takeaways.filter((t) => t.section_id === cursor.id && !t.parent_id) : []
   const childrenOf = (id) => takeaways.filter((t) => t.parent_id === id)
@@ -76,8 +76,14 @@ export default function DeepTopicView({ supabase, topicId, onBack, addToast }) {
 
       <div className={`dt-body${hasSource ? '' : ' dt-body--no-source'}`}>
         <div className="dt-source">
-          {topic.source_kind === 'pdf' && topic.source_url && <PdfViewer url={topic.source_url} />}
-          {(topic.source_kind === 'web' || topic.source_kind === 'paper') && topic.source_url && (
+          {topic.source_kind === 'pdf' && topic.source_url && (
+            <>
+              <PdfViewer url={topic.source_url} />
+              {/* hotlinked PDFs can fail on a host without CORS — always offer the raw file */}
+              <a className="dt-source-link" href={topic.source_url} target="_blank" rel="noreferrer">open original ↗</a>
+            </>
+          )}
+          {topic.source_kind !== 'pdf' && topic.source_url && (
             <a className="dt-source-link" href={topic.source_url} target="_blank" rel="noreferrer">open source ↗</a>
           )}
         </div>

@@ -66,6 +66,16 @@ test('renders a PDF source pane for pdf resources', async () => {
   expect(await screen.findByTestId('pdf')).toHaveTextContent('https://x/f.pdf')
 })
 
+test('renders an open-source link for a book with a reference url', async () => {
+  const { getDeepTopic } = await import('../lib/db/deepTopics.js')
+  getDeepTopic.mockResolvedValueOnce({
+    ...state,
+    topic: { ...state.topic, source_kind: 'book', source_url: 'https://ref/book' },
+  })
+  render(<DeepTopicView supabase={{}} topicId="t1" onBack={vi.fn()} addToast={vi.fn()} />)
+  expect(await screen.findByRole('link', { name: /open source/i })).toHaveAttribute('href', 'https://ref/book')
+})
+
 test('renders an open-source link for web resources', async () => {
   const { getDeepTopic } = await import('../lib/db/deepTopics.js')
   getDeepTopic.mockResolvedValueOnce({

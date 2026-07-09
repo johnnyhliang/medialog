@@ -7,7 +7,7 @@ const SOURCE_KINDS = [
   { key: 'book', label: 'Book (no file)' },
   { key: 'web', label: 'Web article' },
   { key: 'paper', label: 'Paper (URL)' },
-  { key: 'pdf', label: 'PDF upload' },
+  { key: 'pdf', label: 'PDF (link or upload)' },
 ]
 
 export default function ReadingView({ supabase, onOpenTopic, addToast }) {
@@ -30,11 +30,16 @@ export default function ReadingView({ supabase, onOpenTopic, addToast }) {
     setBusy(true)
     try {
       let source_url = null
-      if (sourceKind === 'web' || sourceKind === 'paper') source_url = url.trim() || null
+      if (sourceKind === 'web' || sourceKind === 'paper' || sourceKind === 'book') {
+        source_url = url.trim() || null
+      }
       if (sourceKind === 'pdf') {
-        if (!file) { addToast?.('Choose a PDF first', 'error'); setBusy(false); return }
-        const up = await uploadAttachment(supabase, file)
-        source_url = up.url
+        // A pasted link is hotlinked straight into the viewer — no upload, no
+        // storage used. Uploading is the fallback for files you don't host.
+        const pasted = url.trim()
+        if (pasted) source_url = pasted
+        else if (file) source_url = (await uploadAttachment(supabase, file)).url
+        else { addToast?.('Paste a PDF link or choose a file', 'error'); setBusy(false); return }
       }
       const created = await createDeepTopic(supabase, { name: name.trim(), source_kind: sourceKind, source_url })
       setName(''); setUrl(''); setFile(null); setShowAdd(false)
@@ -62,8 +67,20 @@ export default function ReadingView({ supabase, onOpenTopic, addToast }) {
           {(sourceKind === 'web' || sourceKind === 'paper') && (
             <input placeholder="url" value={url} onChange={(e) => setUrl(e.target.value)} />
           )}
+          {sourceKind === 'book' && (
+            <input placeholder="reference url (optional)" value={url} onChange={(e) => setUrl(e.target.value)} />
+          )}
           {sourceKind === 'pdf' && (
-            <input type="file" accept="application/pdf" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+            <>
+              <input placeholder="pdf link (hotlinked — no storage used)" value={url} onChange={(e) => setUrl(e.target.value)} />
+              {!url.trim() && (
+                <input type="file" accept="application/pdf" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+              )}
+              <p className="rd-hint">
+                Paste a direct PDF link to read it without uploading. The viewer needs the host to
+                allow cross-origin requests; if it won't render, use “open original” or upload instead.
+              </p>
+            </>
           )}
           <div className="rd-add-actions">
             <button onClick={handleCreate} disabled={busy || !name.trim()}>{busy ? 'adding…' : 'add'}</button>
