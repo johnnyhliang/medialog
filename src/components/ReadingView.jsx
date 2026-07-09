@@ -20,7 +20,7 @@ export default function ReadingView({ supabase, onOpenTopic, addToast }) {
   const [busy, setBusy] = useState(false)
 
   async function load() {
-    try { setTopics(await listDeepTopics()) }
+    try { setTopics(await listDeepTopics(supabase)) }
     catch (e) { addToast?.(e.message, 'error'); setTopics([]) }
   }
   useEffect(() => { load() }, [])
@@ -36,7 +36,7 @@ export default function ReadingView({ supabase, onOpenTopic, addToast }) {
         const up = await uploadAttachment(supabase, file)
         source_url = up.url
       }
-      const created = await createDeepTopic({ name: name.trim(), source_kind: sourceKind, source_url })
+      const created = await createDeepTopic(supabase, { name: name.trim(), source_kind: sourceKind, source_url })
       setName(''); setUrl(''); setFile(null); setShowAdd(false)
       await load()
       onOpenTopic?.(created.id)

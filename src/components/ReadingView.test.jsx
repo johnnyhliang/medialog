@@ -3,10 +3,10 @@ import { vi, test, expect, beforeEach } from 'vitest'
 import ReadingView from './ReadingView.jsx'
 
 vi.mock('../lib/db/deepTopics.js', () => ({
-  listDeepTopics: vi.fn(async () => [
+  listDeepTopics: vi.fn(async (supabase) => [
     { id: 't1', name: 'Trading & Exchanges', source_kind: 'book' },
   ]),
-  createDeepTopic: vi.fn(async ({ name }) => ({ id: 't2', name, source_kind: 'web' })),
+  createDeepTopic: vi.fn(async (supabase, { name }) => ({ id: 't2', name, source_kind: 'web' })),
 }))
 
 beforeEach(() => vi.clearAllMocks())
@@ -30,6 +30,7 @@ test('creates a book resource from the form', async () => {
   fireEvent.change(screen.getByPlaceholderText(/name/i), { target: { value: 'The Rust Book' } })
   fireEvent.click(screen.getByRole('button', { name: /^add$/i }))
   await waitFor(() => expect(createDeepTopic).toHaveBeenCalledWith(
+    expect.anything(),
     expect.objectContaining({ name: 'The Rust Book' }),
   ))
 })
