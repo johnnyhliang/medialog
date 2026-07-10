@@ -12,7 +12,7 @@ provider pricing before committing.
 |---|---|---|
 | Database / auth / edge functions / crons | **Supabase Pro** | ~$25/mo |
 | Frontend (static Vite build: landing + app) | Cloudflare Pages / Vercel / Netlify **free tier** | $0 |
-| File storage | Supabase Pro (100 GB) at launch; move to **Cloudflare R2** only if egress/storage bites | $0 extra to start |
+| File storage | **None — uploads removed.** Users hotlink their own files (`docs/hotlinking.md`) | $0 |
 | Domain | Cloudflare / Namecheap | ~$12/yr |
 | Transactional email | **Resend** free tier (~3k/mo) for digests/resets | $0 to start |
 | Error monitoring | **Sentry** free tier | $0 |
@@ -41,6 +41,20 @@ for data-ownership reasons, never as the cheap option.
   - Decision per function: make it per-user, or disable/hide it for non-founder accounts before
     launch. (For contrast, `fetch-feeds` already iterates all users' feeds — that pattern is the
     multi-tenant target.)
+- [ ] **Remove file uploads entirely from the deployed build.** Decision (2026-07-09): MediaLog does
+  not host files. Users hotlink instead — see `docs/hotlinking.md`. Not taking on storage cost,
+  abuse surface, or content liability at this stage.
+  - **UI removal (necessary, not sufficient):** the two upload entry points are
+    `src/components/NoteEditor.jsx` (drag/paste attachment) and `src/components/ReadingView.jsx`
+    (the PDF upload fallback — the pasted-link path stays). Also decide the fate of
+    `src/components/FilesView.jsx`, which lists and deletes bucket objects, and the now-unused
+    `uploadAttachment`/`CAP_BYTES`/`isAllowedAttachment` in `src/lib/storage.js`.
+  - **⚠️ Enforcement must be server-side.** The anon key ships in the client bundle, so removing the
+    React UI does NOT prevent uploads — anyone can call
+    `supabase.storage.from('attachments').upload(...)` directly. **Revoke insert on the `attachments`
+    bucket via Supabase storage RLS policies.** That policy change is the actual gate; the UI removal
+    is cosmetic. Do both.
+  - Existing uploaded objects: decide keep vs. purge before other users exist.
 - [ ] **Secrets hygiene.** Service-role key never shipped to the client bundle; `CRON_SECRET`,
   `CAPTURE_SECRET`, provider API keys set as Supabase secrets / host env, not in the repo. Confirm
   `.env.local` is git-ignored and no secret leaked into git history.
@@ -52,10 +66,10 @@ for data-ownership reasons, never as the cheap option.
 
 ## 🟡 Should do before/around launch
 
-- [ ] **Storage cap + plan.** App enforces a 500 MB attachments cap (`uploadAttachment`); decide the
-  per-user policy for real users. If PDF uploads grow, swap the PDF path to **Cloudflare R2**
-  (presigned URLs, free egress, ~10 GB free) — contained change to `uploadAttachment` + a signing
-  step, not a rewrite.
+- [ ] **Hotlinking guide is the storage story.** Uploads are being removed (see blocker above);
+  `docs/hotlinking.md` documents where users host files and how CORS decides inline rendering.
+  Consider surfacing that guide in the in-app Guide view. If hosting files ever becomes necessary,
+  **Cloudflare R2** (presigned URLs, free egress, ~10 GB free) is the path — not Supabase storage.
 - [ ] **Cron review.** Confirm the pg_cron jobs (fetch-feeds 2h, fetch-opportunities daily,
   fetch-reels) all carry the `X-Cron-Secret` and that functions are deployed `--no-verify-jwt` so
   the cron (no bearer token) reaches them. Re-check after any redeploy.
