@@ -1,9 +1,10 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
-import { ChevronUp, Clock, MoreVertical, Pencil, Pin, PinOff, Plus, Trash2, Archive, BookOpen } from 'lucide-react'
+import { ChevronUp, Clock, History, MoreVertical, Pencil, Pin, PinOff, Plus, Trash2, Archive, BookOpen } from 'lucide-react'
 import WaybackPopup from './WaybackPopup.jsx'
 import ReaderModal from './ReaderModal.jsx'
 import TagInput from './TagInput.jsx'
 import MarkdownView from './MarkdownView.jsx'
+import MarkdownOutline from './MarkdownOutline.jsx'
 import ConfirmModal from './ConfirmModal.jsx'
 import Modal from './Modal.jsx'
 import { supabase } from '../lib/supabaseClient.js'
@@ -74,6 +75,7 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
   const [showSnoozePicker, setShowSnoozePicker] = useState(false)
   const [showReader, setShowReader] = useState(false)
   const timer = useRef(null)
+  const noteRef = useRef(null)
   const statusClass = entry.status ? `status-${entry.status}` : 'status-backlog'
   const thumb = getYouTubeThumbnail(entry.url)
   const fileType = classifyUrl(entry.url)
@@ -323,7 +325,8 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
           </Suspense>
         </div>
       ) : entry.note ? (
-        <div onClick={(e) => { if (e.target.type !== 'checkbox') { e.stopPropagation(); startEditing() } }} style={{ cursor: 'text' }}>
+        <div ref={noteRef} onClick={(e) => { if (e.target.type !== 'checkbox') { e.stopPropagation(); startEditing() } }} style={{ cursor: 'text' }}>
+          <MarkdownOutline source={entry.note} containerRef={noteRef} />
           <MarkdownView onPreview={onPreview} onToggleCheckbox={handleCheckboxToggle}>{entry.note}</MarkdownView>
         </div>
       ) : (
@@ -393,7 +396,7 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
             </button>
             {onShowHistory && (
               <button className="icon-btn" aria-label="history" onClick={() => onShowHistory(entry.id)}>
-                <Clock size={15} />
+                <History size={15} />
               </button>
             )}
             {entry.url && (
