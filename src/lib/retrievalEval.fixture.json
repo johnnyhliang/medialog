@@ -1,0 +1,10 @@
+{
+  "note": "Replace expected[] with real entry ids from your library. ~20 queries representing real usage. Run before and after a chunkConfig change to compare.",
+  "queries": [
+    { "query": "why do market makers lose money to informed traders", "expected": [] },
+    { "query": "adverze selection", "expected": [] },
+    { "query": "what sets the width of the bid-ask spread", "expected": [] },
+    { "query": "write-ahead logging", "expected": [] },
+    { "query": "price-time priority", "expected": [] }
+  ]
+}
