@@ -22,6 +22,24 @@ describe('source_hash gate', () => {
     sb.auth = { getUser: async () => { throw new Error('no session') } }
     await expect(chunkEntryAsync(sb, { id: 'e1', note: 'x' })).resolves.toBeUndefined()
   })
+
+  test('reconciles: a fully-cleared entry deletes all its chunks and embeds nothing', async () => {
+    const sb = mockSupabase({ data: [], error: null })
+    sb.auth = { getUser: async () => ({ data: { user: { id: 'u1' } } }) }
+    sb.functions = { invoke: vi.fn() }
+    await chunkEntryAsync(sb, { id: 'e1' }) // no note/full_text/takeaway
+    expect(sb._chain.delete).toHaveBeenCalled()
+    expect(sb._chain.in).toHaveBeenCalledWith('source', ['full_text', 'note', 'takeaway'])
+    expect(sb.functions.invoke).not.toHaveBeenCalled()
+  })
+
+  test('reconciles: a note-only entry drops the other sources', async () => {
+    const sb = mockSupabase({ data: [], error: null })
+    sb.auth = { getUser: async () => ({ data: { user: { id: 'u1' } } }) }
+    sb.functions = { invoke: vi.fn(async () => ({ data: { embeddings: [[0]] }, error: null })) }
+    await chunkEntryAsync(sb, { id: 'e1', note: 'short note' })
+    expect(sb._chain.in).toHaveBeenCalledWith('source', ['full_text', 'takeaway'])
+  })
 })
 
 describe('sourcesFor', () => {

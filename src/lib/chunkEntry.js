@@ -2,6 +2,8 @@ import { chunkContent } from './chunkContent.js'
 import { contextualizeChunks } from './contextualize.js'
 import { NOTE_CHUNK_THRESHOLD, TASK_TYPE_DOCUMENT } from './chunkConfig.js'
 
+const ALL_SOURCES = ['full_text', 'note', 'takeaway']
+
 // Replaces embedEntryAsync. Fire-and-forget: indexing must never break a save.
 
 // Stable non-cryptographic hash (FNV-1a) — only needs to detect "text changed".
@@ -89,9 +91,16 @@ async function chunkSource(supabase, entry, userId, { source, text, markdown }) 
 export async function chunkEntryAsync(supabase, entry) {
   try {
     const sources = sourcesFor(entry)
-    if (!sources.length) return
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
+    // Reconcile: drop chunks for any source this entry no longer has, so a
+    // cleared note/takeaway/full_text stops appearing in search. Runs even when
+    // the entry has no sources left (a fully-cleared entry deletes all its chunks).
+    const keep = sources.map((s) => s.source)
+    const drop = ALL_SOURCES.filter((s) => !keep.includes(s))
+    if (drop.length) {
+      await supabase.from('content_chunks').delete().eq('entry_id', entry.id).in('source', drop)
+    }
     for (const s of sources) {
       await chunkSource(supabase, entry, user.id, s)
     }

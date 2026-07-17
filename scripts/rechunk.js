@@ -86,8 +86,14 @@ async function contextualize(document, chunks) {
 }
 
 async function processEntry(entry) {
+  const sources = sourcesFor(entry)
+  const keep = sources.map((s) => s.source)
+  const drop = ['full_text', 'note', 'takeaway'].filter((s) => !keep.includes(s))
+  if (drop.length) {
+    await supabase.from('content_chunks').delete().eq('entry_id', entry.id).in('source', drop)
+  }
   let written = 0
-  for (const { source, text, markdown } of sourcesFor(entry)) {
+  for (const { source, text, markdown } of sources) {
     const source_hash = hashText(text)
     const { data: existing } = await supabase
       .from('content_chunks').select('source_hash')
