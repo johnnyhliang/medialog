@@ -26,9 +26,10 @@ Two existing defects this also fixes:
   `lists ≈ rows/1000`, so 100 lists targets ~100k rows. At this app's scale each list holds a handful
   of vectors and the default `probes = 1` scans ~1/100th of them — **today's semantic search is
   likely silently under-recalling.**
-- **No lexical arm at all.** There is no `tsvector`, no GIN index, no `pg_trgm`; keyword search is
-  `ilike` patterns (no stemming, no ranking). Pure dense vectors reliably miss exact tokens — names,
-  acronyms ("VWAP", "SM2"), identifiers.
+- **No lexical arm, and no fuzzy search.** There is no `tsvector`, no GIN index, no `pg_trgm`.
+  Keyword search is `note.ilike.%q%,title.ilike.%q%` — a case-insensitive **substring** match that is
+  unranked, typo-intolerant ("adverze" finds nothing), and **never searches `full_text`**. Pure dense
+  vectors, meanwhile, reliably miss exact tokens — names, acronyms ("VWAP", "SM2"), identifiers.
 
 ### Goals
 
@@ -67,12 +68,27 @@ context situating the chunk in its document. Cost is ~**$1.02 per million docume
 chunk already *is* its own context — contextualizing it is pure cost for no gain. This skips the
 majority of items.
 
-### Hybrid retrieval, not pure vector
-Dense vectors capture paraphrase; lexical search captures exact tokens. Fusing both is the difference
-between −35% and −49% above. **Honest caveat:** Postgres full-text search (`tsvector` +
-`ts_rank_cd`) is *not literally BM25* — it's a TF-IDF-family ranker. It fills the same role
-(exact-term matching) and is native to your stack. If measurement later shows the lexical arm is the
-bottleneck, ParadeDB's `pg_search` offers true BM25 as a drop-in upgrade.
+### Hybrid retrieval: three arms, not pure vector
+Each arm catches what the others miss:
+
+| Arm | Catches | Misses |
+|---|---|---|
+| **Vector** (HNSW cosine) | paraphrase: "picked off" → adverse selection | exact identifiers |
+| **Lexical** (`tsvector` + `ts_rank_cd`) | stemming: "caching" → "cached"; ranked; covers `full_text` | typos; mid-word |
+| **Fuzzy** (`pg_trgm` similarity) | typos: "adverze" → "adverse" | precision on long queries |
+
+Fusing vector + lexical is the difference between −35% and −49% above. **Fuzzy is added because the
+stack has no typo tolerance today at all** — a real gap, since a misremembered term currently returns
+nothing.
+
+**Two honest caveats.** (1) Postgres FTS (`ts_rank_cd`) is *not literally BM25* — it's a TF-IDF-family
+ranker. It fills the same role and is native to the stack; ParadeDB's `pg_search` is the drop-in
+upgrade if measurement shows the lexical arm is the bottleneck. (2) Trigram gets **noisy on long
+queries**, so it only engages when the query is at most `TRIGRAM_MAX_QUERY_WORDS` (default 4) — it
+exists to rescue short, misspelled lookups, not to rank prose.
+
+The existing `ilike` substring search stays as Explore's plain keyword mode; it is not removed, and
+the lexical arm supersedes it for quality (and for `full_text` coverage it never had).
 
 ### Retrieval is a tool, not a function
 The accuracy of Claude's own past-chat search comes from **iteration**, not a better index: the model
@@ -140,8 +156,10 @@ tsv         tsvector                 -- generated from (context || content); the
 created_at  timestamptz default now()
 ```
 
-- **HNSW** index: `using hnsw (embedding vector_cosine_ops)`.
-- **GIN** index on `tsv`.
+- **HNSW** index: `using hnsw (embedding vector_cosine_ops)` — the vector arm.
+- **GIN** index on `tsv` — the lexical arm.
+- **GIN trigram** index: `using gin (content gin_trgm_ops)` (requires `create extension pg_trgm`) —
+  the fuzzy arm.
 - Index on `(entry_id, source)`; unique on `(entry_id, source, position)`.
 - RLS: own-rows on `user_id`.
 - **Deep-topic takeaways are entries**, so `entry_id` covers them; `source = 'takeaway'`.
@@ -181,7 +199,8 @@ it's **split**:
 ### `src/lib/chunkConfig.js`
 `TARGET_WORDS`, `MIN_WORDS`, `MAX_WORDS`, `OVERLAP_RATIO`, `NOTE_CHUNK_THRESHOLD`,
 `MATCH_THRESHOLD`, `MATCH_COUNT`, `RRF_K`, `EMBED_DIMS`, `TASK_TYPE_DOCUMENT`, `TASK_TYPE_QUERY`,
-`MAX_CHUNKS_PER_SOURCE`, `CONTEXTUALIZE_MIN_CHUNKS`.
+`MAX_CHUNKS_PER_SOURCE`, `CONTEXTUALIZE_MIN_CHUNKS`, `TRIGRAM_THRESHOLD` (default 0.3),
+`TRIGRAM_MAX_QUERY_WORDS` (default 4).
 
 ### `chunk-entry` edge function
 Per entry, for each applicable source:
@@ -209,8 +228,13 @@ thousands of chunks). Resumable; reports progress.
 ### `search_chunks(query_embedding, query_text, match_count)` — one RPC, hybrid inside
 1. **Vector arm:** cosine over `content_chunks` (HNSW), top ~50.
 2. **Lexical arm:** `websearch_to_tsquery` against `tsv`, ranked by `ts_rank_cd`, top ~50.
-3. **Fuse with RRF:** `score = Σ 1/(RRF_K + rank_i)` across both arms; return top `match_count`
-   with `chunk_id, entry_id, similarity, rank`.
+3. **Fuzzy arm:** `pg_trgm` `similarity(content, query_text) > TRIGRAM_THRESHOLD`, top ~50 — engaged
+   **only** when the query is ≤ `TRIGRAM_MAX_QUERY_WORDS` (it's noisy on long queries).
+4. **Fuse with RRF:** `score = Σ 1/(RRF_K + rank_i)` across the engaged arms; return top
+   `match_count` with `chunk_id, entry_id, similarity, rank`.
+
+RRF needs no score normalization across arms — it fuses on *rank*, not raw score, which is exactly
+why it works when cosine, `ts_rank_cd`, and trigram similarity are on incomparable scales.
 
 RLS-scoped. Replaces `match_entries`.
 
@@ -267,6 +291,8 @@ use), plus recall@5 and MRR. Purpose is comparative: run before/after a paramete
 - Contextualization gating: single-chunk sources are **not** contextualized.
 - `source_hash` unchanged → no re-embed.
 - Retrieval: RRF fusion ordering; roll-up to best-per-entry; MMR drops a near-duplicate; self excluded.
+- Fuzzy arm: a misspelled short query ("adverze selection") retrieves the "adverse selection" chunk;
+  a long query does **not** engage the trigram arm.
 
 ---
 
