@@ -199,8 +199,8 @@ it's **split**:
 ### `src/lib/chunkConfig.js`
 `TARGET_WORDS`, `MIN_WORDS`, `MAX_WORDS`, `OVERLAP_RATIO`, `NOTE_CHUNK_THRESHOLD`,
 `MATCH_THRESHOLD`, `MATCH_COUNT`, `RRF_K`, `EMBED_DIMS`, `TASK_TYPE_DOCUMENT`, `TASK_TYPE_QUERY`,
-`MAX_CHUNKS_PER_SOURCE`, `CONTEXTUALIZE_MIN_CHUNKS`, `TRIGRAM_THRESHOLD` (default 0.3),
-`TRIGRAM_MAX_QUERY_WORDS` (default 4).
+`MAX_CHUNKS_PER_SOURCE`, `CONTEXTUALIZE_MIN_CHUNKS`, `CONTEXTUALIZE_BATCH_SIZE` (default 8),
+`TRIGRAM_THRESHOLD` (default 0.3), `TRIGRAM_MAX_QUERY_WORDS` (default 4).
 
 ### `chunk-entry` edge function
 Per entry, for each applicable source:
@@ -320,6 +320,12 @@ this spec is the substrate that makes it possible, not a substitute for it.
 
 - Exact Gemini `taskType` field name/values for `gemini-embedding-001` — verify at implementation;
   the design holds regardless of spelling.
-- Which cheap model for contextualization (Claude Haiku vs Gemini Flash) — decide on cost/caching
-  behaviour at implementation. The requirement is firm: **the parent document must be cached across
-  its chunks**, or contextualization gets expensive fast.
+- ~~Which cheap model for contextualization, and how to cache the parent document across chunks?~~
+  **Resolved at planning.** The existing `ai` edge function is a generic OpenAI-compatible
+  passthrough (`AI_BASE_URL` → `/chat/completions`) with **no prompt-caching support**, so the
+  cited $1.02/M figure — which assumes the document is cached across its chunks — does not apply as
+  written. Instead: **batch the contextualization.** Send the document **once** with all of its
+  chunks and return a JSON array of contexts (via the existing `json: true` mode), in groups of
+  `CONTEXTUALIZE_BATCH_SIZE` (default 8) to stay inside output limits. A 10-chunk article costs ~1×
+  document tokens instead of ~10×, reaching the same cost goal without needing caching. Model stays
+  whatever `AI_MODEL` is configured to — no new provider dependency.
