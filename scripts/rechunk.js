@@ -131,12 +131,33 @@ async function processEntry(entry) {
   return written
 }
 
+// PostgREST caps a select at 1000 rows, so a single fetch silently drops
+// entries past the cap. Page through the whole table. Newest-first so freshly
+// imported entries index before any embedding quota runs out.
+async function fetchAllEntries(only) {
+  if (only) {
+    const { data, error } = await supabase
+      .from('entries').select('id, user_id, note, full_text, takeaway').eq('id', only)
+    if (error) { console.error('Fetch failed:', error.message); process.exit(1) }
+    return data
+  }
+  const page = 1000
+  const all = []
+  for (let from = 0; ; from += page) {
+    const { data, error } = await supabase
+      .from('entries').select('id, user_id, note, full_text, takeaway')
+      .is('deleted_at', null).order('created_at', { ascending: false })
+      .range(from, from + page - 1)
+    if (error) { console.error('Fetch failed:', error.message); process.exit(1) }
+    all.push(...data)
+    if (data.length < page) break
+  }
+  return all
+}
+
 async function main() {
   const only = process.argv[2]
-  let q = supabase.from('entries').select('id, user_id, note, full_text, takeaway').is('deleted_at', null)
-  if (only) q = q.eq('id', only)
-  const { data: entries, error } = await q
-  if (error) { console.error('Fetch failed:', error.message); process.exit(1) }
+  const entries = await fetchAllEntries(only)
 
   console.log(`${entries.length} entries to consider`)
   let done = 0, chunks = 0, failed = 0
