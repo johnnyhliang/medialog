@@ -16,6 +16,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import os from 'node:os'
+import { createClient } from '@supabase/supabase-js'
 import { chunkContent } from '../src/lib/chunkContent.js'
 import { MAX_CHUNKS_PER_SOURCE } from '../src/lib/chunkConfig.js'
 
@@ -33,6 +34,7 @@ const PROJECT = flag('project')            // substring filter on project dir
 const INPUT = flag('input')                // claude.ai conversations.json
 const OUT = flag('out', 'distilled')
 const DO_IMPORT = has('import')
+const IMPORT_TOPIC = flag('topic', 'AI Chats')
 const LIMIT = Number(flag('limit', 0)) || 0
 
 // Quality gates — a conversation must clear these to be worth embedding.
@@ -235,23 +237,79 @@ function dedupe(convs, overlap = 0.7) {
   return out
 }
 
-// chunkContent hard-caps at MAX_CHUNKS_PER_SOURCE, so an oversized conversation
-// would lose its tail entirely. Split it across entries instead of truncating.
+// A conversation entry must clear two ceilings: chunkContent hard-caps at
+// MAX_CHUNKS_PER_SOURCE (tail silently dropped past it), and the entries.note
+// column has a 100k-char check constraint. Split across entries to satisfy the
+// tighter of the two rather than truncating or failing the insert.
+const NOTE_CHAR_CAP = 90_000 // headroom under the DB's 100k constraint
 function splitOversized(conv) {
   const all = conv.exchangeList
-  const probe = chunkContent(render(conv, all).markdown, { markdown: true })
-  if (probe.length < MAX_CHUNKS_PER_SOURCE) return [{ conv, exchanges: all }]
+  const md = render(conv, all).markdown
+  const probe = chunkContent(md, { markdown: true })
+  if (probe.length < MAX_CHUNKS_PER_SOURCE && md.length <= NOTE_CHAR_CAP) {
+    return [{ conv, exchanges: all }]
+  }
 
-  const parts = Math.ceil(probe.length / (MAX_CHUNKS_PER_SOURCE * 0.75))
+  const byChunks = Math.ceil(probe.length / (MAX_CHUNKS_PER_SOURCE * 0.75))
+  const byChars = Math.ceil(md.length / NOTE_CHAR_CAP)
+  const parts = Math.max(byChunks, byChars)
   const per = Math.ceil(all.length / parts)
   const out = []
   for (let i = 0; i < all.length; i += per) out.push(all.slice(i, i + per))
   return out.map((exchanges) => ({ conv, exchanges, ofParts: out.length }))
 }
 
+// ---------------------------------------------------------------- import
+// Insert distilled conversations as entries. Chunking/embedding is NOT done
+// here — scripts/rechunk.js owns that and runs next. Idempotent: entries are
+// keyed by title within the target topic, so re-running skips what's already in.
+
+async function importEntries(kept) {
+  const URL = process.env.VITE_SUPABASE_URL
+  const KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!URL || !KEY) { console.error('\nSet VITE_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY to import.'); process.exit(1) }
+  const sb = createClient(URL, KEY)
+
+  // Single-owner app: every entry shares the one user_id already in the table.
+  const { data: owner, error: oErr } = await sb.from('entries').select('user_id').limit(1).single()
+  if (oErr || !owner) { console.error('Could not resolve owner user_id:', oErr?.message); process.exit(1) }
+  const userId = owner.user_id
+
+  // Find or create the destination topic.
+  let { data: topic } = await sb.from('topics').select('id').eq('user_id', userId).eq('name', IMPORT_TOPIC).maybeSingle()
+  if (!topic) {
+    const { data: created, error: tErr } = await sb.from('topics')
+      .insert({ user_id: userId, name: IMPORT_TOPIC }).select('id').single()
+    if (tErr) { console.error('Topic create failed:', tErr.message); process.exit(1) }
+    topic = created
+    console.log(`created topic "${IMPORT_TOPIC}"`)
+  }
+
+  // What's already imported, so re-runs are safe.
+  const { data: existing } = await sb.from('entries').select('title').eq('topic_id', topic.id).is('deleted_at', null)
+  const have = new Set((existing ?? []).map((e) => e.title))
+
+  const rows = kept
+    .filter((k) => !have.has(k.title))
+    .map((k) => ({ user_id: userId, topic_id: topic.id, title: k.title, note: k.markdown, status: 'done' }))
+
+  if (!rows.length) { console.log(`\nimport: nothing new — all ${kept.length} already in "${IMPORT_TOPIC}".`); return }
+
+  let inserted = 0
+  for (let i = 0; i < rows.length; i += 100) {
+    const batch = rows.slice(i, i + 100)
+    const { error } = await sb.from('entries').insert(batch)
+    if (error) { console.error(`\ninsert failed at ${i}: ${error.message}`); process.exit(1) }
+    inserted += batch.length
+    process.stdout.write(`\rimporting… ${inserted}/${rows.length}`)
+  }
+  console.log(`\nimport: ${inserted} new entries into "${IMPORT_TOPIC}" (${kept.length - rows.length} already present).`)
+  console.log('next: node scripts/rechunk.js   # chunks + embeds the new notes')
+}
+
 // ---------------------------------------------------------------- run
 
-function main() {
+async function main() {
   const reader = SOURCE === 'claude-ai' ? readClaudeAi : readClaudeCode
   const candidates = []
   let seen = 0, droppedGate = 0, droppedEmpty = 0
@@ -323,10 +381,10 @@ function main() {
     }
   }
   if (DO_IMPORT) {
-    console.log('\n--import is not wired yet — review the markdown above first, then we wire it.')
+    await importEntries(kept)
   } else {
     console.log('\nDry run. Review the .md files, then re-run with --import.')
   }
 }
 
-main()
+main().catch((e) => { console.error(e); process.exit(1) })
