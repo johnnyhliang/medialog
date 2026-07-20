@@ -10,3 +10,7 @@ import/*.html
 import/*.htm
 import-preview.json
 .aider*
+
+# tooling state and logs — machine-generated churn
+.omx/
+supabase/.temp/
