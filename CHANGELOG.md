@@ -11,7 +11,23 @@ section when you deploy. Detailed design rationale lives in `docs/superpowers/sp
 
 ## Unreleased
 
-### Chunk retrieval engine (Plan 1 of 2) — branch `feat/chunk-retrieval`
+### Chunk retrieval consumers (Plan 2 of 2) — planned, not built
+Implementation plan written: `docs/superpowers/plans/2026-07-20-chunk-retrieval-consumers.md`
+(5 TDD tasks, ready to execute). Wires the engine into the app:
+- Repoint `searchSemantic` → `searchChunks` via an entry roll-up adapter, **with a fallback to the
+  legacy `match_entries` path while `content_chunks` is empty**, so search never regresses mid-migration.
+- Explore renders the **matching passage** per hit. Note: `search_chunks` returns an RRF score
+  (~0.01–0.05), which is a rank artifact — rendering it as a similarity percentage would be
+  meaningless, so the passage replaces the percentage.
+- `embedEntryAsync` → `chunkEntryAsync` at all 8 `App.jsx` call sites.
+- **On-demand** related-entries footer (never per-card on render — that would fire N RPCs per list).
+- Final task retires `entry_embeddings`/`match_entries` (migration `0044`), gated on the backfill.
+
+Open design calls deferred to build time (refinements, not architecture): how many related items to
+show, where the footer sits, and highlight-on-scroll behaviour. Precise scroll-into-reader for
+`char_start` passages is deferred entirely.
+
+### Chunk retrieval engine (Plan 1 of 2) — merged to master
 Passage-level retrieval replacing whole-entry embedding. **Built and deployed, but dormant** — no UI
 calls it yet; `searchSemantic` still uses the old `match_entries` path. Wiring is Plan 2.
 - `content_chunks` table (migration `0043`) with three retrieval indexes: HNSW vector, GIN tsvector,
