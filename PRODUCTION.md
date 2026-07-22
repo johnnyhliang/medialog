@@ -48,6 +48,13 @@ for data-ownership reasons, never as the cheap option.
   - Decision per function: make it per-user, or disable/hide it for non-founder accounts before
     launch. (For contrast, `fetch-feeds` already iterates all users' feeds — that pattern is the
     multi-tenant target.)
+- [x] **Remove file uploads** — done 2026-07-22, `0045_revoke_attachment_uploads.sql` APPLIED to the
+  linked project. Client: attach button + drag/paste upload removed from `NoteEditor.jsx` (dropping a
+  file now explains hotlinking), PDF upload fallback removed from `ReadingView.jsx`, dead
+  `src/lib/storage.js` deleted. Server (the actual gate): `attachments_insert_own` and
+  `attachments_update_own` policies dropped, bucket `file_size_limit` set to 0 — verified live.
+  `FilesView.jsx` kept deliberately: read + delete of pre-existing objects, so they can be reviewed
+  and purged. **Still open: whether to purge the existing objects.** Original text follows.
 - [ ] **Remove file uploads entirely from the deployed build.** Decision (2026-07-09): MediaLog does
   not host files. Users hotlink instead — see `docs/hotlinking.md`. Not taking on storage cost,
   abuse surface, or content liability at this stage.
