@@ -26,7 +26,14 @@ for data-ownership reasons, never as the cheap option.
 
 ## 🔴 Must fix before first users (blockers)
 
-- [ ] **RLS / multi-tenant audit.** The app grew up effectively single-user. Before users share
+- [x] **RLS / multi-tenant audit** — done 2026-07-22, fixes in `0044_multitenant_rls.sql`
+  (NOT YET PUSHED — run `npx supabase db push`). Found and fixed: `applications` had no owner
+  column (any authenticated user could read/write everyone's job pipeline); `opportunities.is_read/
+  is_saved` was per-user state on globally shared rows (moved to `opportunity_state`);
+  `opportunities`/`programs`/`companies` were writable by any authenticated user (now read-only,
+  cron writes via service role); storage `attachments` select was bucket-wide, not owner-scoped.
+  Every other table was already correctly owner-scoped.
+  - Scope that was checked: the app grew up effectively single-user. Before users share
   one database, verify EVERY table's row-level security truly isolates users — no one can read or
   write another account's `entries`, `topics`, `highlights`, `resource_sections`, `feeds`,
   `feed_items`, `opportunities`, etc. Run `/security-review` on the branch. A cross-user data leak
