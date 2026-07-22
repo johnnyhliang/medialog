@@ -90,8 +90,18 @@ export default function OpportunityView({ supabase, onTrack, onUnreadCount }) {
       .order('posted_at', { ascending: false })
       .limit(300)
     if (data) {
-      setItems(data)
-      const unreadCount = data.filter(i => !i.is_read).length
+      // read/saved is per-user state; `opportunities` rows are shared by everyone.
+      const { data: state } = await supabase
+        .from('opportunity_state')
+        .select('opportunity_id, is_read, is_saved')
+      const byId = new Map((state ?? []).map((s) => [s.opportunity_id, s]))
+      const merged = data.map((i) => ({
+        ...i,
+        is_read: byId.get(i.id)?.is_read ?? false,
+        is_saved: byId.get(i.id)?.is_saved ?? false,
+      }))
+      setItems(merged)
+      const unreadCount = merged.filter(i => !i.is_read).length
       onUnreadCount?.(unreadCount)
     }
     setLastChecked(new Date())
@@ -100,21 +110,41 @@ export default function OpportunityView({ supabase, onTrack, onUnreadCount }) {
 
   useEffect(() => { load() }, [load])
 
+  // opportunity_state.user_id defaults to auth.uid(); the primary key makes these upserts.
+  async function saveState(rows) {
+    if (!rows.length) return
+    await supabase.from('opportunity_state').upsert(rows, { onConflict: 'user_id,opportunity_id' })
+  }
+
+  function stateRow(id, patch) {
+    const cur = items.find((i) => i.id === id)
+    return {
+      opportunity_id: id,
+      is_read: cur?.is_read ?? false,
+      is_saved: cur?.is_saved ?? false,
+      ...patch,
+      updated_at: new Date().toISOString(),
+    }
+  }
+
   async function markRead(id) {
+    const row = stateRow(id, { is_read: true })
     setItems((prev) => prev.map((i) => i.id === id ? { ...i, is_read: true } : i))
-    await supabase.from('opportunities').update({ is_read: true }).eq('id', id)
+    await saveState([row])
   }
 
   async function markAllRead() {
     const ids = filtered.filter(i => !i.is_read).map(i => i.id)
     if (!ids.length) return
+    const rows = ids.map((id) => stateRow(id, { is_read: true }))
     setItems((prev) => prev.map((i) => ids.includes(i.id) ? { ...i, is_read: true } : i))
-    await supabase.from('opportunities').update({ is_read: true }).in('id', ids)
+    await saveState(rows)
   }
 
   async function toggleSaved(id, current) {
+    const row = stateRow(id, { is_saved: !current })
     setItems((prev) => prev.map((i) => i.id === id ? { ...i, is_saved: !current } : i))
-    await supabase.from('opportunities').update({ is_saved: !current }).eq('id', id)
+    await saveState([row])
   }
 
   async function handleManualAdd(e) {
