@@ -14,7 +14,7 @@ import { resolveBindings, eventToKey } from './lib/keybindings.js'
 import CommandPalette from './components/CommandPalette.jsx'
 import { listVersions, createVersion } from './lib/db/versions.js'
 import { fetchTitle, fetchLinkPreview } from './lib/enrich.js'
-import { embedEntryAsync } from './lib/embedEntry.js'
+import { chunkEntryAsync } from './lib/chunkEntry.js'
 import { buildMarkdownFiles } from './lib/exportMarkdown.js'
 import { buildZip, downloadBlob } from './lib/buildZip.js'
 import AuthGate from './components/AuthGate.jsx'
@@ -404,7 +404,7 @@ function Workspace() {
       }
       onEmbedStatus?.('indexing')
       try {
-        await embedEntryAsync(supabase, { ...finalEntry, note })
+        await chunkEntryAsync(supabase, { ...finalEntry, note })
         onEmbedStatus?.('done')
       } catch {
         onEmbedStatus?.('failed')
@@ -447,7 +447,7 @@ function Workspace() {
       }
       onEmbedStatus?.('indexing')
       try {
-        await embedEntryAsync(supabase, { ...finalEntry, note })
+        await chunkEntryAsync(supabase, { ...finalEntry, note })
         onEmbedStatus?.('done')
       } catch {
         onEmbedStatus?.('failed')
@@ -570,7 +570,7 @@ function Workspace() {
     try {
       const updated = await updateEntry(supabase, entryId, { note })
       applyUpdateEntry(entryId, updated)
-      embedEntryAsync(supabase, updated)
+      chunkEntryAsync(supabase, updated)
     } catch {
       addToast('Note failed to save', 'error')
     }
@@ -655,7 +655,7 @@ function Workspace() {
     const inbox = inboxTopic || (await getTopicByName(supabase, 'Inbox'))
     const created = await bulkCreateEntries(supabase, inbox.id, items)
     enrichEntries(created)
-    created.forEach(e => embedEntryAsync(supabase, e))
+    created.forEach(e => chunkEntryAsync(supabase, e))
     setInboxCount((prev) => prev + created.length)
     return created.length
   }
@@ -663,7 +663,7 @@ function Workspace() {
   async function handleSaveFromFeed(item, topicId) {
     const entry = await createEntry(supabase, { topicId, url: item.url, title: item.title, note: item.note || '' })
     enrichEntries([entry])
-    embedEntryAsync(supabase, entry)
+    chunkEntryAsync(supabase, entry)
     if (selectedId === topicId) setEntries((prev) => [entry, ...prev])
     const inbox = topics.find((t) => t.name === 'Inbox')
     if (inbox && topicId === inbox.id) setInboxCount((prev) => prev + 1)
@@ -673,7 +673,7 @@ function Workspace() {
   async function handleArchiveImport(topicId, items) {
     const created = await bulkCreateEntries(supabase, topicId, items)
     enrichEntries(created)
-    created.forEach(e => embedEntryAsync(supabase, e))
+    created.forEach(e => chunkEntryAsync(supabase, e))
     if (selectedId === topicId) {
       setEntries((prev) => [...created, ...prev])
     }
@@ -712,7 +712,7 @@ function Workspace() {
       setTopics((prev) => [...prev, ...newTopics].sort((a, b) => a.name.localeCompare(b.name)))
     }
     enrichEntries(allCreated)
-    allCreated.forEach(e => embedEntryAsync(supabase, e))
+    allCreated.forEach(e => chunkEntryAsync(supabase, e))
     setInboxCount((prev) => prev + allCreated.filter((e) => e.topic_id === inbox.id).length)
     return total
   }
@@ -745,7 +745,7 @@ function Workspace() {
     }
 
     enrichEntries(allCreated)
-    allCreated.forEach(e => embedEntryAsync(supabase, e))
+    allCreated.forEach(e => chunkEntryAsync(supabase, e))
     return total
   }
 
