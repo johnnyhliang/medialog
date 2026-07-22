@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'vitest'
-import { shouldUseTrigram, mmrSelect } from './retrieval.js'
+import { shouldUseTrigram, mmrSelect, bestPerEntry } from './retrieval.js'
 
 describe('shouldUseTrigram', () => {
   test('engages for short queries (where typos matter)', () => {
@@ -36,5 +36,27 @@ describe('mmrSelect', () => {
 
   test('handles an empty candidate list', () => {
     expect(mmrSelect([], { k: 3, lambda: 0.5 })).toEqual([])
+  })
+})
+
+describe('bestPerEntry', () => {
+  test('keeps the first (highest-ranked) hit per entry', () => {
+    const hits = [
+      { chunkId: 'c1', entryId: 'e1', score: 0.05, content: 'best for e1' },
+      { chunkId: 'c2', entryId: 'e1', score: 0.03, content: 'worse for e1' },
+      { chunkId: 'c3', entryId: 'e2', score: 0.04, content: 'best for e2' },
+    ]
+    const out = bestPerEntry(hits)
+    expect(out.map((h) => h.chunkId)).toEqual(['c1', 'c3'])
+    expect(out[0].content).toBe('best for e1')
+  })
+
+  test('preserves incoming rank order and handles an empty list', () => {
+    expect(bestPerEntry([])).toEqual([])
+    const hits = [
+      { chunkId: 'a', entryId: 'e9', score: 0.9 },
+      { chunkId: 'b', entryId: 'e1', score: 0.1 },
+    ]
+    expect(bestPerEntry(hits).map((h) => h.entryId)).toEqual(['e9', 'e1'])
   })
 })

@@ -104,12 +104,12 @@ export async function relatedTo(supabase, { entryId, topK = 5 } = {}) {
   const hydrated = await hydrate(supabase, hits)
 
   // Roll up to one best chunk per entry, then diversify by topic.
-  const bestPerEntry = new Map()
+  const bestByEntry = new Map()
   for (const h of hydrated) {
-    const prev = bestPerEntry.get(h.entryId)
-    if (!prev || h.score > prev.score) bestPerEntry.set(h.entryId, h)
+    const prev = bestByEntry.get(h.entryId)
+    if (!prev || h.score > prev.score) bestByEntry.set(h.entryId, h)
   }
-  const rolled = [...bestPerEntry.values()]
+  const rolled = [...bestByEntry.values()]
 
   const { data: entries } = await supabase
     .from('entries')
@@ -121,4 +121,50 @@ export async function relatedTo(supabase, { entryId, topK = 5 } = {}) {
     rolled.map((r) => ({ ...r, id: r.chunkId, topicId: topicByEntry.get(r.entryId) ?? null })),
     { k: topK, lambda: 0.5 }
   )
+}
+
+// Collapse passage hits to one row per entry, keeping the highest-ranked
+// passage (the input is already rank-ordered by search_chunks).
+export function bestPerEntry(hits) {
+  const seen = new Map()
+  for (const h of hits) {
+    if (!seen.has(h.entryId)) seen.set(h.entryId, h)
+  }
+  return [...seen.values()]
+}
+
+// Entry-shaped results for the existing search UI, each carrying the passage
+// that actually matched. `similarity` is deliberately null: search_chunks
+// returns an RRF score (~0.01-0.05), which is a RANK artifact, not a 0-1
+// similarity — rendering it as a percentage would be meaningless.
+export async function searchChunksAsEntries(supabase, query, { topK = MATCH_COUNT } = {}) {
+  const hits = await searchChunks(supabase, { query, topK })
+  const best = bestPerEntry(hits)
+  if (!best.length) return []
+
+  const { data, error } = await supabase
+    .from('entries')
+    .select('*, entry_tags(tags(name)), topics(name)')
+    .in('id', best.map((h) => h.entryId))
+    .is('deleted_at', null)
+  if (error) throw new Error(error.message)
+
+  const byId = new Map((data ?? []).map((e) => [e.id, e]))
+  return best
+    .map((h) => {
+      const e = byId.get(h.entryId)
+      if (!e) return null
+      const tags = (e.entry_tags || []).map((et) => et.tags?.name).filter(Boolean)
+      const { entry_tags, topics, ...rest } = e
+      return {
+        ...rest,
+        tags,
+        topicName: topics?.name ?? '',
+        similarity: null,
+        passage: h.content,
+        passageHeading: h.heading,
+        passageAnchor: h.anchor,
+      }
+    })
+    .filter(Boolean) // rank order preserved; do NOT re-sort by score
 }

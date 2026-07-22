@@ -1,5 +1,6 @@
 import { buildSearchFilter } from '../searchFilter.js'
 import { computeTitle } from '../entryTitle.js'
+import { searchChunksAsEntries } from './retrieval.js'
 
 const TAG_SELECT = '*, entry_tags(tags(name))'
 const MAX_NOTE = 10000
@@ -190,7 +191,9 @@ export async function emptyTrash(supabase) {
   if (error) throw new Error(error.message)
 }
 
-export async function searchSemantic(supabase, query) {
+// Legacy whole-entry path. Retained as a fallback until content_chunks is
+// backfilled; removed together with entry_embeddings in migration 0044.
+async function legacySearchSemantic(supabase, query) {
   const { data: { session } } = await supabase.auth.getSession()
   if (!session?.access_token) return []
 
@@ -223,6 +226,14 @@ export async function searchSemantic(supabase, query) {
     const { entry_tags, topics, ...rest } = e
     return { ...rest, tags, topicName: topics?.name ?? '', similarity: match?.similarity ?? 0 }
   }).sort((a, b) => b.similarity - a.similarity)
+}
+
+export async function searchSemantic(supabase, query) {
+  const viaChunks = await searchChunksAsEntries(supabase, query)
+  if (viaChunks.length) return viaChunks
+  // content_chunks not backfilled yet (or genuinely no match) — fall back so
+  // search never regresses mid-migration.
+  return legacySearchSemantic(supabase, query)
 }
 
 export async function listAllArchivedEntries(supabase) {
