@@ -64,10 +64,10 @@ npx wrangler pages deploy dist --project-name medialog
 
 Dashboard → Authentication → URL Configuration:
 
-- **Site URL**: `https://<your-domain>`
+- **Site URL**: `https://notes.johnnyliang.me`
 - **Redirect URLs** (add all):
-  - `https://<your-domain>/app`
-  - `https://<your-domain>/settings`
+  - `https://notes.johnnyliang.me/app`
+  - `https://notes.johnnyliang.me/settings`
 
 Leave `http://localhost:5173/**` in the list so local development keeps working.
 
@@ -78,8 +78,8 @@ abuse protection on signup.
 
 github.com → Settings → Developer settings → OAuth Apps → your app:
 
-- **Homepage URL**: `https://<your-domain>`
-- **Authorization callback URL**: `https://<your-domain>/settings`
+- **Homepage URL**: `https://notes.johnnyliang.me`
+- **Authorization callback URL**: `https://notes.johnnyliang.me/settings`
 
 ## 6. Deploy the edge functions
 
@@ -91,16 +91,19 @@ npx supabase functions deploy github-backup
 npx supabase functions deploy github-token
 ```
 
-Secrets they need (set once, server-side only):
+Secrets they need are **already set** on this project (verified 2026-07-22):
+`GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `ENCRYPTION_KEY`, `CRON_SECRET`,
+`CAPTURE_SECRET`, `GEMINI_API_KEY`.
+
+**Do not re-run `supabase secrets set` for these.** `ENCRYPTION_KEY` in
+particular must never change once a user has connected GitHub — rotating it
+makes every stored token undecryptable and forces everyone to reconnect.
+
+To confirm what is set (values are shown as hashes, never plaintext):
 
 ```bash
-npx supabase secrets set GITHUB_CLIENT_ID=...
-npx supabase secrets set GITHUB_CLIENT_SECRET=...
-npx supabase secrets set ENCRYPTION_KEY=...   # 32+ chars, used for AES-GCM at rest
+npx supabase secrets list
 ```
-
-`ENCRYPTION_KEY` must never change once a user has connected GitHub — rotating
-it makes every stored token undecryptable, and affected users have to reconnect.
 
 ## 7. Verify before demoing
 
@@ -114,6 +117,28 @@ Walk these in a private window, on the deployed domain:
 - [ ] Back up now writes a commit to the repo
 - [ ] Semantic search returns passages
 - [ ] Hard refresh on `/settings` still loads the app (rewrite works)
+
+## DNS
+
+Vercel serving the domain is not the same as DNS pointing at it. As of
+2026-07-22, `johnnyliang.me` resolves to Vercel's apex IP (76.76.21.21) but
+`notes.johnnyliang.me` has **no A or CNAME record at all** — the subdomain is
+attached in the Vercel dashboard but was never created at the DNS provider.
+
+Add at whoever hosts johnnyliang.me's DNS:
+
+```
+CNAME   notes   cname.vercel-dns.com
+```
+
+Verify before assuming propagation is the problem:
+
+```bash
+nslookup notes.johnnyliang.me
+```
+
+No record at all means it was never created; a record pointing elsewhere means
+propagation. They are different problems.
 
 ## Gotchas
 
