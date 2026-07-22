@@ -1,1 +1,20 @@
-/*  /index.html  200
+# Netlify / Cloudflare Pages routing.
+#
+# This is a two-entry Vite build: index.html is the marketing landing page,
+# app.html is the application. Static files are matched before these rules, so
+# real assets (/assets/*, /pwa-*.png) are unaffected.
+#
+# The order matters. A single catch-all to /index.html — what this file used to
+# be — serves the LANDING page for /app and /settings, which silently breaks
+# every auth flow: signup confirmation and password reset redirect to /app, and
+# the GitHub OAuth callback returns to /settings.
+
+/                 /index.html   200
+/app              /app.html     200
+/app/*            /app.html     200
+/settings         /app.html     200
+/settings/*       /app.html     200
+
+# Anything else is an in-app route (the app rewrites its own URL), so hand it
+# to the app rather than the landing page.
+/*                /app.html     200
