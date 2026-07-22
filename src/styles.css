@@ -4896,3 +4896,14 @@ a.digest-item-title:hover { text-decoration: underline; }
   display: block; padding: 1px 10px; border-radius: 4px;
 }
 .md-outline-list a:hover { color: var(--accent); background: var(--surface-2); }
+
+/* ── Explore: matching passage from chunk retrieval ── */
+.explore-passage {
+  margin: 4px 0 0 24px;
+  font-size: var(--text-sm);
+  color: var(--text-secondary, var(--muted));
+  line-height: 1.5;
+  border-left: 2px solid var(--border);
+  padding-left: 10px;
+}
+.explore-passage-heading { color: var(--accent); font-weight: 500; }

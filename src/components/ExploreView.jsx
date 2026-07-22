@@ -9,7 +9,7 @@ function faviconUrl(url) {
   try { return `https://www.google.com/s2/favicons?domain=${new URL(url).hostname}&sz=32` } catch { return null }
 }
 
-function EntryRow({ entry, onSelect, showSimilarity }) {
+function EntryRow({ entry, onSelect }) {
   const favicon = entry.url ? faviconUrl(entry.url) : null
   return (
     <div className="explore-row" onClick={() => onSelect?.(entry)}>
@@ -28,13 +28,19 @@ function EntryRow({ entry, onSelect, showSimilarity }) {
         <span className="explore-row-title">
           {entry.title || entry.url || 'Untitled'}
         </span>
-        {showSimilarity && entry.similarity != null && (
+        {entry.similarity != null && (
           <span className="explore-similarity">{Math.round(entry.similarity * 100)}%</span>
         )}
         <span className={`entry-status-chip ${STATUS_CLASS[entry.status] || ''}`}>
           {STATUS_LABEL[entry.status] || entry.status}
         </span>
       </div>
+      {entry.passage && (
+        <p className="explore-passage">
+          {entry.passageHeading && <span className="explore-passage-heading">{entry.passageHeading} · </span>}
+          {entry.passage.length > 220 ? `${entry.passage.slice(0, 220).trimEnd()}…` : entry.passage}
+        </p>
+      )}
       <div className="explore-row-meta">
         {entry.topicName && <span className="explore-topic-pill">{entry.topicName}</span>}
         {entry.tags?.map((t) => (
@@ -222,7 +228,7 @@ export default function ExploreView({ supabase, topics, onSelectEntry, onOrdered
           </p>
         ) : isSearching ? (
           filtered.map((e) => (
-            <EntryRow key={e.id} entry={e} onSelect={onSelectEntry} showSimilarity={semanticMode} />
+            <EntryRow key={e.id} entry={e} onSelect={onSelectEntry} />
           ))
         ) : (
           Object.entries(grouped).sort(([a], [b]) => a.localeCompare(b)).map(([topic, entries]) => (
