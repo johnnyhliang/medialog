@@ -1,4 +1,4 @@
-import { SYNC_TABLES } from '../githubSync.js'
+import { SYNC_TABLES, buildFiles, summarize } from '../githubSync.js'
 
 // Reading and restoring the tables that make up a backup. Every query runs
 // through the user's own client, so RLS — not this file — decides what is
@@ -65,4 +65,35 @@ export async function applySnapshot(supabase, snapshot, onProgress) {
     }
   }
   return applied
+}
+
+/**
+ * Collect, render and commit a backup. Shared by the Settings button and the
+ * background auto-backup so the two can never take different paths — the
+ * auto-backup previously called an action that no longer existed and, because
+ * it swallows its errors, failed silently.
+ */
+export async function runBackup(supabase, { message, onProgress } = {}) {
+  const snapshot = await collectSnapshot(supabase, onProgress)
+  const counts = summarize(snapshot)
+  const files = buildFiles(snapshot)
+
+  onProgress?.(`committing ${files.length} files`)
+  const { data, error } = await supabase.functions.invoke('github-backup', {
+    body: {
+      action: 'commit',
+      files,
+      message: message || `MediaLog backup — ${new Date().toISOString().slice(0, 10)}`,
+    },
+  })
+  if (error) throw new Error(data?.error || error.message)
+  if (data?.error) throw new Error(data.error)
+
+  const { data: { user } } = await supabase.auth.getUser()
+  await supabase
+    .from('user_configs')
+    .update({ last_backup_sha: data.sha, last_backup_summary: counts })
+    .eq('user_id', user.id)
+
+  return { ...data, counts }
 }

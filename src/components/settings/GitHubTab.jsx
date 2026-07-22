@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { GitBranch, Check, RefreshCw, Download, Upload, AlertTriangle, ExternalLink } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient.js'
-import { buildFiles, parseFiles, summarize, SYNC_TABLES, EXCLUDED_TABLES } from '../../lib/githubSync.js'
-import { collectSnapshot, applySnapshot } from '../../lib/db/githubBackup.js'
+import { parseFiles, summarize, SYNC_TABLES, EXCLUDED_TABLES } from '../../lib/githubSync.js'
+import { applySnapshot, runBackup } from '../../lib/db/githubBackup.js'
 
 const TABLE_LABEL = {
   topics: 'topics',
@@ -89,30 +89,20 @@ export default function GitHubTab({ config, setConfig, addToast, onRefreshData }
     setBusy('backup')
     setLastResult(null)
     try {
-      setProgress('reading your library…')
-      const snapshot = await collectSnapshot(supabase, (t) => setProgress(`reading ${TABLE_LABEL[t] ?? t}…`))
-      const counts = summarize(snapshot)
-      const files = buildFiles(snapshot)
-
-      setProgress(`committing ${files.length} files…`)
-      const res = await call('commit', {
-        files,
-        message: `MediaLog backup — ${new Date().toISOString().slice(0, 10)}`,
+      const res = await runBackup(supabase, {
+        onProgress: (step) => setProgress(`${TABLE_LABEL[step] ? 'reading ' + TABLE_LABEL[step] : step}…`),
       })
-
-      await supabase
-        .from('user_configs')
-        .update({ last_backup_sha: res.sha, last_backup_summary: counts })
-        .eq('user_id', config.user_id)
       setConfig({
         ...config,
         last_backup_at: new Date().toISOString(),
         last_backup_sha: res.sha,
-        last_backup_summary: counts,
+        last_backup_summary: res.counts,
       })
-
-      setLastResult({ kind: 'backup', counts, ...res })
-      addToast(res.unchanged ? 'Already up to date — nothing changed' : `Backed up to ${res.sha.slice(0, 7)}`, 'success')
+      setLastResult({ kind: 'backup', ...res })
+      addToast(
+        res.unchanged ? 'Already up to date — nothing changed' : `Backed up ${res.uploaded} changed files`,
+        'success',
+      )
     } catch (e) {
       addToast(`Backup failed: ${e.message}`, 'error')
     }

@@ -174,16 +174,37 @@ async function commitFiles(
     token,
   )
 
-  // Blobs are created explicitly and sent as shas. Inlining `content` in the
-  // tree call works until a note contains something the tree endpoint rejects,
-  // and fails the whole backup when it does.
+  // Only upload what actually changed. A full library is ~1400 files, and one
+  // blob POST each would burn a quarter of the 5000/hour API budget per backup
+  // — the background auto-backup would exhaust it in an afternoon. Git blob
+  // shas are content-addressed, so computing them locally tells us exactly
+  // which files GitHub already has.
+  const existing = await listTreeShas(token, owner, repo, parentCommit.tree.sha)
   const tree = []
+  let uploaded = 0
+
   for (const f of files) {
+    const sha = await gitBlobSha(f.content)
+    if (existing.get(f.path) === sha) continue // unchanged; base_tree keeps it
     const blob = await ghFetch(`https://api.github.com/repos/${owner}/${repo}/git/blobs`, token, {
       method: 'POST',
       body: JSON.stringify({ content: f.content, encoding: 'utf-8' }),
     })
     tree.push({ path: f.path, mode: '100644', type: 'blob', sha: blob.sha })
+    uploaded++
+  }
+
+  // Entries deleted since the last backup must disappear from the repo too,
+  // or the mirror keeps resurrecting notes the user removed.
+  const current = new Set(files.map((f) => f.path))
+  for (const path of existing.keys()) {
+    if (!current.has(path) && (path.startsWith('data/') || path.startsWith('notes/'))) {
+      tree.push({ path, mode: '100644', type: 'blob', sha: null })
+    }
+  }
+
+  if (!tree.length) {
+    return { sha: parentSha, branch: targetBranch, unchanged: true, fileCount: files.length, uploaded: 0 }
   }
 
   const newTree = await ghFetch(`https://api.github.com/repos/${owner}/${repo}/git/trees`, token, {
@@ -191,10 +212,9 @@ async function commitFiles(
     body: JSON.stringify({ base_tree: parentCommit.tree.sha, tree }),
   })
 
-  // An unchanged library produces an identical tree; committing it would add an
-  // empty commit on every run.
+  // Belt and braces: if the resulting tree is identical anyway, don't commit.
   if (newTree.sha === parentCommit.tree.sha) {
-    return { sha: parentSha, branch: targetBranch, unchanged: true, fileCount: files.length }
+    return { sha: parentSha, branch: targetBranch, unchanged: true, fileCount: files.length, uploaded }
   }
 
   const commit = await ghFetch(`https://api.github.com/repos/${owner}/${repo}/git/commits`, token, {
@@ -207,7 +227,31 @@ async function commitFiles(
     body: JSON.stringify({ sha: commit.sha }),
   })
 
-  return { sha: commit.sha, branch: targetBranch, unchanged: false, fileCount: files.length }
+  return { sha: commit.sha, branch: targetBranch, unchanged: false, fileCount: files.length, uploaded }
+}
+
+// A git blob sha is sha1("blob <bytelength> " + content) — the same value
+// GitHub reports, so it can be compared without asking GitHub for anything.
+async function gitBlobSha(content: string) {
+  const body = new TextEncoder().encode(content)
+  const header = new TextEncoder().encode(`blob ${body.length} `)
+  const buf = new Uint8Array(header.length + body.length)
+  buf.set(header)
+  buf.set(body, header.length)
+  const digest = await crypto.subtle.digest('SHA-1', buf)
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('')
+}
+
+async function listTreeShas(token: string, owner: string, repo: string, treeSha: string) {
+  const map = new Map<string, string>()
+  const tree = await ghFetch(
+    `https://api.github.com/repos/${owner}/${repo}/git/trees/${treeSha}?recursive=1`,
+    token,
+  )
+  for (const item of tree.tree ?? []) {
+    if (item.type === 'blob') map.set(item.path, item.sha)
+  }
+  return map
 }
 
 async function fetchRepoFiles(token: string, owner: string, repo: string, branch: string) {

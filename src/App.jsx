@@ -15,6 +15,7 @@ import CommandPalette from './components/CommandPalette.jsx'
 import { listVersions, createVersion } from './lib/db/versions.js'
 import { fetchTitle, fetchLinkPreview } from './lib/enrich.js'
 import { chunkEntryAsync } from './lib/chunkEntry.js'
+import { runBackup } from './lib/db/githubBackup.js'
 import { buildMarkdownFiles } from './lib/exportMarkdown.js'
 import { buildZip, downloadBlob } from './lib/buildZip.js'
 import AuthGate from './components/AuthGate.jsx'
@@ -225,13 +226,23 @@ function Workspace() {
       if (!pendingBackup.current) return
       pendingBackup.current = false
       try {
-        const { data: config } = await supabase.from('user_configs').select('auto_backup').maybeSingle()
-        if (config?.auto_backup) {
-          await supabase.functions.invoke('github-backup', { body: { action: 'push' } })
-          addToast('Auto-backup complete', 'success')
+        const { data: config } = await supabase
+          .from('user_configs')
+          .select('auto_backup, github_token')
+          .maybeSingle()
+        if (config?.auto_backup && config?.github_token) {
+          const res = await runBackup(supabase, { message: 'MediaLog auto-backup' })
+          if (!res.unchanged) addToast('Auto-backup complete', 'success')
         }
-      } catch {
-        // auto-backup failures are silent
+      } catch (e) {
+        // Never interrupt the user for a background backup, but record why it
+        // failed — this path silently did nothing at all for months.
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+          await supabase.from('user_configs')
+            .update({ last_error: String(e.message ?? e) })
+            .eq('user_id', user.id)
+        }
       }
     }, 60000)
   }, [entries, topics])
