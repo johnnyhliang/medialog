@@ -55,11 +55,13 @@ Deno.serve(async (req) => {
       note = reel.caption.slice(0, 300)
     }
 
+    const firstLine = reel.caption.split('\n')[0].trim().slice(0, 80)
+    const title = firstLine || 'Instagram Reel'
     const { error: insertErr } = await sb.from('entries').insert({
       user_id: ownerId,
       topic_id: topicId,
       url: reel.reelUrl,
-      title: 'Instagram Reel',
+      title,
       note,
     })
     if (!insertErr) inserted++

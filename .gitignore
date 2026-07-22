@@ -10,3 +10,12 @@ import/*.html
 import/*.htm
 import-preview.json
 .aider*
+
+# tooling state and logs — machine-generated churn
+.omx/
+supabase/.temp/
+
+# session exports — local showcase artifacts, not repo content
+medialog-session-export.md
+medialog-session-highlights.md
+distilled/
