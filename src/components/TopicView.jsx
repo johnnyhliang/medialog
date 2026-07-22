@@ -17,7 +17,7 @@ const SCOPES = [
 
 export default function TopicView({
   topic, entries, allCandidates, topics,
-  onAddEntry, onDelete, onStatusChange, onTagsChange, onTogglePin, onNoteSave, onPreview, onDocChange,
+  onAddEntry, onDelete, onStatusChange, onTagsChange, onTogglePin, onNoteSave, onPreview, onOpenRelated, onDocChange,
   onNoteVersion, onShowHistory,
   onSearchAll, globalSearchResults,
   onTitleChange, onMove, tagColors,
@@ -349,6 +349,7 @@ export default function TopicView({
           onTogglePin={onTogglePin}
           onNoteSave={onNoteSave}
           onPreview={onPreview}
+          onOpenRelated={onOpenRelated}
           onNoteVersion={onNoteVersion}
           onShowHistory={onShowHistory}
           onTitleChange={onTitleChange}

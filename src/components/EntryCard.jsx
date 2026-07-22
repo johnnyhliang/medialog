@@ -5,6 +5,7 @@ import ReaderModal from './ReaderModal.jsx'
 import TagInput from './TagInput.jsx'
 import MarkdownView from './MarkdownView.jsx'
 import MarkdownOutline from './MarkdownOutline.jsx'
+import RelatedEntries from './RelatedEntries.jsx'
 import ConfirmModal from './ConfirmModal.jsx'
 import Modal from './Modal.jsx'
 import { supabase } from '../lib/supabaseClient.js'
@@ -50,7 +51,7 @@ function daysOld(dateStr) {
   return Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000)
 }
 
-export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChange, onTogglePin, onNoteSave, onPreview, onNoteVersion, onShowHistory, onTitleChange, moveTargets, onMove, tagColors, onEntryUpdate, supabase: supabaseClient, focused, forceExpand, onForceExpandDone }) {
+export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChange, onTogglePin, onNoteSave, onPreview, onOpenRelated, onNoteVersion, onShowHistory, onTitleChange, moveTargets, onMove, tagColors, onEntryUpdate, supabase: supabaseClient, focused, forceExpand, onForceExpandDone }) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(entry.note || '')
   const [editingTitle, setEditingTitle] = useState(false)
@@ -334,6 +335,10 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
           <Plus size={13} />
           Add a note
         </button>
+      )}
+
+      {!editing && onOpenRelated && (
+        <RelatedEntries supabase={supabaseClient || supabase} entryId={entry.id} onOpen={onOpenRelated} />
       )}
 
       {/* Tags row */}

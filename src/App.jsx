@@ -634,6 +634,13 @@ function Workspace() {
     setView('browse')
   }
 
+  // A related passage only knows its entry id; resolve it and reuse the normal
+  // select-and-scroll path so the target entry opens wherever it lives.
+  function handleOpenRelated(entryId) {
+    const entry = entries.find((e) => e.id === entryId)
+    if (entry) handleSelectEntry(entry)
+  }
+
   async function enrichEntries(created) {
     for (const e of created) {
       if (e.url && (!e.title || !e.og_image)) {
@@ -942,6 +949,7 @@ function Workspace() {
               onTogglePin={handleTogglePin}
               onNoteSave={handleNoteSave}
               onPreview={openPreview}
+              onOpenRelated={handleOpenRelated}
               onDocChange={(doc) => handleDocChange(selectedTopic.id, doc)}
               onNoteVersion={handleNoteVersion}
               onShowHistory={handleShowHistory}
