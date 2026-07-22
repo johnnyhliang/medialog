@@ -31,24 +31,37 @@ if (!canContextualize) {
 
 const supabase = createClient(SUPABASE_URL, SERVICE_KEY)
 
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+
 async function embedBatch(texts) {
   const out = []
   for (const text of texts) {
-    const res = await fetch(
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent',
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': GEMINI_API_KEY },
-        body: JSON.stringify({
-          content: { parts: [{ text }] },
-          output_dimensionality: EMBED_DIMS,
-          taskType: TASK_TYPE_DOCUMENT,
-        }),
-      }
-    )
-    if (!res.ok) throw new Error(`Gemini ${res.status}: ${(await res.text()).slice(0, 200)}`)
-    const data = await res.json()
-    out.push(data.embedding.values)
+    let embedding = null
+    // Retry both the per-minute rate limit (429) AND transient network errors
+    // (a dropped connection throws from fetch). Resumable via source_hash, so an
+    // eventual give-up is safe — a re-run picks up whatever was missed.
+    for (let attempt = 0; attempt < 10; attempt++) {
+      let res
+      try {
+        res = await fetch(
+          'https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent',
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-goog-api-key': GEMINI_API_KEY },
+            body: JSON.stringify({
+              content: { parts: [{ text }] },
+              output_dimensionality: EMBED_DIMS,
+              taskType: TASK_TYPE_DOCUMENT,
+            }),
+          }
+        )
+      } catch { await sleep(Math.min(30000, 3000 * (attempt + 1))); continue } // network drop
+      if (res.ok) { embedding = (await res.json()).embedding.values; break }
+      if (res.status === 429) { await sleep(Math.min(60000, 5000 * (attempt + 1))); continue }
+      throw new Error(`Gemini ${res.status}: ${(await res.text()).slice(0, 200)}`)
+    }
+    if (!embedding) throw new Error('embed failed: retries exhausted (rate limit or network)')
+    out.push(embedding)
   }
   return out
 }
