@@ -1,286 +1,243 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'
 
+// This function exists for exactly one reason: the GitHub access token is
+// encrypted at rest and must never reach the browser. It therefore owns the
+// GitHub API calls and nothing else.
+//
+// Deciding WHAT to back up, rendering it, and reading it back is the client's
+// job (src/lib/githubSync.js) — it is pure, unit-tested, and shares no logic
+// with this file, so the two can never drift out of sync.
+//
+// Actions:
+//   repos  → list the repos this token can push to (for the repo picker)
+//   commit → { files, message } committed as one commit; creates the repo if needed
+//   fetch  → every file in the repo, for a restore
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+const json = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  })
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
   try {
-    const { action } = await req.json()
+    const { action, files, message, repo: repoOverride } = await req.json()
     const authHeader = req.headers.get('Authorization')
-    const supabaseClient = createClient(
+    if (!authHeader) throw new Error('Unauthorized')
+
+    const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      { global: { headers: { Authorization: authHeader! } } }
+      { global: { headers: { Authorization: authHeader } } },
     )
 
-    const { data: { user }, error: userError } = await supabaseClient.auth.getUser()
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
     if (userError || !user) throw new Error('Unauthorized')
 
-    const { data: config, error: configError } = await supabaseClient
+    const { data: config } = await supabase
       .from('user_configs')
       .select('*')
       .eq('user_id', user.id)
-      .single()
-    
-    if (configError || !config || !config.github_token) {
-      throw new Error('GitHub not connected')
+      .maybeSingle()
+
+    if (!config?.github_token) throw new Error('GitHub not connected')
+
+    const encryptionKey = Deno.env.get('ENCRYPTION_KEY')
+    if (!encryptionKey) throw new Error('ENCRYPTION_KEY not configured')
+    const token = await decrypt(config.github_token, encryptionKey)
+
+    const owner = config.github_user
+    const repo = repoOverride || config.repo_name
+    const branch = config.repo_branch || 'main'
+
+    if (action === 'repos') {
+      return json({ repos: await listRepos(token) })
     }
 
-    const encryptionKey = Deno.env.get('ENCRYPTION_KEY')!
-    const accessToken = await decrypt(config.github_token, encryptionKey)
-
-    if (action === 'push') {
-      const { data: topics } = await supabaseClient.from('topics').select('*').eq('user_id', user.id)
-      const { data: entries } = await supabaseClient.from('entries').select('*').eq('user_id', user.id).is('deleted_at', null)
-      
-      for (const entry of entries || []) {
-        const { data: tags } = await supabaseClient.rpc('get_entry_tags', { p_entry_id: entry.id })
-        entry.tags = tags || []
-      }
-
-      const files = buildGitHubFileMap(topics || [], entries || [])
-      const sha = await pushToGitHub(accessToken, config.github_user, config.repo_name, files, config.is_private)
-
-      await supabaseClient
+    if (action === 'commit') {
+      if (!Array.isArray(files) || !files.length) throw new Error('No files to commit')
+      const result = await commitFiles(token, owner, repo, branch, files, {
+        message: message || 'MediaLog backup',
+        isPrivate: config.is_private !== false,
+      })
+      await supabase
         .from('user_configs')
         .update({ last_backup_at: new Date().toISOString(), last_error: null })
         .eq('user_id', user.id)
-
-      return new Response(JSON.stringify({ success: true, sha }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
+      return json({ success: true, ...result })
     }
 
-    if (action === 'pull') {
-      const files = await fetchRepoContent(accessToken, config.github_user, config.repo_name)
-      let importedCount = 0
-      const topicCache = {}
-
-      for (const file of files) {
-        const entry = parseEntryMarkdown(file.content)
-        if (!entry) continue
-
-        const topicName = file.path.split('/')[0]
-        if (!topicCache[topicName]) {
-          let { data: topic } = await supabaseClient
-            .from('topics')
-            .select('id')
-            .eq('user_id', user.id)
-            .eq('name', topicName)
-            .maybeSingle()
-          
-          if (!topic) {
-            const { data: newTopic } = await supabaseClient
-              .from('topics')
-              .insert({ user_id: user.id, name: topicName })
-              .select('id')
-              .single()
-            topic = newTopic
-          }
-          topicCache[topicName] = topic.id
-        }
-
-        // Skip if an entry with the same URL already exists in this topic (dedup on restore)
-        if (entry.url) {
-          const { data: existing } = await supabaseClient
-            .from('entries')
-            .select('id')
-            .eq('user_id', user.id)
-            .eq('url', entry.url)
-            .maybeSingle()
-          if (existing) continue
-        }
-
-        const { data: newEntry, error: entryError } = await supabaseClient
-          .from('entries')
-          .insert({
-            user_id: user.id,
-            topic_id: topicCache[topicName],
-            title: entry.title,
-            url: entry.url,
-            note: entry.note,
-            status: entry.status,
-            created_at: entry.created_at,
-            pinned: entry.pinned || false
-          })
-          .select('id')
-          .single()
-
-        if (entryError || !newEntry) continue
-
-        if (entry.tags) {
-          for (const tagName of entry.tags) {
-            let { data: tag } = await supabaseClient
-              .from('tags')
-              .select('id')
-              .eq('user_id', user.id)
-              .eq('name', tagName)
-              .maybeSingle()
-
-            if (!tag) {
-              const { data: newTag } = await supabaseClient
-                .from('tags')
-                .insert({ user_id: user.id, name: tagName })
-                .select('id')
-                .single()
-              tag = newTag
-            }
-
-            if (tag) {
-              await supabaseClient
-                .from('entry_tags')
-                .insert({ entry_id: newEntry.id, tag_id: tag.id })
-            }
-          }
-        }
-        importedCount++
-      }
-
-      return new Response(JSON.stringify({ success: true, count: importedCount }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
+    if (action === 'fetch') {
+      return json({ files: await fetchRepoFiles(token, owner, repo, branch) })
     }
 
-    throw new Error('Invalid action')
+    throw new Error(`Unknown action: ${action}`)
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 400,
-    })
+    return json({ error: (error as Error).message }, 400)
   }
 })
 
 async function decrypt(encryptedBase64: string, keyStr: string) {
-  const enc = new TextEncoder()
-  // AES-GCM requires exactly 16, 24, or 32 bytes — pad/truncate to 32
-  const raw = enc.encode(keyStr)
+  const raw = new TextEncoder().encode(keyStr)
   const keyBytes = new Uint8Array(32)
   keyBytes.set(raw.slice(0, 32))
-  const keyBuffer = await crypto.subtle.importKey('raw', keyBytes, { name: 'AES-GCM' }, false, ['decrypt'])
-  const combined = new Uint8Array(atob(encryptedBase64).split('').map(c => c.charCodeAt(0)))
-  const iv = combined.slice(0, 12); const data = combined.slice(12)
-  const decrypted = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, keyBuffer, data)
+  const key = await crypto.subtle.importKey('raw', keyBytes, { name: 'AES-GCM' }, false, ['decrypt'])
+  const combined = new Uint8Array(atob(encryptedBase64).split('').map((c) => c.charCodeAt(0)))
+  const decrypted = await crypto.subtle.decrypt(
+    { name: 'AES-GCM', iv: combined.slice(0, 12) },
+    key,
+    combined.slice(12),
+  )
   return new TextDecoder().decode(decrypted)
 }
 
-async function pushToGitHub(token: string, user: string, repo: string, files: any[], isPrivate: boolean) {
-  const headers = { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json' }
-  
-  // Check if repo exists, create if not
-  const checkRes = await fetch(`https://api.github.com/repos/${user}/${repo}`, { headers })
-  if (checkRes.status === 404) {
-    const createRes = await fetch(`https://api.github.com/user/repos`, {
+const gh = (token: string) => ({
+  Authorization: `token ${token}`,
+  Accept: 'application/vnd.github.v3+json',
+  'Content-Type': 'application/json',
+})
+
+async function ghFetch(url: string, token: string, init: RequestInit = {}) {
+  const res = await fetch(url, { ...init, headers: gh(token) })
+  if (!res.ok) {
+    const body = await res.text()
+    let msg = body.slice(0, 300)
+    try { msg = JSON.parse(body).message ?? msg } catch { /* keep raw */ }
+    throw new Error(`GitHub ${res.status}: ${msg}`)
+  }
+  return res.json()
+}
+
+async function listRepos(token: string) {
+  const out: any[] = []
+  for (let page = 1; page <= 4; page++) {
+    const batch = await ghFetch(
+      `https://api.github.com/user/repos?per_page=100&sort=updated&affiliation=owner&page=${page}`,
+      token,
+    )
+    out.push(...batch)
+    if (batch.length < 100) break
+  }
+  return out.map((r) => ({
+    name: r.name,
+    full_name: r.full_name,
+    private: r.private,
+    default_branch: r.default_branch,
+    updated_at: r.updated_at,
+  }))
+}
+
+async function ensureRepo(token: string, owner: string, repo: string, isPrivate: boolean) {
+  const res = await fetch(`https://api.github.com/repos/${owner}/${repo}`, { headers: gh(token) })
+  if (res.ok) return await res.json()
+  if (res.status !== 404) throw new Error(`GitHub ${res.status}: could not read ${owner}/${repo}`)
+
+  const created = await ghFetch('https://api.github.com/user/repos', token, {
+    method: 'POST',
+    body: JSON.stringify({
+      name: repo,
+      private: isPrivate,
+      auto_init: true,
+      description: 'MediaLog backup — notes, topics and metadata',
+    }),
+  })
+  // auto_init commits asynchronously; the ref is not queryable immediately.
+  await new Promise((r) => setTimeout(r, 2500))
+  return created
+}
+
+async function commitFiles(
+  token: string,
+  owner: string,
+  repo: string,
+  branch: string,
+  files: { path: string; content: string }[],
+  { message, isPrivate }: { message: string; isPrivate: boolean },
+) {
+  const repoData = await ensureRepo(token, owner, repo, isPrivate)
+  const targetBranch = branch || repoData.default_branch || 'main'
+
+  const ref = await ghFetch(
+    `https://api.github.com/repos/${owner}/${repo}/git/ref/heads/${targetBranch}`,
+    token,
+  )
+  const parentSha = ref.object.sha
+  const parentCommit = await ghFetch(
+    `https://api.github.com/repos/${owner}/${repo}/git/commits/${parentSha}`,
+    token,
+  )
+
+  // Blobs are created explicitly and sent as shas. Inlining `content` in the
+  // tree call works until a note contains something the tree endpoint rejects,
+  // and fails the whole backup when it does.
+  const tree = []
+  for (const f of files) {
+    const blob = await ghFetch(`https://api.github.com/repos/${owner}/${repo}/git/blobs`, token, {
       method: 'POST',
-      headers,
-      body: JSON.stringify({ name: repo, private: isPrivate, auto_init: true })
+      body: JSON.stringify({ content: f.content, encoding: 'utf-8' }),
     })
-    if (!createRes.ok) {
-      const err = await createRes.json()
-      throw new Error(`Failed to create repo: ${err.message}`)
-    }
-    // Wait a moment for GitHub to initialize the repo
-    await new Promise(r => setTimeout(r, 2000))
+    tree.push({ path: f.path, mode: '100644', type: 'blob', sha: blob.sha })
   }
 
-  const branchRes = await fetch(`https://api.github.com/repos/${user}/${repo}/branches/main`, { headers })
-  if (!branchRes.ok) throw new Error('Could not find main branch. Make sure the repo is initialized.')
-  const branchData = await branchRes.json()
-  const baseTreeSha = branchData.commit.commit.tree.sha
-  const parentSha = branchData.commit.sha
-
-  const tree = files.map(f => ({ path: f.path, mode: '100644', type: 'blob', content: f.content }))
-
-  const treeRes = await fetch(`https://api.github.com/repos/${user}/${repo}/git/trees`, {
+  const newTree = await ghFetch(`https://api.github.com/repos/${owner}/${repo}/git/trees`, token, {
     method: 'POST',
-    headers,
-    body: JSON.stringify({ base_tree: baseTreeSha, tree })
+    body: JSON.stringify({ base_tree: parentCommit.tree.sha, tree }),
   })
-  if (!treeRes.ok) {
-    const err = await treeRes.json()
-    throw new Error(`GitHub tree creation failed: ${err.message || treeRes.status}`)
-  }
-  const treeData = await treeRes.json()
 
-  const commitRes = await fetch(`https://api.github.com/repos/${user}/${repo}/git/commits`, {
+  // An unchanged library produces an identical tree; committing it would add an
+  // empty commit on every run.
+  if (newTree.sha === parentCommit.tree.sha) {
+    return { sha: parentSha, branch: targetBranch, unchanged: true, fileCount: files.length }
+  }
+
+  const commit = await ghFetch(`https://api.github.com/repos/${owner}/${repo}/git/commits`, token, {
     method: 'POST',
-    headers,
-    body: JSON.stringify({ message: 'MediaLog Sync', tree: treeData.sha, parents: [parentSha] })
+    body: JSON.stringify({ message, tree: newTree.sha, parents: [parentSha] }),
   })
-  if (!commitRes.ok) {
-    const err = await commitRes.json()
-    throw new Error(`GitHub commit creation failed: ${err.message || commitRes.status}`)
-  }
-  const commitData = await commitRes.json()
 
-  const refRes = await fetch(`https://api.github.com/repos/${user}/${repo}/git/refs/heads/main`, {
+  await ghFetch(`https://api.github.com/repos/${owner}/${repo}/git/refs/heads/${targetBranch}`, token, {
     method: 'PATCH',
-    headers,
-    body: JSON.stringify({ sha: commitData.sha })
+    body: JSON.stringify({ sha: commit.sha }),
   })
-  if (!refRes.ok) {
-    const err = await refRes.json()
-    throw new Error(`GitHub ref update failed: ${err.message || refRes.status}`)
-  }
 
-  return commitData.sha
+  return { sha: commit.sha, branch: targetBranch, unchanged: false, fileCount: files.length }
 }
 
-async function fetchRepoContent(token: string, user: string, repo: string) {
-  const headers = { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json' }
-  const branchRes = await fetch(`https://api.github.com/repos/${user}/${repo}/branches/main`, { headers })
-  if (!branchRes.ok) throw new Error('Repo not found or empty')
-  const branchData = await branchRes.json()
-  const treeSha = branchData.commit.commit.tree.sha
-  const treeRes = await fetch(`https://api.github.com/repos/${user}/${repo}/git/trees/${treeSha}?recursive=1`, { headers })
-  const treeData = await treeRes.json()
+async function fetchRepoFiles(token: string, owner: string, repo: string, branch: string) {
+  const ref = await ghFetch(
+    `https://api.github.com/repos/${owner}/${repo}/git/ref/heads/${branch || 'main'}`,
+    token,
+  )
+  const commit = await ghFetch(
+    `https://api.github.com/repos/${owner}/${repo}/git/commits/${ref.object.sha}`,
+    token,
+  )
+  const tree = await ghFetch(
+    `https://api.github.com/repos/${owner}/${repo}/git/trees/${commit.tree.sha}?recursive=1`,
+    token,
+  )
+
+  // Only data/ is needed to restore; pulling every note blob would be hundreds
+  // of extra API calls for files the restore ignores.
+  const wanted = tree.tree.filter(
+    (i: any) => i.type === 'blob' && i.path.startsWith('data/') && i.path.endsWith('.json'),
+  )
+
   const files = []
-  for (const item of treeData.tree) {
-    if (item.type === 'blob' && item.path.endsWith('.md')) {
-      const blobRes = await fetch(item.url, { headers })
-      const blobData = await blobRes.json()
-      const content = atob(blobData.content.replace(/\n/g, ''))
-      files.push({ path: item.path, content: new TextDecoder().decode(new Uint8Array([...content].map(c => c.charCodeAt(0)))) })
-    }
+  for (const item of wanted) {
+    const blob = await ghFetch(
+      `https://api.github.com/repos/${owner}/${repo}/git/blobs/${item.sha}`,
+      token,
+    )
+    const bytes = Uint8Array.from(atob(blob.content.replace(/\n/g, '')), (c) => c.charCodeAt(0))
+    files.push({ path: item.path, content: new TextDecoder().decode(bytes) })
   }
   return files
-}
-
-function parseEntryMarkdown(content: string) {
-  const match = content.match(/^---\n([\s\S]*?)\n---\n?([\s\S]*)$/)
-  if (!match) return null
-  const [, yaml, body] = match
-  const metadata: any = {}
-  yaml.split('\n').forEach(line => {
-    const [key, ...vals] = line.split(':')
-    if (!key || !vals.length) return
-    const val = vals.join(':').trim()
-    try { metadata[key.trim()] = JSON.parse(val) } catch { metadata[key.trim()] = val }
-  })
-  return { ...metadata, note: body.trim() }
-}
-
-function buildGitHubFileMap(topics: any[], entries: any[]) {
-  const files: any[] = []
-  for (const topic of topics) {
-    const topicEntries = entries.filter((e) => e.topic_id === topic.id)
-    const topicPath = topic.name.replace(/[\\/:*?"<>|]/g, '-').trim()
-    for (const entry of topicEntries) {
-      const fileName = `${(entry.title || 'Untitled').replace(/[\\/:*?"<>|]/g, '-').trim()}-${entry.id.slice(0, 8)}.md`
-      files.push({ path: `${topicPath}/${fileName}`, content: renderEntryMarkdown(entry) })
-    }
-  }
-  return files
-}
-
-function renderEntryMarkdown(e: any) {
-  const lines = ['---', `title: ${JSON.stringify(e.title || '')}`, `url: ${JSON.stringify(e.url || '')}`, `status: ${e.status || 'backlog'}`]
-  if (e.tags && e.tags.length) lines.push(`tags: [${e.tags.map((t: any) => JSON.stringify(t)).join(', ')}]`)
-  lines.push(`created_at: ${JSON.stringify(e.created_at)}`)
-  if (e.pinned) lines.push('pinned: true')
-  lines.push('---', '', e.note || '')
-  return lines.join('\n')
 }

@@ -137,7 +137,7 @@ Rename the existing `export async function searchSemantic(supabase, query) {` to
 
 ```js
 // Legacy whole-entry path. Retained as a fallback until content_chunks is
-// backfilled; removed together with entry_embeddings in migration 0046.
+// backfilled; removed together with entry_embeddings in migration 0047.
 async function legacySearchSemantic(supabase, query) {
 ```
 
@@ -521,7 +521,7 @@ git commit -m "feat: on-demand related-entries footer powered by chunk retrieval
 > **DO NOT EXECUTE until the user confirms `node scripts/rechunk.js` has run and every non-empty entry has ≥1 row in `content_chunks`.** This task removes the fallback; running it early breaks semantic search.
 
 **Files:**
-- Create: `supabase/migrations/0046_drop_entry_embeddings.sql`
+- Create: `supabase/migrations/0047_drop_entry_embeddings.sql`
 - Modify: `src/lib/db/entries.js` (remove `legacySearchSemantic` + fallback)
 - Delete: `src/lib/embedEntry.js`
 
@@ -530,7 +530,7 @@ git commit -m "feat: on-demand related-entries footer powered by chunk retrieval
 
 - [ ] **Step 1: Write the migration**
 
-Create `supabase/migrations/0046_drop_entry_embeddings.sql`:
+Create `supabase/migrations/0047_drop_entry_embeddings.sql`:
 
 ```sql
 -- Retire the legacy whole-entry embedding path. content_chunks (0043) has
@@ -573,7 +573,7 @@ Expected: `✓ built`
 - [ ] **Step 6: Commit**
 
 ```bash
-git add supabase/migrations/0046_drop_entry_embeddings.sql src/lib/db/entries.js
+git add supabase/migrations/0047_drop_entry_embeddings.sql src/lib/db/entries.js
 git commit -m "feat: retire legacy entry_embeddings path in favour of chunk retrieval"
 ```
 
@@ -583,7 +583,7 @@ git commit -m "feat: retire legacy entry_embeddings path in favour of chunk retr
 
 1. `node scripts/rechunk.js` — backfill `content_chunks` (needs `SUPABASE_SERVICE_ROLE_KEY`, `GEMINI_API_KEY`, and optionally `AI_BASE_URL`/`AI_API_KEY`/`AI_MODEL` for contextualization).
 2. Verify every non-empty, non-deleted entry has ≥1 chunk.
-3. Only then: run Task 5, and `npx supabase db push` to apply `0046`.
+3. Only then: run Task 5, and `npx supabase db push` to apply `0047`.
 4. Fill real entry ids into `src/lib/retrievalEval.fixture.json` and record a baseline with the eval harness.
 
 ## Deferred (not in this plan)

@@ -4925,3 +4925,37 @@ a.digest-item-title:hover { text-decoration: underline; }
 }
 .rel-item:hover { color: var(--text); background: var(--surface-2); }
 .rel-heading { color: var(--accent); font-weight: 500; }
+
+/* ── GitHub sync tab ── */
+.gh-connect { display: flex; align-items: flex-start; gap: 14px; flex-wrap: wrap; }
+.gh-connect-lead { margin: 0 0 4px; font-weight: 500; }
+.gh-connect > div { flex: 1; min-width: 220px; }
+.gh-status { display: flex; align-items: center; gap: 7px; margin-bottom: 14px; font-size: var(--text-sm); }
+.gh-ok { color: var(--accent); }
+.gh-repo-row { display: flex; gap: 8px; }
+.gh-repo-row input { flex: 1; min-width: 0; }
+.gh-repo-select { margin-top: 8px; width: 100%; }
+.gh-hint { font-size: var(--text-xs); margin: 6px 0 0; }
+.gh-hint a { display: inline-flex; align-items: center; gap: 3px; }
+.gh-card-title {
+  display: flex; align-items: center; gap: 7px;
+  font-size: var(--text-sm); font-weight: 600; margin: 0 0 10px;
+}
+.gh-progress { display: flex; align-items: center; gap: 7px; font-size: var(--text-sm); color: var(--muted); margin-top: 12px; }
+.gh-spin { animation: gh-spin 1s linear infinite; }
+@keyframes gh-spin { to { transform: rotate(360deg); } }
+.gh-last { font-size: var(--text-xs); margin-top: 12px; }
+.gh-counts {
+  list-style: none; margin: 0; padding: 0;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px;
+}
+.gh-counts li {
+  border: 1px solid var(--border); border-radius: 7px; padding: 8px 10px;
+  display: flex; flex-direction: column; gap: 2px;
+}
+.gh-count--empty { opacity: 0.45; }
+.gh-count-n { font-size: var(--text-lg); font-weight: 600; font-variant-numeric: tabular-nums; }
+.gh-count-label { font-size: var(--text-xs); color: var(--muted); }
+.gh-restore { border-color: var(--accent); }
+.gh-excluded { list-style: none; margin: 10px 0 0; padding: 0; font-size: var(--text-xs); color: var(--muted); }
+.gh-excluded li { padding: 3px 0; }
