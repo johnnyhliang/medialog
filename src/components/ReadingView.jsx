@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { BookOpen, Plus } from 'lucide-react'
 import { listDeepTopics, createDeepTopic } from '../lib/db/deepTopics.js'
-import { uploadAttachment } from '../lib/storage.js'
 
 const SOURCE_KINDS = [
   { key: 'book', label: 'Book (no file)' },
@@ -16,7 +15,6 @@ export default function ReadingView({ supabase, onOpenTopic, addToast }) {
   const [name, setName] = useState('')
   const [sourceKind, setSourceKind] = useState('book')
   const [url, setUrl] = useState('')
-  const [file, setFile] = useState(null)
   const [busy, setBusy] = useState(false)
 
   async function load() {
@@ -34,15 +32,14 @@ export default function ReadingView({ supabase, onOpenTopic, addToast }) {
         source_url = url.trim() || null
       }
       if (sourceKind === 'pdf') {
-        // A pasted link is hotlinked straight into the viewer — no upload, no
-        // storage used. Uploading is the fallback for files you don't host.
+        // A pasted link is hotlinked straight into the viewer. MediaLog does not
+        // host files (decision 2026-07-09), so a link is the only path.
         const pasted = url.trim()
         if (pasted) source_url = pasted
-        else if (file) source_url = (await uploadAttachment(supabase, file)).url
-        else { addToast?.('Paste a PDF link or choose a file', 'error'); setBusy(false); return }
+        else { addToast?.('Paste a direct PDF link — MediaLog does not host files', 'error'); setBusy(false); return }
       }
       const created = await createDeepTopic(supabase, { name: name.trim(), source_kind: sourceKind, source_url })
-      setName(''); setUrl(''); setFile(null); setShowAdd(false)
+      setName(''); setUrl(''); setShowAdd(false)
       await load()
       onOpenTopic?.(created.id)
     } catch (e) { addToast?.(e.message, 'error') }
@@ -73,12 +70,10 @@ export default function ReadingView({ supabase, onOpenTopic, addToast }) {
           {sourceKind === 'pdf' && (
             <>
               <input placeholder="pdf link (hotlinked — no storage used)" value={url} onChange={(e) => setUrl(e.target.value)} />
-              {!url.trim() && (
-                <input type="file" accept="application/pdf" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
-              )}
               <p className="rd-hint">
-                Paste a direct PDF link to read it without uploading. The viewer needs the host to
-                allow cross-origin requests; if it won't render, use “open original” or upload instead.
+                Paste a direct PDF link. The viewer needs the host to allow cross-origin
+                requests; if it won't render, use “open original”. See the hotlinking guide
+                for where to host a PDF you own.
               </p>
             </>
           )}

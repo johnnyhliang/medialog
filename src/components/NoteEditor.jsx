@@ -7,7 +7,6 @@ import { keymap } from '@codemirror/view'
 import { indentWithTab } from '@codemirror/commands'
 import { Prec, EditorSelection } from '@codemirror/state'
 import MarkdownView from './MarkdownView.jsx'
-import { uploadAttachment, markdownForAttachment, isAllowedAttachment } from '../lib/storage.js'
 
 const mdKeymap = Prec.high(
   keymap.of([
@@ -153,9 +152,7 @@ export default function NoteEditor({ value, onChange, supabase, extraExtensions 
     { icon: Link2, label: 'Link', run: (v) => wrapSelection(v, '[', '](url)') },
   ]
   const [mode, setMode] = useState('write')
-  const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState(null)
-  const fileRef = useRef(null)
   const [showTip, setShowTip] = useState(
     () => !localStorage.getItem('medialog_preview_tip_dismissed')
   )
@@ -165,42 +162,23 @@ export default function NoteEditor({ value, onChange, supabase, extraExtensions 
     setShowTip(false)
   }
 
-  async function attachFiles(files) {
-    if (!supabase || !files?.length) return
-    setUploadError(null)
-    setUploading(true)
-    let next = value
-    try {
-      for (const file of files) {
-        if (!isAllowedAttachment(file)) {
-          throw new Error(`${file.name}: images or PDFs only, max 10 MB`)
-        }
-        const { url, thumbUrl } = await uploadAttachment(supabase, file)
-        next = insertAtCursor(next, markdownForAttachment(url, thumbUrl, file))
-      }
-      onChange(next)
-    } catch (err) {
-      setUploadError(err.message || 'Upload failed')
-    } finally {
-      setUploading(false)
-    }
+  // MediaLog does not host files (decision 2026-07-09) — users hotlink instead.
+  // Dropping or pasting a file used to upload it; now it explains what to do.
+  function rejectFiles() {
+    setUploadError('MediaLog doesn’t host files. Paste a link to the file instead — see the Guide for where to host it.')
   }
 
   function onPaste(e) {
     const items = [...(e.clipboardData?.items ?? [])]
-    const files = items
-      .filter((item) => item.kind === 'file')
-      .map((item) => item.getAsFile())
-      .filter(Boolean)
+    const files = items.filter((item) => item.kind === 'file')
     if (!files.length) return
     e.preventDefault()
-    attachFiles(files)
+    rejectFiles()
   }
 
   function onDrop(e) {
     e.preventDefault()
-    const files = [...(e.dataTransfer?.files ?? [])]
-    if (files.length) attachFiles(files)
+    if (e.dataTransfer?.files?.length) rejectFiles()
   }
 
   const showEditor = mode === 'write' || mode === 'split'
@@ -237,28 +215,6 @@ export default function NoteEditor({ value, onChange, supabase, extraExtensions 
                 <Icon size={16} strokeWidth={2} />
               </button>
             ))}
-          </div>
-        )}
-        {supabase && (
-          <div className="note-editor-attach">
-            <input
-              ref={fileRef}
-              type="file"
-              accept="image/*,application/pdf"
-              multiple
-              hidden
-              onChange={(e) => {
-                attachFiles([...e.target.files])
-                e.target.value = ''
-              }}
-            />
-            <button
-              type="button"
-              disabled={uploading}
-              onClick={() => fileRef.current?.click()}
-            >
-              {uploading ? 'Uploading…' : 'Attach'}
-            </button>
           </div>
         )}
       </div>

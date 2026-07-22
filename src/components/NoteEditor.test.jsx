@@ -29,7 +29,7 @@ test('switches between write, preview, and split modes', async () => {
   expect(screen.getByTestId('preview')).toBeInTheDocument()
 })
 
-test('shows attach button when supabase is provided', () => {
+test('offers no attach button — MediaLog does not host files', () => {
   render(<NoteEditor value="" onChange={() => {}} supabase={supabase} />)
-  expect(screen.getByRole('button', { name: 'Attach' })).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: 'Attach' })).toBeNull()
 })

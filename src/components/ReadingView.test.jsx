@@ -9,10 +9,6 @@ vi.mock('../lib/db/deepTopics.js', () => ({
   createDeepTopic: vi.fn(async (supabase, { name }) => ({ id: 't2', name, source_kind: 'web' })),
 }))
 
-vi.mock('../lib/storage.js', () => ({
-  uploadAttachment: vi.fn(async () => ({ url: 'https://uploaded/f.pdf', thumbUrl: null })),
-}))
-
 beforeEach(() => vi.clearAllMocks())
 
 async function openForm(name) {
@@ -57,7 +53,6 @@ test('book can carry an optional reference url', async () => {
 
 test('a pasted pdf link is hotlinked, never uploaded', async () => {
   const { createDeepTopic } = await import('../lib/db/deepTopics.js')
-  const { uploadAttachment } = await import('../lib/storage.js')
   render(<ReadingView supabase={{}} onOpenTopic={vi.fn()} addToast={vi.fn()} />)
   await openForm('DDIA')
   fireEvent.change(screen.getByRole('combobox'), { target: { value: 'pdf' } })
@@ -67,5 +62,4 @@ test('a pasted pdf link is hotlinked, never uploaded', async () => {
     expect.anything(),
     expect.objectContaining({ source_kind: 'pdf', source_url: 'https://x/ddia.pdf' }),
   ))
-  expect(uploadAttachment).not.toHaveBeenCalled()
 })
