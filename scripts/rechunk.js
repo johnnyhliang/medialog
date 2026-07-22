@@ -31,24 +31,37 @@ if (!canContextualize) {
 
 const supabase = createClient(SUPABASE_URL, SERVICE_KEY)
 
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+
 async function embedBatch(texts) {
   const out = []
   for (const text of texts) {
-    const res = await fetch(
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent',
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': GEMINI_API_KEY },
-        body: JSON.stringify({
-          content: { parts: [{ text }] },
-          output_dimensionality: EMBED_DIMS,
-          taskType: TASK_TYPE_DOCUMENT,
-        }),
-      }
-    )
-    if (!res.ok) throw new Error(`Gemini ${res.status}: ${(await res.text()).slice(0, 200)}`)
-    const data = await res.json()
-    out.push(data.embedding.values)
+    let embedding = null
+    // Retry both the per-minute rate limit (429) AND transient network errors
+    // (a dropped connection throws from fetch). Resumable via source_hash, so an
+    // eventual give-up is safe — a re-run picks up whatever was missed.
+    for (let attempt = 0; attempt < 10; attempt++) {
+      let res
+      try {
+        res = await fetch(
+          'https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent',
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-goog-api-key': GEMINI_API_KEY },
+            body: JSON.stringify({
+              content: { parts: [{ text }] },
+              output_dimensionality: EMBED_DIMS,
+              taskType: TASK_TYPE_DOCUMENT,
+            }),
+          }
+        )
+      } catch { await sleep(Math.min(30000, 3000 * (attempt + 1))); continue } // network drop
+      if (res.ok) { embedding = (await res.json()).embedding.values; break }
+      if (res.status === 429) { await sleep(Math.min(60000, 5000 * (attempt + 1))); continue }
+      throw new Error(`Gemini ${res.status}: ${(await res.text()).slice(0, 200)}`)
+    }
+    if (!embedding) throw new Error('embed failed: retries exhausted (rate limit or network)')
+    out.push(embedding)
   }
   return out
 }
@@ -131,12 +144,33 @@ async function processEntry(entry) {
   return written
 }
 
+// PostgREST caps a select at 1000 rows, so a single fetch silently drops
+// entries past the cap. Page through the whole table. Newest-first so freshly
+// imported entries index before any embedding quota runs out.
+async function fetchAllEntries(only) {
+  if (only) {
+    const { data, error } = await supabase
+      .from('entries').select('id, user_id, note, full_text, takeaway').eq('id', only)
+    if (error) { console.error('Fetch failed:', error.message); process.exit(1) }
+    return data
+  }
+  const page = 1000
+  const all = []
+  for (let from = 0; ; from += page) {
+    const { data, error } = await supabase
+      .from('entries').select('id, user_id, note, full_text, takeaway')
+      .is('deleted_at', null).order('created_at', { ascending: false })
+      .range(from, from + page - 1)
+    if (error) { console.error('Fetch failed:', error.message); process.exit(1) }
+    all.push(...data)
+    if (data.length < page) break
+  }
+  return all
+}
+
 async function main() {
   const only = process.argv[2]
-  let q = supabase.from('entries').select('id, user_id, note, full_text, takeaway').is('deleted_at', null)
-  if (only) q = q.eq('id', only)
-  const { data: entries, error } = await q
-  if (error) { console.error('Fetch failed:', error.message); process.exit(1) }
+  const entries = await fetchAllEntries(only)
 
   console.log(`${entries.length} entries to consider`)
   let done = 0, chunks = 0, failed = 0

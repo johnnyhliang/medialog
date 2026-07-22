@@ -1,0 +1,374 @@
+<title>Context Engine — retrieval over your own mind</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>
+  :root{
+    --bg:#101416; --surface:#161B1E; --surface-2:#1C2226; --text:#E9E7E1;
+    --muted:#889089; --line:#252C30; --accent:#EAB24A; --accent-ink:#1a1205;
+    --hl:rgba(234,178,74,.20); --vec:#6FB7C4; --lex:#B8A0D8; --fuz:#C7896B;
+    --serif:ui-serif,"New York","Iowan Old Style",Palatino,Georgia,serif;
+    --sans:ui-sans-serif,-apple-system,"SF Pro Text",system-ui,sans-serif;
+    --mono:ui-monospace,"SF Mono","Menlo",monospace;
+    --maxw:640px;
+  }
+  @media (prefers-color-scheme:light){
+    :root{ --bg:#ECEEEC; --surface:#FFFFFF; --surface-2:#F4F5F3; --text:#171B1D;
+      --muted:#59635F; --line:#DCE0DD; --accent:#9A6B12; --accent-ink:#fff;
+      --hl:rgba(234,178,74,.42); --vec:#2C6E7C; --lex:#6E4F9A; --fuz:#9A5B3C; }
+  }
+  :root[data-theme="dark"]{ --bg:#101416; --surface:#161B1E; --surface-2:#1C2226; --text:#E9E7E1;
+    --muted:#889089; --line:#252C30; --accent:#EAB24A; --accent-ink:#1a1205;
+    --hl:rgba(234,178,74,.20); --vec:#6FB7C4; --lex:#B8A0D8; --fuz:#C7896B; }
+  :root[data-theme="light"]{ --bg:#ECEEEC; --surface:#FFFFFF; --surface-2:#F4F5F3; --text:#171B1D;
+    --muted:#59635F; --line:#DCE0DD; --accent:#9A6B12; --accent-ink:#fff;
+    --hl:rgba(234,178,74,.42); --vec:#2C6E7C; --lex:#6E4F9A; --fuz:#9A5B3C; }
+
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);
+    font-size:17px;line-height:1.55;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+  .wrap{max-width:var(--maxw);margin:0 auto;padding:0 22px}
+  section{padding:56px 0;border-top:1px solid var(--line)}
+  section:first-of-type{border-top:0}
+  h1,h2,h3{text-wrap:balance;margin:0;font-weight:600}
+  p{margin:0}
+  .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--accent);margin-bottom:18px}
+  .lede{color:var(--muted)}
+  a{color:inherit}
+
+  /* theme toggle */
+  .toggle{position:fixed;top:14px;right:14px;z-index:20;width:38px;height:38px;border-radius:50%;
+    border:1px solid var(--line);background:var(--surface);color:var(--muted);font-size:15px;
+    display:grid;place-items:center;cursor:pointer}
+  .toggle:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+  /* hero */
+  .hero{position:relative;min-height:88vh;display:flex;flex-direction:column;justify-content:flex-end;
+    padding-bottom:52px;overflow:hidden}
+  #field{position:absolute;inset:0;width:100%;height:100%;z-index:0}
+  .hero .wrap{position:relative;z-index:2}
+  .hero::after{content:"";position:absolute;inset:0;z-index:1;pointer-events:none;
+    background:linear-gradient(180deg,transparent 30%,var(--bg) 96%)}
+  .hero h1{font-family:var(--serif);font-weight:500;line-height:1.02;letter-spacing:-.015em;
+    font-size:clamp(38px,10.5vw,68px)}
+  .hero h1 em{font-style:italic;color:var(--accent)}
+  .hero .sub{margin-top:22px;max-width:34ch;font-size:18px;color:var(--muted)}
+  .tag{margin-bottom:22px;font-family:var(--mono);font-size:12.5px;letter-spacing:.06em;color:var(--muted)}
+  .tag b{color:var(--text);font-weight:600}
+
+  /* demo */
+  .qrow{display:flex;flex-wrap:wrap;gap:9px;margin:8px 0 26px}
+  .chip{font-family:var(--sans);font-size:14.5px;line-height:1.3;text-align:left;
+    background:var(--surface);color:var(--text);border:1px solid var(--line);border-radius:13px;
+    padding:11px 14px;cursor:pointer;transition:border-color .15s,transform .05s}
+  .chip:hover{border-color:var(--accent)}
+  .chip:active{transform:translateY(1px)}
+  .chip[aria-pressed="true"]{border-color:var(--accent);background:var(--surface-2)}
+  .chip:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+  .stage{background:var(--surface);border:1px solid var(--line);border-radius:18px;
+    padding:20px 18px;min-height:230px}
+  .stage .ask{font-family:var(--serif);font-style:italic;font-size:20px;line-height:1.25;
+    color:var(--text);margin-bottom:4px}
+  .stage .hint{font-family:var(--mono);font-size:11.5px;letter-spacing:.05em;color:var(--muted);
+    text-transform:uppercase;margin-bottom:18px}
+  .result{border-top:1px dashed var(--line);padding-top:16px;margin-top:16px;
+    opacity:0;transform:translateY(6px);animation:rise .45s ease forwards}
+  .result:nth-child(2){animation-delay:.05s}
+  .result:nth-child(3){animation-delay:.16s}
+  .result:nth-child(4){animation-delay:.27s}
+  @keyframes rise{to{opacity:1;transform:none}}
+  .passage{font-size:15.5px;line-height:1.5}
+  .passage mark{background:var(--hl);color:inherit;padding:.05em .12em;border-radius:2px;
+    box-decoration-break:clone;-webkit-box-decoration-break:clone}
+  .src{display:flex;align-items:baseline;gap:8px;margin-top:9px;flex-wrap:wrap}
+  .src .from{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+  .src .title{font-size:13.5px;color:var(--text);font-weight:500}
+  .src .date{font-family:var(--mono);font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+  .score{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--accent);font-variant-numeric:tabular-nums}
+  .empty{color:var(--muted);font-size:15px;display:grid;place-items:center;min-height:150px;text-align:center;
+    font-family:var(--mono);font-size:12.5px;letter-spacing:.03em}
+
+  /* stats */
+  .stats{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:var(--line);
+    border:1px solid var(--line);border-radius:16px;overflow:hidden;margin-top:8px}
+  .stat{background:var(--surface);padding:20px 16px}
+  .stat .n{font-family:var(--mono);font-size:26px;font-weight:600;color:var(--text);
+    font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+  .stat .k{font-size:12.5px;color:var(--muted);margin-top:4px}
+
+  /* architecture */
+  .arms{display:flex;flex-direction:column;gap:12px;margin-top:10px}
+  .arm{display:flex;gap:13px;align-items:flex-start;background:var(--surface);border:1px solid var(--line);
+    border-radius:14px;padding:15px 16px}
+  .dot{flex:none;width:11px;height:11px;border-radius:3px;margin-top:5px}
+  .arm h3{font-family:var(--mono);font-size:13px;letter-spacing:.02em;font-weight:600}
+  .arm p{font-size:14px;color:var(--muted);margin-top:3px}
+  .fuse{font-family:var(--mono);font-size:12.5px;color:var(--muted);text-align:center;margin-top:14px;
+    letter-spacing:.03em}
+  .fuse b{color:var(--accent)}
+  .chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:16px}
+  .kv{font-family:var(--mono);font-size:11.5px;color:var(--muted);border:1px solid var(--line);
+    border-radius:20px;padding:5px 11px}
+  .kv b{color:var(--text);font-weight:600}
+
+  /* prose */
+  h2{font-family:var(--serif);font-weight:500;font-size:clamp(26px,7vw,34px);line-height:1.08;letter-spacing:-.01em}
+  .body{margin-top:16px;font-size:16.5px;color:var(--text)}
+  .body p+p{margin-top:14px}
+  .body .muted{color:var(--muted)}
+  .split{display:grid;gap:12px;margin-top:20px}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:15px;padding:17px 17px}
+  .card .lbl{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+  .card.now .lbl{color:var(--muted)}
+  .card.next{border-color:var(--accent)}
+  .card.next .lbl{color:var(--accent)}
+  .card h3{font-family:var(--serif);font-style:italic;font-weight:500;font-size:19px;margin:8px 0 6px}
+  .card p{font-size:14.5px;color:var(--muted)}
+
+  .foot{color:var(--muted);font-size:15px;padding-bottom:70px}
+  .foot .say{font-family:var(--serif);font-style:italic;font-size:19px;color:var(--text);
+    line-height:1.4;margin-bottom:16px}
+
+  @media (prefers-reduced-motion:reduce){
+    *{animation:none!important;transition:none!important}
+    .result{opacity:1;transform:none}
+  }
+</style>
+
+<button class="toggle" id="tg" aria-label="Toggle light and dark theme">◐</button>
+
+<header class="hero">
+  <canvas id="field" aria-hidden="true"></canvas>
+  <div class="wrap">
+    <p class="tag"><b id="convN">353</b> conversations · <b id="wordN">1.1M</b> words · one person</p>
+    <h1>Your notes remember topics.<br>This remembers <em>what you figured out.</em></h1>
+    <p class="sub">A retrieval engine over five months of my own conversations — so the thinking I already did stops disappearing.</p>
+  </div>
+</header>
+
+<main>
+  <section id="demo">
+    <div class="wrap">
+      <p class="eyebrow">Ask it something</p>
+      <h2 style="font-size:clamp(23px,6.2vw,30px)">A question, answered from my own history.</h2>
+      <p class="body muted" style="margin-bottom:22px">Not keyword search — the query and what it finds often share no words. Tap one.</p>
+      <div class="qrow" id="qrow"></div>
+      <div class="stage" id="stage">
+        <div class="empty">— pick a question above —</div>
+      </div>
+    </div>
+  </section>
+
+  <section id="corpus">
+    <div class="wrap">
+      <p class="eyebrow">The corpus is the point</p>
+      <h2>Not a demo dataset. My actual mind, indexed.</h2>
+      <p class="body muted" style="margin-top:14px">The breadth is the moat — a private, compounding record no one else can index. A slice of what's in there:</p>
+      <div class="stats">
+        <div class="stat"><div class="n" id="s1">353</div><div class="k">conversations ingested</div></div>
+        <div class="stat"><div class="n" id="s2">4,909</div><div class="k">passages, individually embedded</div></div>
+        <div class="stat"><div class="n" id="s3">1.1M</div><div class="k">words of my own reasoning</div></div>
+        <div class="stat"><div class="n" id="s4">Feb–Jul</div><div class="k">2026, and growing daily</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="how">
+    <div class="wrap">
+      <p class="eyebrow">Under the hood — no hand-waving</p>
+      <h2>The serious version of retrieval, not cosine similarity in a weekend.</h2>
+      <p class="body muted" style="margin-top:14px">Three independent retrievers, each ranking the same passages a different way, fused on rank:</p>
+      <div class="arms">
+        <div class="arm"><span class="dot" style="background:var(--vec)"></span><div>
+          <h3>Dense vector · pgvector / HNSW</h3><p>Meaning, not words. 1536-dim embeddings, approximate-nearest-neighbor over the passage index.</p></div></div>
+        <div class="arm"><span class="dot" style="background:var(--lex)"></span><div>
+          <h3>Lexical · Postgres tsvector</h3><p>Exact terms and names the vector arm glosses over.</p></div></div>
+        <div class="arm"><span class="dot" style="background:var(--fuz)"></span><div>
+          <h3>Fuzzy · pg_trgm trigram</h3><p>Rescues misspellings and partial tokens on short lookups.</p></div></div>
+      </div>
+      <p class="fuse">fused by <b>Reciprocal Rank Fusion</b> → diversified by MMR</p>
+      <div class="chips">
+        <span class="kv"><b>Contextual Retrieval</b> · per-passage context before embedding</span>
+        <span class="kv"><b>passage-level</b> chunking, not whole-doc</span>
+        <span class="kv"><b>plain markdown</b> · exportable, yours</span>
+      </div>
+    </div>
+  </section>
+
+  <section id="wedge">
+    <div class="wrap">
+      <p class="eyebrow">Where this goes</p>
+      <h2>The gap nobody's filled: retrieving a decision, not a topic.</h2>
+      <div class="body">
+        <p>Every memory tool — including this one, today — retrieves by <em>subject</em>. Ask <span class="muted">“what did I decide was good enough to pitch,”</span> and topical search hands back things <em>about</em> pitching, never the moment you said <em>yes, that one.</em></p>
+        <p class="muted">That's a speech-act query, and embeddings are structurally bad at it. The fix is extraction at ingest — typing each conversation into decisions, endorsements, commitments, open questions — so a stance becomes a filter, not a fuzzy guess.</p>
+      </div>
+      <div class="split">
+        <div class="card now">
+          <div class="lbl">Live today</div>
+          <h3>Topical recall</h3>
+          <p>“What have I thought about X” — across every domain, connected. Running on the engine above.</p>
+        </div>
+        <div class="card next">
+          <div class="lbl">The wedge — building</div>
+          <h3>Episodic recall</h3>
+          <p>“Where did I <em>decide</em> / <em>commit</em> / <em>endorse</em> X.” The moment, dated and quotable. What the whole field is weakest at.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="foot">
+    <div class="wrap">
+      <p class="say">“Same retrieval stack as anyone's. The difference is the corpus — it's mine, it compounds, and it's exportable. The interesting question isn't ‘what's the answer,’ it's ‘what did I already figure out.’”</p>
+      <p>MediaLog · a personal context engine · <span style="font-family:var(--mono);font-size:13px">built, not slideware</span></p>
+    </div>
+  </section>
+</main>
+
+<script>
+window.__CTX__ = {
+  stats: { conversations: 353, passages: 4909, words: 1111047 },
+  titles: [
+    "Small living room layout and furnishing strategy","Calculating resonant capacitance",
+    "Clock propagation in synchronous circuits","Best single router for two-story home",
+    "Post-workout protein shake formula","Two's complement to 7-segment display decoder",
+    "Wavelength and atomic resolution limits","Funding travel to YC career fair",
+    "Positioning and cropping facecam in DaVinci Resolve","Pocket pair strategy in poker",
+    "Basketball shooting strength exercises","Fixing flat, dull photos in bright daylight",
+    "Magnetic permeability in ferromagnetic materials","Word prefix replacement algorithm",
+    "LRU tracking scheme overhead","Ice needed to cool bedroom to sleeping temperature",
+    "Compiled book recommendations and chapters","Filling out a W-9 form",
+    "Reverse-engineering a skilled developer's knowledge","Blender vs Helimix for protein shakes",
+    "Staying current with pop culture references","Remote income options while traveling",
+    "Replacing doomscrolling with intentional learning","Chicago summer tech events",
+    "Creating a coding Easter egg for the team","Approaching the performance takehome challenge"
+  ],
+  queries: [
+    { ask: "how do I come across as more confident and magnetic to people",
+      note: "query and answer share no words — retrieved by meaning",
+      results: [
+        { text: "The biggest reframe first: good conversation isn't about what you say, it's about what you draw out of them. Stop trying to “hold up your end” and start being genuinely curious — attractive people especially are used to others performing.",
+          title: "Staying current with pop culture references",
+          mark: ["draw out of them", "genuinely curious"] },
+        { text: "Novelty and genuine curiosity hit harder than “omg same.” The trick is short personal volleys, not stories — one sentence about you, then redirect.",
+          title: "Staying current with pop culture references",
+          mark: ["short personal volleys"] }
+      ] },
+    { ask: "what's a realistic way to make income on my own schedule",
+      note: "no keyword match — it found the plan, not the phrase",
+      results: [
+        { text: "Realistic plan if you've got real hours and don't mind active sales: build 2–3 spec sites this week, no client yet — pick a niche where bad websites are common and decisions are fast (dentists, contractors, salons, local restaurants).",
+          title: "Remote income options while traveling",
+          mark: ["spec sites", "bad websites are common"] },
+        { text: "For 3 weeks while traveling, the async stuff wins since it doesn't need your physical presence: EECS tutoring — post in the 281 / 370 / 270 groups before you leave and schedule sessions over Zoom.",
+          title: "Remote income options while traveling",
+          mark: ["async stuff wins"] }
+      ] },
+    { ask: "how do I stop wasting time and actually learn",
+      note: "found by meaning, across a different conversation",
+      results: [
+        { text: "Replace the feed, don't fight the urge: an RSS reader loaded with your existing sources, so the pull toward a feed lands on something you chose instead of an algorithm's.",
+          title: "Replacing doomscrolling with intentional learning",
+          mark: ["Replace the feed", "something you chose"] },
+        { text: "The best ideas usually come from working inside a problem, not staring at a blank page trying to will one into existence — you've already been closer than most.",
+          title: "Offer rescinded after onboarding",
+          mark: ["working inside a problem"] }
+      ] }
+  ]
+};
+/* ---- theme ---- */
+const root=document.documentElement, tg=document.getElementById('tg');
+tg.addEventListener('click',()=>{
+  const cur=root.getAttribute('data-theme')
+    || (matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');
+  root.setAttribute('data-theme',cur==='dark'?'light':'dark');
+});
+
+/* ---- real corpus data (injected) ---- */
+const DATA = window.__CTX__ || {stats:{}, titles:[], queries:[]};
+
+/* numbers */
+if(DATA.stats.conversations){
+  const f=n=>n>=1e6?(n/1e6).toFixed(1)+'M':n>=1e3?(n/1e3).toFixed(1).replace(/\.0$/,'')+'k':''+n;
+  const set=(id,v)=>{const el=document.getElementById(id); if(el)el.textContent=v;};
+  set('convN',DATA.stats.conversations); set('s1',DATA.stats.conversations);
+  set('wordN',f(DATA.stats.words)); set('s3',f(DATA.stats.words));
+  set('s2',DATA.stats.passages.toLocaleString());
+}
+
+/* ---- demo ---- */
+const qrow=document.getElementById('qrow'), stage=document.getElementById('stage');
+function esc(s){return s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
+function mark(text,phrases){
+  if(!phrases||!phrases.length) return esc(text);
+  const r=[];
+  for(const p of phrases){const i=text.toLowerCase().indexOf(p.toLowerCase()); if(i>=0)r.push([i,i+p.length]);}
+  r.sort((a,b)=>a[0]-b[0]);
+  let out='',i=0;
+  for(const [a,b] of r){ if(a<i)continue; out+=esc(text.slice(i,a))+'<mark>'+esc(text.slice(a,b))+'</mark>'; i=b; }
+  return out+esc(text.slice(i));
+}
+function render(q){
+  if(!q.results||!q.results.length){
+    stage.innerHTML='<div class="ask">'+esc(q.ask)+'</div><div class="empty">indexing… results land after the backfill</div>';
+    return;
+  }
+  let html='<div class="ask">'+esc(q.ask)+'</div><div class="hint">'+(q.note||'no shared keywords — retrieved by meaning')+'</div>';
+  for(const r of q.results){
+    html+='<div class="result"><div class="passage">'+mark(r.text,r.mark)+'</div>'+
+      '<div class="src"><span class="from">from</span><span class="title">'+esc(r.title)+'</span>'+
+      (r.date?'<span class="date">'+esc(r.date)+'</span>':'')+
+      (r.score?'<span class="score">'+r.score+'</span>':'')+'</div></div>';
+  }
+  stage.innerHTML=html;
+}
+DATA.queries.forEach((q,idx)=>{
+  const b=document.createElement('button');
+  b.className='chip'; b.type='button'; b.textContent=q.ask;
+  b.setAttribute('aria-pressed','false');
+  b.addEventListener('click',()=>{
+    [...qrow.children].forEach(c=>c.setAttribute('aria-pressed','false'));
+    b.setAttribute('aria-pressed','true'); render(q);
+  });
+  qrow.appendChild(b);
+});
+
+/* ---- hero: constellation of real titles ---- */
+(function(){
+  const c=document.getElementById('field'), ctx=c.getContext('2d');
+  const reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
+  const titles=(DATA.titles&&DATA.titles.length?DATA.titles:['','','']).slice(0,46);
+  let W,H,DPR,pts;
+  function css(v){return getComputedStyle(root).getPropertyValue(v).trim();}
+  function resize(){
+    DPR=Math.min(2,devicePixelRatio||1);
+    W=c.clientWidth; H=c.clientHeight;
+    c.width=W*DPR; c.height=H*DPR; ctx.setTransform(DPR,0,0,DPR,0,0);
+    pts=titles.map((t,i)=>({
+      t, x:Math.random()*W, y:Math.random()*H,
+      vx:(Math.random()-.5)*.12, vy:(Math.random()-.5)*.12,
+      s:11+Math.random()*4, a:.18+Math.random()*.5
+    }));
+  }
+  function frame(){
+    const col=css('--text'), acc=css('--accent');
+    ctx.clearRect(0,0,W,H);
+    ctx.font='12px '+css('--mono').split(',')[0].replace(/["']/g,'')+',monospace';
+    for(const p of pts){
+      p.x+=p.vx; p.y+=p.vy;
+      if(p.x<-160)p.x=W+40; if(p.x>W+160)p.x=-40;
+      if(p.y<-20)p.y=H+20; if(p.y>H+20)p.y=-20;
+      ctx.font=p.s.toFixed(0)+'px '+css('--mono');
+      ctx.fillStyle=(p.hot?acc:col);
+      ctx.globalAlpha=p.a;
+      ctx.fillText(p.t,p.x,p.y);
+    }
+    ctx.globalAlpha=1;
+    if(!reduce) requestAnimationFrame(frame);
+  }
+  addEventListener('resize',()=>{resize();if(reduce)frame();});
+  resize(); frame();
+})();
+</script>
