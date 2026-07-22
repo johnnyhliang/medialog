@@ -125,10 +125,12 @@ Vercel serving the domain is not the same as DNS pointing at it. As of
 `notes.johnnyliang.me` has **no A or CNAME record at all** — the subdomain is
 attached in the Vercel dashboard but was never created at the DNS provider.
 
-Add at whoever hosts johnnyliang.me's DNS:
+Add at whoever hosts johnnyliang.me's DNS. Vercel issues a **per-domain**
+target, so use exactly this value — the generic `cname.vercel-dns.com` is not
+what this project was assigned:
 
 ```
-CNAME   notes   cname.vercel-dns.com
+CNAME   notes   5541e9a611a6e46a.vercel-dns-017.com
 ```
 
 Verify before assuming propagation is the problem:
