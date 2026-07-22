@@ -69,6 +69,13 @@ for data-ownership reasons, never as the cheap option.
     bucket via Supabase storage RLS policies.** That policy change is the actual gate; the UI removal
     is cosmetic. Do both.
   - Existing uploaded objects: decide keep vs. purge before other users exist.
+- [x] **Secrets hygiene** — checked 2026-07-22. Scanned all 133 JS files in a fresh `dist/` build:
+  no service-role key, no Gemini key, no literal `service_role` anywhere in the bundle. `.env.local`
+  is git-ignored (via `*.local`) and was never committed. The only key ever committed to history was
+  the **anon** key hardcoded in `index.html` (removed in `b297ce3`) — decoded, its payload is
+  `role: anon`, which is public by design and ships in the client regardless. No rotation needed.
+  Remaining (needs console access, yours): confirm `CRON_SECRET` / `CAPTURE_SECRET` / provider keys
+  are set as Supabase function secrets rather than living only in a local file. Original text:
 - [ ] **Secrets hygiene.** Service-role key never shipped to the client bundle; `CRON_SECRET`,
   `CAPTURE_SECRET`, provider API keys set as Supabase secrets / host env, not in the repo. Confirm
   `.env.local` is git-ignored and no secret leaked into git history.
