@@ -8,7 +8,7 @@ import KeywordsTab from './settings/KeywordsTab.jsx'
 import ProgramsTab from './settings/ProgramsTab.jsx'
 import GitHubTab from './settings/GitHubTab.jsx'
 
-export default function SettingsView({ topics, onRefreshData, addToast, allTags = [], onUpdateTagColor, archiveToast, onToggleArchiveToast, trashToast, onToggleTrashToast, themePalette, themeStyle, onSetPalette, onSetStyle }) {
+export default function SettingsView({ topics, onRefreshData, addToast, allTags = [], onUpdateTagColor, archiveToast, onToggleArchiveToast, trashToast, onToggleTrashToast, themePalette, themeStyle, onSetPalette, onSetStyle, assistantEnabled, onToggleAssistant }) {
   const [config, setConfig] = useState(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -335,6 +335,16 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
             />
             Show undo notification when moving entries to trash (5 seconds)
           </label>
+          {onToggleAssistant && (
+            <label style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, marginTop: 10 }}>
+              <input
+                type="checkbox"
+                checked={assistantEnabled ?? true}
+                onChange={(e) => onToggleAssistant(e.target.checked)}
+              />
+              Enable “Ask your library” assistant (⌘/ to open)
+            </label>
+          )}
         </section>
       )}
 

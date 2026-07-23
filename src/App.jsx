@@ -12,6 +12,8 @@ import { setEntryTags, listTags, updateTagColor } from './lib/db/tags.js'
 import { getCommands } from './lib/commands.js'
 import { resolveBindings, eventToKey } from './lib/keybindings.js'
 import CommandPalette from './components/CommandPalette.jsx'
+import AssistantPanel from './components/AssistantPanel.jsx'
+import { Sparkles } from 'lucide-react'
 import { listVersions, createVersion } from './lib/db/versions.js'
 import { fetchTitle, fetchLinkPreview } from './lib/enrich.js'
 import { chunkEntryAsync } from './lib/chunkEntry.js'
@@ -95,6 +97,14 @@ function Workspace() {
   const [editTargetId, setEditTargetId] = useState(null)
   const [user, setUser] = useState(null)
   const showFounder = showFounderFeatures(user)
+  // Assistant: founder-only, and separately enable/disableable (persisted).
+  const [assistantEnabled, setAssistantEnabled] = useState(() => {
+    try { return localStorage.getItem('medialog_assistant_enabled') !== 'false' } catch { return true }
+  })
+  const [assistantOpen, setAssistantOpen] = useState(false)
+  function toggleAssistant() {
+    setAssistantOpen((v) => !v)
+  }
 
   const focusedEntry = focusedEntryId
     ? (entries.find((e) => e.id === focusedEntryId) ?? null)
@@ -281,6 +291,13 @@ function Workspace() {
 
       const key = eventToKey(e)
 
+      // Toggle the library assistant (founder-only). Works even while editing.
+      if ((e.metaKey || e.ctrlKey) && e.key === '/' && showFounder && assistantEnabled) {
+        e.preventDefault()
+        toggleAssistant()
+        return
+      }
+
       if (key === 'ctrl+k') {
         if (bindings.has('ctrl+k')) {
           e.preventDefault()
@@ -317,7 +334,7 @@ function Workspace() {
 
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [paletteCommands, focusedEntryId, orderedEntryIds])
+  }, [paletteCommands, focusedEntryId, orderedEntryIds, showFounder, assistantEnabled])
 
   async function refreshTags() {
     const tags = await listTags(supabase)
@@ -651,8 +668,14 @@ function Workspace() {
 
   // A related passage only knows its entry id; resolve it and reuse the normal
   // select-and-scroll path so the target entry opens wherever it lives.
-  function handleOpenRelated(entryId) {
-    const entry = entries.find((e) => e.id === entryId)
+  async function handleOpenRelated(entryId) {
+    // The related footer and the assistant can point at any entry, not just the
+    // loaded topic's — fetch it if it isn't already in memory.
+    let entry = entries.find((e) => e.id === entryId)
+    if (!entry) {
+      const { data } = await supabase.from('entries').select('id, topic_id').eq('id', entryId).maybeSingle()
+      entry = data
+    }
     if (entry) handleSelectEntry(entry)
   }
 
@@ -1061,6 +1084,12 @@ function Workspace() {
               themeStyle={themeStyle}
               onSetPalette={setPalette}
               onSetStyle={setStyle}
+              assistantEnabled={showFounder ? assistantEnabled : undefined}
+              onToggleAssistant={showFounder ? ((v) => {
+                setAssistantEnabled(v)
+                try { localStorage.setItem('medialog_assistant_enabled', String(v)) } catch {}
+                if (!v) setAssistantOpen(false)
+              }) : undefined}
             />
           )}
           {view === 'guide' && <GuideView />}
@@ -1180,6 +1209,19 @@ function Workspace() {
             />
           </div>
         </div>
+      )}
+
+      {showFounder && assistantEnabled && !assistantOpen && (
+        <button className="asst-tab" onClick={toggleAssistant} title="Ask your library (⌘/)">
+          <Sparkles size={16} />
+        </button>
+      )}
+      {showFounder && assistantEnabled && assistantOpen && (
+        <AssistantPanel
+          supabase={supabase}
+          onOpenEntry={(src) => handleOpenRelated(src.entryId)}
+          onClose={() => setAssistantOpen(false)}
+        />
       )}
     </div>
   )
