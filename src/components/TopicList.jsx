@@ -68,6 +68,36 @@ export default function TopicList({
   return (
     <nav>
       <p className="section-label">Topics</p>
+
+      {/* Compact switcher for narrow screens — the full list below is hidden
+          via CSS at the same breakpoint so topics don't eat the whole drawer. */}
+      <select
+        className="topics-dropdown"
+        value={selectedId ?? ''}
+        onChange={(e) => e.target.value && onSelect(e.target.value)}
+        aria-label="Jump to topic"
+      >
+        <option value="" disabled>Jump to topic…</option>
+        {inboxTopic && <option value={inboxTopic.id}>{inboxTopic.name}</option>}
+        {pinnedTopics.length > 0 && (
+          <optgroup label="Pinned">
+            {pinnedTopics.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+          </optgroup>
+        )}
+        {regularTopics.length > 0 && (
+          <optgroup label="Topics">
+            {regularTopics.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+          </optgroup>
+        )}
+        {allArchived.length > 0 && (
+          <optgroup label="Archived">
+            {[...allArchived].sort((a, b) => a.name.localeCompare(b.name)).map((t) => (
+              <option key={t.id} value={t.id}>{t.name}</option>
+            ))}
+          </optgroup>
+        )}
+      </select>
+
       <ul className="topics">
         {inboxTopic && (
           <li key={inboxTopic.id}>

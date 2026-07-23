@@ -9,7 +9,7 @@ test('lists topics and selects one on click', async () => {
   const onSelect = vi.fn()
   const topics = [{ id: '1', name: 'AI' }, { id: '2', name: 'Film' }]
   render(<TopicList topics={topics} selectedId="1" onSelect={onSelect} onAdd={() => {}} />)
-  await userEvent.click(screen.getByText('Film'))
+  await userEvent.click(screen.getByRole('button', { name: 'Film' }))
   expect(onSelect).toHaveBeenCalledWith('2')
 })
 
@@ -47,7 +47,9 @@ const baseProps = {
 
 test('archived section is collapsed by default and expands on click', async () => {
   render(<TopicList {...baseProps} />)
-  expect(screen.queryByText('Old Project')).not.toBeInTheDocument()
+  // (an <option> for it always exists in the mobile dropdown; assert on the
+  // list button, which only appears once the archived section is expanded)
+  expect(screen.queryByRole('button', { name: 'Old Project' })).not.toBeInTheDocument()
   await userEvent.click(screen.getByRole('button', { name: /archived/i }))
-  expect(screen.getByText('Old Project')).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Old Project' })).toBeInTheDocument()
 })

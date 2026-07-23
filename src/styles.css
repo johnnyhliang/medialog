@@ -308,15 +308,25 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
   font-weight: 600;
 }
 
-/* Topic list grows to fill sidebar, scrolls if needed; keeps toggle pinned */
-.sidebar nav {
+/* Nav items + topics scroll together as one region, so the topic list uses the
+   full remaining sidebar height instead of a cramped nested scrollbox. The
+   toggle button stays pinned below this container. */
+.sidebar-scroll {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
   display: flex;
   flex-direction: column;
+  gap: 20px;
 }
+.sidebar nav {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Compact topic switcher — desktop uses the full list, so hide the dropdown. */
+.topics-dropdown { display: none; }
 
 /* Sidebar toggle button — floats at the bottom of the sidebar */
 .sidebar-toggle {
@@ -1256,6 +1266,22 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
     z-index: 199;
   }
   .sidebar-overlay.visible { display: block; }
+
+  /* Narrow screens: swap the topic list for a compact dropdown so topics don't
+     dominate the drawer. The add-topic form stays reachable below it. */
+  .topics-dropdown {
+    display: block;
+    width: 100%;
+    padding: 8px 10px;
+    font-size: 14px;
+    border-radius: 8px;
+    background: var(--surface-2);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .sidebar .topics,
+  .sidebar .topics-archived-toggle,
+  .sidebar .topics-archived-list { display: none; }
 
   .main { padding: 16px; flex: 1; min-height: 0; overflow-y: auto; }
 }

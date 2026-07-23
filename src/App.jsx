@@ -888,29 +888,33 @@ function Workspace() {
           <h1>MediaLog</h1>
           <button className="signout" onClick={() => supabase.auth.signOut()}>Sign out</button>
         </div>
-        <NavSidebar
-          view={view}
-          navigateTo={navigateTo}
-          sideEffects={{ loadInbox, loadRevisit, loadTrash }}
-          onExport={handleExportClick}
-        />
-        <hr className="topic-divider" />
-        <TopicList
-          topics={topics}
-          activeTopics={activeTopics}
-          archivedTopics={archivedTopics}
-          selectedId={view === 'browse' ? selectedId : null}
-          onSelect={(id) => { setSelectedId(id); setGlobalSearchResults(null); setView('browse') }}
-          onAdd={handleAddTopic}
-          onPinToggle={async (id, pinned) => {
-            const updated = await togglePinTopic(supabase, id, pinned)
-            setTopics((prev) => prev.map((t) => t.id === id ? { ...t, pinned: updated.pinned } : t))
-          }}
-          sidebarCollapsed={!sidebarOpen}
-          onArchive={handleArchiveTopic}
-          onUnarchive={handleUnarchiveTopic}
-          onDeleteTopic={handleDeleteTopic}
-        />
+        {/* Nav and topics share one scroll region so the topic list can use
+            the full sidebar height instead of a cramped nested scrollbox. */}
+        <div className="sidebar-scroll">
+          <NavSidebar
+            view={view}
+            navigateTo={navigateTo}
+            sideEffects={{ loadInbox, loadRevisit, loadTrash }}
+            onExport={handleExportClick}
+          />
+          <hr className="topic-divider" />
+          <TopicList
+            topics={topics}
+            activeTopics={activeTopics}
+            archivedTopics={archivedTopics}
+            selectedId={view === 'browse' ? selectedId : null}
+            onSelect={(id) => { setSelectedId(id); setGlobalSearchResults(null); setView('browse') }}
+            onAdd={handleAddTopic}
+            onPinToggle={async (id, pinned) => {
+              const updated = await togglePinTopic(supabase, id, pinned)
+              setTopics((prev) => prev.map((t) => t.id === id ? { ...t, pinned: updated.pinned } : t))
+            }}
+            sidebarCollapsed={!sidebarOpen}
+            onArchive={handleArchiveTopic}
+            onUnarchive={handleUnarchiveTopic}
+            onDeleteTopic={handleDeleteTopic}
+          />
+        </div>
         <button className="sidebar-toggle" onClick={toggleSidebar} title={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}>
           <span className="sidebar-toggle-icon" style={{ transform: sidebarOpen ? 'rotate(0deg)' : 'rotate(180deg)' }}>‹</span>
           <span className="sidebar-toggle-label">{sidebarOpen ? 'collapse' : 'expand'}</span>
