@@ -192,7 +192,7 @@ export async function emptyTrash(supabase) {
 }
 
 // Legacy whole-entry path. Retained as a fallback until content_chunks is
-// backfilled; removed together with entry_embeddings in migration 0047.
+// backfilled; removed together with entry_embeddings in migration 0048.
 async function legacySearchSemantic(supabase, query) {
   const { data: { session } } = await supabase.auth.getSession()
   if (!session?.access_token) return []

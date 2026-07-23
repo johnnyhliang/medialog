@@ -1,6 +1,8 @@
-import { useMemo, useState, useRef } from 'react'
-import { Bold, Italic, Heading, List, ListChecks, Link2, Quote, Code } from 'lucide-react'
+import { useMemo, useState, useRef, useEffect } from 'react'
+import { Bold, Italic, Heading, List, ListChecks, Link2, Quote, Code, Paperclip } from 'lucide-react'
 import CodeMirror from '@uiw/react-codemirror'
+import { uploadAttachment, markdownForAttachment, isAllowedAttachment } from '../lib/storage.js'
+import { showFounderFeatures } from '../lib/account.js'
 import { markdown, markdownLanguage, insertNewlineContinueMarkup, deleteMarkupBackward } from '@codemirror/lang-markdown'
 import { languages } from '@codemirror/language-data'
 import { keymap } from '@codemirror/view'
@@ -140,6 +142,16 @@ export default function NoteEditor({ value, onChange, supabase, extraExtensions 
     [extraExtensions],
   )
   const viewRef = useRef(null)
+  const fileRef = useRef(null)
+  const [uploading, setUploading] = useState(false)
+  // Uploads are founder-only. Determined here rather than threaded as a prop,
+  // since NoteEditor renders from many places (cards, topic docs). isDev makes
+  // it true locally; in prod it checks the signed-in user against VITE_FOUNDER_IDS.
+  const [canUpload, setCanUpload] = useState(() => showFounderFeatures(null))
+  useEffect(() => {
+    if (!supabase) return
+    supabase.auth.getUser().then(({ data }) => setCanUpload(showFounderFeatures(data?.user ?? null)))
+  }, [supabase])
   const fmt = (fn) => () => { if (viewRef.current) fn(viewRef.current) }
   const FORMATS = [
     { icon: Bold, label: 'Bold', run: (v) => wrapSelection(v, '**') },
@@ -162,23 +174,48 @@ export default function NoteEditor({ value, onChange, supabase, extraExtensions 
     setShowTip(false)
   }
 
-  // MediaLog does not host files (decision 2026-07-09) — users hotlink instead.
-  // Dropping or pasting a file used to upload it; now it explains what to do.
+  // Uploads are founder-only (canUpload). For everyone else MediaLog hosts no
+  // files — dropping or pasting one explains hotlinking instead of failing.
+  async function attachFiles(files) {
+    if (!supabase || !files?.length) return
+    setUploadError(null)
+    setUploading(true)
+    let next = value
+    try {
+      for (const file of files) {
+        if (!isAllowedAttachment(file)) {
+          throw new Error(`${file.name}: images or PDFs only, max 10 MB`)
+        }
+        const { url, thumbUrl } = await uploadAttachment(supabase, file)
+        next = insertAtCursor(next, markdownForAttachment(url, thumbUrl, file))
+      }
+      onChange(next)
+    } catch (err) {
+      setUploadError(err.message || 'Upload failed')
+    } finally {
+      setUploading(false)
+    }
+  }
+
   function rejectFiles() {
     setUploadError('MediaLog doesn’t host files. Paste a link to the file instead — see the Guide for where to host it.')
   }
 
   function onPaste(e) {
     const items = [...(e.clipboardData?.items ?? [])]
-    const files = items.filter((item) => item.kind === 'file')
+    const files = items.filter((item) => item.kind === 'file').map((i) => i.getAsFile()).filter(Boolean)
     if (!files.length) return
     e.preventDefault()
-    rejectFiles()
+    if (canUpload) attachFiles(files)
+    else rejectFiles()
   }
 
   function onDrop(e) {
     e.preventDefault()
-    if (e.dataTransfer?.files?.length) rejectFiles()
+    const files = [...(e.dataTransfer?.files ?? [])]
+    if (!files.length) return
+    if (canUpload) attachFiles(files)
+    else rejectFiles()
   }
 
   const showEditor = mode === 'write' || mode === 'split'
@@ -215,6 +252,26 @@ export default function NoteEditor({ value, onChange, supabase, extraExtensions 
                 <Icon size={16} strokeWidth={2} />
               </button>
             ))}
+          </div>
+        )}
+        {canUpload && supabase && (
+          <div className="note-editor-attach">
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*,application/pdf"
+              multiple
+              hidden
+              onChange={(e) => { attachFiles([...e.target.files]); e.target.value = '' }}
+            />
+            <button
+              type="button"
+              title="Attach image or PDF"
+              disabled={uploading}
+              onClick={() => fileRef.current?.click()}
+            >
+              <Paperclip size={15} /> {uploading ? 'Uploading…' : 'Attach'}
+            </button>
           </div>
         )}
       </div>

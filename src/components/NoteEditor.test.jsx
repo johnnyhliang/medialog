@@ -13,7 +13,10 @@ vi.mock('@uiw/react-codemirror', () => ({
   ),
 }))
 
-const supabase = { auth: { getUser: vi.fn() }, storage: { from: vi.fn() } }
+const supabase = {
+  auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'u1' } } }) },
+  storage: { from: vi.fn() },
+}
 
 test('switches between write, preview, and split modes', async () => {
   render(<NoteEditor value="hello" onChange={() => {}} supabase={supabase} />)
@@ -29,7 +32,9 @@ test('switches between write, preview, and split modes', async () => {
   expect(screen.getByTestId('preview')).toBeInTheDocument()
 })
 
-test('offers no attach button — MediaLog does not host files', () => {
+test('shows the attach button for founder/dev, hosting is founder-only', () => {
+  // import.meta.env.DEV is true under vitest, so showFounderFeatures() enables
+  // uploads regardless of account — mirrors local dev.
   render(<NoteEditor value="" onChange={() => {}} supabase={supabase} />)
-  expect(screen.queryByRole('button', { name: 'Attach' })).toBeNull()
+  expect(screen.getByRole('button', { name: /attach/i })).toBeInTheDocument()
 })
