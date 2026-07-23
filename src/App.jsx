@@ -16,6 +16,7 @@ import { listVersions, createVersion } from './lib/db/versions.js'
 import { fetchTitle, fetchLinkPreview } from './lib/enrich.js'
 import { chunkEntryAsync } from './lib/chunkEntry.js'
 import { runBackup } from './lib/db/githubBackup.js'
+import { showFounderFeatures } from './lib/account.js'
 import { buildMarkdownFiles } from './lib/exportMarkdown.js'
 import { buildZip, downloadBlob } from './lib/buildZip.js'
 import AuthGate from './components/AuthGate.jsx'
@@ -92,6 +93,8 @@ function Workspace() {
   const [orderedEntryIds, setOrderedEntryIds] = useState([])
   const [snoozeTarget, setSnoozeTarget] = useState(null)
   const [editTargetId, setEditTargetId] = useState(null)
+  const [user, setUser] = useState(null)
+  const showFounder = showFounderFeatures(user)
 
   const focusedEntry = focusedEntryId
     ? (entries.find((e) => e.id === focusedEntryId) ?? null)
@@ -206,6 +209,7 @@ function Workspace() {
   }, [])
 
   useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setUser(data?.user ?? null))
     refreshTopics()
     refreshTags()
     const params = new URLSearchParams(window.location.search)
@@ -896,6 +900,7 @@ function Workspace() {
             navigateTo={navigateTo}
             sideEffects={{ loadInbox, loadRevisit, loadTrash }}
             onExport={handleExportClick}
+            showFounder={showFounder}
           />
           <hr className="topic-divider" />
           <TopicList
@@ -1099,7 +1104,7 @@ function Workspace() {
               addToast={addToast}
             />
           )}
-          {view === 'career' && (
+          {view === 'career' && showFounder && (
             <CareerView
               supabase={supabase}
               addToast={addToast}

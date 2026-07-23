@@ -18,7 +18,7 @@ const SECTIONS = [
       { view: 'feed', label: 'Feed', icon: Rss },
       { view: 'sort', label: 'Sort Inbox', icon: Inbox, side: 'loadInbox' },
       { view: 'tidy', label: 'Tidy', icon: Sparkles },
-      { view: 'career', label: 'Career', icon: Briefcase },
+      { view: 'career', label: 'Career', icon: Briefcase, founderOnly: true },
       { view: 'interview', label: 'Interview Prep', icon: GraduationCap },
     ],
   },
@@ -61,7 +61,7 @@ function digestStale() {
   }
 }
 
-export default function NavSidebar({ view, navigateTo, sideEffects = {}, onExport }) {
+export default function NavSidebar({ view, navigateTo, sideEffects = {}, onExport, showFounder = false }) {
   const [moreOpen, setMoreOpen] = useState(() => {
     try { return localStorage.getItem(MORE_OPEN_KEY) === 'true' } catch { return false }
   })
@@ -105,9 +105,13 @@ export default function NavSidebar({ view, navigateTo, sideEffects = {}, onExpor
   return (
     <ul className="nav">
       {SECTIONS.map((section) => {
+        // Founder-only items (job/career pipeline) are hidden unless the viewer
+        // is a founder account or running the local dev server.
+        const items = section.items.filter((i) => !i.founderOnly || showFounder)
+        if (!items.length) return null
         // keep the "more" group visible when its current view is active,
         // otherwise the active highlight would be hidden
-        const containsActive = section.items.some((i) => i.view === view)
+        const containsActive = items.some((i) => i.view === view)
         const open = !section.collapsible || moreOpen || containsActive
         return (
           <li key={section.id} className="nav-section">
@@ -120,7 +124,7 @@ export default function NavSidebar({ view, navigateTo, sideEffects = {}, onExpor
                 <span>{section.label}</span>
               </button>
             )}
-            {open && <ul className="nav-section-items">{section.items.map(renderItem)}</ul>}
+            {open && <ul className="nav-section-items">{items.map(renderItem)}</ul>}
           </li>
         )
       })}
