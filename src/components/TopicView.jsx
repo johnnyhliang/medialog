@@ -84,7 +84,16 @@ export default function TopicView({
     return Math.floor((w - gap * (c - 1)) / c)
   }, [])
 
-  const cardMinWidth = containerWidth ? colsToMinWidth(cols, containerWidth) : 200
+  // Treat the user's column count as a MAX. Step down (e.g. 3→2→1) when the
+  // container can't fit that many cards at a comfortable width — otherwise a
+  // fixed grid either cramps on small screens or leaves an awkward gap before
+  // collapsing to one column.
+  const COMFORTABLE_CARD = 240
+  const fitCols = containerWidth
+    ? Math.max(1, Math.floor((containerWidth + 12) / (COMFORTABLE_CARD + 12)))
+    : cols
+  const effectiveCols = Math.min(cols, fitCols)
+  const cardMinWidth = containerWidth ? colsToMinWidth(effectiveCols, containerWidth) : 200
 
   function setDocWidthAndSave(w) {
     setDocWidth(w)
