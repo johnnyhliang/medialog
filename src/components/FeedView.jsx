@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import { fetchFeedItems } from '../lib/fetchFeed.js'
 import {
-  listFeeds, createFeed, deleteFeed, markFeedFetched,
-  listFeedItems, upsertFeedItems, dismissFeedItem,
+  listFeeds, createFeed, deleteFeed,
+  listFeedItems, dismissFeedItem,
   markFeedItemSaved, cullExpiredItems, getFeedItemCounts,
   addStarterFeeds,
 } from '../lib/db/feeds.js'
@@ -31,7 +30,7 @@ export default function FeedView({ supabase, topics, onSaveItem, addToast }) {
   const [selectedFeedId, setSelectedFeedId] = useState(null) // null = all
   const [items, setItems] = useState([])
   const [loadingItems, setLoadingItems] = useState(false)
-  const [fetchingFeed, setFetchingFeed] = useState(null) // feed id currently refreshing
+  const [refreshing, setRefreshing] = useState(false) // server poll in flight
   const [error, setError] = useState(null)
   const [savingItem, setSavingItem] = useState(null) // item id being saved
   const [saveTopicId, setSaveTopicId] = useState('')
@@ -42,7 +41,7 @@ export default function FeedView({ supabase, topics, onSaveItem, addToast }) {
   const [addBusy, setAddBusy] = useState(false)
   const [addError, setAddError] = useState(null)
   const [packBusy, setPackBusy] = useState(false)
-  const fetchedRef = useRef(new Set()) // feed ids fetched this session
+  const polledRef = useRef(false) // whether we've triggered a server poll this session
 
   const nonInbox = topics.filter((t) => t.name !== 'Inbox')
 
@@ -55,8 +54,15 @@ export default function FeedView({ supabase, topics, onSaveItem, addToast }) {
   // reload items when selected feed changes
   useEffect(() => {
     loadItems(selectedFeedId)
-    maybeRefreshFeed(selectedFeedId)
-  }, [selectedFeedId, feeds])
+  }, [selectedFeedId])
+
+  // once feeds are loaded, poll the server if anything is stale
+  useEffect(() => {
+    if (polledRef.current || feeds.length === 0) return
+    const anyStale = feeds.some((f) =>
+      !f.last_fetched_at || Date.now() - new Date(f.last_fetched_at).getTime() > STALE_MS)
+    if (anyStale) { polledRef.current = true; serverRefresh() }
+  }, [feeds])
 
   async function loadFeeds() {
     const [f, c] = await Promise.all([
@@ -79,37 +85,28 @@ export default function FeedView({ supabase, topics, onSaveItem, addToast }) {
     setLoadingItems(false)
   }
 
-  // fetch from network if feed is stale and hasn't been fetched this session
-  async function maybeRefreshFeed(feedId) {
-    const toRefresh = feedId
-      ? feeds.filter((f) => f.id === feedId)
-      : feeds
-
-    for (const feed of toRefresh) {
-      if (feed.kind === 'reddit') continue // server-polled only (score filter)
-      const stale = !feed.last_fetched_at ||
-        Date.now() - new Date(feed.last_fetched_at).getTime() > STALE_MS
-      if (!stale || fetchedRef.current.has(feed.id)) continue
-
-      fetchedRef.current.add(feed.id)
-      setFetchingFeed(feed.id)
-      try {
-        const fetched = await fetchFeedItems(feed.url)
-        await upsertFeedItems(supabase, feed.id, fetched)
-        await markFeedFetched(supabase, feed.id)
-        await loadItems(selectedFeedId)
-        const c = await getFeedItemCounts(supabase)
-        setCounts(c)
-      } catch {
-        // silent — stale feed shouldn't break the view
-      }
-      setFetchingFeed(null)
+  // Poll all of the user's feeds server-side (reliable, handles Reddit, no
+  // browser CORS), then reload what's on screen.
+  async function serverRefresh() {
+    if (refreshing || feeds.length === 0) return
+    setRefreshing(true)
+    setError(null)
+    try {
+      const { error: fnErr } = await supabase.functions.invoke('fetch-feeds')
+      if (fnErr) throw fnErr
+    } catch {
+      setError('Could not refresh feeds right now. Try again in a moment.')
     }
+    await loadItems(selectedFeedId)
+    const [f, c] = await Promise.all([listFeeds(supabase), getFeedItemCounts(supabase)])
+    setFeeds(f)
+    setCounts(c)
+    setRefreshing(false)
   }
 
-  async function handleRefresh(feed) {
-    fetchedRef.current.delete(feed.id)
-    await maybeRefreshFeed(feed.id)
+  async function handleRefresh() {
+    polledRef.current = true
+    await serverRefresh()
   }
 
   async function handleDismiss(item) {
@@ -167,8 +164,10 @@ export default function FeedView({ supabase, topics, onSaveItem, addToast }) {
     setPackBusy(true)
     try {
       const added = await addStarterFeeds(supabase, STARTER_PACK)
-      addToast?.(added.length ? `Added ${added.length} sources — items arrive on the next poll` : 'Already following all starter sources')
+      addToast?.(added.length ? `Added ${added.length} sources — fetching now…` : 'Already following all starter sources')
       await loadFeeds()
+      polledRef.current = true
+      await serverRefresh()
     } catch (err) {
       addToast?.(`Failed to add starter pack: ${err.message}`, 'error')
     }
@@ -198,11 +197,19 @@ export default function FeedView({ supabase, topics, onSaveItem, addToast }) {
       <div className="feed-sidebar">
         <div className="feed-sidebar-header">
           <span className="section-label" style={{ margin: 0 }}>feeds</span>
-          <button
-            className="feed-add-btn"
-            onClick={() => setShowAddFeed((v) => !v)}
-            title="Add feed"
-          >+</button>
+          <div style={{ display: 'flex', gap: 4 }}>
+            <button
+              className="feed-add-btn"
+              onClick={handleRefresh}
+              disabled={refreshing || feeds.length === 0}
+              title="Refresh all feeds"
+            >{refreshing ? '…' : '↻'}</button>
+            <button
+              className="feed-add-btn"
+              onClick={() => setShowAddFeed((v) => !v)}
+              title="Add feed"
+            >+</button>
+          </div>
         </div>
 
         {showAddFeed && (
@@ -253,16 +260,10 @@ export default function FeedView({ supabase, topics, onSaveItem, addToast }) {
                   >
                     <span className="feed-nav-name">{feed.name}</span>
                     <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      {fetchingFeed === feed.id && <span className="feed-spinner" />}
                       {counts[feed.id] > 0 && <span className="feed-count">{counts[feed.id]}</span>}
                     </span>
                   </button>
                   <div className="feed-nav-actions">
-                    <button
-                      className="feed-action-btn"
-                      onClick={() => handleRefresh(feed)}
-                      title="Refresh"
-                    >↻</button>
                     <button
                       className="feed-action-btn"
                       onClick={() => handleDeleteFeed(feed)}
@@ -280,7 +281,11 @@ export default function FeedView({ supabase, topics, onSaveItem, addToast }) {
       <div className="feed-items">
         {error && <p className="muted" style={{ padding: '24px 32px', fontSize: '0.8rem' }}>{error}</p>}
 
-        {!error && !loadingItems && items.length === 0 && (
+        {refreshing && items.length === 0 && (
+          <p className="muted" style={{ padding: '24px 32px', fontSize: '0.8rem' }}>fetching latest…</p>
+        )}
+
+        {!error && !loadingItems && !refreshing && items.length === 0 && (
           <div className="feed-empty">
             <p className="muted">
               {feeds.length === 0

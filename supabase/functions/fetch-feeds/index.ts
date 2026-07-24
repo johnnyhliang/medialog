@@ -6,8 +6,14 @@ import { parseFeed } from 'https://deno.land/x/rss@1.0.0/mod.ts'
 const FOURTEEN_DAYS = 14 * 24 * 60 * 60 * 1000
 const UA = 'medialog-feed-bot/1.0'
 
+const cors = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-cron-secret',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+}
+
 const json = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } })
+  new Response(JSON.stringify(body), { status, headers: { ...cors, 'content-type': 'application/json' } })
 
 interface Item {
   title: string
@@ -74,21 +80,39 @@ async function fetchReddit(feedUrl: string, minScore: number): Promise<Item[]> {
 }
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response(null, { status: 204 })
-
-  const cronSecret = Deno.env.get('CRON_SECRET')
-  if (cronSecret) {
-    if (req.headers.get('X-Cron-Secret') !== cronSecret) {
-      return json({ error: 'forbidden' }, 403)
-    }
-  }
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
 
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL')!,
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
   )
 
-  const { data: feeds, error: feedsErr } = await supabase.from('feeds').select('*')
+  // Two callers:
+  //   1. Scheduled cron with X-Cron-Secret → polls EVERY user's feeds.
+  //   2. A logged-in user from the app (Authorization bearer) → polls only
+  //      their own feeds, on demand (this is what makes the Feed view load).
+  const cronSecret = Deno.env.get('CRON_SECRET')
+  const authHeader = req.headers.get('Authorization')
+  let targetUserId: string | null = null
+
+  if (cronSecret && req.headers.get('X-Cron-Secret') === cronSecret) {
+    targetUserId = null // all users
+  } else if (authHeader) {
+    const authed = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_ANON_KEY')!,
+      { global: { headers: { Authorization: authHeader } } },
+    )
+    const { data: { user } } = await authed.auth.getUser()
+    if (!user) return json({ error: 'unauthorized' }, 401)
+    targetUserId = user.id
+  } else {
+    return json({ error: 'forbidden' }, 403)
+  }
+
+  const feedsQuery = supabase.from('feeds').select('*')
+  if (targetUserId) feedsQuery.eq('user_id', targetUserId)
+  const { data: feeds, error: feedsErr } = await feedsQuery
   if (feedsErr) return json({ error: feedsErr.message }, 500)
 
   const results: Record<string, string | number> = {}
