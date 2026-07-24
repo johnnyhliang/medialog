@@ -2067,6 +2067,9 @@ a.activity-title:hover { color: var(--accent); }
   display: flex;
   flex-direction: column;
   gap: 16px;
+  /* Sizing context for .topics-grid — it needs to react to this column's own
+     width, which varies with the widget panel and sidebar, not the viewport. */
+  container-type: inline-size;
 }
 
 .home-right {
@@ -2175,6 +2178,16 @@ a.activity-title:hover { color: var(--accent); }
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   gap: 12px;
+}
+
+/* Below two card tracks (2 x 150px + 12px gap) the grid collapses to one
+   column, where a 1fr card goes full-bleed and reads as a banner rather than a
+   card. Cap it to a card-ish width and centre the column instead. */
+@container (width < 312px) {
+  .topics-grid {
+    grid-template-columns: minmax(0, 260px);
+    justify-content: center;
+  }
 }
 
 .topics-grid-card-wrap {

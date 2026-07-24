@@ -20,8 +20,11 @@ const FOUNDER_IDS = (import.meta.env.VITE_FOUNDER_IDS || '')
 // site. Lets you see and test gated features locally regardless of account.
 export const isDev = import.meta.env.DEV
 
+// A DB-backed `is_founder` flag (loaded into the user object in App.jsx) is the
+// primary signal — it takes effect without a rebuild. VITE_FOUNDER_IDS stays as
+// a build-time fallback.
 export function isFounder(user) {
-  return Boolean(user && FOUNDER_IDS.includes(user.id))
+  return Boolean(user && (user.is_founder || FOUNDER_IDS.includes(user.id)))
 }
 
 // The gate the UI actually checks: a founder account, OR local dev.

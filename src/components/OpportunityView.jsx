@@ -80,6 +80,7 @@ export default function OpportunityView({ supabase, onTrack, onUnreadCount }) {
   const [addTag, setAddTag] = useState('swe')
   const [showRead, setShowRead] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
   const [lastChecked, setLastChecked] = useState(null)
 
   const load = useCallback(async () => {
@@ -108,7 +109,30 @@ export default function OpportunityView({ supabase, onTrack, onUnreadCount }) {
     setLoading(false)
   }, [supabase])
 
-  useEffect(() => { load() }, [load])
+  // Server-side refresh of the shared opportunities table (GitHub/HN scrape),
+  // then reload. Throttled to once per 8h across visits via localStorage so
+  // opening the tab doesn't hammer the scraper.
+  const REFRESH_KEY = 'medialog_opps_last_fetch'
+  const REFRESH_MS = 8 * 60 * 60 * 1000
+
+  const refreshFromSource = useCallback(async (force = false) => {
+    if (refreshing) return
+    if (!force) {
+      const last = Number(localStorage.getItem(REFRESH_KEY) || 0)
+      if (Date.now() - last < REFRESH_MS) return
+    }
+    setRefreshing(true)
+    try {
+      const { error } = await supabase.functions.invoke('fetch-opportunities')
+      if (!error) {
+        localStorage.setItem(REFRESH_KEY, String(Date.now()))
+        await load()
+      }
+    } catch { /* leave existing items in place */ }
+    setRefreshing(false)
+  }, [supabase, refreshing, load])
+
+  useEffect(() => { load().then(() => refreshFromSource(false)) }, [load])
 
   // opportunity_state.user_id defaults to auth.uid(); the primary key makes these upserts.
   async function saveState(rows) {
@@ -203,8 +227,8 @@ export default function OpportunityView({ supabase, onTrack, onUnreadCount }) {
                 Mark all read
               </button>
             )}
-            <button className="opp-refresh-btn" onClick={load} disabled={loading}>
-              {loading ? 'Loading...' : 'Refresh'}
+            <button className="opp-refresh-btn" onClick={() => refreshFromSource(true)} disabled={loading || refreshing}>
+              {refreshing ? 'Fetching…' : loading ? 'Loading...' : 'Refresh'}
             </button>
             <button className="opp-add-btn" onClick={() => setShowAdd((v) => !v)}>+ add</button>
           </div>

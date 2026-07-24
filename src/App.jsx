@@ -219,7 +219,14 @@ function Workspace() {
   }, [])
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setUser(data?.user ?? null))
+    supabase.auth.getUser().then(async ({ data }) => {
+      const u = data?.user ?? null
+      if (!u) { setUser(null); return }
+      // Merge the DB-backed founder flag so gating works without a rebuild.
+      const { data: cfg } = await supabase
+        .from('user_configs').select('is_founder').eq('user_id', u.id).maybeSingle()
+      setUser({ ...u, is_founder: cfg?.is_founder ?? false })
+    })
     refreshTopics()
     refreshTags()
     const params = new URLSearchParams(window.location.search)

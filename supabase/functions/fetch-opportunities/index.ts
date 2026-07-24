@@ -3,7 +3,14 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { fetchGithub } from './github.ts'
 import type { Opportunity } from './hn.ts'
 
+const cors = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-cron-secret',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+}
+
 serve(async (req) => {
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
 
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL')!,
@@ -43,6 +50,6 @@ serve(async (req) => {
 
   return new Response(
     JSON.stringify({ fetched: github.length, filtered: filtered.length, inserted }),
-    { headers: { 'Content-Type': 'application/json' } }
+    { headers: { ...cors, 'Content-Type': 'application/json' } }
   )
 })
