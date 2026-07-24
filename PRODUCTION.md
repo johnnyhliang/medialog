@@ -124,4 +124,14 @@ for data-ownership reasons, never as the cheap option.
 6. Wire **Resend** for transactional email; verify digest + reset send from prod.
 7. Invite first users.
 
+
+Client-side end-to-end encryption (E2EE) fundamentally breaks your AI features. If entries are encrypted so the server can't read them, then the server can't embed them, can't chunk them, can't run semantic search, and the assistant can't read them. You cannot do RAG over ciphertext. It's a hard either/or:
+
+- E2EE → maximum privacy, "even we can't read your data" (great for the own-your-data thesis) → but no semantic search, no assistant. You'd be shipping Standard Notes, not the "memory that reads itself back."
+- Plaintext server-side (what you have) → all the AI works → but you and Supabase (and Gemini) can technically read the data. Encryption-at-rest (disk) is already on via Supabase, but that's not E2EE.
+
+The pragmatic middle ground, and the one I'd actually consider: encrypt the things you don't need to search (file attachments, maybe raw private journal entries flagged "private"), keep searchable notes plaintext. You E2EE the sensitive blobs, keep AI over the corpus. That's a real, shippable posture — and it means when you do add file uploads, encrypting those client-side is cheap and doesn't cost you any AI feature, because you weren't going to RAG over a PDF's bytes anyway.
+
+production ideas: this really isn't worth it at the moment because it would ruin the ai vec search and I would have to reimplemnet, not worth optimizing, but something worth later down the lineis
+
 Related docs: `IDEAS.md` (feature backlog), `docs/superpowers/specs/` (feature specs).

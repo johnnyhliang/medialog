@@ -9,7 +9,7 @@ export function mockSupabase(result) {
   const thenable = () => Object.assign(Promise.resolve(result), chain)
   for (const m of [
     'select', 'insert', 'update', 'delete', 'upsert',
-    'eq', 'neq', 'or', 'is', 'not', 'in', 'gt', 'lt', 'gte', 'lte',
+    'eq', 'neq', 'or', 'is', 'not', 'in', 'gt', 'lt', 'gte', 'lte', 'ilike', 'like',
     'order', 'limit', 'range', 'match', 'filter', 'contains',
   ]) {
     chain[m] = vi.fn(thenable)

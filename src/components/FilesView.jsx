@@ -26,6 +26,7 @@ export default function FilesView({ supabase, onSelectEntry }) {
   const [files, setFiles] = useState([])
   const [loading, setLoading] = useState(true)
   const [sortBy, setSortBy] = useState('date')
+  const [nameQuery, setNameQuery] = useState('')
   const [pageSize, setPageSize] = useState(PAGE_SIZE)
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [userId, setUserId] = useState(null)
@@ -68,7 +69,13 @@ export default function FilesView({ supabase, onSelectEntry }) {
     await loadFiles()
   }
 
-  const sorted = sortFiles(files, sortBy)
+  // Match against the human-readable name (UUID prefix stripped) so a search
+  // for "invoice" finds "…-invoice.pdf".
+  const q = nameQuery.trim().toLowerCase()
+  const matched = q
+    ? files.filter((f) => f.name.replace(/^[0-9a-f-]{37}/, '').toLowerCase().includes(q))
+    : files
+  const sorted = sortFiles(matched, sortBy)
   const visible = sorted.slice(0, pageSize)
   const totalBytes = files.reduce((sum, f) => sum + (f.metadata?.size || 0), 0)
   const remaining = sorted.length - pageSize
@@ -82,6 +89,13 @@ export default function FilesView({ supabase, onSelectEntry }) {
       <h2 className="files-heading">Your Files</h2>
       <StorageBar totalBytes={totalBytes} capBytes={CAP_BYTES} />
 
+      <input
+        className="files-search-input"
+        placeholder="search by file name…"
+        value={nameQuery}
+        onChange={(e) => { setNameQuery(e.target.value); setPageSize(PAGE_SIZE) }}
+      />
+
       <div className="files-sort-row">
         <span className="files-sort-label muted">Sort by:</span>
         {['date', 'size', 'type'].map(s => (
@@ -93,11 +107,15 @@ export default function FilesView({ supabase, onSelectEntry }) {
             {s.charAt(0).toUpperCase() + s.slice(1)}
           </button>
         ))}
-        <span className="files-count muted">{files.length} file{files.length !== 1 ? 's' : ''}</span>
+        <span className="files-count muted">
+          {q ? `${matched.length} of ${files.length}` : `${files.length} file${files.length !== 1 ? 's' : ''}`}
+        </span>
       </div>
 
       {files.length === 0 ? (
         <p className="muted files-empty">No files uploaded yet.</p>
+      ) : matched.length === 0 ? (
+        <p className="muted files-empty">No files matching “{nameQuery}”.</p>
       ) : (
         <>
           <div className="files-list">

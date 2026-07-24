@@ -71,15 +71,48 @@ export async function bulkCreateEntries(supabase, topicId, items) {
 }
 
 export async function searchEntries(supabase, query) {
-  const { data, error } = await supabase
+  // Plain substring match over note + title…
+  const textQ = supabase
     .from('entries')
     .select(`${TAG_SELECT}, topics(name)`)
     .is('deleted_at', null)
     .or(buildSearchFilter(query))
     .or('surface_after.is.null,surface_after.lte.now()')
     .order('created_at', { ascending: false })
+
+  // …plus entries carrying a tag whose name matches the query, so typing a tag
+  // name in the search bar finds by tag (not just note/title text).
+  const safe = query.replace(/[,()"\\*%_]/g, '').trim()
+  const tagQ = safe
+    ? supabase.from('entry_tags').select('entry_id, tags!inner(name)').ilike('tags.name', `%${safe}%`)
+    : Promise.resolve({ data: [] })
+
+  const [{ data, error }, { data: tagRows }] = await Promise.all([textQ, tagQ])
   if (error) throw new Error(error.message)
-  return data.map((row) => ({ ...flattenTags(row), topicName: row.topics?.name ?? null }))
+
+  const rows = data ?? []
+  const have = new Set(rows.map((r) => r.id))
+  const extraIds = [...new Set((tagRows ?? []).map((r) => r.entry_id))].filter((id) => !have.has(id))
+
+  let extra = []
+  if (extraIds.length) {
+    const { data: ed } = await supabase
+      .from('entries')
+      .select(`${TAG_SELECT}, topics(name)`)
+      .in('id', extraIds)
+      .is('deleted_at', null)
+      .or('surface_after.is.null,surface_after.lte.now()')
+    extra = ed ?? []
+  }
+
+  const merged = []
+  const seen = new Set()
+  for (const row of [...rows, ...extra]) {
+    if (seen.has(row.id)) continue
+    seen.add(row.id)
+    merged.push({ ...flattenTags(row), topicName: row.topics?.name ?? null })
+  }
+  return merged
 }
 
 export async function listForRevisit(supabase, limit) {

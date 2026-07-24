@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
-import { ArrowLeft, CornerDownRight } from 'lucide-react'
+import { ArrowLeft, CornerDownRight, Download } from 'lucide-react'
 import { getDeepTopic, addSection, setCursor, setSectionStatus, addTakeaway } from '../lib/db/deepTopics.js'
+import { buildDeepTopicMarkdown, topicFilename } from '../lib/exportMarkdown.js'
+import { downloadBlob } from '../lib/buildZip.js'
 import PdfViewer from './PdfViewer.jsx'
 
 export default function DeepTopicView({ supabase, topicId, onBack, addToast }) {
@@ -63,6 +65,11 @@ export default function DeepTopicView({ supabase, topicId, onBack, addToast }) {
     catch (e) { addToast?.(e.message, 'error') }
   }
 
+  function handleExport() {
+    const md = buildDeepTopicMarkdown(data)
+    downloadBlob(new Blob([md], { type: 'text/markdown' }), topicFilename(topic.name))
+  }
+
   return (
     <div className="dt-view">
       <div className="dt-header">
@@ -71,6 +78,7 @@ export default function DeepTopicView({ supabase, topicId, onBack, addToast }) {
         <div className="dt-tabs">
           <button className={tab === 'read' ? 'active' : ''} onClick={() => setTab('read')}>read</button>
           <button className={tab === 'learned' ? 'active' : ''} onClick={() => setTab('learned')}>what I learned</button>
+          <button onClick={handleExport} title="Export as Markdown"><Download size={14} /></button>
         </div>
       </div>
 

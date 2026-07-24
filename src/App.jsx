@@ -19,7 +19,7 @@ import { fetchTitle, fetchLinkPreview } from './lib/enrich.js'
 import { chunkEntryAsync } from './lib/chunkEntry.js'
 import { runBackup } from './lib/db/githubBackup.js'
 import { showFounderFeatures } from './lib/account.js'
-import { buildMarkdownFiles } from './lib/exportMarkdown.js'
+import { buildMarkdownFiles, buildTopicMarkdown, topicFilename } from './lib/exportMarkdown.js'
 import { buildZip, downloadBlob } from './lib/buildZip.js'
 import AuthGate from './components/AuthGate.jsx'
 import TopicList from './components/TopicList.jsx'
@@ -896,6 +896,17 @@ function Workspace() {
     downloadBlob(blob, `medialog-${new Date().toISOString().slice(0, 10)}.zip`)
   }
 
+  // Single topic → single .md, sized to drop straight into a Claude Project.
+  async function handleExportTopic(topic) {
+    try {
+      const rows = await listEntriesByTopic(supabase, topic.id)
+      const md = buildTopicMarkdown(topic, rows)
+      downloadBlob(new Blob([md], { type: 'text/markdown' }), topicFilename(topic.name))
+    } catch (e) {
+      addToast(e.message, 'error')
+    }
+  }
+
   return (
     <div className={`app${sidebarOpen ? '' : ' sidebar-collapsed'}`}>
       <header className="mobile-topbar">
@@ -1011,6 +1022,7 @@ function Workspace() {
               onArchiveTopic={handleArchiveTopic}
               onUnarchiveTopic={handleUnarchiveTopic}
               onDeleteTopic={handleDeleteTopic}
+              onExportTopic={handleExportTopic}
               focusedEntryId={focusedEntryId}
               editTargetId={editTargetId}
               onClearEditTarget={() => setEditTargetId(null)}

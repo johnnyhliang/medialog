@@ -18,4 +18,5 @@ supabase/.temp/
 # session exports — local showcase artifacts, not repo content
 medialog-session-export.md
 medialog-session-highlights.md
+session-log-*.md
 distilled/

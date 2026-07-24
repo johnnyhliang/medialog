@@ -2721,6 +2721,26 @@ a.activity-title:hover { color: var(--accent); }
   color: var(--danger);
   padding: 8px 0 4px;
 }
+.explore-embed-dot {
+  font-size: 10px;
+  line-height: 1;
+  margin-left: 6px;
+  color: var(--border);
+  cursor: help;
+}
+.explore-embed-dot.is-embedded { color: var(--accent); }
+
+.files-search-input {
+  width: 100%;
+  padding: 8px 12px;
+  margin: 4px 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: var(--text-sm);
+}
+.files-search-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-weak); outline: none; }
 
 .explore-filters {
   display: flex;

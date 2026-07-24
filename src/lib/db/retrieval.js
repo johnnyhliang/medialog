@@ -123,6 +123,24 @@ export async function relatedTo(supabase, { entryId, topK = 5 } = {}) {
   )
 }
 
+// Flag which entries have embeddings (rows in content_chunks). Keyword search
+// can return entries that were never chunked; the marker tells the user which
+// results the semantic engine can actually reach. Best-effort — on any error we
+// return the entries unchanged rather than break search.
+export async function annotateEmbedded(supabase, entries) {
+  if (!entries?.length) return entries ?? []
+  try {
+    const { data } = await supabase
+      .from('content_chunks')
+      .select('entry_id')
+      .in('entry_id', entries.map((e) => e.id))
+    const embedded = new Set((data ?? []).map((r) => r.entry_id))
+    return entries.map((e) => ({ ...e, embedded: embedded.has(e.id) }))
+  } catch {
+    return entries
+  }
+}
+
 // Collapse passage hits to one row per entry, keeping the highest-ranked
 // passage (the input is already rank-ordered by search_chunks).
 export function bestPerEntry(hits) {

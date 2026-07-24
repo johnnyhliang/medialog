@@ -29,6 +29,7 @@ export default function TopicView({
   onArchiveTopic,
   onUnarchiveTopic,
   onDeleteTopic,
+  onExportTopic,
   focusedEntryId,
   editTargetId,
   onClearEditTarget,
@@ -163,9 +164,12 @@ export default function TopicView({
       let pool = scope === 'doc' ? entries.filter((e) => docEmbedIds.has(e.id)) : entries
       result = fuzzyFind(query, pool, ['title', 'url', 'note'])
     }
-    // Hide done entries unless they're pending archive (timer still running)
-    return result.filter(e => e.status !== 'done' || pendingArchiveIds.has(e.id))
-  }, [entries, query, scope, docEmbedIds, globalSearchResults, filteredByTag, pendingArchiveIds])
+    // Browsing hides done entries (unless pending-archive timer is running).
+    // But an active search reaches them too — like `is:archived` on GitHub, you
+    // only see archived items when you actually ask for something.
+    const isSearching = inputVal.trim().length > 0
+    return result.filter(e => isSearching || e.status !== 'done' || pendingArchiveIds.has(e.id))
+  }, [entries, query, inputVal, scope, docEmbedIds, globalSearchResults, filteredByTag, pendingArchiveIds])
 
   useEffect(() => {
     onOrderedIds?.(filtered.map((e) => e.id))
@@ -196,29 +200,32 @@ export default function TopicView({
       <div className="topic-header">
         <h2>{topic.name}</h2>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          {topic.name !== 'Inbox' && (
-            <div className="topic-more-menu" ref={menuRef}>
-              <button
-                className="topic-more-trigger"
-                onClick={() => setMenuOpen((v) => !v)}
-                aria-label="Topic actions"
-                aria-expanded={menuOpen}
-              >⋯</button>
-              {menuOpen && (
-                <div className="topic-more-dropdown">
-                  {topic.archived_at ? (
-                    <button onClick={() => { setMenuOpen(false); onUnarchiveTopic?.(topic.id) }}>Unarchive topic</button>
-                  ) : (
-                    <button onClick={() => { setMenuOpen(false); onArchiveTopic?.(topic.id) }}>Archive topic</button>
-                  )}
-                  <button
-                    className="topic-more-danger"
-                    onClick={() => { setMenuOpen(false); setConfirmDelete(true) }}
-                  >Delete topic…</button>
-                </div>
-              )}
-            </div>
-          )}
+          <div className="topic-more-menu" ref={menuRef}>
+            <button
+              className="topic-more-trigger"
+              onClick={() => setMenuOpen((v) => !v)}
+              aria-label="Topic actions"
+              aria-expanded={menuOpen}
+            >⋯</button>
+            {menuOpen && (
+              <div className="topic-more-dropdown">
+                <button onClick={() => { setMenuOpen(false); onExportTopic?.(topic) }}>Export as Markdown</button>
+                {topic.name !== 'Inbox' && (
+                  <>
+                    {topic.archived_at ? (
+                      <button onClick={() => { setMenuOpen(false); onUnarchiveTopic?.(topic.id) }}>Unarchive topic</button>
+                    ) : (
+                      <button onClick={() => { setMenuOpen(false); onArchiveTopic?.(topic.id) }}>Archive topic</button>
+                    )}
+                    <button
+                      className="topic-more-danger"
+                      onClick={() => { setMenuOpen(false); setConfirmDelete(true) }}
+                    >Delete topic…</button>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
           {mode === 'doc' && (
             <div className="doc-width-btns">
               {[

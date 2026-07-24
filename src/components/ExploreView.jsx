@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { searchEntries, searchSemantic, listReadingQueue } from '../lib/db/entries.js'
+import { annotateEmbedded } from '../lib/db/retrieval.js'
 import { Search, BookOpen, Clock } from 'lucide-react'
 
 const STATUS_LABEL = { active: 'active', backlog: 'backlog' }
@@ -28,6 +29,14 @@ function EntryRow({ entry, onSelect }) {
         <span className="explore-row-title">
           {entry.title || entry.url || 'Untitled'}
         </span>
+        {entry.embedded != null && (
+          <span
+            className={`explore-embed-dot${entry.embedded ? ' is-embedded' : ''}`}
+            title={entry.embedded ? 'Indexed for semantic search' : 'Not yet embedded — semantic search can’t reach this'}
+          >
+            {entry.embedded ? '◆' : '◇'}
+          </span>
+        )}
         {entry.similarity != null && (
           <span className="explore-similarity">{Math.round(entry.similarity * 100)}%</span>
         )}
@@ -101,9 +110,10 @@ export default function ExploreView({ supabase, topics, onSelectEntry, onOrdered
     const delay = semanticMode ? 600 : 300
     timerRef.current = setTimeout(async () => {
       try {
-        const results = semanticMode
+        const raw = semanticMode
           ? await searchSemantic(supabase, query.trim())
           : await searchEntries(supabase, query.trim())
+        const results = await annotateEmbedded(supabase, raw)
         setSearchResults(results)
         saveRecentSearch(query.trim())
       } catch (e) {
@@ -152,7 +162,7 @@ export default function ExploreView({ supabase, topics, onSelectEntry, onOrdered
         <input
           ref={inputRef}
           className="explore-search-input"
-          placeholder="search titles, urls, notes, tags…"
+          placeholder={semanticMode ? 'ask by meaning — “notes about focus and burnout”…' : 'search titles, urls, notes, tags…'}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onFocus={() => setShowRecent(true)}
@@ -176,15 +186,13 @@ export default function ExploreView({ supabase, topics, onSelectEntry, onOrdered
           </div>
         )}
         {searching && <span className="explore-search-spinner" />}
-        {query && (
-          <button
-            className={`explore-semantic-btn${semanticMode ? ' explore-semantic-btn--on' : ''}`}
-            onClick={() => setSemanticMode((m) => !m)}
-            title="Toggle semantic search"
-          >
-            semantic
-          </button>
-        )}
+        <button
+          className={`explore-semantic-btn${semanticMode ? ' explore-semantic-btn--on' : ''}`}
+          onClick={() => setSemanticMode((m) => !m)}
+          title="Semantic search — finds by meaning across your whole library, not just literal words"
+        >
+          semantic
+        </button>
         {query && (
           <button className="explore-clear-btn" onClick={() => { setQuery(''); setSemanticMode(false) }}>×</button>
         )}
