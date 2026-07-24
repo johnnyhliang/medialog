@@ -14,16 +14,39 @@ import {
   CONTEXTUALIZE_MIN_CHUNKS, CONTEXTUALIZE_BATCH_SIZE, TASK_TYPE_DOCUMENT, EMBED_DIMS,
 } from '../src/lib/chunkConfig.js'
 
+import { existsSync, readFileSync } from 'node:fs'
+import { homedir } from 'node:os'
+import { join } from 'node:path'
+
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY
 const AI_BASE_URL = process.env.AI_BASE_URL
 const AI_API_KEY = process.env.AI_API_KEY
 const AI_MODEL = process.env.AI_MODEL
 
-for (const [k, v] of Object.entries({ VITE_SUPABASE_URL: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY: SERVICE_KEY, GEMINI_API_KEY })) {
+// Gemini key pool: ~/.gemini-keys (one per line) if present, else GEMINI_API_KEY.
+// The free tier is a per-KEY daily quota, so rotating across keys multiplies the
+// daily embedding budget — a 429 on one key advances to the next instead of
+// stalling the whole backfill.
+function loadKeys() {
+  const file = join(homedir(), '.gemini-keys')
+  if (existsSync(file)) {
+    const keys = readFileSync(file, 'utf8')
+      .split(/[\r\n,]+/).map((s) => s.trim()).filter(Boolean)
+      .map((s) => (s.includes('=') ? s.split('=').pop().trim() : s))
+      .filter((s) => s.length >= 30)
+    if (keys.length) return keys
+  }
+  return process.env.GEMINI_API_KEY ? [process.env.GEMINI_API_KEY] : []
+}
+const GEMINI_KEYS = loadKeys()
+let keyIdx = 0
+
+for (const [k, v] of Object.entries({ VITE_SUPABASE_URL: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY: SERVICE_KEY })) {
   if (!v) { console.error(`Set ${k}`); process.exit(1) }
 }
+if (!GEMINI_KEYS.length) { console.error('No Gemini key: set GEMINI_API_KEY or create ~/.gemini-keys'); process.exit(1) }
+console.log(`Gemini key pool: ${GEMINI_KEYS.length} key(s)`)
 const canContextualize = Boolean(AI_BASE_URL && AI_API_KEY && AI_MODEL)
 if (!canContextualize) {
   console.warn('AI_BASE_URL/AI_API_KEY/AI_MODEL not set — indexing WITHOUT contextual retrieval (lower quality).')
@@ -37,17 +60,19 @@ async function embedBatch(texts) {
   const out = []
   for (const text of texts) {
     let embedding = null
-    // Retry both the per-minute rate limit (429) AND transient network errors
-    // (a dropped connection throws from fetch). Resumable via source_hash, so an
-    // eventual give-up is safe — a re-run picks up whatever was missed.
-    for (let attempt = 0; attempt < 10; attempt++) {
+    // Retry the per-minute rate limit (429) and transient network errors. On a
+    // 429 we ALSO rotate to the next key — a daily-quota 429 won't clear by
+    // waiting, so advancing keys is what actually makes progress. Resumable via
+    // source_hash, so an eventual give-up is safe.
+    let rotationsWithoutProgress = 0
+    for (let attempt = 0; attempt < 10 + GEMINI_KEYS.length * 2; attempt++) {
       let res
       try {
         res = await fetch(
           'https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent',
           {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'x-goog-api-key': GEMINI_API_KEY },
+            headers: { 'Content-Type': 'application/json', 'x-goog-api-key': GEMINI_KEYS[keyIdx] },
             body: JSON.stringify({
               content: { parts: [{ text }] },
               output_dimensionality: EMBED_DIMS,
@@ -57,10 +82,19 @@ async function embedBatch(texts) {
         )
       } catch { await sleep(Math.min(30000, 3000 * (attempt + 1))); continue } // network drop
       if (res.ok) { embedding = (await res.json()).embedding.values; break }
-      if (res.status === 429) { await sleep(Math.min(60000, 5000 * (attempt + 1))); continue }
+      if (res.status === 429) {
+        // Move to the next key immediately. Only back off (short) once we've
+        // cycled through every key without one accepting the request.
+        keyIdx = (keyIdx + 1) % GEMINI_KEYS.length
+        if (++rotationsWithoutProgress >= GEMINI_KEYS.length) {
+          rotationsWithoutProgress = 0
+          await sleep(Math.min(60000, 5000 * (attempt + 1)))
+        }
+        continue
+      }
       throw new Error(`Gemini ${res.status}: ${(await res.text()).slice(0, 200)}`)
     }
-    if (!embedding) throw new Error('embed failed: retries exhausted (rate limit or network)')
+    if (!embedding) throw new Error('embed failed: retries exhausted (all keys rate-limited or network down)')
     out.push(embedding)
   }
   return out
