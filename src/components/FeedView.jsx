@@ -6,6 +6,7 @@ import {
   addStarterFeeds,
 } from '../lib/db/feeds.js'
 import { buildInterestProfile, sortByRelevance } from '../lib/feedRelevance.js'
+import { listRecentActivity } from '../lib/db/entries.js'
 import { STARTER_PACK } from '../lib/feedStarterPack.js'
 
 const STALE_MS = 60 * 60 * 1000 // re-fetch if older than 1 hour
@@ -25,8 +26,9 @@ function domain(url) {
   try { return new URL(url).hostname.replace(/^www\./, '') } catch { return url }
 }
 
-export default function FeedView({ supabase, topics, onSaveItem, addToast }) {
+export default function FeedView({ supabase, topics, allTags = [], onSaveItem, addToast }) {
   const [feeds, setFeeds] = useState([])
+  const [recentTitles, setRecentTitles] = useState([])
   const [counts, setCounts] = useState({})
   const [selectedFeedId, setSelectedFeedId] = useState(null) // null = all
   const [items, setItems] = useState([])
@@ -48,8 +50,12 @@ export default function FeedView({ supabase, topics, onSaveItem, addToast }) {
 
   const nonInbox = topics.filter((t) => t.name !== 'Inbox')
 
-  // Interest profile from the user's own topics — drives relevance ranking.
-  const interestProfile = useMemo(() => buildInterestProfile({ topics }), [topics])
+  // Interest profile from topics + tags + recurring words in recent entry
+  // titles — the sharper the signal, the better Relevant mode ranks.
+  const interestProfile = useMemo(
+    () => buildInterestProfile({ topics, tags: allTags, titles: recentTitles }),
+    [topics, allTags, recentTitles],
+  )
 
   // Items to render: text filter, then either newest (default query order) or
   // ranked against the interest profile.
@@ -66,6 +72,10 @@ export default function FeedView({ supabase, topics, onSaveItem, addToast }) {
   useEffect(() => {
     cullExpiredItems(supabase).catch(() => {})
     loadFeeds()
+    // Recent entry titles sharpen the relevance profile beyond topic names.
+    listRecentActivity(supabase, 60)
+      .then((rows) => setRecentTitles((rows ?? []).map((r) => r.title).filter(Boolean)))
+      .catch(() => {})
   }, [])
 
   // reload items when selected feed changes

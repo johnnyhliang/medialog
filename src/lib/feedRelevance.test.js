@@ -18,6 +18,17 @@ describe('feedRelevance', () => {
     expect(p.has('inbox')).toBe(false)
   })
 
+  test('title tokens only enter the profile when they recur (>=2 titles)', () => {
+    const p = buildInterestProfile({
+      topics: [],
+      tags: [],
+      titles: ['Kubernetes networking deep dive', 'Kubernetes operators', 'one-off headline'],
+    })
+    expect(p.has('kubernetes')).toBe(true) // appears in 2 titles
+    expect(p.has('networking')).toBe(false) // only 1 title
+    expect(p.has('headline')).toBe(false)
+  })
+
   test('scoreItem weighs title matches double', () => {
     const profile = new Set(['rust', 'compiler'])
     expect(scoreItem({ title: 'Rust compiler internals', summary: '' }, profile)).toBe(4)

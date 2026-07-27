@@ -1151,6 +1151,7 @@ function Workspace() {
             <FeedView
               supabase={supabase}
               topics={topics}
+              allTags={allTags}
               onSaveItem={handleSaveFromFeed}
               addToast={addToast}
             />

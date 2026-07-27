@@ -16,8 +16,11 @@ export function tokenize(text) {
     .filter((t) => t.length >= 3 && !STOPWORDS.has(t))
 }
 
-// A Set of interest terms drawn from topic names and tag names.
-export function buildInterestProfile({ topics = [], tags = [] } = {}) {
+// A Set of interest terms drawn from topic names, tag names, and recent entry
+// titles — the three cheapest signals of what the user actually cares about.
+// Title tokens only count once they recur (>=2 titles), so one-off words in a
+// single headline don't pollute the profile.
+export function buildInterestProfile({ topics = [], tags = [], titles = [] } = {}) {
   const terms = new Set()
   for (const t of topics) {
     if (!t?.name || t.name === 'Inbox') continue
@@ -27,6 +30,13 @@ export function buildInterestProfile({ topics = [], tags = [] } = {}) {
     const name = typeof tag === 'string' ? tag : tag?.name
     for (const tok of tokenize(name)) terms.add(tok)
   }
+  const titleCounts = new Map()
+  for (const title of titles) {
+    for (const tok of new Set(tokenize(title))) {
+      titleCounts.set(tok, (titleCounts.get(tok) ?? 0) + 1)
+    }
+  }
+  for (const [tok, n] of titleCounts) if (n >= 2) terms.add(tok)
   return terms
 }
 
