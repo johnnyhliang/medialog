@@ -44,8 +44,25 @@ export default function FeedView({ supabase, topics, allTags = [], onSaveItem, a
   const [addBusy, setAddBusy] = useState(false)
   const [addError, setAddError] = useState(null)
   const [packBusy, setPackBusy] = useState(false)
-  const [sortMode, setSortMode] = useState('new') // 'new' | 'relevant'
+  const [sortMode, setSortMode] = useState(() => {
+    try { return localStorage.getItem('medialog_feed_sort') || 'relevant' } catch { return 'relevant' }
+  })
+  const [hideLowSignal, setHideLowSignal] = useState(() => {
+    try { return localStorage.getItem('medialog_feed_hide_lowsignal') === 'true' } catch { return false }
+  })
   const [itemSearch, setItemSearch] = useState('')
+
+  function chooseSort(mode) {
+    setSortMode(mode)
+    try { localStorage.setItem('medialog_feed_sort', mode) } catch {}
+  }
+  function toggleHideLowSignal() {
+    setHideLowSignal((v) => {
+      const next = !v
+      try { localStorage.setItem('medialog_feed_hide_lowsignal', String(next)) } catch {}
+      return next
+    })
+  }
   const polledRef = useRef(false) // whether we've triggered a server poll this session
 
   const nonInbox = topics.filter((t) => t.name !== 'Inbox')
@@ -65,8 +82,14 @@ export default function FeedView({ supabase, topics, allTags = [], onSaveItem, a
       ? items.filter((it) =>
           `${it.title} ${it.summary ?? ''}`.toLowerCase().includes(q))
       : items
-    return sortMode === 'relevant' ? sortByRelevance(base, interestProfile) : base
-  }, [items, itemSearch, sortMode, interestProfile])
+    if (sortMode !== 'relevant') return base
+    const ranked = sortByRelevance(base, interestProfile)
+    // "only matches" hides zero-signal items (e.g. off-topic papers) — but only
+    // when the profile actually has terms, so it can't blank the whole feed.
+    return hideLowSignal && interestProfile.size > 0
+      ? ranked.filter((it) => it._relevance > 0)
+      : ranked
+  }, [items, itemSearch, sortMode, interestProfile, hideLowSignal])
 
   // on mount: cull expired items, load feeds + counts
   useEffect(() => {
@@ -317,14 +340,20 @@ export default function FeedView({ supabase, topics, allTags = [], onSaveItem, a
             <div className="feed-sort-toggle">
               <button
                 className={`feed-sort-btn${sortMode === 'new' ? ' active' : ''}`}
-                onClick={() => setSortMode('new')}
+                onClick={() => chooseSort('new')}
               >Newest</button>
               <button
                 className={`feed-sort-btn${sortMode === 'relevant' ? ' active' : ''}`}
-                onClick={() => setSortMode('relevant')}
-                title="Rank by overlap with your topics"
+                onClick={() => chooseSort('relevant')}
+                title="Rank by overlap with your topics, tags, and recent reading"
               >Relevant</button>
             </div>
+            {sortMode === 'relevant' && (
+              <label className="feed-only-matches" title="Hide items that don't match your interests (e.g. off-topic papers)">
+                <input type="checkbox" checked={hideLowSignal} onChange={toggleHideLowSignal} />
+                only matches
+              </label>
+            )}
           </div>
         )}
 
@@ -350,7 +379,11 @@ export default function FeedView({ supabase, topics, allTags = [], onSaveItem, a
         )}
 
         {!refreshing && items.length > 0 && displayItems.length === 0 && (
-          <p className="muted" style={{ padding: '24px 32px', fontSize: '0.8rem' }}>no items match “{itemSearch}”.</p>
+          <p className="muted" style={{ padding: '24px 32px', fontSize: '0.8rem' }}>
+            {itemSearch
+              ? `no items match “${itemSearch}”.`
+              : 'nothing matches your interests right now — untick “only matches” to see everything.'}
+          </p>
         )}
 
         {displayItems.map((item) => (
