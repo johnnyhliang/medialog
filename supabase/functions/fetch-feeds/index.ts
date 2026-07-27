@@ -143,9 +143,13 @@ Deno.serve(async (req) => {
 
   for (const feed of feeds ?? []) {
     try {
-      const items = feed.kind === 'reddit'
+      // Keep only the newest N per source so a firehose (e.g. arXiv ~400/pull)
+      // doesn't drown everything else. Feeds arrive newest-first.
+      const MAX_PER_FEED = 40
+      const all = feed.kind === 'reddit'
         ? await fetchReddit(feed.url)
         : await fetchXml(feed.url)
+      const items = all.slice(0, MAX_PER_FEED)
 
       if (items.length > 0) {
         const rows = items.map((it) => ({

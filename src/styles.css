@@ -3283,6 +3283,26 @@ a.iv-problem-title:hover { color: var(--accent); }
 }
 .career-tab-panel { flex: 1; overflow-y: auto; }
 
+/* Feed toolbar: search + relevance sort */
+.feed-toolbar {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 32px; border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; background: var(--bg); z-index: 1;
+}
+.feed-item-search {
+  flex: 1; padding: 6px 10px; border: 1px solid var(--border);
+  border-radius: 7px; background: var(--surface); color: var(--text);
+  font-size: var(--text-sm);
+}
+.feed-item-search:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-weak); outline: none; }
+.feed-sort-toggle { display: inline-flex; border: 1px solid var(--border); border-radius: 7px; overflow: hidden; }
+.feed-sort-btn {
+  padding: 6px 12px; background: var(--surface); border: none; cursor: pointer;
+  font-size: var(--text-xs); color: var(--muted);
+}
+.feed-sort-btn.active { background: var(--accent-weak); color: var(--accent); font-weight: 600; }
+.feed-item-relevance { color: var(--accent); font-size: var(--text-xs); font-variant-numeric: tabular-nums; }
+
 /* Boards */
 .boards-tab { padding: 16px 20px; max-width: 760px; }
 .boards-intro { font-size: var(--text-sm); margin: 0 0 18px; }

@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   listFeeds, createFeed, deleteFeed,
   listFeedItems, dismissFeedItem,
   markFeedItemSaved, cullExpiredItems, getFeedItemCounts,
   addStarterFeeds,
 } from '../lib/db/feeds.js'
+import { buildInterestProfile, sortByRelevance } from '../lib/feedRelevance.js'
 import { STARTER_PACK } from '../lib/feedStarterPack.js'
 
 const STALE_MS = 60 * 60 * 1000 // re-fetch if older than 1 hour
@@ -41,9 +42,25 @@ export default function FeedView({ supabase, topics, onSaveItem, addToast }) {
   const [addBusy, setAddBusy] = useState(false)
   const [addError, setAddError] = useState(null)
   const [packBusy, setPackBusy] = useState(false)
+  const [sortMode, setSortMode] = useState('new') // 'new' | 'relevant'
+  const [itemSearch, setItemSearch] = useState('')
   const polledRef = useRef(false) // whether we've triggered a server poll this session
 
   const nonInbox = topics.filter((t) => t.name !== 'Inbox')
+
+  // Interest profile from the user's own topics — drives relevance ranking.
+  const interestProfile = useMemo(() => buildInterestProfile({ topics }), [topics])
+
+  // Items to render: text filter, then either newest (default query order) or
+  // ranked against the interest profile.
+  const displayItems = useMemo(() => {
+    const q = itemSearch.trim().toLowerCase()
+    const base = q
+      ? items.filter((it) =>
+          `${it.title} ${it.summary ?? ''}`.toLowerCase().includes(q))
+      : items
+    return sortMode === 'relevant' ? sortByRelevance(base, interestProfile) : base
+  }, [items, itemSearch, sortMode, interestProfile])
 
   // on mount: cull expired items, load feeds + counts
   useEffect(() => {
@@ -279,6 +296,28 @@ export default function FeedView({ supabase, topics, onSaveItem, addToast }) {
 
       {/* ── items panel ── */}
       <div className="feed-items">
+        {items.length > 0 && (
+          <div className="feed-toolbar">
+            <input
+              className="feed-item-search"
+              placeholder="filter these items…"
+              value={itemSearch}
+              onChange={(e) => setItemSearch(e.target.value)}
+            />
+            <div className="feed-sort-toggle">
+              <button
+                className={`feed-sort-btn${sortMode === 'new' ? ' active' : ''}`}
+                onClick={() => setSortMode('new')}
+              >Newest</button>
+              <button
+                className={`feed-sort-btn${sortMode === 'relevant' ? ' active' : ''}`}
+                onClick={() => setSortMode('relevant')}
+                title="Rank by overlap with your topics"
+              >Relevant</button>
+            </div>
+          </div>
+        )}
+
         {error && <p className="muted" style={{ padding: '24px 32px', fontSize: '0.8rem' }}>{error}</p>}
 
         {refreshing && items.length === 0 && (
@@ -300,12 +339,19 @@ export default function FeedView({ supabase, topics, onSaveItem, addToast }) {
           </div>
         )}
 
-        {items.map((item) => (
+        {!refreshing && items.length > 0 && displayItems.length === 0 && (
+          <p className="muted" style={{ padding: '24px 32px', fontSize: '0.8rem' }}>no items match “{itemSearch}”.</p>
+        )}
+
+        {displayItems.map((item) => (
           <div key={item.id} className="feed-item">
             <div className="feed-item-meta">
               <span className="feed-item-source">{item.feeds?.name || domain(item.url)}</span>
               <span className="feed-item-sep">·</span>
               <span className="feed-item-age">{timeAgo(item.published_at) || '—'}</span>
+              {sortMode === 'relevant' && item._relevance > 0 && (
+                <span className="feed-item-relevance" title="matches your topics">★ {item._relevance}</span>
+              )}
             </div>
             <a
               href={item.url}
