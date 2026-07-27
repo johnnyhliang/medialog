@@ -29,6 +29,16 @@ test('scoped search filters the entry list', async () => {
   }, { timeout: 1000 })
 })
 
+test('scoped search uses literal substring matching, not fuzzy matching', async () => {
+  render(<TopicView {...props} entries={[
+    { id: 'e1', title: 'React notes', note: 'hooks and render timing', url: null, tags: [], created_at: new Date().toISOString() },
+  ]} />)
+  await userEvent.type(screen.getByPlaceholderText(/search/i), 'rct')
+  await waitFor(() => {
+    expect(screen.queryByText('React notes')).not.toBeInTheDocument()
+  }, { timeout: 1000 })
+})
+
 test('view toggle shows/hides the master doc editor', async () => {
   render(<TopicView {...props} />)
   // default for a topic with empty doc is List → no editor

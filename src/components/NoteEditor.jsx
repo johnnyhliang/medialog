@@ -2,7 +2,7 @@ import { useMemo, useState, useRef, useEffect } from 'react'
 import { Bold, Italic, Heading, List, ListChecks, Link2, Quote, Code, Paperclip } from 'lucide-react'
 import CodeMirror from '@uiw/react-codemirror'
 import { uploadAttachment, markdownForAttachment, isAllowedAttachment } from '../lib/storage.js'
-import { showFounderFeatures } from '../lib/account.js'
+import { showFounderUploads } from '../lib/account.js'
 import { markdown, markdownLanguage, insertNewlineContinueMarkup, deleteMarkupBackward } from '@codemirror/lang-markdown'
 import { languages } from '@codemirror/language-data'
 import { keymap } from '@codemirror/view'
@@ -144,13 +144,12 @@ export default function NoteEditor({ value, onChange, supabase, extraExtensions 
   const viewRef = useRef(null)
   const fileRef = useRef(null)
   const [uploading, setUploading] = useState(false)
-  // Uploads are founder-only. Determined here rather than threaded as a prop,
-  // since NoteEditor renders from many places (cards, topic docs). isDev makes
-  // it true locally; in prod it checks the signed-in user against VITE_FOUNDER_IDS.
-  const [canUpload, setCanUpload] = useState(() => showFounderFeatures(null))
+  // Uploads are founder-only at the Storage RLS layer. Keep the UI aligned with
+  // that stricter gate even while other founder surfaces are public-facing.
+  const [canUpload, setCanUpload] = useState(() => showFounderUploads(null))
   useEffect(() => {
     if (!supabase) return
-    supabase.auth.getUser().then(({ data }) => setCanUpload(showFounderFeatures(data?.user ?? null)))
+    supabase.auth.getUser().then(({ data }) => setCanUpload(showFounderUploads(data?.user ?? null)))
   }, [supabase])
   const fmt = (fn) => () => { if (viewRef.current) fn(viewRef.current) }
   const FORMATS = [

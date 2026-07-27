@@ -766,6 +766,38 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
   font-feature-settings: 'kern' 1, 'liga' 1;
 }
 .card-title:hover { color: var(--accent); text-decoration: none; }
+.search-hit {
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  color: inherit;
+  border-radius: 3px;
+  padding: 0 2px;
+}
+
+.entry-search-snippets {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 4px 0 8px;
+  color: var(--muted);
+  font-size: var(--text-xs);
+  line-height: 1.45;
+}
+.entry-search-snippet {
+  display: flex;
+  gap: 6px;
+  margin: 0;
+  min-width: 0;
+}
+.entry-search-snippet-label {
+  flex: 0 0 auto;
+  color: var(--accent);
+  font-weight: 600;
+}
+.entry-search-snippet span:last-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
 /* ── Title row (link + edit button) ───────────────────────────────────────── */
 .card-title-row { margin-bottom: 2px; }
@@ -4966,6 +4998,10 @@ a.digest-item-title:hover { text-decoration: underline; }
   padding-left: 10px;
 }
 .explore-passage-heading { color: var(--accent); font-weight: 500; }
+.entry-search-snippets--explore {
+  margin: 4px 0 0 24px;
+  font-size: var(--text-sm);
+}
 
 /* ── Related entries footer ── */
 .rel-wrap { margin-top: 10px; }

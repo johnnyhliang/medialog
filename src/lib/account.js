@@ -1,33 +1,33 @@
-// Founder / dev gating for features that aren't multi-tenant yet.
+import { DEFAULT_FEATURE_FLAGS } from './featureFlags.js'
+
+// Founder / dev gating.
 //
-// Some surfaces are wired to a single account server-side — the `capture` and
-// `fetch-reels` edge functions write to CAPTURE_USER_ID, so the job/career
-// pipeline only does something useful for the founder. Rather than show a
-// button that silently does nothing for everyone else, gate those views.
-//
-// Two independent switches:
-//   - VITE_FOUNDER_IDS: comma-separated auth user ids that get founder features
-//     in production. Set it in .env.local AND in the Vercel dashboard.
-//   - import.meta.env.DEV: true under `npm run dev`, false in a prod build — so
-//     running locally always shows founder features without needing your id.
+// Switches:
+// - app_flags.founder_features_public: runtime public rollout flag. Defaults on,
+//   and can be turned off from Supabase without a frontend rebuild.
+// - VITE_FOUNDER_FEATURES_PUBLIC=false: build-time fallback/off switch.
+// - VITE_FOUNDER_IDS: comma-separated auth user ids that retain founder access.
+// - import.meta.env.DEV: local dev always shows gated tools for testing.
 
 const FOUNDER_IDS = (import.meta.env.VITE_FOUNDER_IDS || '')
   .split(',')
   .map((s) => s.trim())
   .filter(Boolean)
 
-// True when running the local dev server (`npm run dev`); false in the built
-// site. Lets you see and test gated features locally regardless of account.
 export const isDev = import.meta.env.DEV
 
-// A DB-backed `is_founder` flag (loaded into the user object in App.jsx) is the
-// primary signal — it takes effect without a rebuild. VITE_FOUNDER_IDS stays as
-// a build-time fallback.
 export function isFounder(user) {
   return Boolean(user && (user.is_founder || FOUNDER_IDS.includes(user.id)))
 }
 
-// The gate the UI actually checks: a founder account, OR local dev.
-export function showFounderFeatures(user) {
+// Public-facing experimental surfaces: Career and Ask-your-library. They can be
+// turned off globally if signups or backend usage spike.
+export function showFounderFeatures(user, flags = DEFAULT_FEATURE_FLAGS) {
+  return isDev || Boolean(flags.founderFeaturesPublic) || isFounder(user)
+}
+
+// File uploads are still backend-enforced by Storage RLS, so only founder/dev
+// should see them until that policy is intentionally changed.
+export function showFounderUploads(user) {
   return isDev || isFounder(user)
 }

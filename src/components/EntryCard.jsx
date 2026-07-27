@@ -13,6 +13,7 @@ import { snoozeEntry, unsnoozeEntry } from '../lib/db/entries.js'
 import { fetchTitle } from '../lib/enrich.js'
 import { getYouTubeThumbnail } from '../lib/youtube.js'
 import { classifyUrl } from '../lib/classifyUrl.js'
+import { buildSearchPreview, splitHighlightParts } from '../lib/searchSnippets.js'
 
 const NoteEditor = lazy(() => import('./NoteEditor.jsx'))
 
@@ -51,7 +52,7 @@ function daysOld(dateStr) {
   return Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000)
 }
 
-export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChange, onTogglePin, onNoteSave, onPreview, onOpenRelated, onNoteVersion, onShowHistory, onTitleChange, moveTargets, onMove, tagColors, onEntryUpdate, supabase: supabaseClient, focused, forceExpand, onForceExpandDone }) {
+export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChange, onTogglePin, onNoteSave, onPreview, onOpenRelated, onNoteVersion, onShowHistory, onTitleChange, moveTargets, onMove, tagColors, onEntryUpdate, supabase: supabaseClient, focused, forceExpand, onForceExpandDone, searchQuery = '' }) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(entry.note || '')
   const [editingTitle, setEditingTitle] = useState(false)
@@ -83,6 +84,13 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
   const age = relativeAge(entry.created_at)
   const days = daysOld(entry.created_at)
   const noNoteAged = !entry.note && days >= 14
+  const searchPreview = searchQuery ? buildSearchPreview(entry, searchQuery) : null
+
+  function highlighted(text) {
+    return splitHighlightParts(text, searchQuery).map((part, i) => (
+      part.match ? <mark key={i} className="search-hit">{part.text}</mark> : <span key={i}>{part.text}</span>
+    ))
+  }
 
   useEffect(() => {
     if (!editing) return
@@ -285,10 +293,10 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
                       onError={(e) => { e.currentTarget.style.display = 'none' }}
                     />
                   )}
-                  {entry.title || entry.url}
+                  {searchQuery ? highlighted(entry.title || entry.url) : (entry.title || entry.url)}
                 </a>
               )
-              : <span className="card-title">{entry.title || <em className="muted">Untitled</em>}</span>
+              : <span className="card-title">{entry.title ? (searchQuery ? highlighted(entry.title) : entry.title) : <em className="muted">Untitled</em>}</span>
             }
             <button
               className="icon-btn card-title-edit-btn"
@@ -306,6 +314,17 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
           </div>
         )}
       </div>
+
+      {searchPreview?.snippets?.length > 0 && (
+        <div className="entry-search-snippets">
+          {searchPreview.snippets.map((snippet, i) => (
+            <p key={`${snippet.field}-${i}`} className="entry-search-snippet">
+              <span className="entry-search-snippet-label">{snippet.field}</span>
+              <span>{highlighted(snippet.text)}</span>
+            </p>
+          ))}
+        </div>
+      )}
 
       {/* YouTube thumbnail */}
       {thumb && !editing && (

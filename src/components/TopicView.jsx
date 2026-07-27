@@ -6,8 +6,8 @@ import QuickAdd from './QuickAdd.jsx'
 import ReturnButton from './ReturnButton.jsx'
 import ArchiveSection from './ArchiveSection.jsx'
 import ConfirmModal from './ConfirmModal.jsx'
-import { fuzzyFind } from '../lib/fuzzyFind.js'
 import { extractEmbedIds } from '../lib/embeds.js'
+import { entryMatchesLiteral } from '../lib/searchSnippets.js'
 
 const SCOPES = [
   { value: 'topic', label: 'This topic' },
@@ -159,10 +159,10 @@ export default function TopicView({
     if (filteredByTag !== null) {
       result = filteredByTag
     } else if (scope === 'all') {
-      result = globalSearchResults ?? fuzzyFind(query, entries, ['title', 'url', 'note'])
+      result = globalSearchResults ?? entries.filter((entry) => entryMatchesLiteral(entry, query))
     } else {
       let pool = scope === 'doc' ? entries.filter((e) => docEmbedIds.has(e.id)) : entries
-      result = fuzzyFind(query, pool, ['title', 'url', 'note'])
+      result = pool.filter((entry) => entryMatchesLiteral(entry, query))
     }
     // Browsing hides done entries (unless pending-archive timer is running).
     // But an active search reaches them too — like `is:archived` on GitHub, you
@@ -376,6 +376,7 @@ export default function TopicView({
           focusedEntryId={focusedEntryId}
           editTargetId={editTargetId}
           onClearEditTarget={onClearEditTarget}
+          searchQuery={inputVal.trim()}
         />
       </div>
 

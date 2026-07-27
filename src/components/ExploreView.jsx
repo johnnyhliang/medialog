@@ -2,16 +2,22 @@ import { useEffect, useRef, useState } from 'react'
 import { searchEntries, searchSemantic, listReadingQueue } from '../lib/db/entries.js'
 import { annotateEmbedded } from '../lib/db/retrieval.js'
 import { Search, BookOpen, Clock } from 'lucide-react'
+import { buildSearchPreview, splitHighlightParts } from '../lib/searchSnippets.js'
 
 const STATUS_LABEL = { active: 'active', backlog: 'backlog' }
 const STATUS_CLASS = { active: 'status-active', backlog: 'status-backlog' }
+const SEMANTIC_SEARCH_ENABLED = import.meta.env.VITE_SEMANTIC_SEARCH !== 'false'
 
 function faviconUrl(url) {
   try { return `https://www.google.com/s2/favicons?domain=${new URL(url).hostname}&sz=32` } catch { return null }
 }
 
-function EntryRow({ entry, onSelect }) {
+function EntryRow({ entry, onSelect, query = '' }) {
   const favicon = entry.url ? faviconUrl(entry.url) : null
+  const searchPreview = query ? buildSearchPreview(entry, query) : null
+  const highlighted = (text) => splitHighlightParts(text, query).map((part, i) => (
+    part.match ? <mark key={i} className="search-hit">{part.text}</mark> : <span key={i}>{part.text}</span>
+  ))
   return (
     <div className="explore-row" onClick={() => onSelect?.(entry)}>
       <div className="explore-row-main">
@@ -27,7 +33,7 @@ function EntryRow({ entry, onSelect }) {
           <span className="explore-favicon explore-favicon--note">✎</span>
         )}
         <span className="explore-row-title">
-          {entry.title || entry.url || 'Untitled'}
+          {query ? highlighted(entry.title || entry.url || 'Untitled') : (entry.title || entry.url || 'Untitled')}
         </span>
         {entry.embedded != null && (
           <span
@@ -49,6 +55,16 @@ function EntryRow({ entry, onSelect }) {
           {entry.passageHeading && <span className="explore-passage-heading">{entry.passageHeading} · </span>}
           {entry.passage.length > 220 ? `${entry.passage.slice(0, 220).trimEnd()}…` : entry.passage}
         </p>
+      )}
+      {!entry.passage && searchPreview?.snippets?.length > 0 && (
+        <div className="entry-search-snippets entry-search-snippets--explore">
+          {searchPreview.snippets.map((snippet, i) => (
+            <p key={`${snippet.field}-${i}`} className="entry-search-snippet">
+              <span className="entry-search-snippet-label">{snippet.field}</span>
+              <span>{highlighted(snippet.text)}</span>
+            </p>
+          ))}
+        </div>
       )}
       <div className="explore-row-meta">
         {entry.topicName && <span className="explore-topic-pill">{entry.topicName}</span>}
@@ -107,17 +123,18 @@ export default function ExploreView({ supabase, topics, onSelectEntry, onOrdered
     if (!query.trim()) { setSearchResults(null); setSemanticError(null); return }
     setSearching(true)
     setSemanticError(null)
-    const delay = semanticMode ? 600 : 300
+    const useSemantic = semanticMode && SEMANTIC_SEARCH_ENABLED
+    const delay = useSemantic ? 600 : 300
     timerRef.current = setTimeout(async () => {
       try {
-        const raw = semanticMode
+        const raw = useSemantic
           ? await searchSemantic(supabase, query.trim())
           : await searchEntries(supabase, query.trim())
         const results = await annotateEmbedded(supabase, raw)
         setSearchResults(results)
         saveRecentSearch(query.trim())
       } catch (e) {
-        if (semanticMode) {
+        if (useSemantic) {
           setSemanticError(e.message || 'semantic search failed')
           setSearchResults([])
         }
@@ -186,6 +203,7 @@ export default function ExploreView({ supabase, topics, onSelectEntry, onOrdered
           </div>
         )}
         {searching && <span className="explore-search-spinner" />}
+        {SEMANTIC_SEARCH_ENABLED && (
         <button
           className={`explore-semantic-btn${semanticMode ? ' explore-semantic-btn--on' : ''}`}
           onClick={() => setSemanticMode((m) => !m)}
@@ -193,6 +211,7 @@ export default function ExploreView({ supabase, topics, onSelectEntry, onOrdered
         >
           semantic
         </button>
+        )}
         {query && (
           <button className="explore-clear-btn" onClick={() => { setQuery(''); setSemanticMode(false) }}>×</button>
         )}
@@ -236,7 +255,7 @@ export default function ExploreView({ supabase, topics, onSelectEntry, onOrdered
           </p>
         ) : isSearching ? (
           filtered.map((e) => (
-            <EntryRow key={e.id} entry={e} onSelect={onSelectEntry} />
+            <EntryRow key={e.id} entry={e} onSelect={onSelectEntry} query={semanticMode ? '' : query.trim()} />
           ))
         ) : (
           Object.entries(grouped).sort(([a], [b]) => a.localeCompare(b)).map(([topic, entries]) => (

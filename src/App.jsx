@@ -19,6 +19,7 @@ import { fetchTitle, fetchLinkPreview } from './lib/enrich.js'
 import { chunkEntryAsync } from './lib/chunkEntry.js'
 import { runBackup } from './lib/db/githubBackup.js'
 import { showFounderFeatures } from './lib/account.js'
+import { DEFAULT_FEATURE_FLAGS, loadFeatureFlags } from './lib/featureFlags.js'
 import { buildMarkdownFiles, buildTopicMarkdown, topicFilename } from './lib/exportMarkdown.js'
 import { buildZip, downloadBlob } from './lib/buildZip.js'
 import AuthGate from './components/AuthGate.jsx'
@@ -96,7 +97,8 @@ function Workspace() {
   const [snoozeTarget, setSnoozeTarget] = useState(null)
   const [editTargetId, setEditTargetId] = useState(null)
   const [user, setUser] = useState(null)
-  const showFounder = showFounderFeatures(user)
+  const [featureFlags, setFeatureFlags] = useState(DEFAULT_FEATURE_FLAGS)
+  const showFounder = showFounderFeatures(user, featureFlags)
   // Assistant: founder-only, and separately enable/disableable (persisted).
   const [assistantEnabled, setAssistantEnabled] = useState(() => {
     try { return localStorage.getItem('medialog_assistant_enabled') !== 'false' } catch { return true }
@@ -194,6 +196,12 @@ function Workspace() {
     })
   }
 
+  useEffect(() => {
+    if (showFounder) return
+    if (view === 'career') setView('home')
+    setAssistantOpen(false)
+  }, [showFounder, view])
+
   const candidateIndex = useMemo(() => {
     const topicName = selectedTopic?.name || ''
     return entries.map((e) => ({
@@ -219,6 +227,13 @@ function Workspace() {
   }, [])
 
   useEffect(() => {
+    let cancelled = false
+    async function refreshFeatureFlags() {
+      const flags = await loadFeatureFlags(supabase)
+      if (!cancelled) setFeatureFlags(flags)
+    }
+    refreshFeatureFlags()
+    const featureFlagTimer = setInterval(refreshFeatureFlags, 60 * 1000)
     supabase.auth.getUser().then(async ({ data }) => {
       const u = data?.user ?? null
       if (!u) { setUser(null); return }
@@ -233,6 +248,10 @@ function Workspace() {
     const code = params.get('code')
     if (code && window.location.pathname.includes('/settings')) {
       handleGitHubCallback(code)
+    }
+    return () => {
+      cancelled = true
+      clearInterval(featureFlagTimer)
     }
   }, [])
 
