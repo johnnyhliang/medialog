@@ -16,6 +16,16 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      // We register the SW ourselves in main.jsx (app entry only) so we can add
+      // a periodic update check + auto-reload. Don't also auto-inject it.
+      injectRegister: null,
+      workbox: {
+        // New SW takes control immediately, and old precaches are purged so a
+        // fresh deploy is never shadowed by a stale bundle.
+        clientsClaim: true,
+        skipWaiting: true,
+        cleanupOutdatedCaches: true,
+      },
       devOptions: {
         // Never run the service worker in dev — it precaches the bundle and
         // serves stale JS/CSS, making source edits/HMR appear to do nothing.
