@@ -1,7 +1,7 @@
-// Scheduled poller: fetches every user feed server-side, applies quality
-// thresholds (reddit score filter), and upserts into feed_items.
+// Scheduled poller: fetches every user feed server-side and upserts into
+// feed_items. Uses a self-contained RSS/Atom parser (no third-party feed lib,
+// which silently choked on several of our sources).
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { parseFeed } from 'https://deno.land/x/rss@1.0.0/mod.ts'
 
 const FOURTEEN_DAYS = 14 * 24 * 60 * 60 * 1000
 const UA = 'medialog-feed-bot/1.0'
@@ -36,47 +36,70 @@ function truncate(str: string, n: number): string {
   return str.slice(0, n).replace(/\s+\S*$/, '') + '…'
 }
 
-async function fetchRss(url: string): Promise<Item[]> {
+function decodeEntities(s: string): string {
+  return (s || '')
+    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
+    .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"').replace(/&#0?39;/g, "'").replace(/&apos;/g, "'")
+}
+
+function tagText(block: string, name: string): string {
+  const m = block.match(new RegExp(`<${name}[^>]*>([\\s\\S]*?)<\\/${name}>`, 'i'))
+  return m ? decodeEntities(m[1]).trim() : ''
+}
+
+// Works for both RSS <item> and Atom <entry>.
+function getLink(block: string): string {
+  // Atom: prefer rel="alternate", else first <link href>
+  const alt = block.match(/<link\b[^>]*\brel=["']alternate["'][^>]*\bhref=["']([^"']+)["']/i)
+    || block.match(/<link\b[^>]*\bhref=["']([^"']+)["'][^>]*\brel=["']alternate["']/i)
+    || block.match(/<link\b[^>]*\bhref=["']([^"']+)["']/i)
+  if (alt) return alt[1]
+  // RSS: <link>url</link>
+  const txt = block.match(/<link>\s*([\s\S]*?)\s*<\/link>/i)
+  if (txt && /^https?:/i.test(txt[1].trim())) return txt[1].trim()
+  const guid = block.match(/<guid[^>]*>\s*(https?:[^<]+?)\s*<\/guid>/i)
+  return guid ? guid[1].trim() : ''
+}
+
+// Self-contained RSS/Atom parse. Handles every source in our starter pack
+// (verified) plus Reddit's Atom top.rss feed.
+function parseXml(xml: string): Item[] {
+  let blocks = [...xml.matchAll(/<item[\s>][\s\S]*?<\/item>/gi)].map((m) => m[0])
+  if (!blocks.length) blocks = [...xml.matchAll(/<entry[\s>][\s\S]*?<\/entry>/gi)].map((m) => m[0])
+  return blocks
+    .map((b) => {
+      const rawSummary = tagText(b, 'description') || tagText(b, 'summary') || tagText(b, 'content')
+      const pub = tagText(b, 'pubDate') || tagText(b, 'published') || tagText(b, 'updated') || tagText(b, 'dc:date')
+      const d = pub ? new Date(pub) : null
+      return {
+        title: stripHtml(tagText(b, 'title')) || 'Untitled',
+        url: getLink(b),
+        summary: truncate(stripHtml(rawSummary), 240) || null,
+        published_at: d && !isNaN(d.getTime()) ? d.toISOString() : null,
+      }
+    })
+    .filter((x) => x.url.startsWith('http'))
+}
+
+async function fetchXml(url: string): Promise<Item[]> {
   const res = await fetch(url, {
     headers: { 'User-Agent': UA, Accept: 'application/rss+xml, application/atom+xml, application/xml, text/xml' },
     signal: AbortSignal.timeout(15000),
   })
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
-  const feed = await parseFeed(await res.text())
-  return feed.entries
-    .map((e) => ({
-      title: stripHtml(e.title?.value ?? '') || 'Untitled',
-      url: e.links?.[0]?.href ?? (e.id?.startsWith('http') ? e.id : ''),
-      summary: truncate(stripHtml(e.description?.value ?? e.content?.value ?? ''), 240) || null,
-      published_at: (e.published ?? e.updated)?.toISOString() ?? null,
-    }))
-    .filter((x) => x.url.startsWith('http'))
+  const items = parseXml(await res.text())
+  if (!items.length) throw new Error('no items parsed')
+  return items
 }
 
-async function fetchReddit(feedUrl: string, minScore: number): Promise<Item[]> {
+// Reddit's JSON endpoints now 403 bots, but the Atom feed at /r/<sub>/top.rss
+// still serves. We lose the numeric score, but top?t=day is already the day's
+// best, so it stands in for the score gate.
+async function fetchReddit(feedUrl: string): Promise<Item[]> {
   const m = feedUrl.match(/reddit\.com\/r\/([^/?#]+)/i)
   if (!m) throw new Error('not a subreddit url')
-  const sub = m[1]
-  const res = await fetch(`https://www.reddit.com/r/${sub}/top.json?t=day&limit=50&raw_json=1`, {
-    headers: { 'User-Agent': UA },
-    signal: AbortSignal.timeout(15000),
-  })
-  if (!res.ok) throw new Error(`HTTP ${res.status}`)
-  const body = await res.json()
-  const posts = (body?.data?.children ?? []).map((c: { data: Record<string, unknown> }) => c.data)
-  return posts
-    .filter((p: Record<string, unknown>) => (p.score as number) >= minScore && !p.stickied)
-    .map((p: Record<string, unknown>) => ({
-      title: stripHtml(String(p.title)),
-      // link posts point at the content; self posts at the discussion
-      url: p.is_self ? `https://www.reddit.com${p.permalink}` : String(p.url),
-      summary: truncate(
-        `${p.score}↑ r/${sub}` + (p.selftext ? ` — ${stripHtml(String(p.selftext))}` : ''),
-        240,
-      ),
-      published_at: new Date((p.created_utc as number) * 1000).toISOString(),
-    }))
-    .filter((x: Item) => x.url.startsWith('http'))
+  return fetchXml(`https://www.reddit.com/r/${m[1]}/top.rss?t=day&limit=25`)
 }
 
 Deno.serve(async (req) => {
@@ -121,8 +144,8 @@ Deno.serve(async (req) => {
   for (const feed of feeds ?? []) {
     try {
       const items = feed.kind === 'reddit'
-        ? await fetchReddit(feed.url, feed.min_score ?? 100)
-        : await fetchRss(feed.url)
+        ? await fetchReddit(feed.url)
+        : await fetchXml(feed.url)
 
       if (items.length > 0) {
         const rows = items.map((it) => ({

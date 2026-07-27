@@ -2,9 +2,11 @@ import { useState } from 'react'
 import OpportunityView from './OpportunityView.jsx'
 import ApplicationsView from './ApplicationsView.jsx'
 import WatchlistTab from './WatchlistTab.jsx'
+import BoardsTab from './BoardsTab.jsx'
 
 const TABS = [
   { id: 'radar', label: 'Radar' },
+  { id: 'boards', label: 'Boards' },
   { id: 'watchlist', label: 'Watchlist' },
   { id: 'applications', label: 'Applications' },
 ]
@@ -40,6 +42,7 @@ export default function CareerView({ supabase, initialTab = 'radar', addToast })
         {activeTab === 'radar' && (
           <OpportunityView supabase={supabase} onTrack={handleTrack} onUnreadCount={setRadarUnread} />
         )}
+        {activeTab === 'boards' && <BoardsTab />}
         {activeTab === 'watchlist' && (
           <WatchlistTab supabase={supabase} />
         )}

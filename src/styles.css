@@ -3283,6 +3283,27 @@ a.iv-problem-title:hover { color: var(--accent); }
 }
 .career-tab-panel { flex: 1; overflow-y: auto; }
 
+/* Boards */
+.boards-tab { padding: 16px 20px; max-width: 760px; }
+.boards-intro { font-size: var(--text-sm); margin: 0 0 18px; }
+.boards-section { margin-bottom: 20px; }
+.boards-section-label {
+  display: flex; align-items: center; gap: 6px;
+  font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.04em;
+  color: var(--muted); margin-bottom: 8px;
+}
+.boards-links { display: flex; flex-direction: column; gap: 6px; }
+.boards-link {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px;
+  background: var(--surface); color: var(--text); text-decoration: none;
+  transition: border-color 0.12s, background 0.12s;
+}
+.boards-link:hover { border-color: var(--accent); background: var(--accent-weak); }
+.boards-link-name { font-weight: 500; font-size: var(--text-sm); }
+.boards-link-note { color: var(--muted); font-size: var(--text-xs); }
+.boards-link-icon { margin-left: auto; color: var(--muted); flex-shrink: 0; }
+
 /* Watchlist */
 .watchlist-view { padding: 16px; max-width: 680px; }
 .watchlist-header { display: flex; gap: 8px; margin-bottom: 12px; align-items: center; }
