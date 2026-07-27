@@ -24,6 +24,19 @@ is committed work. Promote items into `docs/superpowers/specs/` when they get re
 
 ## Medium features
 
+- **Semantic feed relevance** — the feed currently ranks items by keyword overlap between an
+  item's title/summary and an interest profile (topics + tags + recurring words in recent entry
+  titles), with a "Relevant" default sort and an "only matches" filter that hides zero-signal
+  items (see `src/lib/feedRelevance.js`, `FeedView`). Keyword matching is cheap and instant but
+  leaky — it misses "LLM inference" when your notes say "model serving," and can't tell a strong
+  paper from a weak one beyond literal words. Upgrade path: embed each feed item (reuse
+  `embed-entry` / the chunk pipeline) and score by vector similarity to the user's library
+  instead of token overlap; blend with the keyword score as a fallback. Cost/latency tradeoff:
+  every polled item needs one embedding call, so gate it (e.g. only embed items that pass a
+  cheap keyword prefilter, or only for high-volume "paper" feeds). Would make the "filter out
+  low-signal papers" case actually work. Keep the keyword version as the offline/free default.
+
+
 - ★ **Reader mode as the default click** — link entries open straight into reader + highlights;
   the app becomes where you *read*, not just where you file.
 - ★ **Related-entries footer** (north-star step ④) — semantic neighbors on every entry;
