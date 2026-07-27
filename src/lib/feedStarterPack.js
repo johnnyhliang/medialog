@@ -17,6 +17,12 @@ export const STARTER_PACK = [
   { name: 'Bartosz Ciechanowski', url: 'https://ciechanow.ski/atom.xml', category: 'writers', kind: 'rss' },
   { name: 'Hillel Wayne', url: 'https://buttondown.com/hillelwayne/rss', category: 'writers', kind: 'rss' },
 
+  // ── creators (YouTube channels via per-channel RSS) ──
+  { name: 'George Hotz (streams)', url: 'https://www.youtube.com/feeds/videos.xml?channel_id=UCwgKmJM4ZJQRJ-U5NjvR2dg', category: 'creators', kind: 'rss' },
+  { name: 'ThePrimeagen', url: 'https://www.youtube.com/feeds/videos.xml?channel_id=UCUyeluBRhGPCW4rPe_UvBZQ', category: 'creators', kind: 'rss' },
+  { name: 'ThePrimeTime (long-form)', url: 'https://www.youtube.com/feeds/videos.xml?channel_id=UC8ENHE5xdFSwx71u3fDH5Xw', category: 'creators', kind: 'rss' },
+  { name: 'aligrithm.com', url: 'https://aligrithm.com/rss/', category: 'creators', kind: 'rss' },
+
   // ── system design / courses ──
   { name: 'ByteByteGo', url: 'https://blog.bytebytego.com/feed', category: 'system design', kind: 'rss' },
 
