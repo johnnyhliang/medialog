@@ -16,11 +16,20 @@ export const STARTER_PACK = [
   { name: 'matklad', url: 'https://matklad.github.io/feed.xml', category: 'writers', kind: 'rss' },
   { name: 'Bartosz Ciechanowski', url: 'https://ciechanow.ski/atom.xml', category: 'writers', kind: 'rss' },
   { name: 'Hillel Wayne', url: 'https://buttondown.com/hillelwayne/rss', category: 'writers', kind: 'rss' },
+  { name: 'Casey Muratori (Computer Enhance)', url: 'https://www.computerenhance.com/feed', category: 'writers', kind: 'rss' },
+  { name: 'Xe Iaso', url: 'https://xeiaso.net/blog.rss', category: 'writers', kind: 'rss' },
+  { name: 'Drew DeVault', url: 'https://drewdevault.com/blog/index.xml', category: 'writers', kind: 'rss' },
+  { name: 'Antirez', url: 'https://antirez.com/rss', category: 'writers', kind: 'rss' },
+  { name: 'ryg / Fabian Giesen', url: 'https://fgiesen.wordpress.com/feed/', category: 'writers', kind: 'rss' },
 
   // ── creators (YouTube channels via per-channel RSS) ──
   { name: 'George Hotz (streams)', url: 'https://www.youtube.com/feeds/videos.xml?channel_id=UCwgKmJM4ZJQRJ-U5NjvR2dg', category: 'creators', kind: 'rss' },
   { name: 'ThePrimeagen', url: 'https://www.youtube.com/feeds/videos.xml?channel_id=UCUyeluBRhGPCW4rPe_UvBZQ', category: 'creators', kind: 'rss' },
   { name: 'ThePrimeTime (long-form)', url: 'https://www.youtube.com/feeds/videos.xml?channel_id=UC8ENHE5xdFSwx71u3fDH5Xw', category: 'creators', kind: 'rss' },
+  { name: 'Tsoding', url: 'https://www.youtube.com/feeds/videos.xml?channel_id=UCrqM0Ym_NbK1fqeQG2VIohg', category: 'creators', kind: 'rss' },
+  { name: 'Jonhoo (Rust)', url: 'https://www.youtube.com/feeds/videos.xml?channel_id=UC_iD0xppBwwsrM9DegC5cQQ', category: 'creators', kind: 'rss' },
+  { name: 'Low Level', url: 'https://www.youtube.com/feeds/videos.xml?channel_id=UCzEaIT_yUdxixGEc8mINGmg', category: 'creators', kind: 'rss' },
+  { name: 'Andrej Karpathy', url: 'https://www.youtube.com/feeds/videos.xml?channel_id=UCYO_jab_esuFRV4b17AJtAw', category: 'creators', kind: 'rss' },
   { name: 'aligrithm.com', url: 'https://aligrithm.com/rss/', category: 'creators', kind: 'rss' },
 
   // ── system design / courses ──

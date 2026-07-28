@@ -231,6 +231,18 @@ export async function searchSemantic(supabase, query) {
   return searchChunksAsEntries(supabase, query)
 }
 
+// Notes across the whole library, for scanning externally-hotlinked media.
+export async function listNotesForHotlinks(supabase) {
+  const { data, error } = await supabase
+    .from('entries')
+    .select('id, title, topic_id, note')
+    .is('deleted_at', null)
+    .not('note', 'is', null)
+    .neq('note', '')
+  if (error) throw new Error(error.message)
+  return data ?? []
+}
+
 export async function listAllArchivedEntries(supabase) {
   const { data, error } = await supabase
     .from('entries')
