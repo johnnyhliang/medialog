@@ -8,6 +8,47 @@ is committed work. Promote items into `docs/superpowers/specs/` when they get re
 
 ---
 
+## Roadmap — replace Obsidian + NotebookLM
+
+The bet: MediaLog already owns ~70% of what people use Obsidian for (markdown notes, topics-as-folders,
+keyword+semantic+tag search, GitHub backup / markdown export) and the *hard* part of NotebookLM
+(grounded Q&A — the **Ask-your-library** assistant is RAG over `content_chunks` with citations). The
+gaps are a handful of well-scoped builds, not a rewrite. Ordered by leverage:
+
+### ① Fast synthesis (NotebookLM's core) — ★ build first, cheapest
+One-click **Summarize / Briefing doc / Study guide / Timeline / FAQ** over a topic or a selected set of
+entries. Almost free: it's structured prompts over the *existing* retrieval (`searchChunks` /
+topic entries) → the `ai` edge function already deployed. Output rendered as a new note/entry with
+citations back to sources. Directly replaces NotebookLM's most-used feature.
+- Build: `src/lib/db/synthesize.js` (prompt templates + retrieval), a "Synthesize ▾" action on
+  TopicView, render result as a takeaway/entry. Reuses `ai.js` + `librarian.js` patterns.
+- Cost: one LLM call per synthesis, bounded by retrieved passages. Negligible.
+
+### ② Wikilinks + backlinks (the real Obsidian-replacement piece) — ★
+Typed `[[entry]]` links between entries plus a **"Linked from"** backlinks panel. Today we only have
+*semantic* Related Entries (`relatedTo`); explicit links are what Obsidian users actually miss.
+- Build: parse `[[...]]` in notes → resolve to entries (autocomplete on `[[`); an `entry_links`
+  table (or derive on read); a backlinks section on the entry/reader. Pairs with the graph view (④).
+
+### ③ Audio Overview / podcast (the wow feature) — heavier, gated on TTS
+Two AI hosts discussing your sources, à la NotebookLM. Pipeline: LLM writes a 2-voice dialogue script
+from retrieved passages → TTS with two distinct voices (Gemini TTS / OpenAI / ElevenLabs) → stitch to
+one MP3 → store in a bucket → in-app player. Same "can't run in an edge function" constraint as the
+page archiver (needs a small worker for audio stitching), plus per-minute TTS cost — so gate it behind
+a button, not automatic. Store generated episodes in Storage keyed by topic + source hash so re-runs
+are cheap.
+
+### ④ Graph view — nice-to-have once links exist
+Force-directed graph of entries connected by wikilinks (②) and/or semantic neighbors. Low priority
+until ② lands; mostly a visualization over data ② already produces.
+
+### Also on the Obsidian side (smaller)
+- **Daily note / journal surface** — a real daily entry (Inbox is close but not a journal).
+- **Entry permalinks** — URL-addressable entries (`?entry=<id>` opens the topic + scrolls) so an
+  entry can be hotlinked/shared; today navigation is in-app state only, not routed.
+
+---
+
 ## Big swings
 
 - ★ **The Morning Open** — one composed daily screen (feed picks + a resurfaced highlight +
