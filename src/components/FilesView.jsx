@@ -5,6 +5,7 @@ import FileRow from './FileRow.jsx'
 import ConfirmModal from './ConfirmModal.jsx'
 import { listNotesForHotlinks } from '../lib/db/entries.js'
 import { collectHotlinks } from '../lib/hotlinks.js'
+import { listSnapshots, archiveFile, snapshotUrl } from '../lib/db/snapshots.js'
 
 const CAP_BYTES = 500 * 1024 * 1024
 const PAGE_SIZE = 30
@@ -28,12 +29,35 @@ function sortFiles(files, sortBy) {
 function HotlinkedFiles({ supabase, onSelectEntry }) {
   const [rows, setRows] = useState(null)
   const [query, setQuery] = useState('')
+  const [archived, setArchived] = useState({}) // url -> snapshot row
+  const [busyUrl, setBusyUrl] = useState(null)
+  const [archiveError, setArchiveError] = useState(null)
 
   useEffect(() => {
     listNotesForHotlinks(supabase)
       .then((entries) => setRows(collectHotlinks(entries)))
       .catch(() => setRows([]))
+    listSnapshots(supabase)
+      .then((snaps) => setArchived(Object.fromEntries(snaps.map((s) => [s.url, s]))))
+      .catch(() => {})
   }, [supabase])
+
+  async function handleArchive(url) {
+    setBusyUrl(url)
+    setArchiveError(null)
+    try {
+      const snap = await archiveFile(supabase, { url })
+      setArchived((prev) => ({ ...prev, [url]: snap }))
+    } catch (e) {
+      setArchiveError(`Couldn’t archive that file: ${e.message}`)
+    }
+    setBusyUrl(null)
+  }
+
+  async function openArchived(snap) {
+    const signed = await snapshotUrl(supabase, snap.storage_path)
+    if (signed) window.open(signed, '_blank', 'noopener')
+  }
 
   if (rows === null) return <p className="muted">Scanning notes…</p>
 
@@ -54,8 +78,9 @@ function HotlinkedFiles({ supabase, onSelectEntry }) {
         onChange={(e) => setQuery(e.target.value)}
       />
       <p className="files-count muted" style={{ display: 'block', marginBottom: 10 }}>
-        {rows.length} hotlinked file{rows.length !== 1 ? 's' : ''} across your notes
+        {rows.length} hotlinked file{rows.length !== 1 ? 's' : ''} across your notes · “save copy” stores an owned copy that survives link rot
       </p>
+      {archiveError && <p className="explore-semantic-error">{archiveError}</p>}
       <div className="files-list">
         {visible.map((r) => (
           <div key={r.url} className="file-row">
@@ -68,7 +93,22 @@ function HotlinkedFiles({ supabase, onSelectEntry }) {
               <a href={r.url} target="_blank" rel="noopener noreferrer" className="file-name file-name--link">
                 {r.name} <ExternalLink size={12} />
               </a>
-              <span className="file-meta muted">{r.type} · {new URL(r.url).hostname.replace(/^www\./, '')}</span>
+              <span className="file-meta muted">
+                {r.type} · {new URL(r.url).hostname.replace(/^www\./, '')}
+                {archived[r.url] ? (
+                  <button className="link-btn hotlink-archived" onClick={() => openArchived(archived[r.url])} title="Open your saved copy">
+                    · archived ✓
+                  </button>
+                ) : (
+                  <button
+                    className="link-btn hotlink-archive"
+                    onClick={() => handleArchive(r.url)}
+                    disabled={busyUrl === r.url}
+                  >
+                    · {busyUrl === r.url ? 'saving…' : 'save copy'}
+                  </button>
+                )}
+              </span>
               <div className="file-refs">
                 <span className="muted">Used in:{' '}
                   {r.refs.map((e, i) => (

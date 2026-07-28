@@ -11,6 +11,43 @@ section when you deploy. Detailed design rationale lives in `docs/superpowers/sp
 
 ## Unreleased
 
+### File archiver (Phase 1) — owned copies of hotlinked files
+Beat link rot: a `snapshot` edge function fetches a hotlinked image/PDF/media file with the service
+role and stores an owned copy in a private `snapshots` bucket, deduped by SHA-256 content hash
+(`snapshots` table, migration `0054`; `src/lib/db/snapshots.js`). In **Files → Hotlinked**, each row
+gets a **“save copy”** action that flips to **“archived ✓”** and opens the owned copy via a signed
+URL. 25 MB cap; only image/pdf/audio/video content types. Phase 2 (self-contained full-page
+snapshots via a `monolith`/SingleFile worker) is scoped in `IDEAS.md`, not built.
+
+### Files page — Hotlinked overview
+New **Uploads / Hotlinked** tabs on the Files page. “Hotlinked” scans every note for
+externally-referenced images/PDFs (markdown images, media links, bare media URLs), excludes Storage
+uploads, dedupes, and lists each with a thumbnail + jump-to-entry buttons (`src/lib/hotlinks.js`).
+
+### Feed — reliability, relevance, and sources
+- Replaced the flaky client-side allorigins RSS fetch with the server-side `fetch-feeds` function
+  (self-contained RSS/Atom parser after `deno.land/x/rss` silently choked on several sources);
+  Reddit switched from the now-403 `top.json` to the working `top.rss`; 40-items-per-source cap so a
+  firehose (arXiv) can’t drown the feed.
+- Algorithmic **relevance ranking**: interest profile from topics + tags + recurring words in recent
+  entry titles; **Relevant** is the default sort with an **“only matches”** filter and a per-item
+  ★score; plus a per-item text filter (`src/lib/feedRelevance.js`).
+- New **creators/writers** feeds (migrations `0052`/`0053`): George Hotz (streams), ThePrimeagen
+  ×2, aligrithm.com, Tsoding, Jonhoo, Low Level, Karpathy, Casey Muratori, Xe Iaso, Drew DeVault,
+  Antirez, ryg — all verified active.
+
+### Career — Boards tab
+New **Career → Boards** tab: curated auto-updated GitHub job lists (Simplify, vanshb03, Ouckah,
+speedyapply, NW FinTech quant), new-grad lists, and a hotlink to the standalone ApplyKit dashboard.
+Opportunities (radar) now refresh from source on open, throttled to once per 8h.
+
+### Persistent assistant + founder rollout
+- **Ask-your-library** conversations persist to Supabase (`assistant_conversations` /
+  `assistant_messages`, migration `0049`) with a history sidebar; sync across devices.
+- DB-backed founder flag (`user_configs.is_founder`, migration `0050`) so gating works without a
+  rebuild; runtime `app_flags` kill switch (migration `0051`) makes Career + Ask-your-library public.
+- PWA now auto-updates on new deploys (workbox `skipWaiting`/`cleanupOutdatedCaches` + hourly check).
+
 ### Chunk retrieval consumers (Plan 2 of 2) — planned, not built
 Implementation plan written: `docs/superpowers/plans/2026-07-20-chunk-retrieval-consumers.md`
 (5 TDD tasks, ready to execute). Wires the engine into the app:

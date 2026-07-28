@@ -2783,6 +2783,8 @@ a.activity-title:hover { color: var(--accent); }
 .files-tab.active { background: var(--accent-weak); color: var(--accent); font-weight: 600; border-color: var(--accent); }
 .file-name--link { display: inline-flex; align-items: center; gap: 4px; text-decoration: none; color: var(--text); }
 .file-name--link:hover { color: var(--accent); }
+.hotlink-archive { margin-left: 4px; }
+.hotlink-archived { margin-left: 4px; color: var(--accent); }
 
 .files-search-input {
   width: 100%;
