@@ -1,5 +1,6 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2'
-import { extractMetadata, extractReadableText } from '../_shared/extractTitle.ts'
+import { extractMetadata } from '../_shared/extractTitle.ts'
+import { extractArticle, makeReadabilityParser, type ReadableParse } from '../_shared/extractArticle.ts'
 import { isSafeUrl } from '../_shared/isSafeUrl.ts'
 
 const MAX_BYTES = 512 * 1024
@@ -26,6 +27,28 @@ async function tryOembed(url: string, controller: AbortController): Promise<{ ti
       description: json.author_name ? `by ${json.author_name}` : null,
     }
   } catch { return null }
+}
+
+// Readability + a DOM are the heavy part of this function, so load them once per
+// isolate and only when an HTML page actually needs parsing (oEmbed URLs never
+// do). jsdom is not Deno-compatible; linkedom is the DOM here.
+// Resolved lazily and tolerantly: if the npm specifiers ever fail to resolve at
+// runtime, extractArticle falls back to its regex extractor instead of the whole
+// enrich call failing.
+let readabilityParser: ReadableParse | null | undefined
+async function getReadabilityParser(): Promise<ReadableParse | null> {
+  if (readabilityParser !== undefined) return readabilityParser
+  try {
+    const [{ Readability }, { parseHTML }] = await Promise.all([
+      import('npm:@mozilla/readability@0.6.0'),
+      import('npm:linkedom@0.18.13'),
+    ])
+    readabilityParser = makeReadabilityParser({ Readability, parseHTML })
+  } catch (e) {
+    console.error('readability unavailable, using fallback extractor:', e)
+    readabilityParser = null
+  }
+  return readabilityParser
 }
 
 const cors = {
@@ -75,11 +98,22 @@ Deno.serve(async (req) => {
   try {
     const controller = new AbortController()
     const timer = setTimeout(() => controller.abort(), TIMEOUT_MS)
-    let result: { title: string | null; site: string; image: string | null; description: string | null }
+    // Existing keys keep their exact shape; byline/excerpt/full_text_extractor
+    // are additive so current callers are unaffected.
+    let result: {
+      title: string | null
+      site: string
+      image: string | null
+      description: string | null
+      full_text: string | null
+      byline: string | null
+      excerpt: string | null
+      full_text_extractor: string | null
+    }
     try {
       const oembed = await tryOembed(url, controller)
       if (oembed) {
-        result = { ...oembed, site, full_text: null }
+        result = { ...oembed, site, full_text: null, byline: null, excerpt: null, full_text_extractor: null }
       } else {
         const res = await fetch(url, {
           headers: {
@@ -93,8 +127,14 @@ Deno.serve(async (req) => {
         const buf = new Uint8Array(await res.arrayBuffer())
         const html = new TextDecoder().decode(buf.slice(0, MAX_BYTES))
         const meta = extractMetadata(html, url)
-        const fullText = extractReadableText(html)
-        result = { ...meta, full_text: fullText || null }
+        const article = extractArticle(html, url, { parse: await getReadabilityParser() })
+        result = {
+          ...meta,
+          full_text: article.full_text,
+          byline: article.byline,
+          excerpt: article.excerpt,
+          full_text_extractor: article.full_text ? article.extractor : null,
+        }
       }
     } finally {
       clearTimeout(timer)
@@ -103,7 +143,10 @@ Deno.serve(async (req) => {
       headers: { ...cors, 'Content-Type': 'application/json' },
     })
   } catch (_e) {
-    return new Response(JSON.stringify({ title: null, site, image: null, description: null, full_text: null }), {
+    return new Response(JSON.stringify({
+      title: null, site, image: null, description: null,
+      full_text: null, byline: null, excerpt: null, full_text_extractor: null,
+    }), {
       headers: { ...cors, 'Content-Type': 'application/json' },
     })
   }

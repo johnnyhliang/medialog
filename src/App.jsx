@@ -17,6 +17,7 @@ import AssistantPanel from './components/AssistantPanel.jsx'
 import { Sparkles } from 'lucide-react'
 import { listVersions, createVersion } from './lib/db/versions.js'
 import { fetchTitle, fetchLinkPreview } from './lib/enrich.js'
+import { preservationPatch } from './lib/preservation.js'
 import { chunkEntryAsync } from './lib/chunkEntry.js'
 import { runBackup } from './lib/db/githubBackup.js'
 import { isDev } from './lib/account.js'
@@ -478,7 +479,7 @@ function Workspace() {
           if (title) patch.title = title
           if (meta?.image) patch.og_image = meta.image
           if (meta?.description) patch.og_description = meta.description
-          if (meta?.full_text) patch.full_text = meta.full_text
+          Object.assign(patch, preservationPatch(meta))
           if (Object.keys(patch).length > 0) {
             const updated = await updateEntry(supabase, e.id, patch)
             applyUpdateEntry(e.id, updated)
@@ -522,7 +523,7 @@ function Workspace() {
           if (title) patch.title = title
           if (meta?.image) patch.og_image = meta.image
           if (meta?.description) patch.og_description = meta.description
-          if (meta?.full_text) patch.full_text = meta.full_text
+          Object.assign(patch, preservationPatch(meta))
           if (Object.keys(patch).length > 0) {
             const updated = await updateEntry(supabase, e.id, patch)
             finalEntry = updated
@@ -736,18 +737,23 @@ function Workspace() {
 
   async function enrichEntries(created) {
     for (const e of created) {
-      if (e.url && (!e.title || !e.og_image)) {
-        const meta = await fetchLinkPreview(supabase, e.url)
-        if (!meta) continue
-        const patch = {}
-        if (!e.title && meta.title) patch.title = meta.title
-        if (!e.og_image && meta.image) patch.og_image = meta.image
-        if (!e.og_description && meta.description) patch.og_description = meta.description
-        if (Object.keys(patch).length > 0) {
-          const updated = await updateEntry(supabase, e.id, patch)
-          applyUpdateEntry(e.id, updated)
-        }
-      }
+      // Text preservation must be attempted for EVERY url entry, not only ones
+      // missing a title/image — a bulk import that arrives with titles already
+      // filled in used to skip enrichment entirely and so never preserved text.
+      if (!e.url) continue
+      if (e.title && e.og_image && e.full_text_status) continue
+      const meta = await fetchLinkPreview(supabase, e.url)
+      const patch = {}
+      if (!e.title && meta?.title) patch.title = meta.title
+      if (!e.og_image && meta?.image) patch.og_image = meta.image
+      if (!e.og_description && meta?.description) patch.og_description = meta.description
+      if (!e.full_text) Object.assign(patch, preservationPatch(meta))
+      if (Object.keys(patch).length === 0) continue
+      const updated = await updateEntry(supabase, e.id, patch)
+      applyUpdateEntry(e.id, updated)
+      // Newly preserved text is a retrieval source, so index it. The caller's
+      // own chunk pass ran against the pre-enrichment entry and saw no full_text.
+      if (patch.full_text) chunkEntryAsync(supabase, updated)
     }
   }
 

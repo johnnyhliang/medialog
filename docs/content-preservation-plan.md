@@ -7,7 +7,55 @@ image/PDF archiver) is **already shipped** (`snapshots` table, `public-share`…
 
 ---
 
-## (a) Article `full_text` preservation — mostly already built, needs hardening
+## (a) Article `full_text` preservation — **hardened (T1/T2/T3/T5 done)**
+
+**Shipped:** Mozilla Readability extraction, coverage markers, and a resumable backfill.
+
+- `supabase/functions/_shared/extractArticle.ts` — all extraction logic, dependency-free and
+  unit-tested. The DOM + Readability are *injected* (`makeReadabilityParser`) so the same module runs
+  under Deno (`enrich`, via `npm:@mozilla/readability` + `npm:linkedom`), Node (the backfill), and
+  Vitest. Fallback chain: **Readability → regex heuristic → nothing preserved**. Never throws.
+  `MIN_ARTICLE_CHARS` (500) is the gate that treats a cookie wall / paywall stub as "not an article".
+- `enrich` returns `full_text`, plus additive `byline` / `excerpt` / `full_text_extractor`. Existing
+  response keys are unchanged. If the `npm:` specifiers ever fail to resolve at runtime, it logs and
+  degrades to the heuristic rather than failing the call.
+- **Coverage markers** (migration `0060_full_text_coverage.sql`): `full_text_status`
+  (`ok` | `empty` | `failed` | null = never attempted), `full_text_extractor`, `full_text_at`.
+  A null `full_text` alone could not distinguish "never tried" from "nothing extractable"; the status
+  column is what makes coverage answerable in one query. Written by every capture path
+  (`src/lib/preservation.js` → `preservationPatch`) and by the backfill.
+- **Coverage query** — one query, run as the signed-in user:
+
+  ```sql
+  select
+    count(*)                                            as url_entries,
+    count(*) filter (where full_text_status = 'ok')      as preserved,
+    count(*) filter (where full_text_status = 'empty')   as unextractable,
+    count(*) filter (where full_text_status = 'failed')  as failed,
+    count(*) filter (where full_text_status is null)     as not_attempted,
+    round(100.0 * count(*) filter (where full_text_status = 'ok')
+          / greatest(count(*), 1), 1)                    as pct_preserved
+  from entries
+  where user_id = auth.uid() and deleted_at is null and url is not null;
+  ```
+
+  `node scripts/backfill-full-text.js --coverage` prints the same numbers.
+  `preservationCoverage()` in `src/lib/preservation.js` mirrors it client-side for already-loaded
+  entries (for the UI count in T3, still to be surfaced).
+- **Backfill:** `scripts/backfill-full-text.js`. Resumable (queue is "status is null", so an
+  interrupted run resumes; `--retry` re-attempts `empty`/`failed`) and rate-limited (`--rps`, default
+  2, or `BACKFILL_RPS`). The rate limit is load-bearing: better extraction changes the extracted
+  text, which changes the FNV-1a `source_hash` in `content_chunks`, so **every backfilled entry
+  re-embeds**. Re-chunking happens inside the same throttled loop (reusing `processEntry` from
+  `scripts/rechunk.js`) so the embedding burst is bounded by `--rps` too. `--dry-run` and `--limit`
+  for rehearsal.
+
+**Still open:** T4 ("preserve text now" per-entry action) and the T3 *UI* surface (a ◆-style marker
+and an "N preserved / M total" count in Settings/Files). The data behind both now exists.
+
+---
+
+### Original scoping notes
 
 **What exists today:** the `enrich` edge function already runs `extractReadableText(html)` and returns
 `full_text`, which `App.jsx` stores on the entry at capture (App.jsx:452, 496). Reader mode renders
