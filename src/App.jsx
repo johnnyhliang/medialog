@@ -9,6 +9,7 @@ import {
   softDeleteEntry, listTrashedEntries, restoreEntry, emptyTrash, snoozeEntry, rateRevisit,
 } from './lib/db/entries.js'
 import { setEntryTags, listTags, updateTagColor } from './lib/db/tags.js'
+import { seedStarterTopic } from './lib/starterTopic.js'
 import { getCommands } from './lib/commands.js'
 import { resolveBindings, eventToKey } from './lib/keybindings.js'
 import CommandPalette from './components/CommandPalette.jsx'
@@ -375,7 +376,14 @@ function Workspace() {
   }
 
   async function refreshTopics() {
-    const t = await listTopics(supabase)
+    let t = await listTopics(supabase)
+    // Brand-new account (Inbox only, or nothing): drop in the worked-example
+    // topic so the first screen has something to read instead of a tour.
+    if (t.filter((topic) => topic.name !== 'Inbox').length === 0) {
+      const seeded = await seedStarterTopic(supabase, { createTopic, createEntry })
+        .catch(() => null)
+      if (seeded) t = await listTopics(supabase)
+    }
     setTopics(t)
     const inbox = t.find((topic) => topic.name === 'Inbox')
     if (inbox) {

@@ -142,6 +142,60 @@ until ② lands; mostly a visualization over data ② already produces.
   branch: match `<tr>…</tr>`, pull `<td>` cells, reuse cellText/extractLink. Fixed 2026-07-06:
   HTML `<a href>` links + `##`-heading companies; SimplifyJobs HTML tables still TODO.
 
+## Launch readiness — metering, analytics, unit economics
+
+Ordering is the whole point here: **instrumentation can't be backfilled.** Every day in
+production without event capture is behavior data that's gone for good. The dashboard is the
+easy part and should come last.
+
+### ① Per-user AI metering — ★ build first, blocks everything else
+Today every AI call runs on one shared key: `ai/index.ts` reads `AI_API_KEY` from deploy env,
+`embed-entry` reads `GEMINI_API_KEY`. Callers are authenticated but **not metered or rate
+limited** — one user can drain the quota for everyone.
+
+- `ai_usage(user_id, day, function_name, calls, input_tokens, output_tokens, est_cost_usd)`
+- Written by the edge functions — they're the only layer that knows real token counts.
+- Cap check in `ai/index.ts` before the provider fetch; free tier gets N/month.
+- Unblocks: tier enforcement, the import queue's backpressure, and the one number pricing
+  depends on — *what does the median user cost me*.
+
+**BYO-key is not the monetization model.** It inverts value capture (the user willing to manage
+a Gemini key is the least likely to pay, and you've just told them AI is free), it walls off
+the first-session magic moment, and you still eat the support burden. Offer it as a free-tier
+escape valve for power users, never as a paid SKU. Price on value: ~$8–12/mo for uncapped AI +
+interview tracker + sharing + storage. Inference is cents; the story "we charge $10, it costs
+us $0.40" is the one that reads as a business.
+
+### ② Product events — gated on defining the activation metric
+Thin `events(user_id, name, props jsonb, created_at)` + one `track()` helper. Keep the list
+short and funnel-shaped: `entry_created` (source: paste/capture/import), `inbox_sorted`,
+`search_run` (semantic vs keyword), `digest_opened`, `topic_created`.
+
+Likely activation metric: **sorted the inbox at least once in week one** — the moment the app
+stops being a bookmark pile. Pin this down before instrumenting; it decides what's worth
+logging.
+
+### ③ Internal admin dashboard — last, once there's data worth looking at
+> Full build spec: `docs/metering-analytics-spec.md`
+
+Mostly SQL over ① and ②: cohort retention, DAU/WAU, cost per active user, gross margin by
+tier. Ship as a route behind the existing founder flag (`0050_founder_flag.sql`,
+`featureFlags.js`), not a separate app.
+
+**Cost caution:** unit economics here are probably *not* AI-dominated. The file archiver's
+`snapshots` bucket (25 MB/file) plus Supabase egress will likely outrun inference. Track bytes
+stored per user next to API calls or you'll optimize the wrong line.
+
+### Related: embeddings are derived, never exported
+`githubSync.js` already excludes `content_chunks` (megabytes of churn, rebuilt by
+`scripts/rechunk.js`) — extend that rule to every export path. Vectors are a cache tied to a
+specific model + `chunkConfig.js`; exporting them creates silent search corruption after any
+model change. **Don't offer a user toggle** — it asks users to reason about something they
+can't evaluate. Recompute cost is near zero anyway: `chunkSource` hash-guards on `source_hash`,
+so re-importing indexed content makes zero API calls. The real risk is burst, not spend — fix
+it with an import queue (mark entries unindexed, drain a few per second), which also gives ①
+its natural backpressure hook.
+
 ## Cuts / quiet retirements
 
 - Market, weather, clock widgets — dashboard filler diluting the Today thesis.
