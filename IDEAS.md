@@ -65,6 +65,21 @@ until ② lands; mostly a visualization over data ② already produces.
 
 ## Medium features
 
+- **Content preservation (Phase 2/3)** — beat link rot / taken-down media. Phase 1 (hotlinked
+  image/PDF archiver → owned copies in the `snapshots` bucket) is **shipped**. Next: **(a)** harden
+  auto `full_text` capture so dead *articles* stay readable (mostly already exists via `enrich` →
+  `extractReadableText`; needs a real readability extractor + coverage marker + backfill), **(b)
+  Phase 2** self-contained full-page snapshots via a `monolith`/SingleFile worker, **(c) Phase 3**
+  YouTube/video via `yt-dlp` (transcript+thumbnail default, audio/full-video opt-in — the cost lever).
+  Pages/media need a small always-on worker (edge functions can't run a browser/binary). Full plan:
+  `docs/content-preservation-plan.md`.
+- **Intentional app: reminders + modularity + calm review** — replace a separate todo app with
+  org-mode-flavored reminders that are just entries with a `due_at` (no new pile); make every surface
+  a Settings toggle so people use only what they need (module registry + `user_configs.modules`,
+  generalizing founder gating); and defeat paradox-of-choice with a bounded, closeable "Today /
+  Morning Open" screen + per-topic synthesis so you digest instead of doom-scroll. Full spec:
+  `docs/intentional-app-spec.md`.
+
 - **Semantic feed relevance** — the feed currently ranks items by keyword overlap between an
   item's title/summary and an interest profile (topics + tags + recurring words in recent entry
   titles), with a "Relevant" default sort and an "only matches" filter that hides zero-signal
