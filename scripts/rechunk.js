@@ -17,6 +17,7 @@ import {
 import { existsSync, readFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
+import { pathToFileURL } from 'node:url'
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -42,17 +43,30 @@ function loadKeys() {
 const GEMINI_KEYS = loadKeys()
 let keyIdx = 0
 
-for (const [k, v] of Object.entries({ VITE_SUPABASE_URL: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY: SERVICE_KEY })) {
-  if (!v) { console.error(`Set ${k}`); process.exit(1) }
-}
-if (!GEMINI_KEYS.length) { console.error('No Gemini key: set GEMINI_API_KEY or create ~/.gemini-keys'); process.exit(1) }
-console.log(`Gemini key pool: ${GEMINI_KEYS.length} key(s)`)
 const canContextualize = Boolean(AI_BASE_URL && AI_API_KEY && AI_MODEL)
-if (!canContextualize) {
-  console.warn('AI_BASE_URL/AI_API_KEY/AI_MODEL not set — indexing WITHOUT contextual retrieval (lower quality).')
+
+// Validated on demand rather than at import time, so other scripts (the
+// full_text backfill) can reuse processEntry without this module deciding to
+// exit their process for them.
+export function requireEnv() {
+  for (const [k, v] of Object.entries({ VITE_SUPABASE_URL: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY: SERVICE_KEY })) {
+    if (!v) { console.error(`Set ${k}`); process.exit(1) }
+  }
+  if (!GEMINI_KEYS.length) { console.error('No Gemini key: set GEMINI_API_KEY or create ~/.gemini-keys'); process.exit(1) }
+  console.log(`Gemini key pool: ${GEMINI_KEYS.length} key(s)`)
+  if (!canContextualize) {
+    console.warn('AI_BASE_URL/AI_API_KEY/AI_MODEL not set — indexing WITHOUT contextual retrieval (lower quality).')
+  }
 }
 
-const supabase = createClient(SUPABASE_URL, SERVICE_KEY)
+export const hasEmbeddingKeys = () => GEMINI_KEYS.length > 0
+
+// Lazy so importing this module never constructs a client from missing env.
+let _client = null
+function db() {
+  _client ??= createClient(SUPABASE_URL, SERVICE_KEY)
+  return _client
+}
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
@@ -132,17 +146,17 @@ async function contextualize(document, chunks) {
   return out
 }
 
-async function processEntry(entry) {
+export async function processEntry(entry) {
   const sources = sourcesFor(entry)
   const keep = sources.map((s) => s.source)
   const drop = ['full_text', 'note', 'takeaway'].filter((s) => !keep.includes(s))
   if (drop.length) {
-    await supabase.from('content_chunks').delete().eq('entry_id', entry.id).in('source', drop)
+    await db().from('content_chunks').delete().eq('entry_id', entry.id).in('source', drop)
   }
   let written = 0
   for (const { source, text, markdown } of sources) {
     const source_hash = hashText(text)
-    const { data: existing } = await supabase
+    const { data: existing } = await db()
       .from('content_chunks').select('source_hash')
       .eq('entry_id', entry.id).eq('source', source).limit(1)
     if (existing?.[0]?.source_hash === source_hash) continue
@@ -155,8 +169,8 @@ async function processEntry(entry) {
       chunks.map((c, i) => (contexts[i] ? `${contexts[i]}\n\n${c.content}` : c.content))
     )
 
-    await supabase.from('content_chunks').delete().eq('entry_id', entry.id).eq('source', source)
-    const { error } = await supabase.from('content_chunks').insert(
+    await db().from('content_chunks').delete().eq('entry_id', entry.id).eq('source', source)
+    const { error } = await db().from('content_chunks').insert(
       chunks.map((c, i) => ({
         user_id: entry.user_id,
         entry_id: entry.id,
@@ -183,7 +197,7 @@ async function processEntry(entry) {
 // imported entries index before any embedding quota runs out.
 async function fetchAllEntries(only) {
   if (only) {
-    const { data, error } = await supabase
+    const { data, error } = await db()
       .from('entries').select('id, user_id, note, full_text, takeaway').eq('id', only)
     if (error) { console.error('Fetch failed:', error.message); process.exit(1) }
     return data
@@ -191,7 +205,7 @@ async function fetchAllEntries(only) {
   const page = 1000
   const all = []
   for (let from = 0; ; from += page) {
-    const { data, error } = await supabase
+    const { data, error } = await db()
       .from('entries').select('id, user_id, note, full_text, takeaway')
       .is('deleted_at', null).order('created_at', { ascending: false })
       .range(from, from + page - 1)
@@ -203,6 +217,7 @@ async function fetchAllEntries(only) {
 }
 
 async function main() {
+  requireEnv()
   const only = process.argv[2]
   const entries = await fetchAllEntries(only)
 
@@ -221,4 +236,5 @@ async function main() {
   console.log(`\nDone. ${done} entries, ${chunks} chunks, ${failed} failed.`)
 }
 
-main()
+// Only run when invoked directly — backfill-full-text.js imports processEntry.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main()
