@@ -2653,7 +2653,11 @@ a.activity-title:hover { color: var(--accent); }
   transition: opacity 0.12s;
 }
 .feed-nav-item-wrap:hover .feed-cat-select,
+.feed-nav-item-wrap.managing .feed-cat-select,
 .feed-cat-select:focus { opacity: 1; }
+/* Manage mode pins the row actions open — hover alone is unreachable on touch. */
+.feed-nav-item-wrap.managing .feed-nav-actions { opacity: 1; }
+.feed-add-btn.active { color: var(--accent); border-color: var(--accent); }
 .feed-cat-select:focus { outline: none; border-color: var(--accent); color: var(--text); }
 
 /* Market rows */

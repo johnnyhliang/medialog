@@ -45,6 +45,9 @@ export default function FeedView({ supabase, topics, allTags = [], onSaveItem, a
   // '' = uncategorized, '__new' = reveal the free-text field, anything else is
   // an existing category picked from the list.
   const [categoryMode, setCategoryMode] = useState('')
+  // Manage mode reveals the per-feed category picker + delete button. Needed
+  // because hover-only affordances don't exist on touch.
+  const [managing, setManaging] = useState(false)
   const [addBusy, setAddBusy] = useState(false)
   const [addError, setAddError] = useState(null)
   const [packBusy, setPackBusy] = useState(false)
@@ -273,6 +276,15 @@ export default function FeedView({ supabase, topics, allTags = [], onSaveItem, a
               disabled={refreshing || feeds.length === 0}
               title="Refresh all feeds"
             >{refreshing ? '…' : '↻'}</button>
+            {/* Hover-reveal hid the category picker and delete button entirely
+                on touch, where there is no hover. An explicit toggle matches the
+                tools-shelf pattern and works everywhere. */}
+            <button
+              className={`feed-add-btn ${managing ? 'active' : ''}`}
+              onClick={() => setManaging((v) => !v)}
+              disabled={feeds.length === 0}
+              title="Move or remove feeds"
+            >{managing ? 'done' : 'edit'}</button>
             <button
               className="feed-add-btn"
               onClick={() => setShowAddFeed((v) => !v)}
@@ -343,7 +355,7 @@ export default function FeedView({ supabase, topics, allTags = [], onSaveItem, a
             <div key={cat}>
               <p className="feed-category-label">{cat}</p>
               {catFeeds.map((feed) => (
-                <div key={feed.id} className="feed-nav-item-wrap">
+                <div key={feed.id} className={`feed-nav-item-wrap ${managing ? 'managing' : ''}`}>
                   <button
                     className={`feed-nav-item ${selectedFeedId === feed.id ? 'active' : ''}`}
                     onClick={() => setSelectedFeedId(feed.id)}
