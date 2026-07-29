@@ -37,6 +37,22 @@ parallel worktrees claimed numbers out of order.
 
 ## High
 
+### v1 MCP server has ungated bulk-write tools
+`mcp-server/src/tools.js` exposes 14 tools including `create_entry`, `move_entry`,
+`bulk_move_entries` and `bulk_create_entries` — built before the safety model in
+`docs/superpowers/specs/2026-06-25-ai-agent-rag-design.md` existed. That spec
+classifies `bulk_reassign` as **propose-only, human-confirm**, and requires an
+`agent_actions` log for undo. Neither exists here: the tools mutate directly, with
+no proposal step and no audit trail.
+
+Currently dormant — it's a local stdio server that needs `SUPABASE_SERVICE_ROLE_KEY`
+in env, so nothing reaches it unless you wire it into a client. But it is a loaded
+gun sitting in the repo: connecting it to Claude Desktop today would hand an agent
+unlogged bulk mutation over the whole library, using a key that bypasses RLS.
+
+**Before reconnecting it to anything:** either re-gate the bulk tools behind the
+propose/confirm model, or strip them to read-only. Don't rely on remembering.
+
 ### `VITE_CAPTURE_SECRET` is baked into the client bundle
 `SettingsView.jsx` renders bookmarklet / iOS Shortcut templates containing the
 capture secret. Any `VITE_`-prefixed var is inlined at build time, so the secret

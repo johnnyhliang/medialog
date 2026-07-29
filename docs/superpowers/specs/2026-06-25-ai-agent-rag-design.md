@@ -1,7 +1,27 @@
 # MediaLog AI Agent + RAG Layer — Design Spec
 
 **Date:** 2026-06-25
-**Status:** Draft (for review)
+**Status:** DEFERRED as of 2026-07-29 — steps 1–2 shipped; 3–5 on hold until the app stabilizes.
+
+> **Why deferred:** this spec's safety model is built on seams that are still moving — the
+> `entry_versions` snapshot path, the `github-backup` audit trail, and the `src/lib/db/*`
+> wrappers the agent is required never to bypass. With the `App.jsx` decomposition and
+> `styles.css` split still ahead (`docs/tech-debt.md`), a tool layer built now gets written
+> twice. Revisit once those land.
+>
+> **Shipped:** step 1 (pgvector + embed-on-write, `content_chunks` + `chunkEntry.js`) and step 2
+> (read-only "ask my library" — `librarian.js`, `AssistantPanel`, now the `assistant` module at
+> `minTier: 'founder'`).
+>
+> **Not built:** `agent_actions` (no such table exists), safe-mutate tools, proposal gating,
+> MCP v2.
+>
+> **Unspecified gap, noted 2026-07-29:** feeds and archive files appear in no tier. They don't
+> slot in on reversibility alone — adding a feed makes the server fetch an arbitrary URL on a
+> schedule (SSRF-adjacent, and it sidesteps the `isSafeUrl` guard that protects capture), and
+> triggering a snapshot spends storage in a 25 MB/file bucket. Both are "reversible" yet neither
+> is free or contained, so a cost-and-network-reach axis is needed alongside blast radius.
+> Feed *category* moves are genuinely safe-mutate and would slot in as-is.
 **Roadmap:** Phase C — synthesis moat (`2026-06-21-strategic-roadmap.md`). Builds on the
 "AI agent with persistent memory = the living docs" idea in `docs/PROJECT.md` §6.
 
