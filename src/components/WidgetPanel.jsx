@@ -19,8 +19,7 @@ export default function WidgetPanel({ supabase, onTrack, onSaveFeedItem, onGoToF
       <ResurfaceWidget supabase={supabase} onOpenEntry={onOpenEntry} />
       <SearchWidget />
       <div className="kw-divider" />
-      <p className="kw-label">quick links</p>
-      <QuickLinksWidget />
+      <QuickLinksWidget supabase={supabase} />
       <div className="kw-divider" />
       <FeedWidget supabase={supabase} onSave={onSaveFeedItem} onGoToFeed={onGoToFeed} />
       <div className="kw-divider" />

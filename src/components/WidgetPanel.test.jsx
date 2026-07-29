@@ -41,5 +41,6 @@ test('renders clock, search input, quick links, and market section', () => {
   render(<WidgetPanel supabase={mockSupabase} />)
   expect(document.querySelector('.kw-clock')).toBeTruthy()
   expect(screen.getByPlaceholderText(/search/i)).toBeTruthy()
-  expect(screen.getByText('gmail')).toBeTruthy()
+  // Links themselves are user data now, so assert the section, not a seeded row.
+  expect(screen.getByText('tools & links')).toBeTruthy()
 })
