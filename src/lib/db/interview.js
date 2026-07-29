@@ -129,3 +129,24 @@ export async function setProblem(supabase, id, patch) {
   const { error } = await supabase.from('entries').update(patch).eq('id', id)
   if (error) throw new Error(error.message)
 }
+
+// Manually add a problem (with optional link) to a pattern topic.
+export async function addProblem(supabase, topicId, { title, url = null, difficulty = null }) {
+  const { data: { user } } = await supabase.auth.getUser()
+  const { data, error } = await supabase
+    .from('entries')
+    .insert({ user_id: user.id, topic_id: topicId, title, url, note: '', status: 'backlog', difficulty })
+    .select()
+    .single()
+  if (error) throw new Error(error.message)
+  return data
+}
+
+// Soft-delete (goes to trash, recoverable) — mirrors the rest of the app.
+export async function deleteProblem(supabase, id) {
+  const { error } = await supabase
+    .from('entries')
+    .update({ deleted_at: new Date().toISOString() })
+    .eq('id', id)
+  if (error) throw new Error(error.message)
+}

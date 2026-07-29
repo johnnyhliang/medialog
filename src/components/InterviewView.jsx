@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { GraduationCap, ChevronDown, ChevronRight } from 'lucide-react'
-import { listInterview, seedPatterns, setProblem, patternReadiness, trackReadiness } from '../lib/db/interview.js'
+import { listInterview, seedPatterns, setProblem, addProblem, deleteProblem, patternReadiness, trackReadiness } from '../lib/db/interview.js'
 import { parseCurriculum } from '../lib/parseCurriculum.js'
 import { PATTERNS, TRACKS } from '../lib/interviewSeed.js'
 
@@ -10,7 +10,29 @@ const DIFF_CLASS = { easy: 'diff-easy', medium: 'diff-medium', hard: 'diff-hard'
 
 function pct(x) { return `${Math.round(x * 100)}%` }
 
-function ProblemRow({ p, onCycle, onConfidence }) {
+function ProblemRow({ p, onCycle, onConfidence, onEdit, onDelete }) {
+  const [editing, setEditing] = useState(false)
+  const [title, setTitle] = useState(p.title || '')
+  const [url, setUrl] = useState(p.url || '')
+
+  async function save() {
+    const t = title.trim()
+    if (!t) return
+    await onEdit(p, { title: t, url: url.trim() || null })
+    setEditing(false)
+  }
+
+  if (editing) {
+    return (
+      <div className="iv-problem iv-problem--editing">
+        <input className="iv-edit-input" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Problem / prompt" autoFocus />
+        <input className="iv-edit-input" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="Link (optional)" />
+        <button className="iv-mini-btn" onClick={save}>save</button>
+        <button className="iv-mini-btn iv-mini-btn--ghost" onClick={() => { setTitle(p.title || ''); setUrl(p.url || ''); setEditing(false) }}>cancel</button>
+      </div>
+    )
+  }
+
   return (
     <div className={`iv-problem iv-problem--${p.status || 'backlog'}`}>
       <button className="iv-status" onClick={() => onCycle(p)} title="Cycle status">
@@ -34,11 +56,38 @@ function ProblemRow({ p, onCycle, onConfidence }) {
           {[1, 2, 3, 4, 5].map((n) => <option key={n} value={n}>{n}/5</option>)}
         </select>
       )}
+      <button className="iv-row-action" title="Edit" onClick={() => setEditing(true)}>✎</button>
+      <button className="iv-row-action" title="Remove" onClick={() => onDelete(p)}>×</button>
     </div>
   )
 }
 
-function PatternCard({ pattern, problems, onCycle, onConfidence }) {
+function AddProblem({ onAdd }) {
+  const [open, setOpen] = useState(false)
+  const [title, setTitle] = useState('')
+  const [url, setUrl] = useState('')
+
+  async function submit() {
+    const t = title.trim()
+    if (!t) return
+    await onAdd({ title: t, url: url.trim() || null })
+    setTitle(''); setUrl(''); setOpen(false)
+  }
+
+  if (!open) {
+    return <button className="iv-add-problem" onClick={() => setOpen(true)}>+ add problem / link</button>
+  }
+  return (
+    <div className="iv-problem iv-problem--editing">
+      <input className="iv-edit-input" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Problem / prompt" autoFocus />
+      <input className="iv-edit-input" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="Link (optional)" />
+      <button className="iv-mini-btn" onClick={submit}>add</button>
+      <button className="iv-mini-btn iv-mini-btn--ghost" onClick={() => { setTitle(''); setUrl(''); setOpen(false) }}>cancel</button>
+    </div>
+  )
+}
+
+function PatternCard({ pattern, problems, onCycle, onConfidence, onEdit, onDelete, onAdd }) {
   const [open, setOpen] = useState(false)
   const r = patternReadiness(pattern, problems)
   return (
@@ -58,10 +107,11 @@ function PatternCard({ pattern, problems, onCycle, onConfidence }) {
         <div className="iv-pattern-body">
           {pattern.master_doc && <p className="iv-primer">{pattern.master_doc}</p>}
           {(problems ?? []).length === 0
-            ? <p className="muted" style={{ fontSize: 'var(--text-sm)' }}>no problems yet — add a bank below.</p>
+            ? <p className="muted" style={{ fontSize: 'var(--text-sm)' }}>no problems yet — add one below or import a bank.</p>
             : problems.map((p) => (
-              <ProblemRow key={p.id} p={p} onCycle={onCycle} onConfidence={onConfidence} />
+              <ProblemRow key={p.id} p={p} onCycle={onCycle} onConfidence={onConfidence} onEdit={onEdit} onDelete={onDelete} />
             ))}
+          <AddProblem onAdd={(fields) => onAdd(pattern, fields)} />
         </div>
       )}
     </div>
@@ -132,6 +182,21 @@ export default function InterviewView({ supabase, addToast }) {
     }))
     try { await setProblem(supabase, p.id, { status: next }) }
     catch (e) { addToast?.(e.message, 'error'); load() }
+  }
+
+  async function editProblem(p, fields) {
+    try { await setProblem(supabase, p.id, fields); await load() }
+    catch (e) { addToast?.(e.message, 'error') }
+  }
+
+  async function removeProblem(p) {
+    try { await deleteProblem(supabase, p.id); await load() }
+    catch (e) { addToast?.(e.message, 'error') }
+  }
+
+  async function addToPattern(pattern, fields) {
+    try { await addProblem(supabase, pattern.id, fields); await load() }
+    catch (e) { addToast?.(e.message, 'error') }
   }
 
   async function confidence(p, val) {
@@ -214,6 +279,9 @@ export default function InterviewView({ supabase, addToast }) {
                 problems={data.problemsByTopic[p.id]}
                 onCycle={cycle}
                 onConfidence={confidence}
+                onEdit={editProblem}
+                onDelete={removeProblem}
+                onAdd={addToPattern}
               />
             ))}
           </div>
