@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabaseClient.js'
 import { submitArchive } from '../lib/wayback.js'
 import { listEntriesByTopic, updateEntry } from '../lib/db/entries.js'
+import SharedManager from './SharedManager.jsx'
 import CompaniesTab from './settings/CompaniesTab.jsx'
 import KeybindsTab from './settings/KeybindsTab.jsx'
 import KeywordsTab from './settings/KeywordsTab.jsx'
@@ -148,6 +149,7 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
     { id: 'appearance',  label: 'Appearance' },
     { id: 'github',      label: 'GitHub' },
     { id: 'twitter',     label: 'Twitter' },
+    { id: 'shared',      label: 'Shared' },
     { id: 'behavior',    label: 'Behavior' },
     { id: 'tags',        label: 'Tag Colors' },
     { id: 'companies',   label: 'Companies' },
@@ -172,6 +174,8 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
           </button>
         ))}
       </div>
+
+      {tab === 'shared' && <SharedManager />}
 
       {tab === 'appearance' && (
   <section>

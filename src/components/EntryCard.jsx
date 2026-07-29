@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
-import { ChevronUp, Clock, History, MoreVertical, Pencil, Pin, PinOff, Plus, Trash2, Archive, BookOpen } from 'lucide-react'
+import { ChevronUp, Clock, History, MoreVertical, Pencil, Pin, PinOff, Plus, Trash2, Archive, BookOpen, Share2, Check } from 'lucide-react'
 import WaybackPopup from './WaybackPopup.jsx'
 import ReaderModal from './ReaderModal.jsx'
 import TagInput from './TagInput.jsx'
@@ -10,6 +10,7 @@ import ConfirmModal from './ConfirmModal.jsx'
 import Modal from './Modal.jsx'
 import { supabase } from '../lib/supabaseClient.js'
 import { snoozeEntry, unsnoozeEntry } from '../lib/db/entries.js'
+import { shareEntry, shareUrl } from '../lib/db/sharing.js'
 import { fetchTitle } from '../lib/enrich.js'
 import { getYouTubeThumbnail } from '../lib/youtube.js'
 import { classifyUrl } from '../lib/classifyUrl.js'
@@ -76,6 +77,16 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
   const [showWayback, setShowWayback] = useState(false)
   const [showSnoozePicker, setShowSnoozePicker] = useState(false)
   const [showReader, setShowReader] = useState(false)
+  const [shareCopied, setShareCopied] = useState(false)
+
+  async function handleShare() {
+    try {
+      const share = await shareEntry(supabaseClient || supabase, entry)
+      await navigator.clipboard?.writeText(shareUrl(share.slug))
+      setShareCopied(true)
+      setTimeout(() => setShareCopied(false), 2000)
+    } catch { /* surfaced via the Shared manager if it fails */ }
+  }
   const timer = useRef(null)
   const noteRef = useRef(null)
   const statusClass = entry.status ? `status-${entry.status}` : 'status-backlog'
@@ -423,6 +434,14 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
                 <History size={15} />
               </button>
             )}
+            <button
+              className="icon-btn"
+              aria-label={shareCopied ? 'public link copied' : 'share publicly'}
+              title={shareCopied ? 'Public link copied' : 'Share publicly (copies link)'}
+              onClick={(e) => { e.stopPropagation(); handleShare() }}
+            >
+              {shareCopied ? <Check size={15} /> : <Share2 size={15} />}
+            </button>
             {entry.url && (
               <button
                 className="icon-btn"
