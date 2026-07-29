@@ -243,18 +243,24 @@ export async function listNotesForHotlinks(supabase) {
   return data ?? []
 }
 
-export async function listAllArchivedEntries(supabase) {
+export const ARCHIVE_PAGE_SIZE = 100
+
+// Paginated so the Archive view can batch-load instead of pulling the whole
+// (potentially huge) done pile at once. Returns { rows, hasMore }.
+export async function listAllArchivedEntries(supabase, { limit = ARCHIVE_PAGE_SIZE, offset = 0 } = {}) {
   const { data, error } = await supabase
     .from('entries')
     .select(`${TAG_SELECT}, topics(name)`)
     .eq('status', 'done')
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
+    .range(offset, offset + limit - 1)
   if (error) throw new Error(error.message)
-  return data.map((row) => {
+  const rows = (data ?? []).map((row) => {
     const { topics, ...rest } = row
     return { ...flattenTags(rest), topicName: topics?.name ?? 'Unknown' }
   })
+  return { rows, hasMore: rows.length === limit }
 }
 
 export async function listArchivedEntriesByTopic(supabase, topicId) {

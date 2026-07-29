@@ -1,17 +1,35 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
+import { RotateCw } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient.js'
-import { listAllArchivedEntries } from '../lib/db/entries.js'
+import { listAllArchivedEntries, ARCHIVE_PAGE_SIZE } from '../lib/db/entries.js'
 import ConfirmModal from './ConfirmModal.jsx'
 
 export default function ArchiveView({ topics, archivedTopics = [], onSelectTopic, onUnarchiveTopic, onDeleteTopic }) {
   const [entries, setEntries] = useState(null)
+  const [hasMore, setHasMore] = useState(false)
+  const [loadingMore, setLoadingMore] = useState(false)
   const [search, setSearch] = useState('')
   const [expandedTopics, setExpandedTopics] = useState(new Set())
   const [confirmDeleteId, setConfirmDeleteId] = useState(null)
 
-  useEffect(() => {
-    listAllArchivedEntries(supabase).then(setEntries)
+  const loadFirst = useCallback(async () => {
+    setEntries(null)
+    const { rows, hasMore } = await listAllArchivedEntries(supabase, { offset: 0 })
+    setEntries(rows)
+    setHasMore(hasMore)
   }, [])
+
+  useEffect(() => { loadFirst() }, [loadFirst])
+
+  async function loadMore() {
+    if (loadingMore || !entries) return
+    setLoadingMore(true)
+    try {
+      const { rows, hasMore } = await listAllArchivedEntries(supabase, { offset: entries.length })
+      setEntries((prev) => [...prev, ...rows])
+      setHasMore(hasMore)
+    } finally { setLoadingMore(false) }
+  }
 
   const grouped = useMemo(() => {
     if (!entries) return null
@@ -44,7 +62,12 @@ export default function ArchiveView({ topics, archivedTopics = [], onSelectTopic
 
   return (
     <div style={{ maxWidth: 720, padding: '1.5rem' }}>
-      <h2 style={{ marginTop: 0, marginBottom: 16 }}>Archive</h2>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 0, marginBottom: 16 }}>
+        <h2 style={{ margin: 0 }}>Archive</h2>
+        <button className="icon-btn" aria-label="refresh archive" title="Refresh" onClick={loadFirst}>
+          <RotateCw size={15} />
+        </button>
+      </div>
 
       {archivedTopics.length > 0 && (
         <div style={{ marginBottom: 28 }}>
@@ -72,7 +95,7 @@ export default function ArchiveView({ topics, archivedTopics = [], onSelectTopic
       ) : (
         <>
           <p className="section-label" style={{ fontSize: '0.75rem', marginBottom: 8 }}>
-            Archived Entries — {entries.length} across {grouped?.length ?? 0} topics
+            Archived Entries — {entries.length}{hasMore ? '+' : ''} loaded across {grouped?.length ?? 0} topics
           </p>
 
           <input
@@ -148,6 +171,22 @@ export default function ArchiveView({ topics, archivedTopics = [], onSelectTopic
               </div>
             )
           })}
+
+          {hasMore && !search && (
+            <button
+              className="btn-ghost"
+              onClick={loadMore}
+              disabled={loadingMore}
+              style={{ width: '100%', marginTop: 8, padding: '10px' }}
+            >
+              {loadingMore ? 'Loading…' : `Load more (${ARCHIVE_PAGE_SIZE} at a time)`}
+            </button>
+          )}
+          {hasMore && search && (
+            <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>
+              Search covers the {entries.length} loaded entries — load more to widen it.
+            </p>
+          )}
         </>
       )}
 
