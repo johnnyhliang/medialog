@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { searchEntries, searchSemantic, listReadingQueue } from '../lib/db/entries.js'
 import { annotateEmbedded } from '../lib/db/retrieval.js'
+import { track } from '../lib/track.js'
 import { Search, BookOpen, Clock } from 'lucide-react'
 import { buildSearchPreview, splitHighlightParts } from '../lib/searchSnippets.js'
 
@@ -126,6 +127,9 @@ export default function ExploreView({ supabase, topics, onSelectEntry, onOrdered
     const useSemantic = semanticMode && SEMANTIC_SEARCH_ENABLED
     const delay = useSemantic ? 600 : 300
     timerRef.current = setTimeout(async () => {
+      // Fired inside the debounce, so it counts searches, not keystrokes. The
+      // query itself is never recorded — only which engine ran.
+      track(supabase, 'search_run', { mode: useSemantic ? 'semantic' : 'keyword' })
       try {
         const raw = useSemantic
           ? await searchSemantic(supabase, query.trim())
