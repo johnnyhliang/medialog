@@ -3,7 +3,6 @@ import SearchWidget from './widgets/SearchWidget.jsx'
 import QuickLinksWidget from './widgets/QuickLinksWidget.jsx'
 import MarketNewsWidget from './widgets/MarketNewsWidget.jsx'
 import WeatherWidget from './widgets/WeatherWidget.jsx'
-import DeadlineAlertBanner from './widgets/DeadlineAlertBanner.jsx'
 import OpportunitiesWidget from './widgets/OpportunitiesWidget.jsx'
 import FeedWidget from './widgets/FeedWidget.jsx'
 import FocusWidget from './widgets/FocusWidget.jsx'
@@ -12,7 +11,6 @@ import ResurfaceWidget from './widgets/ResurfaceWidget.jsx'
 export default function WidgetPanel({ supabase, onTrack, onSaveFeedItem, onGoToFeed, onOpenEntry }) {
   return (
     <div className="widget-panel">
-      <DeadlineAlertBanner supabase={supabase} />
       <ClockWidget />
       <WeatherWidget />
       <div className="kw-divider" />
