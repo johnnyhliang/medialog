@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
-  listFeeds, createFeed, deleteFeed,
+  listFeeds, createFeed, deleteFeed, setFeedCategory,
   listFeedItems, dismissFeedItem,
   markFeedItemSaved, cullExpiredItems, getFeedItemCounts,
   addStarterFeeds,
 } from '../lib/db/feeds.js'
+import { existingCategories, resolveCategory, UNCATEGORIZED } from '../lib/feedCategories.js'
 import { buildInterestProfile, sortByRelevance } from '../lib/feedRelevance.js'
 import { listRecentActivity } from '../lib/db/entries.js'
 import { STARTER_PACK } from '../lib/feedStarterPack.js'
@@ -41,6 +42,9 @@ export default function FeedView({ supabase, topics, allTags = [], onSaveItem, a
   const [newUrl, setNewUrl] = useState('')
   const [newName, setNewName] = useState('')
   const [newCategory, setNewCategory] = useState('')
+  // '' = uncategorized, '__new' = reveal the free-text field, anything else is
+  // an existing category picked from the list.
+  const [categoryMode, setCategoryMode] = useState('')
   const [addBusy, setAddBusy] = useState(false)
   const [addError, setAddError] = useState(null)
   const [packBusy, setPackBusy] = useState(false)
@@ -186,6 +190,19 @@ export default function FeedView({ supabase, topics, allTags = [], onSaveItem, a
     setCounts((prev) => ({ ...prev, [item.feed_id]: Math.max(0, (prev[item.feed_id] || 1) - 1) }))
   }
 
+  async function handleMoveFeed(feed, rawCategory) {
+    const category = resolveCategory(rawCategory, feeds)
+    const previous = feed.category ?? null
+    if (category === previous) return
+    setFeeds((prev) => prev.map((f) => (f.id === feed.id ? { ...f, category } : f)))
+    try {
+      await setFeedCategory(supabase, feed.id, category)
+    } catch {
+      setFeeds((prev) => prev.map((f) => (f.id === feed.id ? { ...f, category: previous } : f)))
+      addToast?.('Could not move that feed', 'error')
+    }
+  }
+
   async function handleAddFeed() {
     if (!newUrl.trim() || !newName.trim() || addBusy) return
     setAddBusy(true)
@@ -196,12 +213,14 @@ export default function FeedView({ supabase, topics, allTags = [], onSaveItem, a
       const feed = await createFeed(supabase, {
         url,
         name: newName.trim(),
-        category: newCategory.trim() || null,
+        // Reuses an existing spelling when one matches case-insensitively, so
+        // "Writers" joins "writers" instead of forking a twin group.
+        category: resolveCategory(newCategory, feeds),
         kind: isReddit ? 'reddit' : 'rss',
         min_score: isReddit ? 100 : null,
       })
       setFeeds((prev) => [...prev, feed].sort((a, b) => a.name.localeCompare(b.name)))
-      setNewUrl(''); setNewName(''); setNewCategory('')
+      setNewUrl(''); setNewName(''); setNewCategory(''); setCategoryMode('')
       setShowAddFeed(false)
     } catch (err) {
       setAddError(err.message)
@@ -234,7 +253,7 @@ export default function FeedView({ supabase, topics, allTags = [], onSaveItem, a
 
   // group feeds by category for sidebar
   const feedsByCategory = feeds.reduce((acc, f) => {
-    const cat = f.category || 'uncategorized'
+    const cat = f.category || UNCATEGORIZED
     if (!acc[cat]) acc[cat] = []
     acc[cat].push(f)
     return acc
@@ -275,11 +294,32 @@ export default function FeedView({ supabase, topics, allTags = [], onSaveItem, a
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
             />
-            <input
-              placeholder="category (optional)"
-              value={newCategory}
-              onChange={(e) => setNewCategory(e.target.value)}
-            />
+            {/* Picking from what exists is the fix for the real failure mode:
+                retyping a category by hand and landing a feed in a near-duplicate
+                group. Free text stays available behind "+ new category". */}
+            <select
+              value={categoryMode}
+              onChange={(e) => {
+                setCategoryMode(e.target.value)
+                if (e.target.value !== '__new') setNewCategory(e.target.value)
+                else setNewCategory('')
+              }}
+              aria-label="category"
+            >
+              <option value="">uncategorized</option>
+              {existingCategories(feeds).map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+              <option value="__new">+ new category…</option>
+            </select>
+            {categoryMode === '__new' && (
+              <input
+                placeholder="new category name"
+                value={newCategory}
+                onChange={(e) => setNewCategory(e.target.value)}
+                aria-label="new category name"
+              />
+            )}
             {addError && <p className="muted" style={{ fontSize: '0.75rem', color: 'var(--danger,#c0392b)' }}>{addError}</p>}
             <div style={{ display: 'flex', gap: '0.5rem' }}>
               <button onClick={handleAddFeed} disabled={addBusy || !newUrl || !newName}>
@@ -314,6 +354,20 @@ export default function FeedView({ supabase, topics, allTags = [], onSaveItem, a
                     </span>
                   </button>
                   <div className="feed-nav-actions">
+                    {/* Re-file without deleting and re-adding — the only way to
+                        recover a feed that landed in the wrong category. */}
+                    <select
+                      className="feed-cat-select"
+                      value={feed.category || ''}
+                      onChange={(e) => handleMoveFeed(feed, e.target.value)}
+                      title="Move to category"
+                      aria-label={`category for ${feed.name}`}
+                    >
+                      <option value="">{UNCATEGORIZED}</option>
+                      {existingCategories(feeds).map((c) => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                    </select>
                     <button
                       className="feed-action-btn"
                       onClick={() => handleDeleteFeed(feed)}

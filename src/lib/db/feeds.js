@@ -37,6 +37,12 @@ export async function addStarterFeeds(supabase, pack) {
   return data
 }
 
+// Re-files a feed under a different category. null moves it to uncategorized.
+export async function setFeedCategory(supabase, id, category) {
+  const { error } = await supabase.from('feeds').update({ category }).eq('id', id)
+  if (error) throw new Error(error.message)
+}
+
 export async function deleteFeed(supabase, id) {
   const { error } = await supabase.from('feeds').delete().eq('id', id)
   if (error) throw new Error(error.message)

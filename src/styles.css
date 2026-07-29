@@ -2638,6 +2638,24 @@ a.activity-title:hover { color: var(--accent); }
 }
 .modules-badge--locked { color: var(--accent); border-color: var(--accent); }
 
+/* Feed category re-file picker — hidden until the row is hovered/focused so the
+   sidebar stays a list of names rather than a bank of dropdowns. */
+.feed-cat-select {
+  max-width: 92px;
+  font-size: 10.5px;
+  font-family: inherit;
+  background: var(--bg);
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  padding: 1px 2px;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+.feed-nav-item-wrap:hover .feed-cat-select,
+.feed-cat-select:focus { opacity: 1; }
+.feed-cat-select:focus { outline: none; border-color: var(--accent); color: var(--text); }
+
 /* Market rows */
 .kw-market { display: flex; flex-direction: column; }
 

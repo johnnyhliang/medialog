@@ -264,3 +264,4 @@ and the deltas are logged, so the user can open settings and see *why* the mix s
   localStorage until midnight (stable-per-day like the current ResurfaceWidget seed).
 - v1 without embeddings: pools 1–3 + evidence/age/diversity only. Focus similarity and taste
   filter switch on after north-star ④/⑥. FIFO Revisit retires when this ships.
+- [Tech debt](docs/tech-debt.md) — known problems ranked by impact; Deno npm: resolution + unapplied migrations need verifying
