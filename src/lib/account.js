@@ -1,13 +1,17 @@
-import { DEFAULT_FEATURE_FLAGS } from './featureFlags.js'
-
-// Founder / dev gating.
+// Dev override and the legacy founder-identity check.
 //
-// Switches:
-// - app_flags.founder_features_public: runtime public rollout flag. Defaults on,
-//   and can be turned off from Supabase without a frontend rebuild.
-// - VITE_FOUNDER_FEATURES_PUBLIC=false: build-time fallback/off switch.
-// - VITE_FOUNDER_IDS: comma-separated auth user ids that retain founder access.
-// - import.meta.env.DEV: local dev always shows gated tools for testing.
+// Feature gating no longer lives here — it moved to the three-layer model in
+// src/lib/modules.js (entitlement × preference × availability). What remains:
+//
+// - isDev: local dev shows gated tools for testing. Deliberately separate from
+//   tier so it can never be reachable in a production build.
+// - isFounder / VITE_FOUNDER_IDS: the pre-tier identity check. Still the SOURCE
+//   for tier — migration 0057 derives user_entitlements.tier from
+//   user_configs.is_founder — but it is no longer consulted for visibility.
+//
+// showFounderFeatures() was removed: App.jsx now derives founder status from
+// tier, and the app_flags.founder_features_public switch it wrapped is read as
+// the availability layer in modules.js instead.
 
 const FOUNDER_IDS = (import.meta.env.VITE_FOUNDER_IDS || '')
   .split(',')
@@ -20,14 +24,11 @@ export function isFounder(user) {
   return Boolean(user && (user.is_founder || FOUNDER_IDS.includes(user.id)))
 }
 
-// Public-facing experimental surfaces: Career and Ask-your-library. They can be
-// turned off globally if signups or backend usage spike.
-export function showFounderFeatures(user, flags = DEFAULT_FEATURE_FLAGS) {
-  return isDev || Boolean(flags.founderFeaturesPublic) || isFounder(user)
-}
-
-// File uploads are still backend-enforced by Storage RLS, so only founder/dev
-// should see them until that policy is intentionally changed.
+// TODO: fold into the 'uploads' module (minTier 'founder'). NoteEditor resolves
+// this on its own with a getUser() call rather than receiving tier from App, so
+// migrating it means threading entitlement down or reading it locally. Uploads
+// stay backend-enforced by Storage RLS either way, so this is tidiness, not a
+// hole. Tracked in docs/tech-debt.md.
 export function showFounderUploads(user) {
   return isDev || isFounder(user)
 }
