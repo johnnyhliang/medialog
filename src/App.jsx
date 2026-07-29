@@ -17,6 +17,7 @@ import { Sparkles } from 'lucide-react'
 import { listVersions, createVersion } from './lib/db/versions.js'
 import { fetchTitle, fetchLinkPreview } from './lib/enrich.js'
 import { chunkEntryAsync } from './lib/chunkEntry.js'
+import { track } from './lib/track.js'
 import { runBackup } from './lib/db/githubBackup.js'
 import { showFounderFeatures } from './lib/account.js'
 import { DEFAULT_FEATURE_FLAGS, loadFeatureFlags } from './lib/featureFlags.js'
@@ -220,6 +221,12 @@ function Workspace() {
     setTopics((prev) => prev.map((t) => (t.id === topicId ? { ...t, icon } : t)))
   }
 
+  // Retention hook. Fires on entering the digest view rather than inside
+  // DigestView, which is lazy-loaded and has no supabase client of its own.
+  useEffect(() => {
+    if (view === 'digest') track(supabase, 'digest_opened')
+  }, [view])
+
   useEffect(() => {
     supabase.from('user_configs').select('archive_toast').maybeSingle().then(({ data }) => {
       if (data && typeof data.archive_toast === 'boolean') setArchiveToast(data.archive_toast)
@@ -403,6 +410,7 @@ function Workspace() {
 
   async function handleSearchAll(q) {
     if (!q.trim()) { setGlobalSearchResults(null); return }
+    track(supabase, 'search_run', { mode: 'keyword' })
     const results = await searchEntries(supabase, q.trim())
     setGlobalSearchResults(results)
   }
@@ -422,6 +430,7 @@ function Workspace() {
 
   async function handleAddTopic(name) {
     const t = await createTopic(supabase, name)
+    track(supabase, 'topic_created')
     applyAddTopic(t)
   }
 
@@ -432,6 +441,7 @@ function Workspace() {
     } catch (err) {
       return { ok: false, error: err }
     }
+    track(supabase, 'entry_created', { source: 'paste' })
     setEntries((prev) => [{ ...e, tags: [] }, ...prev])
     if (tags.length > 0) {
       await setEntryTags(supabase, e.id, tags)
@@ -480,6 +490,7 @@ function Workspace() {
     } catch (err) {
       return { ok: false, error: err }
     }
+    track(supabase, 'entry_created', { source: 'capture' })
     setInboxCount((c) => c + 1)
     if (selectedId === inboxTopic.id) setEntries((prev) => [{ ...e, tags: [] }, ...prev])
     ;(async () => {
@@ -727,6 +738,8 @@ function Workspace() {
     const created = await bulkCreateEntries(supabase, inbox.id, items)
     enrichEntries(created)
     created.forEach(e => chunkEntryAsync(supabase, e))
+    // One event per entry, not per batch — track() batches the inserts.
+    created.forEach(() => track(supabase, 'entry_created', { source: 'bulk' }))
     setInboxCount((prev) => prev + created.length)
     return created.length
   }
@@ -735,6 +748,8 @@ function Workspace() {
     const entry = await createEntry(supabase, { topicId, url: item.url, title: item.title, note: item.note || '' })
     enrichEntries([entry])
     chunkEntryAsync(supabase, entry)
+    // Saving a single item out of the feed is a capture, not an import.
+    track(supabase, 'entry_created', { source: 'capture' })
     if (selectedId === topicId) setEntries((prev) => [entry, ...prev])
     const inbox = topics.find((t) => t.name === 'Inbox')
     if (inbox && topicId === inbox.id) setInboxCount((prev) => prev + 1)
@@ -745,6 +760,7 @@ function Workspace() {
     const created = await bulkCreateEntries(supabase, topicId, items)
     enrichEntries(created)
     created.forEach(e => chunkEntryAsync(supabase, e))
+    created.forEach(() => track(supabase, 'entry_created', { source: 'import' }))
     if (selectedId === topicId) {
       setEntries((prev) => [...created, ...prev])
     }
@@ -784,6 +800,7 @@ function Workspace() {
     }
     enrichEntries(allCreated)
     allCreated.forEach(e => chunkEntryAsync(supabase, e))
+    allCreated.forEach(() => track(supabase, 'entry_created', { source: 'import' }))
     setInboxCount((prev) => prev + allCreated.filter((e) => e.topic_id === inbox.id).length)
     return total
   }
@@ -817,11 +834,15 @@ function Workspace() {
 
     enrichEntries(allCreated)
     allCreated.forEach(e => chunkEntryAsync(supabase, e))
+    allCreated.forEach(() => track(supabase, 'entry_created', { source: 'import' }))
     return total
   }
 
   async function handleAssign(entryId, topicId) {
     await updateEntry(supabase, entryId, { topic_id: topicId })
+    // The activation metric. One event per entry filed, so `sum(count)` gives
+    // sorting volume while `exists` gives activation.
+    track(supabase, 'inbox_sorted', { count: 1 })
     applyAssign(entryId)
     setInboxCount((prev) => Math.max(0, prev - 1))
   }
