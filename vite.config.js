@@ -54,5 +54,9 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: './src/test/setup.js',
+    // Agent worktrees under .claude/ carry their own node_modules, so crawling
+    // them collects a second copy of every test AND a second React — which
+    // fails with "Cannot read properties of null (reading 'useState')".
+    exclude: ['**/node_modules/**', '**/dist/**', '.claude/**'],
   },
 })

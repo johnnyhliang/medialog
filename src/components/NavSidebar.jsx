@@ -15,24 +15,24 @@ const SECTIONS = [
     items: [
       { view: 'home', label: 'Home', icon: Home },
       { view: 'explore', label: 'Explore', icon: Search },
-      { view: 'feed', label: 'Feed', icon: Rss },
+      { view: 'feed', label: 'Feed', icon: Rss, module: 'feed' },
       { view: 'sort', label: 'Sort Inbox', icon: Inbox, side: 'loadInbox' },
-      { view: 'tidy', label: 'Tidy', icon: Sparkles },
-      { view: 'career', label: 'Career', icon: Briefcase, founderOnly: true },
-      { view: 'interview', label: 'Interview Prep', icon: GraduationCap },
+      { view: 'tidy', label: 'Tidy', icon: Sparkles, module: 'tidy' },
+      { view: 'career', label: 'Career', icon: Briefcase, module: 'career' },
+      { view: 'interview', label: 'Interview Prep', icon: GraduationCap, module: 'interview' },
     ],
   },
   {
     id: 'library',
     label: 'library',
     items: [
-      { view: 'reading', label: 'Reading', icon: BookMarked },
-      { view: 'highlights', label: 'Highlights', icon: Highlighter },
-      { view: 'revisit', label: 'Revisit', icon: RotateCcw, side: 'loadRevisit' },
-      { view: 'digest', label: 'Digest', icon: ScrollText, badge: 'digestStale' },
-      { view: 'archive', label: 'Archive', icon: Archive },
-      { view: 'files', label: 'Files', icon: FolderOpen },
-      { view: 'progress', label: 'Progress', icon: BarChart2 },
+      { view: 'reading', label: 'Reading', icon: BookMarked, module: 'reading' },
+      { view: 'highlights', label: 'Highlights', icon: Highlighter, module: 'highlights' },
+      { view: 'revisit', label: 'Revisit', icon: RotateCcw, side: 'loadRevisit', module: 'revisit' },
+      { view: 'digest', label: 'Digest', icon: ScrollText, badge: 'digestStale', module: 'digest' },
+      { view: 'archive', label: 'Archive', icon: Archive, module: 'archive' },
+      { view: 'files', label: 'Files', icon: FolderOpen, module: 'files' },
+      { view: 'progress', label: 'Progress', icon: BarChart2, module: 'progress' },
     ],
   },
   {
@@ -40,8 +40,8 @@ const SECTIONS = [
     label: 'more',
     collapsible: true,
     items: [
-      { view: 'bulk', label: 'Bulk Import', icon: Upload },
-      { view: 'migration', label: 'Import', icon: PackageOpen },
+      { view: 'bulk', label: 'Bulk Import', icon: Upload, module: 'import' },
+      { view: 'migration', label: 'Import', icon: PackageOpen, module: 'import' },
       { action: 'export', label: 'Export', icon: Download },
       { view: 'guide', label: 'Guide', icon: BookOpen },
       { view: 'settings', label: 'Settings', icon: Settings2 },
@@ -61,7 +61,7 @@ function digestStale() {
   }
 }
 
-export default function NavSidebar({ view, navigateTo, sideEffects = {}, onExport, showFounder = false }) {
+export default function NavSidebar({ view, navigateTo, sideEffects = {}, onExport, isModuleVisible = () => true }) {
   const [moreOpen, setMoreOpen] = useState(() => {
     try { return localStorage.getItem(MORE_OPEN_KEY) === 'true' } catch { return false }
   })
@@ -105,9 +105,10 @@ export default function NavSidebar({ view, navigateTo, sideEffects = {}, onExpor
   return (
     <ul className="nav">
       {SECTIONS.map((section) => {
-        // Founder-only items (job/career pipeline) are hidden unless the viewer
-        // is a founder account or running the local dev server.
-        const items = section.items.filter((i) => !i.founderOnly || showFounder)
+        // Items declaring a `module` are shown only when that module passes the
+        // composed entitlement+preference check (src/lib/modules.js). Items with
+        // no `module` are unconditional.
+        const items = section.items.filter((i) => !i.module || isModuleVisible(i.module))
         if (!items.length) return null
         // keep the "more" group visible when its current view is active,
         // otherwise the active highlight would be hidden

@@ -72,6 +72,67 @@ Reminders) and let people opt into the power features. The app stops overwhelmin
 default-off. (2) whether disabling a module hides its data or just its nav — recommend hides nav +
 routes only, data untouched (reversible).
 
+### Resolved 2026-07-29 — decompose gating into three layers
+
+The line above ("fold `showFounderFeatures` into the same system") is **wrong as written** and
+should not be implemented literally. `src/lib/account.js` currently reads:
+
+```js
+return isDev || Boolean(flags.founderFeaturesPublic) || isFounder(user)
+//     ^dev convenience  ^global kill-switch          ^per-account identity
+```
+
+That `||` chain is three unrelated concerns wearing one name. Folding modules into it makes a
+fourth. Decompose instead — visibility is the AND of three independent layers:
+
+```
+visible = entitled(tier, feature) && enabled(prefs, feature) && available(flags, feature)
+```
+
+| Layer | Answers | Written by | Storage | Trust |
+|---|---|---|---|---|
+| **Entitlement** | is this account *allowed* it? | server / billing | `user_entitlements` | authoritative |
+| **Preference** | has the user *chosen* to show it? | the user | `user_configs.modules` | cosmetic |
+| **Availability** | is it shipped / on globally? | ops | `app_flags` | kill-switch |
+
+**These must not share a table.** `user_configs` is user-writable via the `"own config"` RLS
+policy — put `tier` there and a user PATCHes themselves to paid. Entitlement gets its own table
+with select-own and *no* insert/update policy (same shape and same reasoning as `ai_usage` in
+`docs/metering-analytics-spec.md` §2.1). Preferences stay user-writable; forging them is harmless.
+
+**Tier:** `tier text` in `{free, paid, founder}`. Founder is a tier *value*, not a special case,
+and means "paid + internal tools" (metrics dashboard, uploads). Map each feature to a **minimum
+tier** rather than a boolean per feature — one column beats a widening flag set. Keep `isDev` as a
+separate dev-only override and `app_flags` as the ops kill-switch; three mechanisms, three names.
+
+**The module list is identical for every tier.** Entitlement filters what's *offered*, so a free
+user sees paid modules locked with an upgrade affordance rather than hidden — simpler than two
+divergent lists, and better for conversion.
+
+**Interview / Career / Assistant are founder-only, and are NOT paid features.** They were briefly
+exposed to everyone via `founder_features_public` purely to demo them; migration 0057 flips that
+flag off and gates them by entitlement instead (`minTier: 'founder'`). They are internal tools —
+personal and experimental, not product surface. If they ever ship to users they become **free
+opt-in modules**, never a paid upsell. `assistant` is the exception worth revisiting: it's the
+natural first paid feature, so move it to `minTier: 'paid'` when billing ships — but not before
+AI metering (task #4) exists, or signups reach the shared API key ungoverned.
+
+**Note on storage:** `user_configs.is_founder` (migration 0050) already proved the
+guarded-column pattern — a `guard_is_founder` trigger silently reverts client attempts to
+self-elevate. `user_entitlements` generalizes that rather than contradicting it: one
+service-role-only table beats adding a bespoke trigger for every future entitlement field
+(`tier`, `expires_at`, `source`).
+
+**Default-on set (new accounts only):** Home/Today, Inbox + capture, Topics/browse, Search,
+Digest — the capture→sort→resurface spine, nothing else. Off by default: interview tracker,
+career/opportunities, feed, reading/deep topics, files/archive, highlights, bulk import, and the
+weather/market widgets. That last one retires the widget entries under *Cuts / quiet retirements*
+in `IDEAS.md` without deleting anything — off-by-default, not gone.
+
+**Grandfather existing accounts to everything-on.** A migration that silently hides features
+someone uses daily is the worst possible introduction to the modules system. Defaults apply at
+signup only.
+
 ---
 
 ## Part 3 — Paradox of choice: review without FOMO

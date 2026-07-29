@@ -21,7 +21,10 @@ vi.mock('./lib/supabaseClient.js', () => {
     gte: vi.fn().mockReturnThis(),
     order: vi.fn().mockReturnThis(),
     limit: vi.fn().mockReturnThis(),
-    maybeSingle: vi.fn().mockResolvedValue({ data: null }),
+    // Files is an opt-in module now, so a bare account wouldn't render the nav
+    // item at all. Present as a grandfathered account (everything on) — see
+    // src/lib/modules.js — which is what any pre-modules account looks like.
+    maybeSingle: vi.fn().mockResolvedValue({ data: { tier: 'founder', modules: { __grandfathered: true } } }),
     then: (resolve) => Promise.resolve({ data: [], error: null }).then(resolve),
   }
   return {

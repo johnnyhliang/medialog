@@ -20,3 +20,6 @@ medialog-session-export.md
 medialog-session-highlights.md
 session-log-*.md
 distilled/
+
+# Agent worktrees (own git repos + node_modules)
+.claude/worktrees/

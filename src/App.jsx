@@ -1,5 +1,5 @@
 // src/App.jsx
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Search, Upload, Inbox, RotateCcw, BarChart2, Settings2, Trash2 as TrashIcon, Download, Menu, Home, FolderOpen, Rss, Briefcase, PackageOpen, Archive, ScrollText, Highlighter, BookOpen } from 'lucide-react'
 import { supabase } from './lib/supabaseClient.js'
 import { listTopics, createTopic, getTopicByName, listDeletedTopics, archiveTopic, unarchiveTopic, softDeleteTopic, restoreDeletedTopic, togglePinTopic } from './lib/db/topics.js'
@@ -19,8 +19,10 @@ import { listVersions, createVersion } from './lib/db/versions.js'
 import { fetchTitle, fetchLinkPreview } from './lib/enrich.js'
 import { chunkEntryAsync } from './lib/chunkEntry.js'
 import { runBackup } from './lib/db/githubBackup.js'
-import { showFounderFeatures } from './lib/account.js'
+import { isDev } from './lib/account.js'
 import { DEFAULT_FEATURE_FLAGS, loadFeatureFlags } from './lib/featureFlags.js'
+import { isModuleVisible as checkModuleVisible } from './lib/modules.js'
+import { DEFAULT_TIER, loadEntitlement, loadModulePrefs } from './lib/entitlements.js'
 import { buildMarkdownFiles, buildTopicMarkdown, topicFilename } from './lib/exportMarkdown.js'
 import { buildZip, downloadBlob } from './lib/buildZip.js'
 import AuthGate from './components/AuthGate.jsx'
@@ -99,7 +101,15 @@ function Workspace() {
   const [editTargetId, setEditTargetId] = useState(null)
   const [user, setUser] = useState(null)
   const [featureFlags, setFeatureFlags] = useState(DEFAULT_FEATURE_FLAGS)
-  const showFounder = showFounderFeatures(user, featureFlags)
+  const [tier, setTier] = useState(DEFAULT_TIER)
+  const [modulePrefs, setModulePrefs] = useState(null)
+  // Composed gate: entitlement (tier) AND preference (modulePrefs). See
+  // src/lib/modules.js — this is cosmetic, RLS is the real enforcement.
+  const isModuleVisible = useCallback(
+    (id) => checkModuleVisible(id, { tier, prefs: modulePrefs, isDev, flags: featureFlags }),
+    [tier, modulePrefs, featureFlags]
+  )
+  const showFounder = tier === 'founder' || isDev
   // Assistant: founder-only, and separately enable/disableable (persisted).
   const [assistantEnabled, setAssistantEnabled] = useState(() => {
     try { return localStorage.getItem('medialog_assistant_enabled') !== 'false' } catch { return true }
@@ -227,6 +237,22 @@ function Workspace() {
     })
   }, [])
 
+  // Keyed on the user, not mounted once: tier and module prefs are per-account,
+  // so signing in has to re-resolve them or a fresh session keeps the previous
+  // account's gating.
+  useEffect(() => {
+    let cancelled = false
+    if (!user) { setTier(DEFAULT_TIER); setModulePrefs(null); return }
+    Promise.all([loadEntitlement(supabase), loadModulePrefs(supabase)])
+      .then(([entitlement, prefs]) => {
+        if (cancelled) return
+        setTier(entitlement.tier)
+        setModulePrefs(prefs)
+      })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [user])
+
   useEffect(() => {
     let cancelled = false
     async function refreshFeatureFlags() {
@@ -235,13 +261,8 @@ function Workspace() {
     }
     refreshFeatureFlags()
     const featureFlagTimer = setInterval(refreshFeatureFlags, 60 * 1000)
-    supabase.auth.getUser().then(async ({ data }) => {
-      const u = data?.user ?? null
-      if (!u) { setUser(null); return }
-      // Merge the DB-backed founder flag so gating works without a rebuild.
-      const { data: cfg } = await supabase
-        .from('user_configs').select('is_founder').eq('user_id', u.id).maybeSingle()
-      setUser({ ...u, is_founder: cfg?.is_founder ?? false })
+    supabase.auth.getUser().then(({ data }) => {
+      setUser(data?.user ?? null)
     })
     refreshTopics()
     refreshTags()
@@ -968,7 +989,7 @@ function Workspace() {
             navigateTo={navigateTo}
             sideEffects={{ loadInbox, loadRevisit, loadTrash }}
             onExport={handleExportClick}
-            showFounder={showFounder}
+            isModuleVisible={isModuleVisible}
           />
           <hr className="topic-divider" />
           <TopicList
@@ -1088,7 +1109,7 @@ function Workspace() {
               addToast={addToast}
             />
           )}
-          {view === 'interview' && (
+          {view === 'interview' && isModuleVisible('interview') && (
             <InterviewView supabase={supabase} addToast={addToast} />
           )}
           {view === 'reading' && (
@@ -1180,7 +1201,7 @@ function Workspace() {
               addToast={addToast}
             />
           )}
-          {view === 'career' && showFounder && (
+          {view === 'career' && isModuleVisible('career') && (
             <CareerView
               supabase={supabase}
               addToast={addToast}
