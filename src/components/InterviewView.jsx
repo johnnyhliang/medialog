@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { GraduationCap, ChevronDown, ChevronRight } from 'lucide-react'
-import { listInterview, seedPatterns, setProblem, addProblem, deleteProblem, patternReadiness, trackReadiness } from '../lib/db/interview.js'
+import { listInterview, seedPatterns, setProblem, addProblem, deleteProblem, patternReadiness, trackReadiness, scheduleReview } from '../lib/db/interview.js'
 import { parseCurriculum } from '../lib/parseCurriculum.js'
 import { PATTERNS, TRACKS } from '../lib/interviewSeed.js'
 
@@ -207,7 +207,24 @@ export default function InterviewView({ supabase, addToast }) {
         [p.topic_id]: d.problemsByTopic[p.topic_id].map((x) => x.id === p.id ? { ...x, confidence: val } : x),
       },
     }))
-    try { await setProblem(supabase, p.id, { confidence: val }) }
+    try {
+      await setProblem(supabase, p.id, { confidence: val })
+      // Rating a solved problem is the natural moment to schedule its review —
+      // it's the only point where a fresh recall signal exists. A failure here
+      // must not lose the rating itself, so it's caught separately.
+      if (p.status === 'done') {
+        try {
+          const srs = await scheduleReview(supabase, p, val)
+          setData((d) => ({
+            ...d,
+            problemsByTopic: {
+              ...d.problemsByTopic,
+              [p.topic_id]: d.problemsByTopic[p.topic_id].map((x) => x.id === p.id ? { ...x, ...srs } : x),
+            },
+          }))
+        } catch { /* rating saved; scheduling can be retried on the next rating */ }
+      }
+    }
     catch (e) { addToast?.(e.message, 'error'); load() }
   }
 

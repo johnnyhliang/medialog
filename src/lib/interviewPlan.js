@@ -103,6 +103,73 @@ export function actualWeeklyRate(problemsByTopic = {}, now = Date.now()) {
   return done / 2
 }
 
+/**
+ * Turns a focus list into the weights `suggestNext` consumes.
+ *
+ * This is the pivot lever: change focus and readiness ordering, gaps and
+ * suggestions all shift without touching a single problem. No focus means every
+ * track weighted equally — the honest default before you've decided what you're
+ * interviewing for, rather than silently guessing one.
+ */
+export function trackWeightsFromFocus(focus = [], { focused = 3, other = 1 } = {}) {
+  if (!focus?.length) return { __default: other }
+  const out = { __default: other }
+  for (const track of focus) out[track] = focused
+  return out
+}
+
+/**
+ * Ranked gaps with a machine-readable reason each, so the UI can explain *why*
+ * something is a gap instead of only showing a low number.
+ *
+ * Three distinct kinds, because they need different responses:
+ *   'uncovered' — below target, needs new problems
+ *   'stale'     — covered, but reviews are overdue; needs recall not volume
+ *   'shaky'     — covered and reviewed, but mastery is low; needs re-learning
+ *
+ * Collapsing these into one "readiness" number is what makes a tracker feel
+ * accusatory rather than useful: it tells you you're behind without telling you
+ * what to do.
+ */
+export function identifyGaps({ patterns = [], problemsByTopic = {}, focus = [], now = Date.now(), limit = 5 } = {}) {
+  const weights = trackWeightsFromFocus(focus)
+  const inFocus = (pat) => !focus?.length || (pat.tracks ?? []).some((t) => focus.includes(t))
+
+  const gaps = patterns.map((pat) => {
+    const problems = problemsByTopic[pat.id] ?? []
+    const { coverage, mastery, ready, solved, target } = patternReadiness(pat, problems)
+    const stale = patternStaleness(problems, now)
+    const weight = Math.max(
+      ...[...(pat.tracks ?? [])].map((t) => weights[t] ?? 1),
+      weights.__default ?? 1
+    )
+
+    let kind = null
+    if (coverage < 1) kind = 'uncovered'
+    else if (stale >= 0.5) kind = 'stale'
+    else if (mastery < 0.6) kind = 'shaky'
+    if (!kind) return null
+
+    // Severity is scaled by focus weight so a pivot immediately reorders the
+    // list — an untouched pattern outside your focus shouldn't outrank a shaky
+    // one inside it.
+    const severity = (1 - ready) * weight * (inFocus(pat) ? 1 : 0.4)
+    return {
+      patternId: pat.id,
+      name: pat.name,
+      kind,
+      severity,
+      coverage,
+      mastery,
+      stale,
+      missing: Math.max(0, target - solved),
+      inFocus: inFocus(pat),
+    }
+  }).filter(Boolean)
+
+  return gaps.sort((a, b) => b.severity - a.severity).slice(0, limit)
+}
+
 // How badly a pattern needs work. Recency penalty spreads a session across
 // patterns instead of letting it tunnel into whichever one scores highest once.
 function patternNeed(pattern, problems, { trackWeights, now }) {

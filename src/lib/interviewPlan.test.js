@@ -2,6 +2,7 @@ import { test, expect, describe } from 'vitest'
 import {
   dueReviews, patternStaleness, remainingProblems, paceStatus, actualWeeklyRate,
   suggestNext, MAX_REVIEWS_PER_SET, MAX_CONSECUTIVE_SAME_PATTERN,
+  trackWeightsFromFocus, identifyGaps,
 } from './interviewPlan.js'
 
 const NOW = new Date('2026-07-29T12:00:00Z').getTime()
@@ -112,6 +113,60 @@ describe('remaining + pace', () => {
   test('actualWeeklyRate ignores work older than the trailing fortnight', () => {
     const old = { t1: [solved('a', 't1', { updated_at: daysFromNow(-30) })] }
     expect(actualWeeklyRate(old, NOW)).toBe(0)
+  })
+})
+
+describe('trackWeightsFromFocus', () => {
+  test('no focus weights everything equally rather than guessing', () => {
+    expect(trackWeightsFromFocus([])).toEqual({ __default: 1 })
+    expect(trackWeightsFromFocus(null)).toEqual({ __default: 1 })
+  })
+
+  test('focused tracks outweigh the rest', () => {
+    const w = trackWeightsFromFocus(['swe', 'sysdesign'])
+    expect(w.swe).toBe(3)
+    expect(w.sysdesign).toBe(3)
+    expect(w.__default).toBe(1)
+  })
+})
+
+describe('identifyGaps', () => {
+  const patterns = [
+    { id: 't1', name: 'Uncovered', tracks: ['swe'], pattern_target: 3 },
+    { id: 't2', name: 'Stale', tracks: ['swe'], pattern_target: 1 },
+    { id: 't3', name: 'Shaky', tracks: ['qt'], pattern_target: 1 },
+    { id: 't4', name: 'Solid', tracks: ['swe'], pattern_target: 1 },
+  ]
+  const problemsByTopic = {
+    t1: [prob('a', 't1')],
+    t2: [solved('b', 't2', { confidence: 5, surface_after: daysFromNow(-3) })],
+    t3: [solved('c', 't3', { confidence: 1, surface_after: daysFromNow(30) })],
+    t4: [solved('d', 't4', { confidence: 5, surface_after: daysFromNow(30) })],
+  }
+
+  test('classifies each gap kind distinctly and omits solid patterns', () => {
+    const gaps = identifyGaps({ patterns, problemsByTopic, now: NOW })
+    const byId = Object.fromEntries(gaps.map((g) => [g.patternId, g.kind]))
+    expect(byId).toEqual({ t1: 'uncovered', t2: 'stale', t3: 'shaky' })
+    expect(gaps.find((g) => g.patternId === 't4')).toBeUndefined()
+  })
+
+  test('reports how many problems are missing for uncovered patterns', () => {
+    const gaps = identifyGaps({ patterns, problemsByTopic, now: NOW })
+    expect(gaps.find((g) => g.patternId === 't1').missing).toBe(3)
+  })
+
+  test('a pivot reorders gaps without touching any problem', () => {
+    const swe = identifyGaps({ patterns, problemsByTopic, focus: ['swe'], now: NOW })
+    const qt = identifyGaps({ patterns, problemsByTopic, focus: ['qt'], now: NOW })
+    expect(swe[0].inFocus).toBe(true)
+    expect(swe[0].patternId).not.toBe('t3')
+    // Focusing qt promotes the qt pattern to the top of the same data.
+    expect(qt[0].patternId).toBe('t3')
+  })
+
+  test('respects the limit', () => {
+    expect(identifyGaps({ patterns, problemsByTopic, now: NOW, limit: 2 })).toHaveLength(2)
   })
 })
 

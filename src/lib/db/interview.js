@@ -14,7 +14,11 @@ export async function listInterview(supabase) {
   const ids = patterns.map((p) => p.id)
   const { data: problems, error: pErr } = await supabase
     .from('entries')
-    .select('id, topic_id, title, url, status, difficulty, confidence, srs_ef, srs_reps')
+    // srs_interval + surface_after are needed for review scheduling and the
+    // staleness/pace math in interviewPlan.js; updated_at feeds the actual-rate
+    // calculation. They were previously omitted, which is why the SRS columns
+    // existed but nothing time-aware could be computed.
+    .select('id, topic_id, title, url, status, difficulty, confidence, srs_ef, srs_reps, srs_interval, surface_after, updated_at')
     .in('topic_id', ids)
     .is('deleted_at', null)
   if (pErr) throw new Error(pErr.message)
@@ -128,6 +132,31 @@ export async function seedPatterns(supabase, patterns) {
 export async function setProblem(supabase, id, patch) {
   const { error } = await supabase.from('entries').update(patch).eq('id', id)
   if (error) throw new Error(error.message)
+}
+
+// Maps a 1-5 self-rating to an SM-2 grade. Below 3 in SM-2 means "failed recall"
+// and resets the interval, so a 1-2 confidence has to land there — rating a
+// problem "barely understood" and then not seeing it for a month is the exact
+// failure this scheduling is meant to prevent.
+export function confidenceToGrade(confidence) {
+  if (confidence == null) return 4
+  if (confidence <= 2) return 2
+  if (confidence === 3) return 3
+  if (confidence === 4) return 4
+  return 5
+}
+
+/**
+ * Schedules the next review for a solved problem, driving the SM-2 state that
+ * already exists on entries. Without this the interview tracker wrote confidence
+ * but never surface_after, so nothing was ever due and masterySignal's srs_ef
+ * fallback read a value that never changed.
+ *
+ * Returns the SRS patch so callers can update local state without a refetch.
+ */
+export async function scheduleReview(supabase, problem, confidence) {
+  const { rateRevisit } = await import('./entries.js')
+  return rateRevisit(supabase, problem, confidenceToGrade(confidence))
 }
 
 // Manually add a problem (with optional link) to a pattern topic.
