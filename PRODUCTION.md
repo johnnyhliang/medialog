@@ -24,6 +24,77 @@ for data-ownership reasons, never as the cheap option.
 
 ---
 
+## Scaling & cost mechanics
+
+Measured 2026-07-30. The point of this section is that **AI cost here is dominated
+by embeddings, not by chat** — which is the opposite of what people assume, and it
+changes what you optimise.
+
+### Per-operation AI cost, ranked
+
+| Operation | When it fires | Approx tokens | Notes |
+|---|---|---|---|
+| **`embed-entry`** | **every entry save** | ~200–2 000 in, per chunk | Per *save*, not per question. Fires for every user whether or not they ever open the assistant. **This is the real cost centre.** |
+| `askLibrarian` | per library question | ~1 550 | 8 passages × 700 chars + system |
+| `askAppHelp` | per app question only | ~1 010 | Cheapest AI path. Router sends app-shaped questions here; library questions never pay it |
+| `enrich` | per URL capture | 0 (no LLM) | Readability is local to the function |
+
+**Implication:** capping chat would barely move the bill. Capping/queueing
+*embeddings* is what controls spend. `chunkEntry.js` already hash-guards on
+`source_hash`, so re-saving unchanged text costs nothing — the exposure is new
+content and backfills.
+
+### What grows, and when to act
+
+| Thing | Today | Acts up at | Fix |
+|---|---|---|---|
+| App-help prompt | 23 modules × ~22 tok + 21 settings × ~12 tok | ~40 modules | Prefilter rows by keyword, same as `searchSettings` — send only relevant ones |
+| Library passages | 8 × 700 chars, fixed | never | Already bounded by design |
+| `content_chunks` | ~1 chunk per source field | 100k+ rows | pgvector index tuning (`lists`/`probes`); consider HNSW |
+| `snapshots` bucket | images/PDFs only, 25 MB cap | video opt-in | See `preservation-v2-spec.md` §3 — R2 for media |
+| `events` | 5 event types, batched | 1M+ rows | Partition by month, or roll up nightly and drop raw |
+| `crawl-archive` | capped at 500 items | — | Already bounded after a sitemap returned 16 808 |
+
+### Free-tier constraint is rate, not money
+The AI provider is an OpenRouter/Groq free-tier Llama 3.3 70B (`docs/ai-setup.md`).
+Monetary cost is ≈ $0; the ceiling is **requests- and tokens-per-minute**. A burst
+— bulk import triggering hundreds of embeddings — hits TPM long before it hits a
+bill. That is the same burst problem the import queue (task #5) solves, so the
+queue is a *rate-limit* fix as much as a cost one.
+
+---
+
+## If you ever move off Supabase/Vercel
+
+**Don't, until something specific forces it.** Managed Supabase at ~$25/mo replaces
+Postgres + auth + storage + edge functions + cron. Reproducing that on a
+hyperscaler is more money and far more operational surface. The honest triggers
+are: an enterprise customer demanding a specific region/compliance posture, costs
+crossing roughly $500/mo where committed-use discounts start to matter, or needing
+something Supabase genuinely cannot host (a persistent worker, a GPU).
+
+**What would actually port, in order of difficulty:**
+
+| Piece | Portability | Notes |
+|---|---|---|
+| Frontend | **trivial** | Static Vite build. S3+CloudFront / Azure Static Web Apps / Cloudflare Pages. Only `vercel.json` rewrites need translating — see `docs/deploy.md` for the two-entry-point routing that must be preserved |
+| Postgres | **easy** | RDS/Aurora or Azure Database for PostgreSQL. Needs the **pgvector** extension — available on both, verify the version. `pg_cron` and `pg_net` are the catch: RDS has `pg_cron`, but `pg_net` is Supabase-specific, so every cron that POSTs to a function has to become an EventBridge/Logic Apps schedule instead |
+| Edge functions | **medium** | 16 Deno functions → Lambda (needs a Deno layer, or a rewrite to Node) or Azure Functions. The rewrite is mostly mechanical since they are small and dependency-light — but `_shared/isSafeUrl.ts` and `extractArticle.ts` must move with them |
+| **Auth** | **hard — the real lock-in** | Supabase Auth issues the JWTs that **every RLS policy reads via `auth.uid()`**. Moving to Cognito/Entra ID means either re-issuing compatible JWTs with the same `sub` claims, or rewriting every policy. Migrating password hashes is possible but users may need resets |
+| **RLS** | **hard if you leave Postgres** | Row-level security *is* the authorization model here — client gating is cosmetic. Keep Postgres and it ports untouched; move to DynamoDB/Cosmos and you are rewriting authorization from scratch |
+| Storage | **easy** | `snapshots` bucket → S3/Blob with equivalent per-user prefix policies |
+
+**The lesson to keep:** the app is portable *because* the client is a thin layer
+over Postgres+RLS. That is also why the AI-agent tool layer was deferred and why
+client gating was kept cosmetic — those decisions preserve the property. Anything
+that moves authorization into application code makes a future migration harder.
+
+**A cheaper intermediate step**, if the trigger is cost rather than compliance:
+keep Supabase for auth+Postgres, and move only the expensive workload (embeddings,
+media) to whichever provider is cheapest. Nothing forces an all-or-nothing move.
+
+---
+
 ## 🔴 Must fix before first users (blockers)
 
 - [x] **RLS / multi-tenant audit** — done 2026-07-22, fixes in `0044_multitenant_rls.sql`
