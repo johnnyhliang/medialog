@@ -26,12 +26,15 @@ trust) · `docs/tech-debt.md` (severity-ranked problems) · `IDEAS.md` (proposal
 **No migration or function gaps remain.** `scripts/set-tier.js` now works, so paid
 surfaces are testable: `node scripts/set-tier.js <email> paid`.
 
-**One deliberate residue:** `VITE_CAPTURE_SECRET` and the `CAPTURE_SECRET` Supabase
-secret are both still set, and `capture` still honours the legacy path while they
-are. That is the transition ramp so existing bookmarklets keep working. **Unsetting
-both is what actually closes the bundle-secret hole** — do it once your devices use
-tokens (Settings → Capture tokens). The Settings tab shows a warning while the
-legacy secret is present.
+**Capture secret fully removed 2026-07-30.** `CAPTURE_SECRET` unset from Supabase,
+`VITE_CAPTURE_SECRET` deleted from Vercel, site rebuilt, and absence verified by
+fetching the live bundle. Two findings: it was never actually exploitable
+(`CAPTURE_USER_ID` had never been set, so the legacy path 401'd — the bookmarklet
+had been quietly broken), and deleting the env var alone is insufficient because
+`VITE_` values are inlined at build time and persist until a rebuild.
+
+A capture token is minted and verified end-to-end; the bookmarklet and iOS tabs now
+generate token-based code. Manage or revoke at Settings → Capture tokens.
 
 ---
 
@@ -123,9 +126,10 @@ would store the wall as if it were the article. See `docs/tech-debt.md`.
 | Video transcripts | ❌ edge function, no worker needed | same §3 |
 | Video media | ❌ R2, opt-in | same §3 |
 
-**Blocking dependency:** the extension **cannot** ship `VITE_CAPTURE_SECRET`
-(extension bundles unpack trivially), so per-user capture tokens (§1 of that spec)
-gate the whole client-capture line of work.
+**Blocking dependency — now unblocked.** The extension could never have shipped
+`VITE_CAPTURE_SECRET` (extension bundles unpack trivially). Per-user capture tokens
+(§1 of that spec) shipped 2026-07-30, so the client-capture line of work is clear
+to start.
 
 ### 3.4 The intentional-app trio — 1 of 3
 | Part | State | Spec |
@@ -159,16 +163,12 @@ slash commands · episodic extraction · agent steps 3–5 *(deferred)* · MCP v
    `select url, full_text_extractor from entries where full_text_at > now() - interval '10 minutes';`
    `readability` = good, `heuristic` = the imports failed.
 
-2. **`VITE_CAPTURE_SECRET` — fix SHIPPED, one manual step left.** The secret was
-   confirmed in `dist/assets/SettingsView-*.js`, and `capture/index.ts` also read
-   `CAPTURE_USER_ID` from env, so every capture was attributed to one hardcoded
-   account — a second user could post into the founder's library using a secret the
-   bundle handed them. Now: `0063` applied, `capture` deployed and verified,
-   Settings → Capture tokens mints/revokes per-device tokens (SHA-256 stored,
-   plaintext shown once).
-   **Remaining manual step: unset `VITE_CAPTURE_SECRET` (build env) and
-   `CAPTURE_SECRET` (Supabase secret) once your devices use tokens.** Until then the
-   legacy path is still accepted by design, so the hole is open.
+2. ~~**`VITE_CAPTURE_SECRET` in the bundle**~~ — **RESOLVED 2026-07-30.** Tokens
+   shipped (`0063`), `CAPTURE_SECRET` unset, Vercel var deleted, site rebuilt, and
+   absence verified against the live bundle. It turned out never to be exploitable:
+   `CAPTURE_USER_ID` had never been set, so the legacy path 401'd and the
+   bookmarklet had been quietly broken. An earlier note here claiming an attacker
+   could write to the Inbox was wrong.
 
 3. **Wayback records unverified successes.** `submitArchive` is a bare
    `window.open`; the caller writes `wayback_submitted_at` regardless, and the
@@ -245,7 +245,6 @@ server-side on signup.
 | 4 | Interview progress UI | Data flows now, so rings aren't theatre | `interview-progress-spec.md` §4 |
 | 5 | Reminders + Agenda | Biggest product value; unblocked | `intentional-app-spec.md` Part 1 |
 | 6 | Wayback SPN2 rewrite | Fixes a broken feature, no new infra | `preservation-v2-spec.md` §2 |
-| 6 | **Unset `VITE_CAPTURE_SECRET` + `CAPTURE_SECRET`** after migrating devices to tokens | The last step that actually closes the bundle-secret hole. **Only you can do this** | `tech-debt.md` |
 | 7 | Split `App.jsx` along existing seams | Merge pain is already real | `2026-06-19-app-modularization-design.md` |
 | 8 | Split `styles.css` (5422 lines) | Every feature appends to one file | `tech-debt.md` |
 

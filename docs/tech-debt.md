@@ -64,29 +64,26 @@ unlogged bulk mutation over the whole library, using a key that bypasses RLS.
 **Before reconnecting it to anything:** either re-gate the bulk tools behind the
 propose/confirm model, or strip them to read-only. Don't rely on remembering.
 
-### `VITE_CAPTURE_SECRET` — fix shipped, ONE MANUAL STEP LEFT
-Per-user capture tokens shipped 2026-07-29: `capture_tokens` (`0063`, applied),
-`src/lib/db/captureTokens.js`, Settings → **Capture tokens**, and `capture` deployed
-+ verified. Tokens are SHA-256 hashed; plaintext is shown exactly once.
+### ~~`VITE_CAPTURE_SECRET` in the client bundle~~ — RESOLVED 2026-07-30
+Fully closed and verified. Per-user capture tokens (`0063`) shipped, then:
+`CAPTURE_SECRET` unset from Supabase secrets, `VITE_CAPTURE_SECRET` deleted from
+Vercel production, and the site rebuilt. Confirmed by fetching the live bundle and
+searching for the literal value — absent from the new `SettingsView` chunk.
 
-**The legacy path is still accepted while `CAPTURE_SECRET` is set**, deliberately, so
-existing bookmarklets keep working. So the hole is still open:
+**Two findings from doing it, worth keeping:**
 
-> **Action:** mint tokens for each device (Settings → Capture tokens), re-copy the
-> bookmarklet / Shortcut body, then **unset `VITE_CAPTURE_SECRET` in the build env
-> AND `CAPTURE_SECRET` in Supabase secrets.** That is what actually closes it. The
-> Settings tab warns while the legacy secret is present.
+1. **It was never exploitable.** `CAPTURE_USER_ID` had never been set as a Supabase
+   secret, so the legacy path had no account to attribute captures to — a probe with
+   the real secret returned 401. The exposed secret was a latent hole, not an open
+   door, and the bookmarklet had been silently broken for some time. Earlier notes
+   here claiming an attacker could write to the Inbox were wrong.
+2. **Removing an env var is not enough.** `VITE_`-prefixed values are inlined at
+   build time, so the deployed bundle keeps the secret until a rebuild replaces it.
+   Deleting the variable and *not* redeploying looks fixed and isn't.
 
-Original problem, for the record:
-`SettingsView.jsx` renders bookmarklet / iOS Shortcut templates containing the
-capture secret. Any `VITE_`-prefixed var is inlined at build time, so the secret
-ships to every visitor who loads the JS.
-
-Acceptable under a single-user threat model — it's your own secret protecting your
-own capture endpoint. **Not acceptable the moment signups exist**, because every
-user would receive the same shared secret and could post to
-`capture` as `CAPTURE_USER_ID`. Fix before any public launch: per-user capture
-tokens minted server-side, fetched at runtime, never inlined.
+Original problem, for the record: `SettingsView.jsx` rendered bookmarklet / iOS
+Shortcut templates containing the shared capture secret, which shipped to every
+visitor who loaded that chunk.
 
 ### Bookmarklet tokens are plaintext by construction — accepted risk
 A bookmarklet is a string in your bookmarks with no secure storage, so whatever
