@@ -12,6 +12,35 @@ trust) · `docs/tech-debt.md` (severity-ranked problems) · `IDEAS.md` (proposal
 
 ---
 
+## 0. Session synthesis — 2026-07-30
+
+Decisions made here that aren't recoverable from the diff:
+
+- **Metering ships before caps.** A limit guessed before `ai_usage` has history is
+  either useless or hostile. `aiCallsPerWindow` is `null` on purpose.
+- **`embed-entry` is the cost centre, not chat** (measured). It fires on every
+  entry save for every user. Capping chat alone would look responsible and change
+  almost nothing.
+- **Rolling 5h window, not monthly.** A monthly cap answers "you're out" with a
+  date weeks away; a rolling window always supports "wait a bit".
+- **Entry count is never limited.** Capping capture poisons the core loop.
+- **Per-account AI pause does not block embeddings** — that fails silently and
+  makes notes unsearchable with no signal. Only the global switch blocks them.
+- **`stage` gates maturity separately from `minTier`.** Experimental/beta are
+  founder-only automatically, so a half-built feature can't ship by someone
+  forgetting to also edit the tier.
+- **App-help is not RAG.** The corpus is ~1k tokens; retrieval exists for corpora
+  that don't fit. Derived from the registry so it can't drift.
+- **`career` moved founder → free**; it scrapes public boards on a shared cron.
+  `interview` stays founder-only: personal curriculum, not product.
+- **Reels parked, not deleted.** Kept reachable to a founder.
+
+Corrections worth remembering: the exposed `VITE_CAPTURE_SECRET` was never
+actually exploitable (`CAPTURE_USER_ID` was never set, so the legacy path 401'd);
+`retrievalEval.js` is a deliberate tuning harness, not dead code.
+
+---
+
 ## 1. Deployment truth — what is actually live
 
 | Layer | State |

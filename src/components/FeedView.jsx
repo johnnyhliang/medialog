@@ -9,6 +9,7 @@ import { existingCategories, resolveCategory, UNCATEGORIZED } from '../lib/feedC
 import { buildInterestProfile, sortByRelevance } from '../lib/feedRelevance.js'
 import { listRecentActivity } from '../lib/db/entries.js'
 import { STARTER_PACK } from '../lib/feedStarterPack.js'
+import GainsCard from './GainsCard.jsx'
 
 const STALE_MS = 60 * 60 * 1000 // re-fetch if older than 1 hour
 
@@ -27,7 +28,7 @@ function domain(url) {
   try { return new URL(url).hostname.replace(/^www\./, '') } catch { return url }
 }
 
-export default function FeedView({ supabase, topics, allTags = [], onSaveItem, addToast }) {
+export default function FeedView({ supabase, topics, allTags = [], onSaveItem, addToast, onOpenDeepTopic, onOpenPatternTopic }) {
   const [feeds, setFeeds] = useState([])
   const [recentTitles, setRecentTitles] = useState([])
   const [counts, setCounts] = useState({})
@@ -395,6 +396,12 @@ export default function FeedView({ supabase, topics, allTags = [], onSaveItem, a
 
       {/* ── items panel ── */}
       <div className="feed-items">
+        <GainsCard
+          supabase={supabase}
+          onOpenDeepTopic={onOpenDeepTopic}
+          onOpenPatternTopic={onOpenPatternTopic}
+          recommended={displayItems.slice(0, 3)}
+        />
         {items.length > 0 && (
           <div className="feed-toolbar">
             <input

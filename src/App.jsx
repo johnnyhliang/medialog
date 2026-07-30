@@ -1048,6 +1048,7 @@ function Workspace() {
          <Suspense fallback={<div className="view-loading" />}>
           {view === 'home' && (
             <HomeView
+              addToast={addToast}
               topics={topics}
               inboxCount={inboxCount}
               onSelectTopic={handleSelectTopic}
@@ -1212,6 +1213,8 @@ function Workspace() {
               allTags={allTags}
               onSaveItem={handleSaveFromFeed}
               addToast={addToast}
+              onOpenDeepTopic={(id) => { setDeepTopicId(id); setView('deeptopic') }}
+              onOpenPatternTopic={(id) => { setSelectedId(id); setView('browse') }}
             />
           )}
           {view === 'archive' && (

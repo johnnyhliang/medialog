@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
+import IndexStatus from './IndexStatus.jsx'
 import { ChevronUp, Clock, History, MoreVertical, Pencil, Pin, PinOff, Plus, Trash2, Archive, BookOpen, Share2, Check } from 'lucide-react'
 import WaybackPopup from './WaybackPopup.jsx'
 import ReaderModal from './ReaderModal.jsx'
@@ -309,6 +310,10 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
               )
               : <span className="card-title">{entry.title ? (searchQuery ? highlighted(entry.title) : entry.title) : <em className="muted">Untitled</em>}</span>
             }
+            {/* Quiet by design: renders nothing when indexing is healthy. Only
+                'failed' and 'not yet indexed' earn a mark, because those are the
+                states you can act on. */}
+            <IndexStatus status={entry.index_status} />
             <button
               className="icon-btn card-title-edit-btn"
               aria-label="edit title"

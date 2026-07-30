@@ -88,11 +88,29 @@ async function chunkSource(supabase, entry, userId, { source, text, markdown }) 
   await supabase.from('content_chunks').insert(rows)
 }
 
+// Records the outcome without ever throwing. Status is observability: if writing
+// it fails, that must not turn a successful index into a user-visible error.
+async function markIndex(supabase, entryId, status, error = null) {
+  try {
+    await supabase.from('entries').update({
+      index_status: status,
+      indexed_at: new Date().toISOString(),
+      index_error: error ? String(error).slice(0, 300) : null,
+    }).eq('id', entryId)
+  } catch { /* status is best-effort too */ }
+}
+
 export async function chunkEntryAsync(supabase, entry) {
   try {
     const sources = sourcesFor(entry)
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
+
+    // An entry with nothing chunkable is 'empty', not 'failed'. Conflating them
+    // would fill the retry queue with entries that can never succeed.
+    if (!sources.length) {
+      await markIndex(supabase, entry.id, 'empty')
+    }
     // Reconcile: drop chunks for any source this entry no longer has, so a
     // cleared note/takeaway/full_text stops appearing in search. Runs even when
     // the entry has no sources left (a fully-cleared entry deletes all its chunks).
@@ -104,7 +122,38 @@ export async function chunkEntryAsync(supabase, entry) {
     for (const s of sources) {
       await chunkSource(supabase, entry, user.id, s)
     }
-  } catch {
-    // Indexing is best-effort; a failure must never surface to the user.
+    if (sources.length) await markIndex(supabase, entry.id, 'ok')
+  } catch (err) {
+    // Indexing is best-effort; a failure must never surface to the user. But it
+    // is now RECORDED, so it can be retried and counted instead of vanishing.
+    await markIndex(supabase, entry?.id, 'failed', err?.message)
   }
+}
+
+/** Entries whose indexing needs another attempt. Used by the retry action. */
+export async function listUnindexed(supabase, { limit = 200 } = {}) {
+  const { data, error } = await supabase
+    .from('entries')
+    .select('id, topic_id, title, note, takeaway, full_text, index_status')
+    .in('index_status', ['pending', 'failed'])
+    .is('deleted_at', null)
+    .limit(limit)
+  if (error) return []
+  return data ?? []
+}
+
+/**
+ * Re-index a batch, paced so a retry can't recreate the burst that likely caused
+ * the failures. Reports progress so the UI can show movement rather than hanging.
+ */
+export async function reindexBatch(supabase, entries, { ratePerSecond = 3, onProgress } = {}) {
+  const gap = Math.max(0, Math.round(1000 / Math.max(1, ratePerSecond)))
+  let done = 0
+  for (const e of entries) {
+    await chunkEntryAsync(supabase, e)
+    done += 1
+    onProgress?.(done, entries.length)
+    if (done < entries.length && gap) await new Promise((r) => setTimeout(r, gap))
+  }
+  return done
 }
