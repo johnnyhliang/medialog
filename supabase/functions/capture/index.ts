@@ -51,9 +51,38 @@ Deno.serve(async (req) => {
 
   const body = await req.json().catch(() => ({}))
 
-  if (body.secret !== Deno.env.get('CAPTURE_SECRET')) {
+  const supabase = createClient(
+    Deno.env.get('SUPABASE_URL')!,
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+  )
+
+  // Auth: a per-user capture token (0063), falling back to the legacy shared
+  // secret. The legacy path exists only so existing bookmarklets/Shortcuts keep
+  // working through the transition — it attributes every capture to one env-
+  // configured account and its secret is inlined into the client bundle. Unset
+  // CAPTURE_SECRET once tokens are issued; that is what closes the hole.
+  let userId: string | null = null
+
+  if (body.token) {
+    const digest = await crypto.subtle.digest(
+      'SHA-256',
+      new TextEncoder().encode(String(body.token)),
+    )
+    const tokenHash = [...new Uint8Array(digest)]
+      .map((b) => b.toString(16).padStart(2, '0'))
+      .join('')
+    const { data } = await supabase.rpc('resolve_capture_token', { p_token_hash: tokenHash })
+    userId = (data as string | null) ?? null
+  } else if (body.secret) {
+    const legacy = Deno.env.get('CAPTURE_SECRET')
+    if (legacy && body.secret === legacy) {
+      userId = Deno.env.get('CAPTURE_USER_ID') ?? null
+    }
+  }
+
+  if (!userId) {
     return json(
-      { ok: false, error: 'unauthorized', message: 'Invalid or missing capture secret' },
+      { ok: false, error: 'unauthorized', message: 'Invalid or missing capture token' },
       401,
     )
   }
@@ -72,11 +101,6 @@ Deno.serve(async (req) => {
     )
   }
 
-  const supabase = createClient(
-    Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
-  )
-  const userId = Deno.env.get('CAPTURE_USER_ID')!
 
   async function log(ok: boolean, message: string, entryId?: string) {
     await supabase.from('capture_log').insert({
