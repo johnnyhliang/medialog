@@ -120,9 +120,16 @@ if (!post.length) {
   console.log(`  WORKING — ${readability} capture(s) used Readability.`)
   console.log('  The Deno npm: imports resolve. Clear the ⚠️ item in docs/tech-debt.md.')
 } else if (heuristic > 0) {
-  console.log(`  FALLING BACK — ${heuristic} recent capture(s) used the heuristic,`)
-  console.log('  0 used Readability. The npm: specifiers are not resolving in Deno.')
-  console.log('  Check function logs: supabase functions logs enrich')
+  // NOT a failure signal on its own. Readability declines to parse pages that
+  // aren't articles — link indexes, tag pages, homepages — and falling through
+  // to the heuristic is the designed behaviour, not a broken deploy. A single
+  // heuristic capture of danluu.com read as "npm: specifiers not resolving"
+  // (2026-07-30); the extractor was fine, the test URL was a link index.
+  // Only a run of article captures with zero Readability hits means anything.
+  console.log(`  INCONCLUSIVE — ${heuristic} recent capture(s) used the heuristic, 0 used Readability.`)
+  console.log('  Expected when the page is not an article (link index, tag page, homepage,')
+  console.log('  paywall, or JS-rendered). Capture 2-3 plain prose articles and re-run;')
+  console.log(`  ${heuristic >= 3 ? 'with this many samples, still-zero Readability starts to look real.' : 'this sample is too small to conclude anything.'}`)
 } else {
   console.log('  UNCLEAR — recent captures recorded no extractor.')
   console.log('  Likely captured before 0060 or by a path that skips preservationPatch.')
