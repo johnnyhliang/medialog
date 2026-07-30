@@ -107,6 +107,35 @@ capture; it resolves the credential problem as a side effect. Until then, treat 
 bookmarklet token as something to revoke on suspicion rather than protect
 perfectly.
 
+### Captured entries are never enriched — and wiring it up naively is worse
+Found 2026-07-30. `capture/index.ts` never calls `enrich`, and `enrichEntries` in
+`App.jsx` runs only on client-side creation paths (QuickAdd, bulk import,
+migration). Entries created server-side by the bookmarklet / iOS Shortcut are
+therefore **never enriched at all** — they keep the URL and `document.title` and
+nothing else, and `full_text_status` stays null permanently.
+
+This is most of why `check-preservation` reports 955 entries / 0 preserved / 955
+"not attempted".
+
+**Do not just wire `enrich` into `capture`.** It runs server-side and logged out,
+so for any login-walled or paywalled page it fetches the wall, not the article.
+`MIN_ARTICLE_CHARS` (500) catches short stubs, but a wall with nav, footer and
+"subscribe to continue" boilerplate clears 500 easily — Readability would extract
+it and store it as `full_text_status = 'ok'`. That is worse than storing nothing:
+junk feeds the embeddings, pollutes semantic search, and the coverage number lies.
+
+Options, in order of correctness:
+1. **Browser extension** (`docs/preservation-v2-spec.md` §1) — serializes the DOM
+   in your authenticated session, so it captures what you actually saw. The only
+   mechanism that works for login-walled content at all.
+2. Enrich captured entries but **only for public pages**, with a paywall/login
+   heuristic that marks suspected walls `empty` rather than `ok`.
+3. Leave as-is. Captures stay bookmarks-with-titles; the backfill script handles
+   preservation for public URLs on demand.
+
+Today's behaviour is accidentally the safe one, which is why this is logged rather
+than hot-fixed.
+
 ### Instagram session scraping is fragile and ToS-gray
 `fetch-reels` depends on a session cookie in `user_configs.twitter_auth_token`.
 It will break without warning and can't be defended if challenged. Already listed

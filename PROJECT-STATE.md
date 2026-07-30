@@ -106,7 +106,14 @@ not meter or rate-limit, and `embed-entry` likewise. One user can drain the shar
 quota for everyone. No `ai_usage` table exists. **There is no cost-per-user number**,
 which is the input both pricing and the YC narrative need.
 
-### 3.3 Preservation — 1 of 4 tiers, one tier broken
+### 3.3 Preservation — 1 of 4 tiers, one tier broken, one path never runs
+
+**Found 2026-07-30:** entries created by the capture endpoint (bookmarklet, iOS
+Shortcut) are **never enriched** — `capture` doesn't call `enrich`, and
+`enrichEntries` only fires on client-side creation paths. They keep URL + title
+and nothing more. That is most of why coverage reads 955/0. Wiring it up naively
+would be *worse* than leaving it: `enrich` runs logged out, so login-walled pages
+would store the wall as if it were the article. See `docs/tech-debt.md`.
 | Tier | State | Spec |
 |---|---|---|
 | Images/PDFs (Phase 1) | ✅ `snapshots` bucket, `snapshot` fn | `docs/content-preservation-plan.md` |
