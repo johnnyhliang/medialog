@@ -1,3 +1,11 @@
+> **⚠️ Superseded in part — 2026-07-29.** Part (a) `full_text` shipped (see CHANGELOG).
+> Parts **(b)** server-side full-page snapshots and **(c)** `yt-dlp` are **replaced** by
+> `docs/preservation-v2-spec.md`, which inverts the core assumption: capture happens
+> **client-side in a browser extension**, not server-side in a headless browser. That single
+> change makes login-walled pages solvable, removes the Chromium container entirely, and
+> delegates public-page fidelity to the Wayback Machine. Read v2 first; keep this file for the
+> Phase 1 archiver details and the (a) task history.
+
 # Content Preservation — Implementation Plan
 
 Status: **scoping, not built.** Goal: stop losing important articles and videos when they get taken
