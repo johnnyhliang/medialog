@@ -11,6 +11,207 @@ section when you deploy. Detailed design rationale lives in `docs/superpowers/sp
 
 ## Unreleased
 
+### Entitlements & modules — gating decomposed into three layers
+**Migration `0057`.** Replaces `showFounderFeatures()`, which was three unrelated concerns sharing
+one expression (`isDev || founderFeaturesPublic || isFounder(user)`): dev convenience, an ops
+kill-switch, and per-account identity. Folding module preferences into that chain would have made a
+fourth. Visibility is now the AND of three independent layers:
+
+```
+visible = entitled(tier, module) && enabled(prefs, module) && available(flags, module)
+```
+
+| Layer | Question | Written by | Storage | Trust |
+|---|---|---|---|---|
+| Entitlement | is this account *allowed* it? | server / billing | `user_entitlements` | authoritative |
+| Preference | did the user *choose* to show it? | the user | `user_configs.modules` | cosmetic |
+| Availability | is it shipped / on globally? | ops | `app_flags` | kill-switch |
+
+**Why two tables and not one column.** `user_configs` is user-writable via its `own config` RLS
+policy, so a `tier` column there is a free upgrade button. `user_entitlements` has select-own and
+**no write policy at all** — writes come from the service role. Migration `0050` had solved the same
+problem for `is_founder` with a per-column trigger; this generalizes that rather than contradicting
+it, so `tier`/`expires_at`/`source` don't each need their own guard.
+
+**Philosophy.** Showing everything *is* the paradox-of-choice problem. Subtraction is the feature:
+ship a lean spine and let power features be opted into. Features map to a **minimum tier**, not a
+boolean each — one column beats a widening flag set.
+
+**Expected usage.** Add a module to `MODULES` in `src/lib/modules.js` (`id` is persisted — never
+rename it), tag nav items with `module: '<id>'`, and gate routes with `isModuleVisible('<id>')`.
+`core: true` modules can't be disabled. Free users see paid modules **locked with an upgrade
+affordance** rather than hidden — one registry, better conversion — but `minTier: 'founder'` modules
+are hidden entirely, since a locked "Metrics" row advertises an operator surface to everyone.
+
+**Gotcha for developers.** Client-side gating is **cosmetic**. RLS on the underlying tables is the
+real enforcement; a forged tier in devtools reveals nav items that lead nowhere. Never move a
+security boundary into this layer.
+
+**Grandfathering.** Existing accounts got a `{"__grandfathered": true}` sentinel = everything on.
+The lean default set (`home`, `capture`, `topics`, `search`, `settings`, `digest`) applies **at
+signup only**. Silently hiding features someone uses daily is the worst possible introduction to a
+modules system.
+
+**Founder surfaces reverted to internal.** Career, Interview and the assistant are
+`minTier: 'founder'` — they were briefly public via `founder_features_public` purely to demo them.
+`0057` flips that flag off and derives founder tier from the existing `user_configs.is_founder` bit
+rather than a hardcoded uuid. They are **not** paid features and must never become a paid upsell;
+`assistant` is the one to reconsider as `paid` once metering exists.
+
+### Product event tracking — instrumentation that can't be backfilled
+**Migration `0058`.** `events(user_id, name, props jsonb, created_at)` plus `src/lib/track.js`.
+Shipped *before* AI metering despite the spec ordering it second: metering can be added the week you
+launch and lose nothing, whereas week-one cohort behavior for your earliest users is unrecoverable.
+
+`track(supabase, name, props)` is **fire-and-forget** — never throws, never rejects, never blocks the
+UI (same contract as `chunkEntryAsync`), no-ops on a falsy client, buffers with a 3s timer + a
+`visibilitychange` flush + a 100-row early flush, so a bulk import doesn't fire 200 round trips.
+
+**Hard rule, enforced by test.** No note text, titles, URLs, or search queries in `props` — counts
+and bounded enums only. MediaLog is a personal knowledge base; leaking content into an analytics
+table betrays the product's premise, and enums answer every question that matters. The assertion
+lives in its own `src/lib/track.privacy.test.js` so it can't be collateral damage of an unrelated
+edit.
+
+**The five events**, deliberately not more: `entry_created` (`source`), `inbox_sorted` (`count`),
+`search_run` (`mode`), `digest_opened`, `topic_created`.
+
+**Activation metrics** in `supabase/queries/activation.sql`. Primary: *sorted the inbox at least
+once in week one* — sorting is when the app stops being a bookmark pile, and it's the behavior you
+can design toward. Secondary: *captured on two separate days* — sorting proves comprehension,
+returning proves habit, and the second is usually the better retention predictor.
+
+### Article preservation — a real extractor and an unambiguous coverage marker
+**Migration `0060`.** `enrich` now extracts with `@mozilla/readability` + `linkedom`, factored into
+`supabase/functions/_shared/extractArticle.ts` with **the DOM and parser injected**, which is what
+lets one module run under Deno, Node and vitest. Chain: Readability → the old regex heuristic →
+nothing, gated at `MIN_ARTICLE_CHARS` (500) so cookie walls and paywall stubs fall through instead
+of being stored as "preserved".
+
+**Why a status column.** `full_text = null` meant both *never attempted* and *attempted, nothing
+extractable*. You cannot compute coverage from an ambiguous null. `full_text_status`
+(`ok`/`empty`/`failed`/null), `full_text_extractor` and `full_text_at` disambiguate, so
+"how much of my library is preserved" is one query. `src/lib/preservation.js` centralizes the
+mapping (`preservationPatch`) and mirrors the SQL client-side (`preservationCoverage`).
+
+**Bug found and fixed:** `enrichEntries` only ran when title or image were missing, so bulk imports
+arriving *with* titles never preserved text at all.
+
+**Backfill:** `scripts/backfill-full-text.js`, resumable off the marker itself (queue = "status is
+null", no cursor file), with `--retry/--rps/--limit/--dry-run/--coverage`.
+
+**Critical developer note.** `full_text` is a chunk **source** in `chunkEntry.js` (`sourcesFor`).
+Because `chunkSource` hash-guards on an FNV-1a `source_hash`, **improving extraction invalidates
+those hashes and forces re-embedding.** That's why `--rps` throttles the re-chunk *inside* the loop
+rather than just the HTTP fetches. Coverage status says nothing about index freshness — there is
+still no per-entry index status (see `docs/tech-debt.md`).
+
+**⚠️ Unverified.** Deployed 2026-07-29, but the `npm:` specifiers have never resolved at runtime.
+The imports are lazy and try/caught, so failure degrades silently to the heuristic — the dangerous
+kind. Verify with one capture, then check `full_text_extractor = 'readability'`.
+
+### Interview tracker — SRS activated, pace, and gap synthesis
+**Migration `0061`.** The SRS scaffolding was already paid for and idle: `sm2()`/`rateRevisit()`
+existed and wrote `surface_after`, but were wired only to the generic Revisit flow. `listInterview`
+didn't even select `surface_after`, while `masterySignal` read `srs_ef` as a fallback — a value that
+path never wrote. So `patternReadiness` had no time dimension at all: a pattern solved in March
+scored identically to one solved yesterday.
+
+- **Scheduling** — rating a solved problem now schedules its review (`scheduleReview` →
+  `confidenceToGrade` → the existing SM-2). Rating is the right hook because it's the only moment a
+  fresh recall signal exists. Confidence 1–2 maps to an SM-2 *failing* grade deliberately: rating
+  something "barely understood" and then not seeing it for a month is the exact failure this
+  prevents. Scheduling failures are caught separately so they can never lose the rating itself.
+- **`src/lib/interviewPlan.js`** — pure, injected-clock functions. `dueReviews`,
+  `patternStaleness` (overdue fraction, shown *beside* readiness rather than folded in, so it's
+  clear which of the two is the problem), `paceStatus` (required vs actual problems/week; a rate
+  converts into a decision about today, a percentage doesn't; `no_target` is first-class so pace
+  stays opt-in and doesn't nag), and `suggestNext`.
+- **`suggestNext` precedence** — due reviews outrank all new work (retention beats volume, capped at
+  3 so it can't eat the set), then the weakest pattern's **easiest** unsolved problem. Difficulty is
+  a ladder, not a filter: a hard problem in a barely-covered pattern teaches helplessness. Gates cap
+  consecutive picks from one pattern; the set is finite and an empty result means **caught up**,
+  which is the goal, not a failure — callers must not pad it.
+- **`identifyGaps`** returns a **kind** per gap — `uncovered` (needs new problems), `stale` (needs
+  recall), `shaky` (needs re-learning). Collapsing these into one readiness number is what makes a
+  tracker accusatory instead of useful: it says you're behind without saying what to do.
+- **Pivoting is data, not a migration.** `user_configs.prep_focus` + `trackWeightsFromFocus` are the
+  lever: change focus and readiness ordering, gaps and suggestions all re-derive from untouched
+  problems. No focus weights every track equally rather than silently guessing one.
+
+**No streaks, deliberately.** A streak punishes a deliberate rest day and turns a learning tool into
+a guilt engine. Cadence is measured for pace, never displayed as a chain.
+
+**Not yet built:** the UI (readiness rings, staleness dot, gap list, target-date/focus editor).
+
+### Payment infrastructure — built, deliberately inert
+**Migration `0062`.** `subscriptions` (read-own RLS, service-role writes) and
+`sync_tier_from_billing()` as the single authority mapping billing state to tier. Nothing charges
+anyone: `app_flags.billing_enabled` ships **false**, there is no provider key, and the webhook
+handler isn't written.
+
+**Why build it off.** The parts that are painful to retrofit are exactly the ones that must be
+correct before real money and real accounts exist. Both failure directions are quiet: granting paid
+to a lapsed account loses revenue invisibly, revoking it from a paying customer loses the customer.
+
+**The founder guard is load-bearing.** A manual founder grant is *never* downgraded by a billing
+event. Without it, a lapsed test subscription would strip the operator's own access — and the
+operator is the least likely to notice, being used to seeing everything.
+
+**`src/lib/billingPlan.js`** holds the mapping as pure functions: `active`/`trialing` → paid;
+`cancel_at_period_end` keeps access until the period actually ends because it was paid for;
+`past_due` keeps access for a **7-day grace window** (the usual cause is an expired card, not a
+non-paying user); `past_due` with no period end **refuses** rather than granting indefinitely; and an
+**unrecognized status defaults to free**, so a future provider status can never grant paid.
+`billingState()` is separate from tier because entitlement and messaging differ — a `past_due` user
+still has access but needs to hear about it.
+
+**Expected usage / harness.** `node scripts/set-tier.js <email> free|paid|founder` (needs
+`SUPABASE_SERVICE_ROLE_KEY`) sets a tier by hand, so paid surfaces are testable today with no
+provider. That's what makes "built but off" workable, and turning real billing on later changes
+nothing about how tier is consumed in the app.
+
+### Editable tools & links shelf
+**Migration `0056`.** `quick_links` replaces three hardcoded URLs in `QuickLinksWidget`. The design
+point: each link carries a **note**, and search matches note *as well as* label — these are tools you
+reach for by what they *do* long after forgetting what they're called, so "compress" has to find
+ihatepdf.cv. Search input appears past 4 links.
+
+### Feed categories — canonicalized, pickable, re-filable
+Adding a feed with a hand-typed category silently forked the sidebar: grouping is an **exact string
+match**, so `Writers` or a trailing space created a second group beside `writers`. Categories are
+legitimately user-defined, so the fix isn't a fixed taxonomy — `src/lib/feedCategories.js`
+canonicalizes on write (trim, collapse inner whitespace, reuse an existing spelling that matches
+case-insensitively) and the form offers what exists, with free text behind **+ new category**.
+
+Also adds a per-feed category select and an explicit **edit** toggle in the sidebar header. The
+actions were previously hover-only (`.feed-nav-actions` was `opacity: 0`), which made both the
+category picker and delete **unreachable on touch** and undiscoverable on desktop. There was
+previously no way at all to re-file a feed without deleting and re-adding it.
+
+### "Start Here" tutorial topic
+`src/lib/starterTopic.js` seeds an empty account with seven worked-example entries covering capture →
+inbox → semantic search → deep topics → digest → customization. The guide stays **reference**; this
+is the tutorial. Teaching by being a populated topic you read beats a click-through tour, and the
+last entry tells the user to delete the topic — that's the intended ending. Seeded from
+`refreshTopics` when only Inbox exists, name-guarded so it never re-seeds, catch-swallowed so a seed
+failure can't break load. Copy lives in a plain array; edits need no migration.
+
+**Known cost:** starter content re-embeds per signup on the shared key. Precomputing those vectors
+(template rows + a service-role copy on signup) is the fix, not built.
+
+### Mobile — topic grid no longer squeezed
+`.home-view` sets `align-items: flex-start`, which stops stretching children once the mobile query
+flips `flex-direction: column` — `.home-left` collapsed to its content width and topic cards
+rendered ~55px wide. Fixed with `align-items: stretch`, full-width `.home-left`, and a real
+2-column grid (the container query only fires below 312px, which phone widths clear).
+
+### Tooling — vitest was crawling agent worktrees
+`.claude/worktrees/` carry their own `node_modules`, so vitest collected a second copy of every test
+**and a second React**, failing with `Cannot read properties of null (reading 'useState')`. Excluded
+in `vite.config.js` and gitignored. A stale `feat+feed-widget` gitlink was also tracked in the repo
+and has been removed.
+
 ### File archiver (Phase 1) — owned copies of hotlinked files
 Beat link rot: a `snapshot` edge function fetches a hotlinked image/PDF/media file with the service
 role and stores an owned copy in a private `snapshots` bucket, deduped by SHA-256 content hash
