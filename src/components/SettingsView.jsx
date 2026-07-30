@@ -386,58 +386,32 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
         <section>
           <h2>Bookmarklet</h2>
           <div className="card">
-            <p className="muted">Drag the link below to your bookmarks bar. Click on any page to save it to your MediaLog inbox.</p>
-            {!import.meta.env.VITE_CAPTURE_SECRET ? (
-              <div style={{ padding: '12px 16px', background: 'var(--surface-2)', borderRadius: 6, marginTop: 16, marginBottom: 16 }}>
-                <p style={{ fontSize: 13, margin: 0, color: 'var(--text-secondary)' }}>
-                  <strong>Setup required:</strong> Add <code>VITE_CAPTURE_SECRET</code> to your <code>.env.local</code> file with the same value as your <code>CAPTURE_SECRET</code> Supabase secret.
-                </p>
-              </div>
-            ) : (
-              (() => {
-                const bookmarkletCode = `(function(){var url=location.href;var title=document.title;fetch('${import.meta.env.VITE_SUPABASE_URL}/functions/v1/capture',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({secret:'${import.meta.env.VITE_CAPTURE_SECRET}',url:url,note:title})}).then(function(r){return r.json()}).then(function(d){var m=document.createElement('div');m.textContent=d.duplicate?'Already saved ✓':'Saved ✓';m.style.cssText='position:fixed;top:16px;right:16px;background:#222;color:#fff;padding:8px 16px;border-radius:6px;font:14px sans-serif;z-index:999999';document.body.appendChild(m);setTimeout(function(){m.remove()},2500)}).catch(function(){alert('MediaLog: save failed — check console')})})()`
-                return (
-                  <>
-                    <div style={{ marginTop: 16, marginBottom: 16 }}>
-                      <a
-                        href={`javascript:${bookmarkletCode}`}
-                        className="bookmarklet-link"
-                        draggable
-                        onDragStart={(e) => {
-                          e.dataTransfer.effectAllowed = 'move'
-                        }}
-                        style={{
-                          display: 'inline-block',
-                          padding: '10px 16px',
-                          background: 'var(--accent)',
-                          color: 'var(--bg)',
-                          borderRadius: 6,
-                          textDecoration: 'none',
-                          fontWeight: 500,
-                          fontSize: 14,
-                          cursor: 'move',
-                          userSelect: 'none',
-                        }}
-                      >
-                        📎 Save to MediaLog
-                      </a>
-                    </div>
-                    <button
-                      onClick={() => {
-                        navigator.clipboard.writeText(`javascript:${bookmarkletCode}`)
-                        addToast('Bookmarklet copied to clipboard', 'success')
-                      }}
-                      style={{ fontSize: 13 }}
-                    >
-                      Copy Bookmarklet Code
-                    </button>
-                    <p className="muted" style={{ fontSize: 12, marginTop: 12, marginBottom: 0 }}>
-                      When saved, the bookmarklet shows a brief <strong>'Saved ✓'</strong> or <strong>'Already saved ✓'</strong> confirmation in the page.
-                    </p>
-                  </>
-                )
-              })()
-            )}
+            <p className="muted">
+              A bookmark whose address is code instead of a web page. Click it while reading
+              anything on the web and the page is saved to your Inbox — no need to open MediaLog.
+            </p>
+
+            <h3 className="section-label" style={{ marginTop: 20 }}>Install</h3>
+            <ol style={{ fontSize: 13, lineHeight: 1.8, paddingLeft: 20 }}>
+              <li>Go to <button className="linklike" onClick={() => setTab('tokens')}>Capture tokens</button> and create a token.</li>
+              <li>Press <strong>copy bookmarklet</strong> on the token that appears.</li>
+              <li>Make a new bookmark in your browser (right-click the bookmarks bar → Add page).</li>
+              <li>Name it anything; paste the copied code as the <strong>URL</strong>.</li>
+              <li>Click it on any page — a “Saved” badge confirms it worked.</li>
+            </ol>
+
+            {/* The code can only be produced when a token is minted: only the SHA-256
+                hash is stored, so there is nothing here to regenerate it from. */}
+            <p className="muted" style={{ fontSize: 12, marginTop: 16 }}>
+              The code embeds your capture token, so it can only be generated at the moment a
+              token is created — only a hash is kept afterwards. Lost it? Revoke that token and
+              make a new one; it takes a few seconds.
+            </p>
+            <p className="muted" style={{ fontSize: 12 }}>
+              Treat the code like a password: anything holding it can save entries to your Inbox.
+              A bookmarklet runs inside whatever page you click it on, so if you ever click it
+              somewhere sketchy, revoke the token.
+            </p>
           </div>
         </section>
       )}
@@ -464,28 +438,22 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
                 <button onClick={() => { navigator.clipboard.writeText('https://bhxqgpgyxqnqvnqjvrrj.supabase.co/functions/v1/capture'); addToast('Copied', 'success') }} style={{ flexShrink: 0 }}>Copy</button>
               </div>
             </div>
-            {import.meta.env.VITE_CAPTURE_SECRET ? (
-              <div className="form-group">
-                <label>JSON Body (paste into "Request Body" field)</label>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <textarea
-                    readOnly
-                    rows={3}
-                    style={{ fontFamily: 'monospace', fontSize: 11, resize: 'none' }}
-                    value={`{"secret":"${import.meta.env.VITE_CAPTURE_SECRET}","url":"[URLs]","note":"[Name]"}`}
-                  />
-                  <button
-                    onClick={() => { navigator.clipboard.writeText(`{"secret":"${import.meta.env.VITE_CAPTURE_SECRET}","url":"[URLs]","note":"[Name]"}`); addToast('Copied', 'success') }}
-                    style={{ flexShrink: 0, alignSelf: 'flex-start' }}
-                  >Copy</button>
-                </div>
-                <p className="muted" style={{ fontSize: 11, marginTop: 4 }}>Replace <code>[URLs]</code> and <code>[Name]</code> with the Shortcuts variables of the same name.</p>
-              </div>
-            ) : (
-              <p style={{ color: 'var(--warning, #b45309)', fontSize: 13 }}>
-                Add <code>VITE_CAPTURE_SECRET</code> to your <code>.env.local</code> to see the pre-filled JSON body.
+            <div className="form-group">
+              <label>Request body</label>
+              <textarea
+                readOnly
+                rows={3}
+                style={{ fontFamily: 'monospace', fontSize: 11, resize: 'none' }}
+                value={'{"token":"YOUR_TOKEN","url":"[URLs]","note":"[Name]"}'}
+              />
+              <p className="muted" style={{ fontSize: 11, marginTop: 4 }}>
+                Get the filled-in version from{' '}
+                <button className="linklike" onClick={() => setTab('tokens')}>Capture tokens</button>
+                {' '}— press <strong>copy shortcut JSON</strong> when you create a token. Replace{' '}
+                <code>[URLs]</code> and <code>[Name]</code> with the Shortcuts variables of the
+                same name.
               </p>
-            )}
+            </div>
           </div>
           {captureLog !== null && (
             <div style={{ marginTop: 24 }}>

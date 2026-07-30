@@ -86,9 +86,14 @@ export default function CaptureTokensTab({ supabase, addToast }) {
               )}>copy shortcut JSON</button>
               <button onClick={() => setFresh(null)}>done</button>
             </div>
-            <p className="muted ct-hint">
-              For the bookmarklet: create a new bookmark and paste the copied code as its URL.
-            </p>
+            <ol className="ct-hint">
+              <li><strong>Bookmarklet:</strong> copy it, make a new browser bookmark, and paste
+                the code as the bookmark&rsquo;s <em>URL</em>. Click it on any page to save.</li>
+              <li><strong>iOS Shortcut:</strong> copy the shortcut JSON into the Request Body
+                field of the &ldquo;Get Contents of URL&rdquo; action.</li>
+              <li>Delete any older bookmark or shortcut — tokens you replace should be revoked
+                below.</li>
+            </ol>
           </div>
         )}
 
