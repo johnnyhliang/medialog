@@ -29,8 +29,9 @@ question, and the honest move is to park them rather than half-ship them.
 | `highlights`, `archive`, `revisit` | Cheap, well-understood, small surface |
 | `import`, `widgets` | Import is the funnel; widgets are opt-in decoration |
 
-**Verdict:** this is a complete product. Someone could sign up today and get the
-whole thesis — if it weren't for the AI metering gap (below).
+**Verdict:** this is a complete product, and as of 2026-07-30 it is metered. What
+remains before charging is picking AI caps from real data and wiring Stripe —
+neither of which blocks someone signing up and using it.
 
 ---
 
@@ -39,11 +40,11 @@ whole thesis — if it weren't for the AI metering gap (below).
 | Module | Stage | What's actually missing |
 |---|---|---|
 | `files` (archival) | experimental | Image/PDF copies work. **Article text unverified** (Deno `npm:` never confirmed). **Wayback records unconfirmed successes.** Captured entries never enriched at all. Roughly 1 of 4 tiers works |
-| `assistant` | experimental | Works, but runs on an **unmetered shared AI key**. `minTier: 'paid'` records the intent; shipping before metering exposes the key to signups |
+| `assistant` | experimental | Now **metered** but not yet **capped**. `minTier: 'paid'` records the intent; promote once `aiCallsPerMonth` is set from real `ai_usage` history |
 | `reading` | beta | Deep topics work; no UI for the pace/gap algorithms that were built |
 | `progress` | beta | Stats exist; overlaps with digest and the unbuilt interview UI |
 | `tidy` | beta | Works, but a batch-mutation tool with no undo story |
-| `metrics` | experimental | **Not built at all.** Registry placeholder for the admin dashboard |
+| `metrics` | experimental | **Built 2026-07-30.** Accounts, tiers, usage, cost, storage + inline tier control. Stays founder-only permanently — operator tooling |
 
 **The pattern:** none of these are bad ideas. Each has a specific, nameable gap.
 That's what `stage` is for — they stay reachable and keep improving without a
@@ -62,10 +63,19 @@ stranger hitting the rough edge.
 
 ---
 
-## The gap that blocks everything: AI metering
+## ~~The gap that blocks everything: AI metering~~ — BUILT 2026-07-30
 
-**Status: not built.** `docs/metering-analytics-spec.md` §2 has the design;
-no `ai_usage` table exists.
+**Status: metering built and deployed; caps deliberately deferred.**
+
+`ai_usage` (`0065`) records per-user AI calls and estimated cost; storage is metered
+from `snapshots.bytes`; `src/lib/limits.js` holds per-tier allowances for storage,
+feeds and backup frequency, enforced in `createFeed` and the `snapshot` function.
+A founder-only `MetricsView` shows every account, its tier, usage, cost and
+subscription status, with an inline tier dropdown.
+
+**AI call caps are intentionally unset** (`aiCallsPerMonth: null`) until `ai_usage`
+has real history — see `docs/metering-scope.md` Step 5. Everything below described
+the pre-metering state and is kept for the reasoning:
 
 `supabase/functions/ai/index.ts` authenticates the caller and then does not meter
 or rate-limit. `embed-entry` likewise. Consequences, all of them blocking:
@@ -78,16 +88,18 @@ or rate-limit. `embed-entry` likewise. Consequences, all of them blocking:
 4. Semantic search itself calls `embed-entry` on every save, so *every* signup
    spends your key whether or not they touch the assistant.
 
-**This is the single thing standing between "complete product" and "can accept
-signups."** Everything else on this page is a preference; this is arithmetic.
+**That was the single thing standing between "complete product" and "can accept
+signups." It is now measured but not yet enforced** — you can see what a user
+costs, and tiers grant real differences in storage/feeds/backup, but AI itself is
+still uncapped. Remaining before charging: pick caps from real data, then Stripe.
 
-## Admin / analytics — 1 of 3 phases
+## Admin / analytics — 3 of 3 phases
 
 | Phase | State |
 |---|---|
 | Events (`0058`, `track.js`) | ✅ live, collecting |
-| AI metering (`ai_usage`) | ❌ blocking |
-| Admin dashboard (`metrics`) | ❌ not built — correctly last |
+| AI + storage metering (`0065`) | ✅ built + deployed |
+| Admin dashboard (`metrics`) | ✅ built — founder-only, table not charts |
 
 Events was built first deliberately: it cannot be backfilled, while metering can
 be added the week you launch.
@@ -130,7 +142,8 @@ nav items that lead nowhere. Never move a security boundary into this layer.
 
 ## What I'd actually do, in order
 
-1. **AI metering.** Nothing else unblocks signups.
+1. ~~**AI metering.**~~ Done. Next: after a week of `ai_usage`, set
+   `aiCallsPerMonth` in `src/lib/limits.js` and add the cap to `ai/index.ts`.
 2. **Verify the Readability extractor** — one capture, one script run. Either
    promote archival's article tier or fix it.
 3. **Fix or retire Wayback.** It currently records successes it never confirmed,
@@ -140,6 +153,26 @@ nav items that lead nowhere. Never move a security boundary into this layer.
 5. **Promote `tidy` and `progress`** — closest to stable, cheapest wins.
 6. Leave `interview`, `reels`, `twitter` founder-only forever.
 
-**Do not** build the admin dashboard before metering; it would have nothing to
-show. **Do not** promote `assistant` before metering; it hands strangers your API
-key.
+**Do not** promote `assistant` before AI caps exist — metering alone tells you the
+damage after the fact; a cap prevents it.
+
+## What is metered, and what could be
+
+**Metered today:** AI calls (per function and model, with real token counts for
+chat) · storage bytes · feed count · backup interval.
+
+**Deliberately not metered:** entry/note count — capping capture poisons the core
+loop, and rows are cheap. Search queries — they cost a keyword scan, not an
+embedding. Topics, tags, highlights — all free to store and unbounded by nature.
+
+**Candidates if a paid tier needs more substance**, roughly by how defensible each
+is as a paid line rather than an artificial wall:
+1. **Archival depth** — free keeps article text, paid adds full-page snapshots and
+   video. Follows real cost and matches `preservation-v2-spec.md`
+2. **Backup destinations** — free is GitHub, paid adds S3/R2. Real marginal cost
+3. **Retention window on `feed_items`** — currently expires on a fixed schedule;
+   paid could keep longer
+4. **Assistant conversation history depth** — storage plus retrieval cost
+
+Each of those is metered-by-nature: it costs you more when someone uses more. Avoid
+gating things whose cost does not scale with use — that is a wall, not a plan.

@@ -1,6 +1,6 @@
 # MediaLog — Project State
 
-**Regenerated 2026-07-30** from the filesystem and git, not from memory.
+**Regenerated 2026-07-30 (metering)** from the filesystem and git, not from memory.
 **Overwritten on each regeneration, never appended** — an append-only log is always
 partly wrong; a snapshot is always current.
 
@@ -8,7 +8,7 @@ Companions: `CHANGELOG.md` (what shipped + why) · `docs/README.md` (which docs 
 trust) · `docs/tech-debt.md` (severity-ranked problems) · `IDEAS.md` (proposals).
 
 **Hard numbers:** 61 migrations · 15 edge functions · 69 components · 48 lib modules
-· 110 test files / 609 tests passing · 56 docs (~414 KB).
+· 113 test files / 661 tests passing · 58 docs.
 
 ---
 
@@ -47,7 +47,7 @@ committed — and **nothing in the UI imports it**.
 |---|---|---|---|
 | `src/lib/interviewPlan.js` | 210 | Readiness rings, staleness dot, gap list, target-date + focus editor | `docs/interview-progress-spec.md` §4 step 4 |
 | `src/lib/db/studyPlan.js` | 33 | Same UI as above; `prep_target_date`/`prep_focus` are never read | same |
-| `src/lib/billingPlan.js` | 121 | Everything — **inert by design** until billing is turned on | — |
+| `src/lib/billingPlan.js` | 121 | Stripe webhook + checkout. **Inert by design** — status→tier mapping is done and tested | `docs/metering-scope.md` |
 | `src/lib/goals.js` | 85 | Entire feature. Pure lib, no migration (goals = entries w/ frontmatter) | `docs/superpowers/specs/2026-07-17-goals-tracker-design.md` |
 | `src/lib/preservation.js` | 48 | `preservationPatch` **is** wired; `preservationCoverage` has no UI (◆ marker, "N of M preserved") | `docs/content-preservation-plan.md` T3 |
 | `scripts/backfill-full-text.js` | 224 | Never run against real data | same |
@@ -65,6 +65,10 @@ importer by design — it's a tool you run when tuning retrieval, like a script.
 **TODO sweep:** **zero** markers repo-wide as of 2026-07-30. The single one that
 existed (`account.js`, the `showFounderUploads` note) was resolved by folding
 uploads into the module system.
+
+**Metering landed 2026-07-30:** `_shared/meter.ts` · `0065_ai_usage.sql` ·
+`src/lib/limits.js` · `admin-metrics` function · `MetricsView.jsx` ·
+`src/lib/db/adminMetrics.js` · usage readout in Settings → Behavior.
 
 **Autonomous fixes landed 2026-07-30** (no user action needed for any of these):
 `isSafeUrl` deduplicated into `_shared` · `showFounderUploads` → the `uploads`
@@ -92,22 +96,45 @@ locked-with-upgrade rendering · `0062` `subscriptions` +
    **So `paid` currently grants nothing `free` lacks.**
 4. **No cap enforcement**, which is the same blocker from a different angle.
 5. `expires_at` is read by `resolveTier` but nothing ever writes it.
-6. **Testable now:** `node scripts/set-tier.js <email> paid` (needs
-   `SUPABASE_SERVICE_ROLE_KEY`). `0062` is applied, so `set_tier_manual` exists.
+6. **Testable now:** `node scripts/set-tier.js <email> paid`, or the tier dropdown
+   in the founder **Metrics** view (routes through the same `set_tier_manual`).
 
-→ **You cannot charge anyone today**, and the tier boundary is untested end-to-end.
+**What tiers now actually mean** (`src/lib/limits.js`):
 
-### 3.2 Analytics — 1 of 3 phases
+| Dimension | free | paid | founder |
+|---|---|---|---|
+| Storage | 500 MB | 10 GB | unlimited |
+| Feed sources | 10 | 100 | unlimited |
+| Backup interval | 24h | 1h | unlimited |
+| AI calls/month | *unset pending data* | *unset* | unlimited |
+
+Entry count is deliberately **not** limited — capping capture would poison the core
+loop. Enforcement: `createFeed` throws a `LimitError` the UI can turn into an
+upgrade prompt; `snapshot` returns 413 with the actual limit.
+
+→ **You still cannot charge anyone** — no Stripe, no checkout. But tiers now grant
+something real, and you can see per-user cost.
+
+### 3.2 Analytics — 3 of 3 phases built (caps pending)
 | Phase | State |
 |---|---|
-| Events (`0058`, `track.js`) | ✅ live, collecting since today |
-| **AI metering (`ai_usage`)** | ❌ **blocking** — `docs/metering-analytics-spec.md` §2 |
-| Admin dashboard | ❌ correctly last — same doc §4 |
+| Events (`0058`, `track.js`) | ✅ live, collecting |
+| **AI + storage metering (`0065`)** | ✅ **built and deployed 2026-07-30** |
+| Admin dashboard (`metrics`) | ✅ built — founder-only `MetricsView` |
 
-**Gap detail:** `supabase/functions/ai/index.ts` authenticates the caller but does
-not meter or rate-limit, and `embed-entry` likewise. One user can drain the shared
-quota for everyone. No `ai_usage` table exists. **There is no cost-per-user number**,
-which is the input both pricing and the YC narrative need.
+**What metering does now:** `ai_usage` records per-user/day/function/model counts
+and estimated cost. `ai` reads the provider's real `usage.prompt_tokens` /
+`completion_tokens` (it was receiving and discarding them); `embed-entry` estimates
+at ~4 chars/token since Gemini returns none. `_shared/meter.ts` never throws —
+metering is observability, not correctness.
+
+**Verified live:** anon → 401 on `admin-metrics` · client `INSERT` on `ai_usage` →
+`42501` · 3 concurrent RPCs → 1 row with `calls = 3`.
+
+**Still open — caps.** `TIER_LIMITS.aiCallsPerMonth` is `null` (unlimited) on
+purpose: a cap guessed before real usage data would be wrong. Enforce after ~a week
+of `ai_usage` history. See `docs/metering-scope.md` Step 5. **Do not cap
+`embed-entry` on the request path** — that degrades search silently.
 
 ### 3.3 Preservation — 1 of 4 tiers, one tier broken, one path never runs
 

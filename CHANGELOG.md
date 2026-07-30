@@ -11,6 +11,48 @@ section when you deploy. Detailed design rationale lives in `docs/superpowers/sp
 
 ## Unreleased
 
+### Metering, tier limits, and a founder admin dashboard
+**Migration `0065`.** Measurement first, enforcement later — a cap guessed before
+seeing real usage would be wrong, so AI limits ship **unset** on purpose.
+
+**The finding that shaped it:** `embed-entry` is the cost centre, not chat. It fires
+on every entry *save* for every user, whether or not they ever open the assistant.
+Capping chat alone would look responsible and change almost nothing.
+
+- `ai_usage` — per user/day/function/model counters. Read-own RLS and **no write
+  policy**: writes come from the service role only, because a client-writable usage
+  table is a client-defeatable cap. `record_ai_usage()` upserts-and-increments so
+  concurrent calls can't lose counts. `model` is `not null default ''` because
+  Postgres treats NULLs as distinct in a unique constraint — a nullable column would
+  silently create a row per call instead of incrementing one.
+- `_shared/meter.ts` — **never throws.** Metering is observability, not correctness;
+  a dropped row costs accuracy, a thrown error costs the user their answer. Unknown
+  models fall back to a **non-zero** rate, since defaulting to zero would hide real
+  spend the moment a paid model is swapped in.
+- `ai/index.ts` already received `data.usage` and was discarding it — chat now
+  records real token counts. Gemini's `embedContent` returns none, so embeddings are
+  estimated at ~4 chars/token and labelled as an estimate.
+
+**`src/lib/limits.js`** mirrors `modules.js`, so "what does each tier get" is a data
+edit: free 500 MB / 10 feeds / 24h backups, paid 10 GB / 100 feeds / hourly.
+`null` means unlimited, and an *undeclared* key is also unlimited — adding a
+dimension can never retroactively restrict an existing tier. **Entry count is
+deliberately not limited**; capping capture would poison the core loop.
+
+Enforced in `createFeed` (throws a `LimitError` the UI can turn into an upgrade
+prompt rather than a failure) and the `snapshot` function (413 with the real limit).
+
+**`admin-metrics` + `MetricsView`** — founder-only. Server-side because cross-user
+aggregation from the client would hit RLS and silently return only the caller's
+rows: plausible numbers that are wrong, worse than an error. Founder status is read
+with the service role so it can't be spoofed. Tier changes route through
+`set_tier_manual()` (`0062`) to keep the founder-never-downgraded rule in one place.
+A table, not charts — "who is paying and what do they cost" is a lookup question.
+Founder accounts are excluded from cost medians and the UI says so.
+
+**Verified live:** anon → 401 · client `INSERT` on `ai_usage` → `42501` ·
+3 concurrent RPCs → 1 row with `calls = 3`.
+
 ### Entitlements & modules — gating decomposed into three layers
 **Migration `0057`.** Replaces `showFounderFeatures()`, which was three unrelated concerns sharing
 one expression (`isDev || founderFeaturesPublic || isFounder(user)`): dev convenience, an ops
