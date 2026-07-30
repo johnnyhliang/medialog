@@ -1,6 +1,6 @@
 # MediaLog — Project State
 
-**Regenerated 2026-07-29** from the filesystem and git, not from memory.
+**Regenerated 2026-07-30** from the filesystem and git, not from memory.
 **Overwritten on each regeneration, never appended** — an append-only log is always
 partly wrong; a snapshot is always current.
 
@@ -8,7 +8,7 @@ Companions: `CHANGELOG.md` (what shipped + why) · `docs/README.md` (which docs 
 trust) · `docs/tech-debt.md` (severity-ranked problems) · `IDEAS.md` (proposals).
 
 **Hard numbers:** 61 migrations · 15 edge functions · 69 components · 48 lib modules
-· 109 test files / 603 tests passing · 55 docs (~406 KB).
+· 110 test files / 609 tests passing · 56 docs (~414 KB).
 
 ---
 
@@ -19,7 +19,7 @@ trust) · `docs/tech-debt.md` (severity-ranked problems) · `IDEAS.md` (proposal
 | `master` | `4057f98`, pushed |
 | Frontend | auto-deploys on push |
 | Migrations applied | **through `0063` — all current** |
-| Edge functions | `enrich` + `capture` redeployed today |
+| Edge functions | **16** — `enrich`, `capture`, and the new `crawl-archive` all deployed |
 | `capture` auth | **verified live**: token path deployed, rejects bogus/absent/wrong credentials with `Invalid or missing capture token` |
 | `0059` | permanently skipped (parallel worktrees claimed numbers out of order) |
 
@@ -59,9 +59,14 @@ a deliberate comparative harness (`failureRate`/`recallAt5`/`mrr`) for before-an
 after `chunkConfig` changes, with its own tests. **Kept.** It has no production
 importer by design — it's a tool you run when tuning retrieval, like a script.
 
-**TODO sweep:** exactly **1** marker in the entire codebase —
-`src/lib/account.js:27`, the `showFounderUploads` note, already tracked in
-`docs/tech-debt.md`. No hidden FIXME/HACK/XXX anywhere.
+**TODO sweep:** **zero** markers repo-wide as of 2026-07-30. The single one that
+existed (`account.js`, the `showFounderUploads` note) was resolved by folding
+uploads into the module system.
+
+**Autonomous fixes landed 2026-07-30** (no user action needed for any of these):
+`isSafeUrl` deduplicated into `_shared` · `showFounderUploads` → the `uploads`
+module via the new `src/hooks/useModuleAccess.js` · `crawlArchive` moved to the
+`crawl-archive` edge function, retiring the last allorigins dependency.
 
 ---
 
@@ -174,10 +179,10 @@ slash commands · episodic extraction · agent steps 3–5 *(deferred)* · MCP v
    nothing records per-entry index status, so semantic search can go stale
    invisibly. `full_text_status` (`0060`) is the pattern to copy.
 
-6. **`allorigins.win` SPOF — narrowed to one caller.** Now only
-   `src/lib/crawlArchive.js` (used by `ArchiveCrawl.jsx`); the feed path already
-   moved server-side and `fetchFeed.js` is deleted. Fix: move `crawlArchive` into an
-   edge function — no CORS limit there.
+6. ~~**`allorigins.win` SPOF**~~ — **RESOLVED 2026-07-30.** Zero references in
+   runtime code; `crawl-archive` edge function replaces it. Parser verified against
+   live sites (danluu 128/128, simonwillison 30/30, jvns 20/20) and capped at 500
+   items after a sitemap returned 16,808.
 
 7. **Regex HTML sanitization in `public-share`** — not a real sanitizer. Low risk
    while you author all notes; a problem the moment shared content isn't yours.
@@ -233,9 +238,9 @@ server-side on signup.
 | 4 | Interview progress UI | Data flows now, so rings aren't theatre | `interview-progress-spec.md` §4 |
 | 5 | Reminders + Agenda | Biggest product value; unblocked | `intentional-app-spec.md` Part 1 |
 | 6 | Wayback SPN2 rewrite | Fixes a broken feature, no new infra | `preservation-v2-spec.md` §2 |
-| 7 | **Unset `VITE_CAPTURE_SECRET` + `CAPTURE_SECRET`** after migrating devices to tokens | The last step that actually closes the bundle-secret hole | `tech-debt.md` |
-| 8 | Split `App.jsx` along existing seams | Merge pain is already real | `2026-06-19-app-modularization-design.md` |
-| 9 | Move `crawlArchive` server-side | Retires the last allorigins dependency | `tech-debt.md` |
+| 6 | **Unset `VITE_CAPTURE_SECRET` + `CAPTURE_SECRET`** after migrating devices to tokens | The last step that actually closes the bundle-secret hole. **Only you can do this** | `tech-debt.md` |
+| 7 | Split `App.jsx` along existing seams | Merge pain is already real | `2026-06-19-app-modularization-design.md` |
+| 8 | Split `styles.css` (5422 lines) | Every feature appends to one file | `tech-debt.md` |
 
 **Deliberately deferred:** agent steps 3–5 and MCP v2 (until the seams they depend
 on stop moving) · server-side page snapshots (replaced by the extension) · Stripe

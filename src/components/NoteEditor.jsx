@@ -2,7 +2,7 @@ import { useMemo, useState, useRef, useEffect } from 'react'
 import { Bold, Italic, Heading, List, ListChecks, Link2, Quote, Code, Paperclip } from 'lucide-react'
 import CodeMirror from '@uiw/react-codemirror'
 import { uploadAttachment, markdownForAttachment, isAllowedAttachment } from '../lib/storage.js'
-import { showFounderUploads } from '../lib/account.js'
+import { useModuleAccess } from '../hooks/useModuleAccess.js'
 import { markdown, markdownLanguage, insertNewlineContinueMarkup, deleteMarkupBackward } from '@codemirror/lang-markdown'
 import { languages } from '@codemirror/language-data'
 import { keymap } from '@codemirror/view'
@@ -144,13 +144,11 @@ export default function NoteEditor({ value, onChange, supabase, extraExtensions 
   const viewRef = useRef(null)
   const fileRef = useRef(null)
   const [uploading, setUploading] = useState(false)
-  // Uploads are founder-only at the Storage RLS layer. Keep the UI aligned with
-  // that stricter gate even while other founder surfaces are public-facing.
-  const [canUpload, setCanUpload] = useState(() => showFounderUploads(null))
-  useEffect(() => {
-    if (!supabase) return
-    supabase.auth.getUser().then(({ data }) => setCanUpload(showFounderUploads(data?.user ?? null)))
-  }, [supabase])
+  // Uploads are founder-only at the Storage RLS layer; the 'uploads' module
+  // (minTier 'founder') keeps the UI aligned with that stricter gate. Resolved
+  // locally rather than passed down — NoteEditor's two callers would both have to
+  // thread entitlement otherwise.
+  const canUpload = useModuleAccess('uploads', supabase)
   const fmt = (fn) => () => { if (viewRef.current) fn(viewRef.current) }
   const FORMATS = [
     { icon: Bold, label: 'Bold', run: (v) => wrapSelection(v, '**') },
