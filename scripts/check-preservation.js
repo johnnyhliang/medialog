@@ -10,19 +10,37 @@
 //   node scripts/check-preservation.js            # coverage + recent captures
 //   node scripts/check-preservation.js --recent 5 # widen the recent window
 //
-// Requires SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY.
+// Credentials come from .env.local automatically (it already holds
+// SUPABASE_SERVICE_ROLE_KEY and VITE_SUPABASE_URL), so no setup is needed. Real
+// environment variables win if set, which is what makes this usable in CI.
 
 import { createClient } from '@supabase/supabase-js'
+import { readFileSync } from 'node:fs'
 
-function requireEnv(name) {
-  const v = process.env[name]
-  if (!v) {
-    console.error(`Missing ${name}.`)
-    console.error('  PowerShell: $env:SUPABASE_SERVICE_ROLE_KEY="…"')
-    console.error('  bash:       export SUPABASE_SERVICE_ROLE_KEY=…')
-    process.exit(1)
+// Minimal .env parser — enough for KEY=value lines, no dependency needed.
+function readEnvFile(path = '.env.local') {
+  try {
+    const out = {}
+    for (const line of readFileSync(path, 'utf8').split('\n')) {
+      const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/i)
+      if (m) out[m[1]] = m[2].replace(/^['"]|['"]$/g, '').trim()
+    }
+    return out
+  } catch {
+    return {}
   }
-  return v
+}
+
+const fileEnv = readEnvFile()
+
+function requireEnv(...names) {
+  for (const n of names) {
+    const v = process.env[n] ?? fileEnv[n]
+    if (v) return v
+  }
+  console.error(`Missing ${names[0]}.`)
+  console.error(`Add it to .env.local, or set it in the environment.`)
+  process.exit(1)
 }
 
 const args = process.argv.slice(2)
@@ -30,7 +48,7 @@ const recentIdx = args.indexOf('--recent')
 const recentCount = recentIdx >= 0 ? Number(args[recentIdx + 1]) || 5 : 5
 
 const supabase = createClient(
-  requireEnv('SUPABASE_URL'),
+  requireEnv('SUPABASE_URL', 'VITE_SUPABASE_URL'),
   requireEnv('SUPABASE_SERVICE_ROLE_KEY'),
   { auth: { persistSession: false } }
 )
