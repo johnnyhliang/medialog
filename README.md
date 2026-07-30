@@ -1,7 +1,40 @@
 # MediaLog
 
-A personal PWA media log - capture links, notes, and takeaways under flat topics.
-Synced via Supabase. See `docs/superpowers/specs/2026-06-07-medialog-design.md`.
+A personal PWA media log — capture links, notes, and takeaways under flat topics.
+Synced via Supabase.
+
+> **⚠️ Source-available, not open source. All rights reserved.**
+> This repository is public so the work can be read. It carries **no licence**,
+> which under copyright means no permission is granted to use, copy, modify,
+> deploy, or host it. See [Licence](#licence).
+
+**Orientation — read these before the code:**
+
+| Doc | What it answers |
+|---|---|
+| [`PROJECT-STATE.md`](PROJECT-STATE.md) | **Start here.** What is built, deployed, half-built, or broken. Regenerated, never appended |
+| [`CHANGELOG.md`](CHANGELOG.md) | What shipped, and the reasoning a diff can't carry |
+| [`docs/README.md`](docs/README.md) | Which of the 58 docs to trust, and which are stale |
+| [`docs/tech-debt.md`](docs/tech-debt.md) | Known problems, ranked |
+| [`docs/limits-runbook.md`](docs/limits-runbook.md) | Emergency AI kill switch + how to change tier limits |
+
+### Feature maturity & access
+
+Features are gated by two independent fields in [`src/lib/modules.js`](src/lib/modules.js):
+
+- **`minTier`** — `free` / `paid` / `founder`: what an account is *entitled* to
+- **`stage`** — `stable` / `beta` / `experimental`: how *ready* it is
+
+**Anything `beta` or `experimental` is founder-only regardless of `minTier`.** That's
+the point — marking a feature experimental hides it from users automatically, so a
+half-built surface can't ship because someone forgot to also change the tier.
+Promote by deleting one line.
+
+Currently experimental: archival, assistant, metrics, reels · beta: reading,
+progress, tidy. Full reasoning in
+[`docs/product-scope-audit.md`](docs/product-scope-audit.md).
+
+See `docs/superpowers/specs/2026-06-07-medialog-design.md` for the original design.
 
 ---
 
@@ -16,9 +49,14 @@ Copy `.env.example` to `.env.local` and fill in:
 | `VITE_SUPABASE_URL` | Supabase dashboard → Project Settings → API → Project URL |
 | `VITE_SUPABASE_ANON_KEY` | Supabase dashboard → Project Settings → API → `anon` `public` key |
 | `VITE_GITHUB_CLIENT_ID` | GitHub → Settings → Developer settings → OAuth Apps (optional — used for GitHub Trending widget) |
-| `VITE_CAPTURE_SECRET` | Generate: `openssl rand -hex 16` — must match the `CAPTURE_SECRET` Supabase secret below |
 
-If you're deploying to Netlify / Vercel / Cloudflare Pages, set these same four vars in your hosting dashboard (`.env.local` is local-only and not committed to git).
+If you're deploying to Netlify / Vercel / Cloudflare Pages, set these same vars in your hosting dashboard (`.env.local` is local-only and not committed to git).
+
+> **Do not add `VITE_CAPTURE_SECRET`.** It used to exist and was removed 2026-07-30:
+> any `VITE_`-prefixed value is inlined into the JS bundle at build time, so it
+> shipped the shared capture secret to every visitor. Capture now uses per-user
+> tokens minted in **Settings → Capture tokens**, stored as SHA-256 hashes. Adding
+> that variable back would reintroduce the hole.
 
 ### Supabase Secrets — edge functions
 
@@ -27,8 +65,6 @@ Set via `npx supabase secrets set KEY=value` (or the Supabase dashboard → Edge
 | Secret | Required for | How to get |
 |---|---|---|
 | `GEMINI_API_KEY` | Semantic search embeddings, reel caption summarization | [aistudio.google.com](https://aistudio.google.com) → Get API key |
-| `CAPTURE_SECRET` | Bookmarklet + iOS Shortcut capture endpoint | Same value as `VITE_CAPTURE_SECRET` above |
-| `CAPTURE_USER_ID` | Capture endpoint, Instagram Reels ingestion | Supabase dashboard → Authentication → Users → copy your user UUID |
 | `CRON_SECRET` | All scheduled cron jobs | Generate: `openssl rand -hex 32` |
 | `INSTAGRAM_SESSION_ID` | Instagram Reels ingestion (optional) | instagram.com → DevTools → Application → Cookies → `sessionid` value |
 
@@ -56,8 +92,9 @@ alter database postgres set app.supabase_url = 'https://<your-project-ref>.supab
 4. Deploy edge functions: `npx supabase functions deploy`
 5. Set Supabase secrets (see table above)
 6. Run the manual SQL steps above
-7. Copy `.env.example` to `.env.local`, fill in the four vars
-8. `npm install && npm run dev`
+7. Copy `.env.example` to `.env.local`, fill in the vars
+8. Mint a capture token in Settings → Capture tokens (for the bookmarklet / iOS Shortcut)
+9. `npm install && npm run dev`
 
 ## Test
 
@@ -66,7 +103,7 @@ alter database postgres set app.supabase_url = 'https://<your-project-ref>.supab
 ## Build & Deploy
 
 `npm run build` produces static `dist/`. Deploy free to Netlify / Vercel / Cloudflare Pages:
-set the four `VITE_` env vars in the host's dashboard, build command `npm run build`,
+set the `VITE_` env vars in the host's dashboard, build command `npm run build`,
 publish directory `dist`. Add the deployed origin to Supabase Auth → URL Configuration
 (Site URL + Redirect URLs) so magic links resolve.
 
@@ -84,8 +121,8 @@ Open the deployed URL in Safari → Share → Add to Home Screen.
 - **iOS Shortcut guide** — Settings → iOS Shortcut tab; copyable endpoint + JSON body
 - **Bulk import** — paste URLs or `Title - URL` lines; AI triage assigns topics
 - **Migration wizard** — imports Apple Notes HTML, Google Keep JSON, Obsidian ZIP, bare URLs
-- **`capture` edge function** — secret-gated POST endpoint for bookmarklet/shortcut
-- **Instagram Reels** — DM a reel to your alt account → cron polls inbox → Gemini summary → entry in "Reels" topic. Needs `INSTAGRAM_SESSION_ID`. See Settings → Instagram.
+- **`capture` edge function** — POST endpoint authenticated by a per-user token (Settings → Capture tokens)
+- **Instagram Reels** — ⚠️ **parked** (founder-only, cron unscheduled). Depended on a scraped session cookie: fragile and ToS-grey. Code kept, not running.
 
 ### Organize
 - **Topics** — flat list with archive/unarchive, entry counts, drag-free ordering
@@ -136,3 +173,19 @@ Spec: `docs/superpowers/specs/2026-06-21-mcp-v2-design.md`
 
 ### Tech Debt
 - [ ] **`frontend-design` plugin** — shows as `unknown` version in Claude Code; may be broken. Low priority.
+
+---
+
+## Licence
+
+**All rights reserved.** © Johnny Liang.
+
+This repository is public so the work can be read and evaluated. It is **not open
+source** and carries no licence. Under copyright law, the absence of a licence
+means no permission is granted to use, copy, modify, distribute, deploy, or host
+this software or any derivative of it.
+
+GitHub's Terms of Service permit viewing and forking *within GitHub*. They grant
+nothing beyond that.
+
+If you want to use any part of this, ask.
