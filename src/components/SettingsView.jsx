@@ -11,7 +11,7 @@ import GitHubTab from './settings/GitHubTab.jsx'
 import ModulesTab from './ModulesTab.jsx'
 import CaptureTokensTab from './settings/CaptureTokensTab.jsx'
 
-export default function SettingsView({ topics, onRefreshData, addToast, allTags = [], onUpdateTagColor, archiveToast, onToggleArchiveToast, trashToast, onToggleTrashToast, themePalette, themeStyle, onSetPalette, onSetStyle, assistantEnabled, onToggleAssistant }) {
+export default function SettingsView({ topics, onRefreshData, addToast, allTags = [], onUpdateTagColor, archiveToast, onToggleArchiveToast, trashToast, onToggleTrashToast, themePalette, themeStyle, onSetPalette, onSetStyle, assistantEnabled, onToggleAssistant, isModuleVisible = () => true }) {
   const [config, setConfig] = useState(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -147,23 +147,32 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
 
   if (loading) return <p>Loading settings...</p>
 
-  const TABS = [
+  // Tabs declaring a `module` are shown only when that module passes the composed
+  // entitlement + preference check (src/lib/modules.js). Tabs with no `module` are
+  // unconditional — the same rule NavSidebar uses, so there is one place that
+  // decides who sees what rather than a second hardcoded list here.
+  const ALL_TABS = [
     { id: 'appearance',  label: 'Appearance' },
     { id: 'github',      label: 'GitHub' },
-    { id: 'twitter',     label: 'Twitter' },
+    { id: 'twitter',     label: 'Twitter',       module: 'twitter' },
     { id: 'shared',      label: 'Shared' },
     { id: 'behavior',    label: 'Behavior' },
     { id: 'tags',        label: 'Tag Colors' },
-    { id: 'companies',   label: 'Companies' },
-    { id: 'keywords',    label: 'Keywords' },
-    { id: 'programs',    label: 'Programs' },
+    { id: 'companies',   label: 'Companies',     module: 'career' },
+    { id: 'keywords',    label: 'Keywords',      module: 'career' },
+    { id: 'programs',    label: 'Programs',      module: 'career' },
     { id: 'bookmarklet', label: 'Bookmarklet' },
     { id: 'mobile',      label: 'iOS Shortcut' },
-    { id: 'instagram',   label: 'Instagram' },
-    { id: 'keybinds',   label: 'Keybinds' },
+    { id: 'instagram',   label: 'Instagram',     module: 'reels' },
+    { id: 'keybinds',    label: 'Keybinds' },
     { id: 'modules',     label: 'Modules' },
     { id: 'tokens',      label: 'Capture tokens' },
   ]
+  const TABS = ALL_TABS.filter((t) => !t.module || isModuleVisible(t.module))
+
+  // A tab can disappear while it is open (module switched off in another tab), so
+  // fall back rather than render nothing.
+  const activeTab = TABS.some((t) => t.id === tab) ? tab : 'appearance'
 
   return (
     <div className="settings-view">
@@ -171,7 +180,7 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
         {TABS.map((t) => (
           <button
             key={t.id}
-            className={`settings-tab ${tab === t.id ? 'active' : ''}`}
+            className={`settings-tab ${activeTab === t.id ? 'active' : ''}`}
             onClick={() => setTab(t.id)}
           >
             {t.label}
@@ -179,9 +188,9 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
         ))}
       </div>
 
-      {tab === 'shared' && <SharedManager />}
+      {activeTab === 'shared' && <SharedManager />}
 
-      {tab === 'appearance' && (
+      {activeTab === 'appearance' && (
   <section>
     <h2>Appearance</h2>
     <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -280,7 +289,7 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
   </section>
 )}
 
-      {tab === 'github' && (
+      {activeTab === 'github' && (
         <GitHubTab
           config={config}
           setConfig={setConfig}
@@ -289,7 +298,7 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
         />
       )}
 
-      {tab === 'twitter' && (
+      {activeTab === 'twitter' && (
         <section>
           <h2>Twitter / X Auth Token</h2>
           <div className="card">
@@ -324,7 +333,7 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
         </section>
       )}
 
-      {tab === 'behavior' && (
+      {activeTab === 'behavior' && (
         <section>
           <h3 className="section-label">Behavior</h3>
           <label style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13 }}>
@@ -356,7 +365,7 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
         </section>
       )}
 
-      {tab === 'tags' && (
+      {activeTab === 'tags' && (
         <section>
           <h3 className="section-label">Tag Colors</h3>
           {allTags.length === 0 && <p className="muted" style={{ fontSize: 13 }}>No tags yet.</p>}
@@ -378,11 +387,11 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
         </section>
       )}
 
-      {tab === 'companies' && <CompaniesTab supabase={supabase} />}
-      {tab === 'keywords' && <KeywordsTab supabase={supabase} />}
-      {tab === 'programs' && <ProgramsTab supabase={supabase} />}
+      {activeTab === 'companies' && <CompaniesTab supabase={supabase} />}
+      {activeTab === 'keywords' && <KeywordsTab supabase={supabase} />}
+      {activeTab === 'programs' && <ProgramsTab supabase={supabase} />}
 
-      {tab === 'bookmarklet' && (
+      {activeTab === 'bookmarklet' && (
         <section>
           <h2>Bookmarklet</h2>
           <div className="card">
@@ -416,7 +425,7 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
         </section>
       )}
 
-      {tab === 'mobile' && (
+      {activeTab === 'mobile' && (
         <section>
           <h2>iOS Shortcut</h2>
           <div className="card">
@@ -493,7 +502,7 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
         </section>
       )}
 
-      {tab === 'instagram' && (
+      {activeTab === 'instagram' && (
         <section>
           <h2>Instagram Reels</h2>
           <div className="card">
@@ -520,11 +529,11 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
         </section>
       )}
 
-      {tab === 'keybinds' && <KeybindsTab />}
-      {tab === 'modules' && <ModulesTab supabase={supabase} addToast={addToast} />}
-      {tab === 'tokens' && <CaptureTokensTab supabase={supabase} addToast={addToast} />}
+      {activeTab === 'keybinds' && <KeybindsTab />}
+      {activeTab === 'modules' && <ModulesTab supabase={supabase} addToast={addToast} />}
+      {activeTab === 'tokens' && <CaptureTokensTab supabase={supabase} addToast={addToast} />}
 
-      {tab === 'behavior' && <section style={{ marginTop: 32, borderTop: '1px solid var(--border)', paddingTop: 24 }}>
+      {activeTab === 'behavior' && <section style={{ marginTop: 32, borderTop: '1px solid var(--border)', paddingTop: 24 }}>
         <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 4, marginTop: 0 }}>Bulk archive to Wayback Machine</h3>
         <p className="muted" style={{ fontSize: 13, marginBottom: 16 }}>
           Submits all URLs in a topic to archive.org one at a time, with a 5-second gap to stay within rate limits.

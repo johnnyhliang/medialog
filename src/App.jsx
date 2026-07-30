@@ -1165,6 +1165,7 @@ function Workspace() {
           )}
           {view === 'settings' && (
             <SettingsView
+              isModuleVisible={isModuleVisible}
               topics={topics}
               onRefreshData={refreshTopics}
               addToast={addToast}

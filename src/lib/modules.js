@@ -54,6 +54,11 @@ export const MODULES = [
   { id: 'career',    label: 'Career',      description: 'Job pipeline and opportunity radar.',       core: false, defaultOn: false, minTier: 'founder' },
   { id: 'metrics',   label: 'Metrics',     description: 'Operator analytics dashboard.',             core: false, defaultOn: false, minTier: 'founder' },
   { id: 'uploads',   label: 'File uploads',description: 'Direct file uploads to storage.',           core: false, defaultOn: false, minTier: 'founder' },
+  // Kept rather than deleted: the pipeline is parked (cron unscheduled, session
+  // cookie never set) but the code and its setup notes stay reachable to a
+  // founder. Retiring an experiment shouldn't erase it.
+  { id: 'reels',     label: 'Instagram Reels', description: 'Parked experiment — DM reel ingest via session cookie.', core: false, defaultOn: false, minTier: 'founder' },
+  { id: 'twitter',   label: 'Twitter token',   description: 'Auth token used by the opportunity radar.', core: false, defaultOn: false, minTier: 'founder' },
 ]
 
 export const MODULES_BY_ID = new Map(MODULES.map((m) => [m.id, m]))
