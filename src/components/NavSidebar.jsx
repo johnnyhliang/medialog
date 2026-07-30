@@ -46,6 +46,7 @@ const SECTIONS = [
       { view: 'guide', label: 'Guide', icon: BookOpen },
       { view: 'settings', label: 'Settings', icon: Settings2 },
       { view: 'trash', label: 'Trash', icon: TrashIcon, side: 'loadTrash' },
+      { view: 'metrics', label: 'Metrics', icon: BarChart2, module: 'metrics' },
     ],
   },
 ]

@@ -53,6 +53,7 @@ const TidyView = lazy(() => import('./components/TidyView.jsx'))
 const InterviewView = lazy(() => import('./components/InterviewView.jsx'))
 const ReadingView = lazy(() => import('./components/ReadingView.jsx'))
 const DeepTopicView = lazy(() => import('./components/DeepTopicView.jsx'))
+const MetricsView = lazy(() => import('./components/MetricsView.jsx'))
 import TopicView from './components/TopicView.jsx'
 import CatchOverlay from './components/CatchOverlay.jsx'
 import ExportModal from './components/ExportModal.jsx'
@@ -1229,6 +1230,10 @@ function Workspace() {
               addToast={addToast}
             />
           )}
+          {view === 'metrics' && isModuleVisible('metrics') && (
+            <MetricsView supabase={supabase} addToast={addToast} />
+          )}
+
           {view === 'career' && isModuleVisible('career') && (
             <CareerView
               supabase={supabase}

@@ -1,4 +1,5 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2'
+import { recordUsage } from '../_shared/meter.ts'
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -26,6 +27,13 @@ Deno.serve(async (req) => {
   )
   const { data: { user }, error: authErr } = await sb.auth.getUser()
   if (authErr || !user) return json({ error: 'unauthorized' }, 401)
+
+  // Service-role client, used only for metering: ai_usage has no write policy, so
+  // the user-scoped client above cannot record usage.
+  const admin = createClient(
+    Deno.env.get('SUPABASE_URL')!,
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+  )
 
   const body = await req.json().catch(() => null)
   if (!body || (!body.messages && !body.prompt)) {
@@ -62,6 +70,19 @@ Deno.serve(async (req) => {
     }
     const data = await res.json()
     const content = data?.choices?.[0]?.message?.content ?? null
+
+    // Real counts from the provider rather than an estimate — the
+    // OpenAI-compatible response carries them and we were discarding them.
+    // Awaited but non-throwing (see _shared/meter.ts), so a metering failure
+    // cannot cost the user their answer.
+    await recordUsage(admin, {
+      userId: user.id,
+      fn: 'ai',
+      model,
+      inputTokens: data?.usage?.prompt_tokens ?? 0,
+      outputTokens: data?.usage?.completion_tokens ?? 0,
+    })
+
     return json({ content })
   } catch (e) {
     return json({ error: 'request failed', detail: String(e).slice(0, 200) }, 502)

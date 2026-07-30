@@ -1,4 +1,5 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2'
+import { recordUsage, approxTokens } from '../_shared/meter.ts'
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -63,6 +64,21 @@ Deno.serve(async (req) => {
       if (!embedding) return json({ error: 'no embedding returned' }, 502)
       embeddings.push(embedding)
     }
+    // Gemini's embedContent returns no token counts, so this is an ESTIMATE
+    // (~4 chars/token). Recorded anyway because embeddings — not chat — are the
+    // dominant AI cost: this fires on every entry save for every user.
+    const admin = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+    )
+    await recordUsage(admin, {
+      userId: user.id,
+      fn: 'embed-entry',
+      model: 'gemini-embedding-001',
+      inputTokens: texts.reduce((n, t) => n + approxTokens(t), 0),
+      outputTokens: 0,
+    })
+
     // Single-text callers keep the original shape; batch callers get an array.
     return Array.isArray(body?.texts)
       ? json({ embeddings })

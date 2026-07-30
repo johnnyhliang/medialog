@@ -4,7 +4,7 @@ import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
 
 export default [
-  { ignores: ['dist/**', 'node_modules/**', '.vite/**', 'dev-dist/**', 'supabase/functions/**'] },
+  { ignores: ['dist/**', 'node_modules/**', '.vite/**', '.claude/**', 'dev-dist/**', 'supabase/functions/**'] },
   {
     files: ['**/*.{js,jsx}'],
     languageOptions: {
@@ -36,7 +36,7 @@ export default [
     },
   },
   {
-    files: ['**/*.test.{js,jsx}', 'src/test/**'],
+    files: ['**/*.test.{js,jsx}', 'tests/**'],
     languageOptions: { globals: { ...globals.node } },
   },
 ]

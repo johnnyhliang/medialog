@@ -2664,6 +2664,46 @@ a.activity-title:hover { color: var(--accent); }
 }
 .linklike:hover { opacity: 0.8; }
 
+/* ── Settings usage readout ─────────────────────── */
+.usage-card { display: flex; flex-direction: column; gap: 2px; }
+.usage-row {
+  display: flex; justify-content: space-between; align-items: baseline;
+  padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px;
+}
+.usage-row:last-of-type { border-bottom: none; }
+.usage-limit { color: var(--muted); font-size: 12px; }
+.usage-note { font-size: 12px; margin: 10px 0 0; line-height: 1.5; }
+
+/* ── Metrics (founder operator view) ─────────────── */
+.metrics-view { padding: 24px 28px 48px; max-width: 1100px; }
+.metrics-header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 18px; }
+.metrics-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+.metrics-tile {
+  display: flex; flex-direction: column; gap: 2px;
+  border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px;
+  background: var(--surface); min-width: 0;
+}
+.metrics-tile-label { font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.metrics-tile-value { font-size: 22px; font-weight: 600; color: var(--text); }
+.metrics-tile-sub { font-size: 11px; color: var(--muted); }
+.metrics-note { font-size: 12px; color: var(--muted); margin: 14px 0 8px; line-height: 1.5; }
+
+/* Wide table scrolls inside its own container so the page never scrolls sideways. */
+.metrics-table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); }
+.metrics-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.metrics-table th, .metrics-table td {
+  text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); white-space: nowrap;
+}
+.metrics-table th {
+  font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--muted); font-weight: 600;
+}
+.metrics-table tr:last-child td { border-bottom: none; }
+.metrics-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+.metrics-email { display: block; color: var(--text); }
+.metrics-sub { display: block; font-size: 10.5px; color: var(--muted); }
+.metrics-table select { font-size: 12px; padding: 2px 4px; }
+
 /* ── Settings search ────────────────────────────── */
 .settings-search-wrap { margin-bottom: 14px; }
 .settings-search {

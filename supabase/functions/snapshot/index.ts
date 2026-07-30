@@ -53,6 +53,36 @@ Deno.serve(async (req) => {
     const buf = await res.arrayBuffer()
     if (buf.byteLength > MAX_BYTES) return json({ error: 'file too large (25 MB cap)' }, 413)
 
+    // Per-tier storage allowance. Checked AFTER the dedup lookup below would be
+    // wrong — an already-archived file costs no new bytes — but checked before
+    // upload so we never write bytes we then have to account for. Free/paid
+    // limits live in src/lib/limits.js; duplicated here as a number because edge
+    // functions cannot import client code.
+    const { data: tierRow } = await admin
+      .from('user_entitlements').select('tier').eq('user_id', user.id).maybeSingle()
+    const tier = tierRow?.tier ?? 'free'
+    const STORAGE_LIMIT: Record<string, number | null> = {
+      free: 500 * 1024 * 1024,
+      paid: 10 * 1024 * 1024 * 1024,
+      founder: null,
+    }
+    const cap = STORAGE_LIMIT[tier] ?? STORAGE_LIMIT.free
+    if (cap !== null) {
+      const { data: used } = await admin
+        .from('snapshots').select('bytes').eq('user_id', user.id)
+      const total = (used ?? []).reduce((n: number, r: { bytes: number }) => n + (r.bytes ?? 0), 0)
+      if (total + buf.byteLength > cap) {
+        // 413 with an explicit limit, not a generic failure: hitting a documented
+        // allowance is not the same as something breaking.
+        return json({
+          error: 'storage limit reached',
+          limit: cap,
+          used: total,
+          tier,
+        }, 413)
+      }
+    }
+
     const hash = await sha256Hex(buf)
 
     // Already archived? Return the existing row (dedup by content).

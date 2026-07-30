@@ -11,6 +11,9 @@ import GitHubTab from './settings/GitHubTab.jsx'
 import ModulesTab from './ModulesTab.jsx'
 import CaptureTokensTab from './settings/CaptureTokensTab.jsx'
 import { searchSettings } from '../lib/settingsIndex.js'
+import { getMyUsage, getMyStorage } from '../lib/db/adminMetrics.js'
+import { formatBytes, describeLimit } from '../lib/limits.js'
+import { loadEntitlement } from '../lib/entitlements.js'
 
 export default function SettingsView({ topics, onRefreshData, addToast, allTags = [], onUpdateTagColor, archiveToast, onToggleArchiveToast, trashToast, onToggleTrashToast, themePalette, themeStyle, onSetPalette, onSetStyle, assistantEnabled, onToggleAssistant, isModuleVisible = () => true }) {
   const [config, setConfig] = useState(null)
@@ -29,10 +32,18 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
   const bulkCancelledRef = useRef(false)
   const [captureLog, setCaptureLog] = useState(null)
   const [settingsQuery, setSettingsQuery] = useState('')
+  const [usage, setUsage] = useState(null)
 
   useEffect(() => {
     loadConfig()
   }, [])
+
+  useEffect(() => {
+    if (tab !== 'behavior') return
+    Promise.all([getMyUsage(supabase), getMyStorage(supabase), loadEntitlement(supabase)])
+      .then(([rows, bytes, ent]) => setUsage({ rows, bytes, tier: ent?.tier ?? 'free' }))
+      .catch(() => setUsage(null))
+  }, [tab])
 
   useEffect(() => {
     if (tab !== 'mobile') return
@@ -373,6 +384,38 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
                 }}>Clear</button>
               )}
             </div>
+          </div>
+        </section>
+      )}
+
+      {activeTab === 'behavior' && usage && (
+        <section>
+          <h2>Usage this month</h2>
+          <div className="card usage-card">
+            {/* Shown as plain numbers, not charts: at this scale a chart would
+                dress up a single data point. Limits come from src/lib/limits.js. */}
+            <div className="usage-row">
+              <span>AI calls</span>
+              <span>
+                {usage.rows.reduce((n, r) => n + Number(r.calls ?? 0), 0)}
+                <span className="usage-limit"> / {describeLimit(usage.tier, 'aiCallsPerMonth')}</span>
+              </span>
+            </div>
+            <div className="usage-row">
+              <span>Storage</span>
+              <span>
+                {formatBytes(usage.bytes)}
+                <span className="usage-limit"> / {describeLimit(usage.tier, 'storageBytes')}</span>
+              </span>
+            </div>
+            <div className="usage-row">
+              <span>Feed sources</span>
+              <span className="usage-limit">up to {describeLimit(usage.tier, 'feeds')}</span>
+            </div>
+            <p className="muted usage-note">
+              Plan: <strong>{usage.tier}</strong>. AI limits are unset while usage is being
+              measured — see docs/metering-scope.md.
+            </p>
           </div>
         </section>
       )}

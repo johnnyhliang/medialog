@@ -1,5 +1,22 @@
 // DB operations for feeds and feed_items.
 
+import { loadEntitlement } from '../entitlements.js'
+import { isOverLimit, limitFor } from '../limits.js'
+
+// Thrown when a tier allowance is reached. Distinct from a generic Error so the
+// UI can offer an upgrade rather than showing a failure — hitting a documented
+// limit is not the same as something breaking.
+export class LimitError extends Error {
+  constructor(message, { key, limit, tier } = {}) {
+    super(message)
+    this.name = 'LimitError'
+    this.isLimit = true
+    this.key = key
+    this.limit = limit
+    this.tier = tier
+  }
+}
+
 // ── Feeds ──────────────────────────────────────────────
 
 export async function listFeeds(supabase) {
@@ -14,6 +31,22 @@ export async function listFeeds(supabase) {
 
 export async function createFeed(supabase, { url, name, category = null, kind = 'rss', min_score = null }) {
   const { data: { user } } = await supabase.auth.getUser()
+
+  // Feed count is really "how much recurring server-side work does this account
+  // create" — every feed is a repeated fetch on a shared cron. Checked before the
+  // insert so the user gets a clear limit message rather than a DB error.
+  const { tier } = await loadEntitlement(supabase)
+  const { count } = await supabase
+    .from('feeds')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', user.id)
+  if (isOverLimit(tier, 'feeds', count ?? 0)) {
+    throw new LimitError(
+      `Your plan allows ${limitFor(tier, 'feeds')} feeds. Remove one, or upgrade for more.`,
+      { key: 'feeds', limit: limitFor(tier, 'feeds'), tier },
+    )
+  }
+
   const { data, error } = await supabase
     .from('feeds')
     .insert({ user_id: user.id, url, name, category, kind, min_score })
