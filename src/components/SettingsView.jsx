@@ -10,6 +10,7 @@ import ProgramsTab from './settings/ProgramsTab.jsx'
 import GitHubTab from './settings/GitHubTab.jsx'
 import ModulesTab from './ModulesTab.jsx'
 import CaptureTokensTab from './settings/CaptureTokensTab.jsx'
+import { searchSettings } from '../lib/settingsIndex.js'
 
 export default function SettingsView({ topics, onRefreshData, addToast, allTags = [], onUpdateTagColor, archiveToast, onToggleArchiveToast, trashToast, onToggleTrashToast, themePalette, themeStyle, onSetPalette, onSetStyle, assistantEnabled, onToggleAssistant, isModuleVisible = () => true }) {
   const [config, setConfig] = useState(null)
@@ -27,6 +28,7 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
   const bulkPausedRef = useRef(false)
   const bulkCancelledRef = useRef(false)
   const [captureLog, setCaptureLog] = useState(null)
+  const [settingsQuery, setSettingsQuery] = useState('')
 
   useEffect(() => {
     loadConfig()
@@ -170,13 +172,55 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
   ]
   const TABS = ALL_TABS.filter((t) => !t.module || isModuleVisible(t.module))
 
+  const searching = settingsQuery.trim().length > 0
   // A tab can disappear while it is open (module switched off in another tab), so
-  // fall back rather than render nothing.
-  const activeTab = TABS.some((t) => t.id === tab) ? tab : 'appearance'
+  // fall back rather than render nothing. While searching, no tab is active —
+  // results take over the surface entirely.
+  const activeTab = searching
+    ? null
+    : (TABS.some((t) => t.id === tab) ? tab : 'appearance')
+
+  const results = searchSettings(settingsQuery, isModuleVisible)
 
   return (
     <div className="settings-view">
-      <div className="settings-tabs">
+      <div className="settings-search-wrap">
+        <input
+          className="settings-search"
+          type="search"
+          value={settingsQuery}
+          onChange={(e) => setSettingsQuery(e.target.value)}
+          placeholder="Search settings…"
+          aria-label="Search settings"
+        />
+      </div>
+
+      {/* Results replace the tab content rather than sitting beside it — the
+          point of searching is that you no longer care which tab it was in. */}
+      {searching && (
+        <div className="settings-results">
+          {results.length === 0 ? (
+            <p className="muted">No settings match “{settingsQuery}”.</p>
+          ) : (
+            <ul>
+              {results.map((r) => (
+                <li key={r.tab + r.label}>
+                  <button
+                    onClick={() => { setTab(r.tab); setSettingsQuery('') }}
+                  >
+                    <span className="settings-result-label">{r.label}</span>
+                    <span className="settings-result-tab">
+                      {(ALL_TABS.find((t) => t.id === r.tab) || {}).label || r.tab}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
+      <div className="settings-tabs" hidden={searching}>
         {TABS.map((t) => (
           <button
             key={t.id}

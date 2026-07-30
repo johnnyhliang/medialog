@@ -2661,6 +2661,48 @@ a.activity-title:hover { color: var(--accent); }
 }
 .linklike:hover { opacity: 0.8; }
 
+/* ── Settings search ────────────────────────────── */
+.settings-search-wrap { margin-bottom: 14px; }
+.settings-search {
+  width: 100%;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-family: inherit;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+}
+.settings-search:focus { outline: none; border-color: var(--accent); }
+
+.settings-results ul { list-style: none; margin: 0 0 8px; padding: 0; }
+.settings-results li { border-bottom: 1px solid var(--border); }
+.settings-results li:last-child { border-bottom: none; }
+.settings-results button {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  background: none;
+  border: none;
+  text-align: left;
+  padding: 10px 4px;
+  cursor: pointer;
+  font: inherit;
+}
+.settings-results button:hover { background: var(--surface); }
+.settings-result-label { font-size: 13.5px; color: var(--text); }
+/* The section name is the answer to "where was that setting?", so it stays
+   visible rather than being a hover affordance. */
+.settings-result-tab {
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: lowercase;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
 /* ── Settings → Capture tokens ──────────────────── */
 .ct-fresh {
   border: 1px solid var(--accent);
@@ -4086,6 +4128,23 @@ a.iv-problem-title:hover { color: var(--accent); }
   gap: 4px;
   flex-wrap: wrap;
   margin-bottom: 8px;
+  min-width: 0;
+}
+@media (max-width: 640px) {
+  /* One scrollable strip beats a wrapped block that eats vertical space on a
+     phone. Pills keep their size; the row scrolls. */
+  .opp-filter-pills {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+  }
+  .opp-filter-pills::-webkit-scrollbar { display: none; }
+  .opp-pill { flex-shrink: 0; }
+  .opp-view-header { padding: 16px 16px 0; }
+  .opp-view-body { padding: 12px 12px 24px 16px; }
+  /* The secondary location line is the first thing to sacrifice when narrow. */
+  .opp-location { display: none; }
 }
 .opp-pill {
   font-size: 11px;
@@ -4099,11 +4158,16 @@ a.iv-problem-title:hover { color: var(--accent); }
 .opp-pill:hover { background: var(--surface-3); color: var(--text); }
 .opp-pill.active { background: var(--accent-weak); color: var(--accent); border-color: var(--accent); font-weight: 600; }
 
-.opp-rows { display: flex; flex-direction: column; }
+.opp-rows { display: flex; flex-direction: column; min-width: 0; }
 .opp-row {
   display: flex;
   align-items: center;
   gap: 6px;
+  /* A flex item defaults to min-width:auto, which refuses to shrink below its
+     content — so a long title pushed the row (and the star button) past the
+     container's right edge instead of ellipsising. Both the row and the growing
+     child need min-width:0 for the ellipsis on .opp-title to take effect. */
+  min-width: 0;
   padding: 6px 0;
   border-bottom: 1px solid var(--border);
   font-size: var(--text-sm);
@@ -4121,6 +4185,7 @@ a.iv-problem-title:hover { color: var(--accent); }
 }
 .opp-title {
   flex: 1;
+  min-width: 0;
   color: var(--text);
   white-space: nowrap;
   overflow: hidden;
@@ -4221,8 +4286,12 @@ a.iv-problem-title:hover { color: var(--accent); }
 .opp-refresh-btn:disabled { opacity: 0.5; cursor: default; }
 .opp-view-body {
   flex: 1;
+  min-width: 0;
   overflow-y: auto;
-  padding: 12px 28px 24px;
+  /* Extra right padding so the overlay scrollbar doesn't sit on top of the star
+     and track buttons at the end of each row. */
+  padding: 12px 20px 24px 28px;
+  scrollbar-gutter: stable;
 }
 .opp-empty { color: var(--muted); font-size: var(--text-sm); padding: 16px 0; }
 .opp-location {

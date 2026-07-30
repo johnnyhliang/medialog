@@ -17,8 +17,8 @@ describe('entitlement layer', () => {
     expect(isEntitled('metrics', undefined)).toBe(false)
   })
 
-  test('interview and career are founder-only, never reachable by a paid user', () => {
-    for (const id of ['interview', 'career', 'assistant', 'metrics', 'uploads']) {
+  test('interview and internal tools are founder-only, never reachable by a paid user', () => {
+    for (const id of ['interview', 'assistant', 'metrics', 'uploads', 'reels']) {
       expect(isEntitled(id, 'free')).toBe(false)
       expect(isEntitled(id, 'paid')).toBe(false)
       expect(isEntitled(id, 'founder')).toBe(true)
@@ -63,12 +63,14 @@ describe('preference layer', () => {
 
 describe('composed visibility', () => {
   test('needs both entitlement and preference', () => {
+    // Uses 'interview' because it is still founder-only; 'career' moved to free
+    // once the radar was confirmed to cost nothing per user.
     // Entitled but switched off.
-    expect(isModuleVisible('career', { tier: 'founder', prefs: { career: false } })).toBe(false)
+    expect(isModuleVisible('interview', { tier: 'founder', prefs: { interview: false } })).toBe(false)
     // Switched on but not entitled.
-    expect(isModuleVisible('career', { tier: 'free', prefs: { career: true } })).toBe(false)
+    expect(isModuleVisible('interview', { tier: 'free', prefs: { interview: true } })).toBe(false)
     // Both.
-    expect(isModuleVisible('career', { tier: 'founder', prefs: { career: true } })).toBe(true)
+    expect(isModuleVisible('interview', { tier: 'founder', prefs: { interview: true } })).toBe(true)
   })
 
   test('isDev bypasses entitlement but still respects preferences', () => {
@@ -78,20 +80,26 @@ describe('composed visibility', () => {
 })
 
 describe('settings list', () => {
+  test('the opportunity radar is free — it scrapes public boards, so it costs nothing per user', () => {
+    expect(isEntitled('career', 'free')).toBe(true)
+    expect(isModuleVisible('career', { tier: 'free', prefs: { career: true } })).toBe(true)
+  })
+
   test('paid modules show as locked to a free user rather than being hidden', () => {
     const rows = listModulesForSettings({ tier: 'free', prefs: {} })
     const ids = rows.map((r) => r.id)
     expect(ids).toContain('feed')
+    expect(ids).toContain('career')
     // Founder-only internal tools stay hidden entirely — a locked "Metrics" row
     // would advertise an operator surface to every user.
     expect(ids).not.toContain('metrics')
-    expect(ids).not.toContain('career')
+    expect(ids).not.toContain('interview')
   })
 
   test('a founder sees the internal modules', () => {
     const ids = listModulesForSettings({ tier: 'founder', prefs: {} }).map((r) => r.id)
     expect(ids).toContain('metrics')
-    expect(ids).toContain('career')
+    expect(ids).toContain('reels')
     expect(ids).toContain('interview')
   })
 })

@@ -15,10 +15,13 @@
 //               to everything-on by migration 0057, so this only affects signups.
 //   minTier   — minimum entitlement. 'free' for everything a normal user gets.
 //
-// Deliberate: Career and Interview are minTier 'founder' — internal tools, not
-// product surface and not a paid upsell. They were briefly exposed publicly via
-// the `founder_features_public` flag to demo them; migration 0057 reverts that.
-// If they ever ship to users they become 'free' opt-in modules, never 'paid'.
+// Tier notes:
+// - 'career' (opportunity radar + application tracker) is FREE. It scrapes public
+//   GitHub job boards on a shared cron, so it costs nothing per user. Never a
+//   paid upsell.
+// - 'interview' stays founder-only: personal curriculum, not product surface.
+// - 'reels'/'twitter' are parked experiments kept reachable to a founder rather
+//   than deleted.
 
 export const GRANDFATHERED_KEY = '__grandfathered'
 
@@ -37,6 +40,10 @@ export const MODULES = [
   { id: 'feed',      label: 'Feed',        description: 'RSS and creator feeds with relevance ranking.',  core: false, defaultOn: false, minTier: 'free' },
   { id: 'reading',   label: 'Reading',     description: 'Books, courses and papers with section cursors.', core: false, defaultOn: false, minTier: 'free' },
   { id: 'highlights',label: 'Highlights',  description: 'Saved highlights across your library.',     core: false, defaultOn: false, minTier: 'free' },
+  // Free for everyone: the radar scrapes public GitHub job boards, so it costs
+  // nothing per user beyond a shared cron. Interview prep stays founder-only —
+  // that one is personal curriculum, not product.
+  { id: 'career',    label: 'Opportunities',description: 'Job/fellowship radar from public boards, plus the application tracker.', core: false, defaultOn: false, minTier: 'free' },
   { id: 'revisit',   label: 'Revisit',     description: 'Spaced resurfacing of older entries.',      core: false, defaultOn: false, minTier: 'free' },
   { id: 'archive',   label: 'Archive',     description: 'Archived entries.',                         core: false, defaultOn: false, minTier: 'free' },
   { id: 'files',     label: 'Files',       description: 'Preserved files and snapshots.',            core: false, defaultOn: false, minTier: 'free' },
@@ -51,7 +58,6 @@ export const MODULES = [
   // shared AI key isn't exposed to signups before metering lands (task #4).
   { id: 'assistant', label: 'Ask your library', description: 'Conversational search over your notes.', core: false, defaultOn: false, minTier: 'founder' },
   { id: 'interview', label: 'Interview',   description: 'Interview readiness tracker.',              core: false, defaultOn: false, minTier: 'founder' },
-  { id: 'career',    label: 'Career',      description: 'Job pipeline and opportunity radar.',       core: false, defaultOn: false, minTier: 'founder' },
   { id: 'metrics',   label: 'Metrics',     description: 'Operator analytics dashboard.',             core: false, defaultOn: false, minTier: 'founder' },
   { id: 'uploads',   label: 'File uploads',description: 'Direct file uploads to storage.',           core: false, defaultOn: false, minTier: 'founder' },
   // Kept rather than deleted: the pipeline is parked (cron unscheduled, session
