@@ -1323,6 +1323,7 @@ function Workspace() {
       {showFounder && assistantEnabled && assistantOpen && (
         <AssistantPanel
           isModuleVisible={isModuleVisible}
+          onOpenSettings={(tab) => { setView('settings'); if (tab) try { localStorage.setItem('medialog_settings_tab', tab) } catch {} }}
           supabase={supabase}
           onOpenEntry={(src) => handleOpenRelated(src.entryId)}
           onClose={() => setAssistantOpen(false)}

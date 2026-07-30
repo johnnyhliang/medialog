@@ -2677,6 +2677,16 @@ a.activity-title:hover { color: var(--accent); }
   border-color: var(--danger, #c0392b) !important;
 }
 
+/* Assistant: which knowledge source answered. Distinguishes "your notes" from
+   "the app guide" so a confident app answer is never mistaken for a note. */
+.asst-mode { font-size: 10.5px; color: var(--muted); margin: 2px 0 0 2px; font-style: italic; }
+.asst-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.asst-tabs button {
+  font-size: 11px; padding: 2px 8px; border: 1px solid var(--border);
+  border-radius: 2px; background: none; color: var(--accent); cursor: pointer;
+}
+.asst-tabs button:hover { border-color: var(--accent); }
+
 /* ── Index status ────────────────────────────────── */
 /* Colour never carries the meaning alone — every state has a title/aria-label. */
 .index-status { font-size: 11px; line-height: 1; flex-shrink: 0; cursor: help; }

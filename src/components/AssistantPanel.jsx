@@ -39,13 +39,16 @@ function renderWithCitations(text, sources, onOpen) {
   })
 }
 
-export default function AssistantPanel({ supabase, onOpenEntry, onClose, isModuleVisible = () => true }) {
+export default function AssistantPanel({ supabase, onOpenEntry, onClose, onOpenSettings, isModuleVisible = () => true }) {
   const [messages, setMessages] = useState([]) // {role, content, sources?}
   const [conversationId, setConversationId] = useState(null)
   const [conversations, setConversations] = useState([])
   const [showHistory, setShowHistory] = useState(false)
   const [input, setInput] = useState('')
   const [busy, setBusy] = useState(false)
+  // Which path the in-flight question took, so the spinner tells the truth. Since
+  // the app-help router landed, 'searching your notes' was wrong for app questions.
+  const [mode, setMode] = useState('library')
   const scrollRef = useRef(null)
   const inputRef = useRef(null)
 
@@ -102,6 +105,8 @@ export default function AssistantPanel({ supabase, onOpenEntry, onClose, isModul
     const q = input.trim()
     if (!q || busy) return
     const history = messages.map((m) => ({ role: m.role, content: m.content }))
+    const asked = looksLikeAppQuestion(q) ? 'app' : 'library'
+    setMode(asked)
     setMessages((prev) => [...prev, { role: 'user', content: q }])
     setInput('')
     setBusy(true)
@@ -123,7 +128,7 @@ export default function AssistantPanel({ supabase, onOpenEntry, onClose, isModul
       // X" is retrieval over notes; "how do I turn off X" is about the app. The
       // router is conservative — anything ambiguous falls through to the library,
       // which is the more common intent.
-      const res = looksLikeAppQuestion(q)
+      const res = asked === 'app'
         ? await askAppHelp(supabase, q, { isVisible: isModuleVisible, history })
         : await askLibrarian(supabase, q, { history })
       setMessages((prev) => [...prev, {
@@ -131,6 +136,7 @@ export default function AssistantPanel({ supabase, onOpenEntry, onClose, isModul
         content: res.answer,
         sources: res.sources ?? [],
         tabs: res.tabs ?? [],
+        mode: asked,
       }])
       try {
         if (convId) {
@@ -214,6 +220,16 @@ export default function AssistantPanel({ supabase, onOpenEntry, onClose, isModul
                 ? renderWithCitations(m.content, m.sources ?? [], onOpenEntry)
                 : m.content}
             </div>
+            {m.role === 'assistant' && m.mode === 'app' && (
+              <div className="asst-mode">answered from the app guide, not your notes</div>
+            )}
+            {m.role === 'assistant' && m.tabs?.length > 0 && onOpenSettings && (
+              <div className="asst-tabs">
+                {m.tabs.map((t) => (
+                  <button key={t} onClick={() => onOpenSettings(t)}>open Settings › {t}</button>
+                ))}
+              </div>
+            )}
             {m.role === 'assistant' && m.sources?.length > 0 && (
               <div className="asst-sources">
                 {m.sources.map((s) => (
@@ -227,7 +243,10 @@ export default function AssistantPanel({ supabase, onOpenEntry, onClose, isModul
         ))}
         {busy && (
           <div className="asst-msg asst-msg--assistant">
-            <div className="asst-bubble asst-thinking"><Loader2 size={14} className="asst-spin" /> searching your notes…</div>
+            <div className="asst-bubble asst-thinking">
+              <Loader2 size={14} className="asst-spin" />
+              {mode === 'app' ? ' checking how the app works…' : ' searching your notes…'}
+            </div>
           </div>
         )}
       </div>

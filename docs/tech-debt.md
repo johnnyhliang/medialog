@@ -133,6 +133,44 @@ Options, in order of correctness:
 Today's behaviour is accidentally the safe one, which is why this is logged rather
 than hot-fixed.
 
+### ⚠️ Contextual retrieval runs on 0.1% of chunks — cause UNKNOWN
+Found 2026-07-30 by direct inspection. **5 of 4,976 chunks have a `context`
+value.** Every one of those 5 is `source = 'full_text'`; **0 of 4,971 `note`
+chunks have any.**
+
+Not explained by the design gate. `CONTEXTUALIZE_MIN_CHUNKS = 2` correctly skips
+single-chunk documents, but **361 entries produce 2+ note chunks** and so should
+qualify. Only 34 produce a single chunk.
+
+Not explained by age either — the hypothesis that old chunks predate working
+contextualization is **disproved**: a `full_text` chunk written at
+`17:04:54` today HAS context, and a `note` chunk written at `17:05:04` — ten
+seconds later, same session — does not.
+
+**Root cause not determined.** Candidates worth testing, in order:
+1. `contextualizeBatch` failing for note-shaped input and returning `''`. It
+   swallows every error by design ("a failed contextualizer degrades retrieval,
+   it must not block indexing"), so failure is invisible — which is exactly why
+   this went unnoticed for ten days.
+2. Batch behaviour: `full_text` here was 5 chunks (one batch of ≤8); notes with
+   12+ chunks span multiple batches.
+3. The JSON-mode response failing to parse for larger batches, so `contexts[]`
+   comes back empty and every chunk silently gets `''`.
+
+**Why it matters:** contextual retrieval is the headline technique in the chunk
+design — the comment cites ~35% fewer retrieval failures, ~49% with a lexical arm.
+Right now the library is getting approximately none of that, and nothing surfaced
+it. Add a debug log to `contextualizeBatch` and re-index one multi-chunk note.
+
+**Related, and the real lesson:** `scripts/rechunk.js` exists to regenerate
+chunks, and `retrievalEval.js` exists to measure whether a config change helped —
+**but `runEval` has never been run**, and
+`tests/src/lib/retrievalEval.fixture.json` is still the shipped template with 2
+placeholder queries and a note saying "replace expected[] with real entry ids".
+So there is no baseline to compare against, and no way to answer "did the extra
+sauce help" even after it's fixed. Build the fixture first, measure, then fix,
+then measure again.
+
 ### Instagram session scraping is fragile and ToS-gray
 `fetch-reels` depends on a session cookie in `user_configs.twitter_auth_token`.
 It will break without warning and can't be defended if challenged. Already listed
