@@ -88,6 +88,25 @@ user would receive the same shared secret and could post to
 `capture` as `CAPTURE_USER_ID`. Fix before any public launch: per-user capture
 tokens minted server-side, fetched at runtime, never inlined.
 
+### Bookmarklet tokens are plaintext by construction — accepted risk
+A bookmarklet is a string in your bookmarks with no secure storage, so whatever
+credential it carries is necessarily visible in that string. Per-user tokens
+(`0063`) fixed the part that was fixable — the credential is no longer shipped to
+every visitor in the JS bundle, and it is now revocable per device — but the token
+itself is still plaintext in the bookmark.
+
+Residual risk: a bookmarklet runs **in the page's context**, so a hostile site
+could monkeypatch `fetch` and capture the token when you click. Low likelihood,
+but it is the security ceiling of the mechanism, not an implementation gap.
+Mitigation is revocation (Settings → Capture tokens), which is now instant.
+
+**The real fix is the browser extension** in `docs/preservation-v2-spec.md` §1:
+extension code runs in an isolated world the page cannot reach, so the token is
+never exposed to visited sites. That spec wanted an extension for login-walled
+capture; it resolves the credential problem as a side effect. Until then, treat a
+bookmarklet token as something to revoke on suspicion rather than protect
+perfectly.
+
 ### Instagram session scraping is fragile and ToS-gray
 `fetch-reels` depends on a session cookie in `user_configs.twitter_auth_token`.
 It will break without warning and can't be defended if challenged. Already listed
