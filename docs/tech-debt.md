@@ -23,15 +23,25 @@ breaking capture. The failure mode is therefore "silently worse extraction," whi
 is the dangerous kind — it won't page you, it'll just quietly stop preserving
 articles well.
 
-**Check after deploying:** capture one article, confirm
-`full_text_extractor = 'readability'` rather than `'heuristic'` on the new row.
+**Deployed 2026-07-29, still unverified.** An unauthenticated probe returns a clean
+JSON 401, which confirms the function boots and its auth gate works — but proves
+nothing about the imports, because they resolve *lazily inside the handler*, after
+the auth check returns. Verification requires one authenticated capture.
 
-### Migrations written but never applied
-`0057_entitlements_modules.sql`, `0058_events.sql`, `0060_full_text_coverage.sql`
-are all committed and unapplied. 0057 is the one that matters personally — it's
-what sets the founder account's tier, without which founder-gated modules
-(Career, Interview, assistant) are invisible. Note 0059 is deliberately unused;
-parallel worktrees claimed numbers out of order.
+**The check:** capture any article in the app, then
+
+```sql
+select url, full_text_extractor, full_text_status, length(full_text)
+from entries where full_text_at > now() - interval '10 minutes';
+```
+
+`full_text_extractor = 'readability'` means it works. `'heuristic'` means the
+`npm:` specifiers failed to resolve and it silently fell back — which is the whole
+reason this is top priority: nothing errors, the quality just quietly drops.
+
+### ~~Migrations written but never applied~~ — RESOLVED 2026-07-29
+0056–0058, 0060, 0061 all applied via `supabase db push`. Note 0059 is
+permanently unused; parallel worktrees claimed numbers out of order.
 
 ---
 
