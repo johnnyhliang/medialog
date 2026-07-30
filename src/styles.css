@@ -5691,8 +5691,14 @@ a.digest-item-title:hover { text-decoration: underline; }
   background: none; border: none; color: var(--text-dim); font-size: 12px;
   cursor: pointer; padding: 0; text-decoration: underline;
 }
-.gains-floor { display: flex; flex-direction: column; gap: 6px; }
+.gains-floor { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
 .gains-floor-text { font-size: 14px; color: var(--text); margin: 0; }
+.gains-seed-btn {
+  margin-top: 4px; padding: 6px 12px; border: 1px solid var(--border); border-radius: 8px;
+  background: var(--surface); color: var(--text); font-size: 13px; cursor: pointer;
+}
+.gains-seed-btn:hover { border-color: var(--accent); }
+.gains-seed-btn:disabled { opacity: 0.6; cursor: default; }
 .gains-track-tag {
   font-size: 11px; font-weight: 600; color: var(--accent); text-transform: uppercase;
 }

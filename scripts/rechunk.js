@@ -19,11 +19,26 @@ import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 
-const SUPABASE_URL = process.env.VITE_SUPABASE_URL
-const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
-const AI_BASE_URL = process.env.AI_BASE_URL
-const AI_API_KEY = process.env.AI_API_KEY
-const AI_MODEL = process.env.AI_MODEL
+// Read .env.local as a fallback so this script sees the same config the app does.
+// Real environment variables still win, which keeps it usable in CI.
+function readEnvFile(path = '.env.local') {
+  try {
+    const out = {}
+    for (const line of readFileSync(path, 'utf8').split(/\r?\n/)) {
+      const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/i)
+      if (m) out[m[1]] = m[2].replace(/^['"]|['"]$/g, '').trim()
+    }
+    return out
+  } catch { return {} }
+}
+const FILE_ENV = readEnvFile()
+const env = (k) => process.env[k] ?? FILE_ENV[k]
+
+const SUPABASE_URL = env('VITE_SUPABASE_URL')
+const SERVICE_KEY = env('SUPABASE_SERVICE_ROLE_KEY')
+const AI_BASE_URL = env('AI_BASE_URL')
+const AI_API_KEY = env('AI_API_KEY')
+const AI_MODEL = env('AI_MODEL')
 
 // Gemini key pool: ~/.gemini-keys (one per line) if present, else GEMINI_API_KEY.
 // The free tier is a per-KEY daily quota, so rotating across keys multiplies the
@@ -38,12 +53,13 @@ function loadKeys() {
       .filter((s) => s.length >= 30)
     if (keys.length) return keys
   }
-  return process.env.GEMINI_API_KEY ? [process.env.GEMINI_API_KEY] : []
+  return env('GEMINI_API_KEY') ? [env('GEMINI_API_KEY')] : []
 }
 const GEMINI_KEYS = loadKeys()
 let keyIdx = 0
 
 const canContextualize = Boolean(AI_BASE_URL && AI_API_KEY && AI_MODEL)
+const ALLOW_NO_CONTEXT = process.argv.includes('--no-context')
 
 // Validated on demand rather than at import time, so other scripts (the
 // full_text backfill) can reuse processEntry without this module deciding to
@@ -54,8 +70,25 @@ export function requireEnv() {
   }
   if (!GEMINI_KEYS.length) { console.error('No Gemini key: set GEMINI_API_KEY or create ~/.gemini-keys'); process.exit(1) }
   console.log(`Gemini key pool: ${GEMINI_KEYS.length} key(s)`)
+  // A warning was not enough. Chunks written without context are INDISTINGUISHABLE
+  // from good ones — same shape, same embedding dimensions, no error — so a
+  // scrolled-past warning silently produced 4,971 degraded chunks (found
+  // 2026-07-30). Refuse by default; degrading must be an explicit choice.
   if (!canContextualize) {
-    console.warn('AI_BASE_URL/AI_API_KEY/AI_MODEL not set — indexing WITHOUT contextual retrieval (lower quality).')
+    if (!ALLOW_NO_CONTEXT) {
+      console.error('\nRefusing to run: AI_BASE_URL / AI_API_KEY / AI_MODEL are not set.')
+      console.error('Without them, chunks are written WITHOUT contextual retrieval — indistinguishable')
+      console.error('from good chunks, so the damage is invisible until you inspect the DB.\n')
+      console.error('Fix (recommended): add the three vars to .env.local.')
+      console.error('  npx supabase secrets list   # names only — values are hashed;')
+      console.error('                              # copy them from your AI provider dashboard\n')
+      console.error('Or, if you deliberately want degraded chunks:')
+      console.error('  node scripts/rechunk.js --no-context\n')
+      process.exit(1)
+    }
+    console.warn('--no-context: indexing WITHOUT contextual retrieval. Chunks will be lower quality.')
+  } else {
+    console.log(`Contextual retrieval: ON (${AI_MODEL})`)
   }
 }
 

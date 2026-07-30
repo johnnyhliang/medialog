@@ -133,43 +133,43 @@ Options, in order of correctness:
 Today's behaviour is accidentally the safe one, which is why this is logged rather
 than hot-fixed.
 
-### ⚠️ Contextual retrieval runs on 0.1% of chunks — cause UNKNOWN
-Found 2026-07-30 by direct inspection. **5 of 4,976 chunks have a `context`
-value.** Every one of those 5 is `source = 'full_text'`; **0 of 4,971 `note`
-chunks have any.**
+### Contextual retrieval was never applied — ROOT CAUSE FOUND, re-index pending
+Found and diagnosed 2026-07-30. **5 of 4,976 chunks have a `context` value.**
+All 5 are `full_text`; **0 of 4,971 `note` chunks** have any, despite 361 entries
+producing the 2+ chunks that qualify.
 
-Not explained by the design gate. `CONTEXTUALIZE_MIN_CHUNKS = 2` correctly skips
-single-chunk documents, but **361 entries produce 2+ note chunks** and so should
-qualify. Only 34 produce a single chunk.
+**Root cause:** `scripts/rechunk.js` reads `AI_BASE_URL` / `AI_API_KEY` /
+`AI_MODEL` from `process.env`. Those live as **Supabase secrets**, not in
+`.env.local`, so `canContextualize` was always `false` and every chunk the script
+wrote got `''`. The 5 that DO have context came through the app instead, where
+`contextualizeChunks` calls the `ai` edge function, which has the secrets.
 
-Not explained by age either — the hypothesis that old chunks predate working
-contextualization is **disproved**: a `full_text` chunk written at
-`17:04:54` today HAS context, and a `note` chunk written at `17:05:04` — ten
-seconds later, same session — does not.
+**It even warned** — line 57 printed "indexing WITHOUT contextual retrieval (lower
+quality)" — and that warning scrolled past. Chunks written without context are
+*indistinguishable* from good ones: same shape, same dimensions, no error, working
+search. Nothing could surface the difference except inspecting the DB.
 
-**Root cause not determined.** Candidates worth testing, in order:
-1. `contextualizeBatch` failing for note-shaped input and returning `''`. It
-   swallows every error by design ("a failed contextualizer degrades retrieval,
-   it must not block indexing"), so failure is invisible — which is exactly why
-   this went unnoticed for ten days.
-2. Batch behaviour: `full_text` here was 5 chunks (one batch of ≤8); notes with
-   12+ chunks span multiple batches.
-3. The JSON-mode response failing to parse for larger batches, so `contexts[]`
-   comes back empty and every chunk silently gets `''`.
+**Fixed 2026-07-30:** the script now reads `.env.local` (real env still wins), and
+**refuses to run** without the AI vars unless given an explicit `--no-context`.
+Degrading is now a choice someone makes, not an accident they scroll past.
 
-**Why it matters:** contextual retrieval is the headline technique in the chunk
-design — the comment cites ~35% fewer retrieval failures, ~49% with a lexical arm.
-Right now the library is getting approximately none of that, and nothing surfaced
-it. Add a debug log to `contextualizeBatch` and re-index one multi-chunk note.
+**Still to do — this is the actual repair:**
+1. Add `AI_BASE_URL`, `AI_API_KEY`, `AI_MODEL` to `.env.local`
+2. **Build a real eval fixture first.** `tests/src/lib/retrievalEval.fixture.json`
+   is still the shipped template — 2 placeholder queries and a note saying
+   "replace expected[] with real entry ids". Without a baseline there is no way to
+   answer "did contextual retrieval help", which is the whole question.
+3. `runEval` → record the number
+4. `node scripts/rechunk.js` → regenerates ~4,971 chunks WITH context
+5. `runEval` again → compare
 
-**Related, and the real lesson:** `scripts/rechunk.js` exists to regenerate
-chunks, and `retrievalEval.js` exists to measure whether a config change helped —
-**but `runEval` has never been run**, and
-`tests/src/lib/retrievalEval.fixture.json` is still the shipped template with 2
-placeholder queries and a note saying "replace expected[] with real entry ids".
-So there is no baseline to compare against, and no way to answer "did the extra
-sauce help" even after it's fixed. Build the fixture first, measure, then fix,
-then measure again.
+Step 2 before step 4, or the opportunity to measure is gone. The cited benefit is
+~35% fewer retrieval failures (~49% with a lexical arm); whether that holds on a
+personal notes corpus is exactly what the harness exists to find out.
+
+**Cost note:** step 4 re-embeds ~5k chunks and runs the contextualizer over ~360
+documents. Rate-limited by the Gemini key pool (5 keys) and the free-tier AI
+provider — expect it to take a while, and it is resumable via `source_hash`.
 
 ### Instagram session scraping is fragile and ToS-gray
 `fetch-reels` depends on a session cookie in `user_configs.twitter_auth_token`.

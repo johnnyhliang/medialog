@@ -7,11 +7,12 @@
 
 import { useEffect, useState } from 'react'
 import { ExternalLink, RefreshCw } from 'lucide-react'
-import { listMenuItems, markMenuItemPulled, setMenuItemStatus } from '../lib/db/gains.js'
+import { listMenuItems, markMenuItemPulled, setMenuItemStatus, seedStarterMenu } from '../lib/db/gains.js'
 import { listDeepTopics, getDeepTopic } from '../lib/db/deepTopics.js'
 import { listInterview } from '../lib/db/interview.js'
 import { suggestNext as suggestInterview } from '../lib/interviewPlan.js'
 import { suggestNext, FLOOR_ITEMS } from '../lib/gainsPicker.js'
+import { GAINS_STARTER_MENU } from '../lib/gainsStarterMenu.js'
 
 const TRACK_LABEL = { quant: 'Quant', dev: 'Dev', interview: 'Interview' }
 
@@ -21,6 +22,7 @@ export default function GainsCard({ supabase, onOpenDeepTopic, onOpenPatternTopi
   const [floorTrack, setFloorTrack] = useState(null)
   const [context, setContext] = useState(null) // raw data kept around for "pull another"
   const [busy, setBusy] = useState(false)
+  const [seedBusy, setSeedBusy] = useState(false)
 
   async function load() {
     setLoading(true)
@@ -86,6 +88,12 @@ export default function GainsCard({ supabase, onOpenDeepTopic, onOpenPatternTopi
     await load()
   }
 
+  async function handleSeedStarterMenu() {
+    setSeedBusy(true)
+    try { await seedStarterMenu(supabase, GAINS_STARTER_MENU) } finally { setSeedBusy(false) }
+    await load()
+  }
+
   function handleOpen() {
     if (pick?.track === 'dev' && context?.devTopic) onOpenDeepTopic?.(context.devTopic.id)
     if (pick?.track === 'interview' && pick.item?.patternId) onOpenPatternTopic?.(pick.item.patternId)
@@ -111,6 +119,11 @@ export default function GainsCard({ supabase, onOpenDeepTopic, onOpenPatternTopi
         <div className="gains-floor">
           <p className="gains-floor-text">{FLOOR_ITEMS[floorLabel]}</p>
           {pick && <button className="gains-back" onClick={() => setFloorTrack(null)}>back to today's pull</button>}
+          {!pick && context && context.menuItems.length === 0 && (
+            <button className="gains-seed-btn" onClick={handleSeedStarterMenu} disabled={seedBusy}>
+              {seedBusy ? 'adding…' : `add starter menu (${GAINS_STARTER_MENU.length} items)`}
+            </button>
+          )}
         </div>
       ) : (
         <div className="gains-pick">
