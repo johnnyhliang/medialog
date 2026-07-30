@@ -30,6 +30,7 @@ line isn't.
 | `preservation-v2-spec.md` | Not built. Supersedes the server-side archiver plan |
 | `interview-progress-spec.md` | Algorithm built (`src/lib/interviewPlan.js`); UI pending |
 | `intentional-app-spec.md` | Part 2 (modules) **built**. Parts 1 (reminders) + 3 (Today) not |
+| `open-source-boundary.md` | What could safely be open-sourced vs what is the business. Measured coupling, not guesses |
 | `product-scope-audit.md` | **What ships vs waits vs never.** Every surface judged against the thesis; explains the `stage` mechanism |
 
 ## Accurate reference for how things work
