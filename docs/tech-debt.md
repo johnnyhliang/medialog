@@ -40,8 +40,9 @@ from entries where full_text_at > now() - interval '10 minutes';
 reason this is top priority: nothing errors, the quality just quietly drops.
 
 ### ~~Migrations written but never applied~~ — RESOLVED 2026-07-29
-0056–0058, 0060, 0061 all applied via `supabase db push`. Note 0059 is
-permanently unused; parallel worktrees claimed numbers out of order.
+All migrations through `0063` applied via `supabase db push`; `enrich` and `capture`
+both deployed. Note `0059` is permanently unused — parallel worktrees claimed numbers
+out of order. Current state always lives in `PROJECT-STATE.md` §1.
 
 ---
 
@@ -63,7 +64,20 @@ unlogged bulk mutation over the whole library, using a key that bypasses RLS.
 **Before reconnecting it to anything:** either re-gate the bulk tools behind the
 propose/confirm model, or strip them to read-only. Don't rely on remembering.
 
-### `VITE_CAPTURE_SECRET` is baked into the client bundle
+### `VITE_CAPTURE_SECRET` — fix shipped, ONE MANUAL STEP LEFT
+Per-user capture tokens shipped 2026-07-29: `capture_tokens` (`0063`, applied),
+`src/lib/db/captureTokens.js`, Settings → **Capture tokens**, and `capture` deployed
++ verified. Tokens are SHA-256 hashed; plaintext is shown exactly once.
+
+**The legacy path is still accepted while `CAPTURE_SECRET` is set**, deliberately, so
+existing bookmarklets keep working. So the hole is still open:
+
+> **Action:** mint tokens for each device (Settings → Capture tokens), re-copy the
+> bookmarklet / Shortcut body, then **unset `VITE_CAPTURE_SECRET` in the build env
+> AND `CAPTURE_SECRET` in Supabase secrets.** That is what actually closes it. The
+> Settings tab warns while the legacy secret is present.
+
+Original problem, for the record:
 `SettingsView.jsx` renders bookmarklet / iOS Shortcut templates containing the
 capture secret. Any `VITE_`-prefixed var is inlined at build time, so the secret
 ships to every visitor who loads the JS.
@@ -79,7 +93,7 @@ tokens minted server-side, fetched at runtime, never inlined.
 It will break without warning and can't be defended if challenged. Already listed
 under *Cuts / quiet retirements* in `IDEAS.md` — park unless used weekly.
 
-### `App.jsx` is a god object (~1200 lines, 50+ handlers)
+### `App.jsx` is a god object — 1332 lines, 55 handlers, 26 `view ===` branches
 The hook extraction (`useTopics`, `useEntries`, `useInbox`, …) moved *state* out
 but left *orchestration* in. Share-target handling, imports, OAuth callback,
 revisit, trash, export, entitlement loading and now event tracking all live in one
@@ -90,26 +104,30 @@ Concrete evidence this is costing real time: three parallel branches all edited
 
 Next cut should follow seams that already exist rather than splitting by line
 count — `useShareTarget`, `useOAuthCallback`, and a routing module that owns the
-`view ===` ladder (~25 branches) are the obvious three.
+`view ===` ladder (26 branches) are the obvious three.
 
 ---
 
 ## Medium
 
-### `styles.css` monolith (~5k lines / ~160 KB)
+### `styles.css` monolith — 5422 lines / 153 KB
 The entire design system in one file, and every feature keeps appending to it
 (this session added three separate blocks). Split by surface — tokens, layout,
 then per-view — before it becomes unnavigable. No framework needed; the CSS
 itself is fine, it's the packaging that isn't.
 
-### Dead landing backups still tracked
-`LandingPage.backup.jsx` and `landing.backup.css` remain in the tree. Delete —
-git already holds the history, which is the whole point of git.
+### ~~Dead landing backups~~ — RESOLVED 2026-07-29
+`LandingPage.backup.jsx`, `landing.backup.css` and the orphaned `src/lib/fetchFeed.js`
+deleted; all had zero references including the HTML entry points. Note
+`src/lib/retrievalEval.js` was checked and **kept** — it is a deliberate
+before/after harness for `chunkConfig` tuning, not forgotten code.
 
-### `allorigins.win` is a single point of failure
-Feed fetching routes through a free public CORS proxy. If it dies or rate-limits,
-feeds silently stop. Options, cheapest first: fetch server-side in `fetch-feeds`
-(the edge function has no CORS constraint at all), or self-host a proxy.
+### `allorigins.win` SPOF — narrowed to one caller
+Feeds already moved server-side (`fetch-feeds`), and the orphaned client-side
+`src/lib/fetchFeed.js` was deleted 2026-07-29. **The only remaining user is
+`src/lib/crawlArchive.js`** (via `ArchiveCrawl.jsx`). If the free proxy dies or
+rate-limits, archive crawling silently stops. Fix: move `crawlArchive` into an edge
+function — no CORS constraint there.
 
 ### Feature sprawl — many near-products in one shell
 Reels, career/opportunities, interview bank, deep topics, digest, boards. The

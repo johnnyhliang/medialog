@@ -18,16 +18,20 @@ trust) · `docs/tech-debt.md` (severity-ranked problems) · `IDEAS.md` (proposal
 |---|---|
 | `master` | `4057f98`, pushed |
 | Frontend | auto-deploys on push |
-| Migrations applied | through `0061` |
-| **Migrations NOT applied** | **`0062` (billing), `0063` (capture tokens)** |
-| Edge functions | `enrich` redeployed today |
-| **Edge functions NOT deployed** | **`capture`** — working tree accepts tokens, deployed version does not |
+| Migrations applied | **through `0063` — all current** |
+| Edge functions | `enrich` + `capture` redeployed today |
+| `capture` auth | **verified live**: token path deployed, rejects bogus/absent/wrong credentials with `Invalid or missing capture token` |
 | `0059` | permanently skipped (parallel worktrees claimed numbers out of order) |
 
-**Consequences of the two gaps.** Until `0063` is applied and `capture` deployed,
-the token path silently does nothing and the shared-secret path is still the only
-auth. Until `0062` is applied, `scripts/set-tier.js` fails (`set_tier_manual` does
-not exist), so **paid surfaces cannot be tested at all**.
+**No migration or function gaps remain.** `scripts/set-tier.js` now works, so paid
+surfaces are testable: `node scripts/set-tier.js <email> paid`.
+
+**One deliberate residue:** `VITE_CAPTURE_SECRET` and the `CAPTURE_SECRET` Supabase
+secret are both still set, and `capture` still honours the legacy path while they
+are. That is the transition ramp so existing bookmarklets keep working. **Unsetting
+both is what actually closes the bundle-secret hole** — do it once your devices use
+tokens (Settings → Capture tokens). The Settings tab shows a warning while the
+legacy secret is present.
 
 ---
 
@@ -41,19 +45,23 @@ committed — and **nothing in the UI imports it**.
 | `src/lib/interviewPlan.js` | 210 | Readiness rings, staleness dot, gap list, target-date + focus editor | `docs/interview-progress-spec.md` §4 step 4 |
 | `src/lib/db/studyPlan.js` | 33 | Same UI as above; `prep_target_date`/`prep_focus` are never read | same |
 | `src/lib/billingPlan.js` | 121 | Everything — **inert by design** until billing is turned on | — |
-| `src/lib/db/captureTokens.js` | 64 | Settings UI to mint/revoke; bookmarklet still emits the old secret | `docs/preservation-v2-spec.md` §1 |
 | `src/lib/goals.js` | 85 | Entire feature. Pure lib, no migration (goals = entries w/ frontmatter) | `docs/superpowers/specs/2026-07-17-goals-tracker-design.md` |
 | `src/lib/preservation.js` | 48 | `preservationPatch` **is** wired; `preservationCoverage` has no UI (◆ marker, "N of M preserved") | `docs/content-preservation-plan.md` T3 |
 | `scripts/backfill-full-text.js` | 224 | Never run against real data | same |
 
-**Likely dead, not mid-development — needs a decision:**
-- `src/lib/fetchFeed.js` (86 lines) — client-side RSS fetching, almost certainly
-  orphaned when feeds moved server-side to `fetch-feeds` (`fbdc2d7`). **Verify then
-  delete.**
-- `src/lib/retrievalEval.js` (38 lines) — no importers; probably a one-off harness
-  from the chunk-retrieval work.
-- `src/components/LandingPage.backup.jsx` (570) + `src/landing.backup.css` — dead
-  backups; git holds the history.
+**Dead code — REMOVED 2026-07-29:** `src/lib/fetchFeed.js` (86 lines, orphaned when
+feeds moved server-side in `fbdc2d7`), `src/components/LandingPage.backup.jsx`
+(570), `src/landing.backup.css`. All three had zero references anywhere including
+the HTML entry points.
+
+**Correction to an earlier claim:** `src/lib/retrievalEval.js` is **not** dead. It's
+a deliberate comparative harness (`failureRate`/`recallAt5`/`mrr`) for before-and-
+after `chunkConfig` changes, with its own tests. **Kept.** It has no production
+importer by design — it's a tool you run when tuning retrieval, like a script.
+
+**TODO sweep:** exactly **1** marker in the entire codebase —
+`src/lib/account.js:27`, the `showFounderUploads` note, already tracked in
+`docs/tech-debt.md`. No hidden FIXME/HACK/XXX anywhere.
 
 ---
 
@@ -76,6 +84,8 @@ locked-with-upgrade rendering · `0062` `subscriptions` +
    **So `paid` currently grants nothing `free` lacks.**
 4. **No cap enforcement**, which is the same blocker from a different angle.
 5. `expires_at` is read by `resolveTier` but nothing ever writes it.
+6. **Testable now:** `node scripts/set-tier.js <email> paid` (needs
+   `SUPABASE_SERVICE_ROLE_KEY`). `0062` is applied, so `set_tier_manual` exists.
 
 → **You cannot charge anyone today**, and the tier boundary is untested end-to-end.
 
@@ -137,12 +147,16 @@ slash commands · episodic extraction · agent steps 3–5 *(deferred)* · MCP v
    `select url, full_text_extractor from entries where full_text_at > now() - interval '10 minutes';`
    `readability` = good, `heuristic` = the imports failed.
 
-2. **`VITE_CAPTURE_SECRET` is in the client bundle.** Confirmed present in
-   `dist/assets/SettingsView-*.js`. `capture/index.ts` also read `CAPTURE_USER_ID`
-   from env, so every capture was attributed to one hardcoded account — a second
-   user could post into the founder's library using a secret the bundle handed
-   them. Fix written (`0063`, `db/captureTokens.js`, `capture/index.ts`) but
-   **unapplied, undeployed, no UI**. Unsetting `CAPTURE_SECRET` is what closes it.
+2. **`VITE_CAPTURE_SECRET` — fix SHIPPED, one manual step left.** The secret was
+   confirmed in `dist/assets/SettingsView-*.js`, and `capture/index.ts` also read
+   `CAPTURE_USER_ID` from env, so every capture was attributed to one hardcoded
+   account — a second user could post into the founder's library using a secret the
+   bundle handed them. Now: `0063` applied, `capture` deployed and verified,
+   Settings → Capture tokens mints/revokes per-device tokens (SHA-256 stored,
+   plaintext shown once).
+   **Remaining manual step: unset `VITE_CAPTURE_SECRET` (build env) and
+   `CAPTURE_SECRET` (Supabase secret) once your devices use tokens.** Until then the
+   legacy path is still accepted by design, so the hole is open.
 
 3. **Wayback records unverified successes.** `submitArchive` is a bare
    `window.open`; the caller writes `wayback_submitted_at` regardless, and the
@@ -160,8 +174,10 @@ slash commands · episodic extraction · agent steps 3–5 *(deferred)* · MCP v
    nothing records per-entry index status, so semantic search can go stale
    invisibly. `full_text_status` (`0060`) is the pattern to copy.
 
-6. **`allorigins.win` SPOF** — anything still routing through the free CORS proxy
-   dies when it does. Fix: fetch server-side (edge functions have no CORS limit).
+6. **`allorigins.win` SPOF — narrowed to one caller.** Now only
+   `src/lib/crawlArchive.js` (used by `ArchiveCrawl.jsx`); the feed path already
+   moved server-side and `fetchFeed.js` is deleted. Fix: move `crawlArchive` into an
+   edge function — no CORS limit there.
 
 7. **Regex HTML sanitization in `public-share`** — not a real sanitizer. Low risk
    while you author all notes; a problem the moment shared content isn't yours.
@@ -212,14 +228,14 @@ server-side on signup.
 
 | # | Action | Why | Spec |
 |---|---|---|---|
-| 1 | Apply `0062`+`0063`, deploy `capture`, build token UI | Finishes 70%-done work; retires a launch blocker; unblocks the extension | `preservation-v2-spec.md` §1 |
-| 2 | Verify the Readability extractor | One capture + one query; retires the ⚠️ | `tech-debt.md` |
+| 1 | Verify the Readability extractor | One capture + one query; retires the ⚠️ | `tech-debt.md` |
 | 3 | **AI metering + cap** | Blocks tiering, pricing, signups | `metering-analytics-spec.md` §2 |
 | 4 | Interview progress UI | Data flows now, so rings aren't theatre | `interview-progress-spec.md` §4 |
 | 5 | Reminders + Agenda | Biggest product value; unblocked | `intentional-app-spec.md` Part 1 |
 | 6 | Wayback SPN2 rewrite | Fixes a broken feature, no new infra | `preservation-v2-spec.md` §2 |
-| 7 | Delete `fetchFeed.js`, `retrievalEval.js`, landing backups | Cheap; removes false signal | `tech-debt.md` |
+| 7 | **Unset `VITE_CAPTURE_SECRET` + `CAPTURE_SECRET`** after migrating devices to tokens | The last step that actually closes the bundle-secret hole | `tech-debt.md` |
 | 8 | Split `App.jsx` along existing seams | Merge pain is already real | `2026-06-19-app-modularization-design.md` |
+| 9 | Move `crawlArchive` server-side | Retires the last allorigins dependency | `tech-debt.md` |
 
 **Deliberately deferred:** agent steps 3–5 and MCP v2 (until the seams they depend
 on stop moving) · server-side page snapshots (replaced by the extension) · Stripe

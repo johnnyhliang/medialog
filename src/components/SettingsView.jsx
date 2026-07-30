@@ -9,6 +9,7 @@ import KeywordsTab from './settings/KeywordsTab.jsx'
 import ProgramsTab from './settings/ProgramsTab.jsx'
 import GitHubTab from './settings/GitHubTab.jsx'
 import ModulesTab from './ModulesTab.jsx'
+import CaptureTokensTab from './settings/CaptureTokensTab.jsx'
 
 export default function SettingsView({ topics, onRefreshData, addToast, allTags = [], onUpdateTagColor, archiveToast, onToggleArchiveToast, trashToast, onToggleTrashToast, themePalette, themeStyle, onSetPalette, onSetStyle, assistantEnabled, onToggleAssistant }) {
   const [config, setConfig] = useState(null)
@@ -161,6 +162,7 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
     { id: 'instagram',   label: 'Instagram' },
     { id: 'keybinds',   label: 'Keybinds' },
     { id: 'modules',     label: 'Modules' },
+    { id: 'tokens',      label: 'Capture tokens' },
   ]
 
   return (
@@ -552,6 +554,7 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
 
       {tab === 'keybinds' && <KeybindsTab />}
       {tab === 'modules' && <ModulesTab supabase={supabase} addToast={addToast} />}
+      {tab === 'tokens' && <CaptureTokensTab supabase={supabase} addToast={addToast} />}
 
       {tab === 'behavior' && <section style={{ marginTop: 32, borderTop: '1px solid var(--border)', paddingTop: 24 }}>
         <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 4, marginTop: 0 }}>Bulk archive to Wayback Machine</h3>
