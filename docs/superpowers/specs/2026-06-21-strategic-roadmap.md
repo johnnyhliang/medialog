@@ -1,3 +1,5 @@
+> **[Audit 2026-07-29]** **HISTORICAL.** Predates the current direction (tiers, metering, preservation v2). `PROJECT-STATE.md` is authoritative for build state and `IDEAS.md` for what is proposed next. The Phase A/B/C framing is still a useful lens.
+
 # MediaLog — Strategic Roadmap (v2)
 
 **Date:** 2026-06-21

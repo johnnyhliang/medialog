@@ -1,3 +1,5 @@
+> **[Audit 2026-07-29]** **BUILT** — `src/components/FilePreviewModal.jsx`. Status line below is stale.
+
 # File Preview & Smart Editor — Design Spec
 
 **Date:** 2026-06-17

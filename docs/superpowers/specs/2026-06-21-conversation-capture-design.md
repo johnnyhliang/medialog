@@ -1,3 +1,5 @@
+> **[Audit 2026-07-29]** **BUILT** — `scripts/distill-conversations.mjs` with `--import`.
+
 # Conversation Capture Design
 
 **Date:** 2026-06-21

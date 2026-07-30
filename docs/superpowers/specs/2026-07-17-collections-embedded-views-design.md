@@ -1,3 +1,5 @@
+> **[Audit 2026-07-29]** **NOT BUILT.** No `Collection*` module exists.
+
 # Collections + Embedded Views (Design Spec)
 
 **Date:** 2026-07-17

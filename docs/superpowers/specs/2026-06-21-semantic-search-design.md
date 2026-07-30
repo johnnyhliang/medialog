@@ -1,3 +1,5 @@
+> **[Audit 2026-07-29]** **BUILT, THEN SUPERSEDED.** Whole-entry embeddings shipped and were then replaced by chunk retrieval — see `2026-07-15-chunk-retrieval-design.md`. The `entry_embeddings` table is retired (migration `0048`). Read this only for history.
+
 # Semantic Search Design
 
 **Date:** 2026-06-21

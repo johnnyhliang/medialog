@@ -1,3 +1,5 @@
+> **[Audit 2026-07-29]** **SUPERSEDED** by `docs/preservation-v2-spec.md` §3. Transcripts move to an edge function (captions are plain HTTP, no worker needed); media becomes opt-in on Cloudflare R2. Private-YouTube-reupload was considered and **rejected** (Content ID scans private uploads; a claim would land on the same Google account as Gmail/Drive). Not built.
+
 # Video Archiver — Design Spec
 
 **Date:** 2026-06-28  

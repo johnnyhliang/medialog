@@ -1,3 +1,5 @@
+> **[Audit 2026-07-29]** **PARTIALLY BUILT.** The context/retrieval foundation shipped (chunk retrieval, digest, resurfacing) but the composed "four moods" surface, Manager cards and resume cards did not. The bounded/closeable philosophy carried into `docs/intentional-app-spec.md` Part 3, which is the more current statement of it.
+
 # MediaLog — North Star Experience Design
 
 **Date:** 2026-07-04

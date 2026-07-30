@@ -1,3 +1,5 @@
+> **[Audit 2026-07-29]** **BUILT** — `src/components/MigrationView.jsx` + `BulkImport.jsx`.
+
 # Migration Tooling Design
 
 **Date:** 2026-06-21

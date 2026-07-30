@@ -1,3 +1,5 @@
+> **[Audit 2026-07-29]** **BUILT** — `src/components/DeepTopicView.jsx`, `src/lib/db/deepTopics.js`, migration `0042`. Status line stale.
+
 # Deep Topics — Design Spec
 
 **Date:** 2026-07-08

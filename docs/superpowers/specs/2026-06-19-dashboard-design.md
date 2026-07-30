@@ -1,3 +1,5 @@
+> **[Audit 2026-07-29]** **BUILT** — `src/components/HomeView.jsx` + `WidgetPanel.jsx`. Status line stale. Caveat: `IDEAS.md` lists the weather/market/clock widgets under *Cuts*, while the rail now hosts the editable tools shelf — that tension is unresolved.
+
 # MediaLog Dashboard — Design Spec
 
 **Date:** 2026-06-19

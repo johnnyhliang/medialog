@@ -1,3 +1,5 @@
+> **[Audit 2026-07-29]** **BUILT BUT BROKEN — and superseded.** Shipped as `src/lib/wayback.js` + `WaybackPopup.jsx`, but: `submitArchive` is a bare `window.open` that verifies nothing while the caller writes `wayback_submitted_at` anyway (so the DB holds unconfirmed successes the bulk submitter then skips forever), and one `catch` collapses every failure into an ambiguous `error` state. The replacement design is `docs/preservation-v2-spec.md` §2 (SPN2 with keys + real job polling). Read v2 before touching this.
+
 # Wayback Machine Archive Feature Design
 
 ## Goal

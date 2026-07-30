@@ -1,3 +1,5 @@
+> **[Audit 2026-07-29]** **PARTIALLY DONE.** Hooks were extracted (`useTopics`, `useEntries`, `useInbox`, ...) but orchestration stayed in `App.jsx`, which is still ~1200 lines with 50+ handlers. Three parallel branches edited it in one session and merged by luck. Remaining seams: `useShareTarget`, `useOAuthCallback`, and a routing module for the ~25-branch `view ===` ladder. Tracked in `docs/tech-debt.md`.
+
 # App.jsx Modularization Design
 
 **Date:** 2026-06-19  

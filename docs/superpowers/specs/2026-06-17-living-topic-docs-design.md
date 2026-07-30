@@ -1,3 +1,5 @@
+> **[Audit 2026-07-29]** **BUILT** — `topics.master_doc` (migration `0007`). Status line below is stale. Note the AI auto-drafting portion is NOT built and is deferred with the agent spec.
+
 # Living Topic Docs — Design Spec
 
 **Date:** 2026-06-17

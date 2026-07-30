@@ -1,3 +1,5 @@
+> **[Audit 2026-07-29]** **MIXED — partially applied.** Predates the theme system and the neobrutalism pass. Verify individual items against current CSS before acting.
+
 # UI Polish Plan
 
 **Date:** 2026-06-17

@@ -1,3 +1,5 @@
+> **[Audit 2026-07-29]** **MIXED — verify item by item.** 570 lines of small gaps; many were fixed in the weeks since, several were not, and nothing tracks which. Treat as a checklist to re-audit rather than a to-do list.
+
 # MediaLog Product Holes and Polish Implementation Plan
 
 Date: 2026-06-23

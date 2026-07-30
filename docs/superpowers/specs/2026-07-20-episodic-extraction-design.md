@@ -1,3 +1,5 @@
+> **[Audit 2026-07-29]** **NOT BUILT.** Accurate as written.
+
 # Episodic / Stance Extraction — Design
 
 **Date:** 2026-07-20

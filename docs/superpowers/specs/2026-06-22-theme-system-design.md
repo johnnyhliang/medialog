@@ -1,3 +1,5 @@
+> **[Audit 2026-07-29]** **BUILT** — `src/hooks/useTheme.js`, 4 palettes x 2 styles. Per-theme CodeMirror is still future.
+
 # Theme System Design
 
 **Goal:** Two-axis theming — color palette × visual style mode — applied via CSS custom properties and HTML attributes, persisted in localStorage with background sync to user_configs.

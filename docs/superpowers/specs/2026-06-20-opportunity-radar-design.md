@@ -1,3 +1,5 @@
+> **[Audit 2026-07-29]** **BUILT** — `fetch-opportunities` edge function + Career views. Status line stale.
+
 # Opportunity Radar — Design Spec
 
 **Date:** 2026-06-20

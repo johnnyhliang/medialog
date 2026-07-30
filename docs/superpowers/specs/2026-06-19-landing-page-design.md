@@ -1,3 +1,5 @@
+> **[Audit 2026-07-29]** **BUILT** — `src/components/LandingPage.jsx` + `src/landing.jsx`. Status line stale. `LandingPage.backup.jsx` / `landing.backup.css` are dead files (see `docs/tech-debt.md`).
+
 # MediaLog Landing Page — Design Spec
 
 **Date:** 2026-06-19

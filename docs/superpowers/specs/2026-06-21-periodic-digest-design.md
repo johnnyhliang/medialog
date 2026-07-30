@@ -1,3 +1,5 @@
+> **[Audit 2026-07-29]** **BUILT** — `src/components/DigestView.jsx`, `src/lib/db/digest.js`. Digest now excludes interview/deep topics.
+
 # Periodic Digest Design
 
 **Date:** 2026-06-21

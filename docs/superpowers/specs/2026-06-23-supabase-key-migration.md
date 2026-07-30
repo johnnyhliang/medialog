@@ -1,3 +1,5 @@
+> **[Audit 2026-07-29]** **NOT DONE.** `src/lib/supabaseClient.js` still uses `VITE_SUPABASE_ANON_KEY`; no publishable/secret-key style is in use anywhere. Verify against current Supabase guidance before executing — this doc may predate their final naming.
+
 # Supabase Key Migration — Legacy anon/service_role → JWT Signing Keys
 
 Date: 2026-06-23

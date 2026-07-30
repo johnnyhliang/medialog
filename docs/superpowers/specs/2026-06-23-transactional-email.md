@@ -1,3 +1,5 @@
+> **[Audit 2026-07-29]** **BUILT** — `supabase/functions/send-email`.
+
 # Transactional Email — Resend via Supabase Send Email Hook
 
 Date: 2026-06-23

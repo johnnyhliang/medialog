@@ -1,3 +1,5 @@
+> **[Audit 2026-07-29]** **SUPERSEDED / DUPLICATE.** A near-identical `2026-06-21-strategic-roadmap.md` exists. Both predate the current direction; `PROJECT-STATE.md` + `IDEAS.md` are authoritative for what is actually next. Kept for history.
+
 # MediaLog — Strategic Roadmap & Competitive Moat
 
 **Date:** 2026-06-17

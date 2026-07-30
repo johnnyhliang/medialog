@@ -1,3 +1,5 @@
+> **[Audit 2026-07-29]** **BUILT + LIVE.** `content_chunks`, `src/lib/chunkEntry.js`, `src/lib/db/retrieval.js`. This is now the sole semantic search path; the legacy one is retired. Status line stale. **Most accurate doc for how search actually works.**
+
 # Chunk-Level Retrieval — Design Spec
 
 **Date:** 2026-07-15

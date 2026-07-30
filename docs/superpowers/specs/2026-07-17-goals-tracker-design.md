@@ -1,3 +1,5 @@
+> **[Audit 2026-07-29]** **LIBRARY ONLY — no UI, no consumers.** `src/lib/goals.js` (85 lines, pure) exists but **nothing imports it** and there is no migration (by design: goals are entries with frontmatter). Needs a UI to become a feature.
+
 # Goals — Life Tracker v1 (Design Spec)
 
 **Date:** 2026-07-17

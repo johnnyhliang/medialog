@@ -1,3 +1,5 @@
+> **[Audit 2026-07-29]** **DONE.** The engine is no longer dormant — `searchSemantic` is repointed at chunk retrieval, Explore shows matching passages, the related-entries footer is live, and `entry_embeddings` is retired (commit `c947dc5`). The "BUILT + DEPLOYED but DORMANT" line below is obsolete.
+
 # Plan 2 — Activate the Chunk-Retrieval Engine (Scope)
 
 **Date:** 2026-07-20

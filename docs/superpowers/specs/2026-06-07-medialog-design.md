@@ -1,3 +1,5 @@
+> **[Audit 2026-07-29]** **BUILT.** This is the original app design and it shipped; the "Approved design, pre-implementation" line below is stale. Kept as the record of the founding decisions (flat topics, entries, inbox) — those still hold.
+
 # MediaLog — Design Spec
 
 **Date:** 2026-06-07

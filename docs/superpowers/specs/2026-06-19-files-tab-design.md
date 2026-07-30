@@ -1,3 +1,5 @@
+> **[Audit 2026-07-29]** **BUILT** — `src/components/FilesView.jsx`, plus the Hotlinked tab and Phase 1 archiver. Status line stale.
+
 # Files Tab — Design Spec
 
 **Date:** 2026-06-19

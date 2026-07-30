@@ -1,3 +1,5 @@
+> **[Audit 2026-07-29]** **NOT BUILT.** No table/grid editor component exists.
+
 # GFM Table Grid Editor (Design Spec)
 
 **Date:** 2026-07-17

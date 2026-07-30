@@ -1,3 +1,5 @@
+> **[Audit 2026-07-29]** **BUILT** — `src/components/CareerView.jsx` + Boards tab. Now gated `minTier: 'founder'` (see `docs/intentional-app-spec.md` Part 2).
+
 # Career Section — Design Spec
 
 **Date:** 2026-06-26  

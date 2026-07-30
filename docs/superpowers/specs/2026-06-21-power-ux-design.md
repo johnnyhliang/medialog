@@ -1,3 +1,5 @@
+> **[Audit 2026-07-29]** **BUILT** — `src/lib/keybindings.js`, `commands.js`, `CommandPalette.jsx`. Status line stale.
+
 # MediaLog — Power UX: Command Palette, Keyboard Nav, Recent Searches, Snooze
 
 **Date:** 2026-06-21

@@ -1,3 +1,5 @@
+> **[Audit 2026-07-29]** **NOT BUILT.** No slash-command handling exists.
+
 # Live Preview + Slash Commands (Design Spec)
 
 **Date:** 2026-07-17

@@ -1,3 +1,5 @@
+> **[Audit 2026-07-29]** **BUILT** — `src/components/VersionHistoryModal.jsx`, `src/lib/db/versions.js`, `entry_versions`. The "Idea / Future Consideration" status below is badly stale.
+
 # Entry Version History — Spec
 
 **Date:** 2026-06-19
