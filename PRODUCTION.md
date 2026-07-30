@@ -64,6 +64,28 @@ queue is a *rate-limit* fix as much as a cost one.
 
 ---
 
+## What must not be open-sourced
+
+Full analysis with measured coupling: `docs/open-source-boundary.md`.
+
+**Keep closed — these are the business, not a security concern:** `src/lib/limits.js`
+(tier allowances = your pricing model) · `src/lib/modules.js` (feature list,
+maturity, gating = your roadmap) · `src/lib/billingPlan.js` ·
+**`_shared/meter.ts` (per-model cost table = your unit economics)** ·
+`admin-metrics` + `MetricsView` · migrations (schema + every RLS policy) ·
+`feedStarterPack.js` / `interviewSeed.js` (**curated content — arguably the actual
+IP**; the ranking code is generic, the judgement about which sources matter is not).
+
+**Safe to open-source if you want the signal:** the chunking + retrieval-eval
+engine (~430 lines) · `extractArticle.ts` · `isSafeUrl.ts` · `parseMigration.js`.
+The eval harness is the part worth publishing — most chunking code ships with no
+measurement.
+
+**Licence:** repo is public, all rights reserved, `package.json` is `UNLICENSED`.
+No licence means no permission is granted to use, deploy or host it.
+
+---
+
 ## If you ever move off Supabase/Vercel
 
 **Don't, until something specific forces it.** Managed Supabase at ~$25/mo replaces
@@ -92,6 +114,87 @@ that moves authorization into application code makes a future migration harder.
 **A cheaper intermediate step**, if the trigger is cost rather than compliance:
 keep Supabase for auth+Postgres, and move only the expensive workload (embeddings,
 media) to whichever provider is cheapest. Nothing forces an all-or-nothing move.
+
+---
+
+## Operating the app — where the controls are
+
+**Admin dashboard:** sidebar → **more** (collapsed by default) → **Metrics**.
+Requires `tier = 'founder'`; it's `stage: experimental`, so it is invisible to
+every other account regardless of tier.
+
+From there you can: see every account with tier, billing status, AI calls, cost,
+storage and last-seen · change any account's tier inline · **emergency stop** all
+AI globally · pause AI for one account.
+
+**CLI fallback** if the UI is broken: `node scripts/set-tier.js <email> paid`
+(needs `SUPABASE_SERVICE_ROLE_KEY`). Emergency SQL and the full incident runbook
+are in `docs/limits-runbook.md`.
+
+**Your own usage:** Settings → Behavior shows the rolling-window meter, storage
+and plan.
+
+---
+
+## Measured cost model (2026-07-30)
+
+Real numbers from the live corpus — 4,976 chunks, 396 documents, avg 418
+tokens/chunk. Priced at **paid-tier rates** so the numbers stay meaningful when the
+free provider is swapped out; today's actual spend is ~$0.
+
+| Operation | Cost |
+|---|---|
+| Indexing one 2-chunk note | **~$0.0009** |
+| 100 notes | ~$0.09 |
+| **Importing 500 notes** | **~$0.42** |
+| One-time full re-index of the whole corpus | **~$5.34** (ctx $4.98 + embed $0.36) |
+| One chat question | ~$0.001 |
+
+**Contextualisation is ~93% of indexing cost**, because the document is re-sent
+once per batch of 8 chunks — 8.05M input tokens versus 2.37M for the embeddings
+themselves. That is the knob that matters if cost ever bites: raising
+`CONTEXTUALIZE_BATCH_SIZE` sends the document fewer times.
+
+**Implication for pricing:** a heavy user importing 5,000 notes costs about $4
+once, then pennies per month. That is comfortably inside a $8–12/mo tier. Storage
+and egress will bite before AI does.
+
+### Quota design — keep the two budgets separate
+
+`ai_usage` already meters both paths under different `function_name` values, so
+either shape is available. **Do not put them on one budget.**
+
+A shared quota means importing your library exhausts your ability to *ask
+questions about it* — the app punishing you for using its core feature, at the
+exact moment you're deciding whether you like it. Instead:
+
+- **Chat** — rolling `AI_WINDOW_HOURS` window, user-visible meter, hard cap. This
+  is interactive; a user can see it, feel it, and wait.
+- **Indexing** — no user-facing cap. Queue it and drain at a rate. The user never
+  waits on it and never sees a number.
+- **Cost ceiling** — a per-account monthly `est_cost_usd` alert covering BOTH.
+  That's the number that actually protects you, and it belongs in the admin
+  dashboard rather than in the user's face.
+
+### Making indexing invisible
+
+Design goal: a user should never think about embedding. Three mechanisms, in the
+order they pay off:
+
+1. **Queue + drain** (task #5). Imports mark entries `pending`; a worker drains at
+   a few per second. The import completes instantly from the user's perspective;
+   search catches up quietly.
+2. **Two-phase indexing** — embed raw content immediately (searchable within
+   seconds), then upgrade with context in the background. The user gets working
+   search at once and better search later, with no visible state in between. This
+   also makes contextualisation *interruptible*, which a single-phase pipeline
+   isn't.
+3. **Silence on the happy path.** `IndexStatus` renders nothing when healthy;
+   `IndexHealthBanner` appears only when something actually failed. Progress bars
+   for work nobody asked about are noise.
+
+**What to avoid:** a spinner on save, a percentage during import, or any
+"indexing…" state the user has to wait through. Indexing is the app's problem.
 
 ---
 
