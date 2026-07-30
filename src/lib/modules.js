@@ -13,7 +13,13 @@
 //   core      — cannot be disabled; the app is unusable without it
 //   defaultOn — on for NEW accounts. Existing accounts are grandfathered
 //               to everything-on by migration 0057, so this only affects signups.
-//   minTier   — minimum entitlement. 'free' for everything a normal user gets.
+//   minTier   — minimum entitlement the feature is INTENDED for, once it ships.
+//   stage     — maturity. 'stable' (default) | 'beta' | 'experimental'.
+//               EXPERIMENTAL AND BETA ARE FORCED TO FOUNDER regardless of
+//               minTier — see effectiveMinTier(). That is the point: mark a
+//               thing experimental and it disappears for users automatically,
+//               without hand-editing tiers and without risking a wrong edit
+//               shipping something half-built. Promote by changing one word.
 //
 // Tier notes:
 // - 'career' (opportunity radar + application tracker) is FREE. It scrapes public
@@ -24,6 +30,14 @@
 //   than deleted.
 
 export const GRANDFATHERED_KEY = '__grandfathered'
+
+export const STAGE_STABLE = 'stable'
+export const STAGE_BETA = 'beta'
+export const STAGE_EXPERIMENTAL = 'experimental'
+
+// Anything not stable is founder-only, whatever its intended tier says. One
+// switch controls "is this ready for anyone but me".
+const PRERELEASE = new Set([STAGE_BETA, STAGE_EXPERIMENTAL])
 
 export const MODULES = [
   // ── core: the capture → sort → resurface spine ──
@@ -38,7 +52,7 @@ export const MODULES = [
 
   // ── opt-in power features ──
   { id: 'feed',      label: 'Feed',        description: 'RSS and creator feeds with relevance ranking.',  core: false, defaultOn: false, minTier: 'free' },
-  { id: 'reading',   label: 'Reading',     description: 'Books, courses and papers with section cursors.', core: false, defaultOn: false, minTier: 'free' },
+  { id: 'reading',   label: 'Reading',     description: 'Books, courses and papers with section cursors.', core: false, defaultOn: false, minTier: 'free', stage: STAGE_BETA },
   { id: 'highlights',label: 'Highlights',  description: 'Saved highlights across your library.',     core: false, defaultOn: false, minTier: 'free' },
   // Free for everyone: the radar scrapes public GitHub job boards, so it costs
   // nothing per user beyond a shared cron. Interview prep stays founder-only —
@@ -46,9 +60,11 @@ export const MODULES = [
   { id: 'career',    label: 'Opportunities',description: 'Job/fellowship radar from public boards, plus the application tracker.', core: false, defaultOn: false, minTier: 'free' },
   { id: 'revisit',   label: 'Revisit',     description: 'Spaced resurfacing of older entries.',      core: false, defaultOn: false, minTier: 'free' },
   { id: 'archive',   label: 'Archive',     description: 'Archived entries.',                         core: false, defaultOn: false, minTier: 'free' },
-  { id: 'files',     label: 'Files',       description: 'Preserved files and snapshots.',            core: false, defaultOn: false, minTier: 'free' },
-  { id: 'progress',  label: 'Progress',    description: 'Stats and streaks.',                        core: false, defaultOn: false, minTier: 'free' },
-  { id: 'tidy',      label: 'Tidy',        description: 'Batch cleanup of untagged entries.',        core: false, defaultOn: false, minTier: 'free' },
+    // Archival is half-built: image/PDF copies work, article text is unverified,
+  // Wayback records unconfirmed successes. Experimental until that settles.
+  { id: 'files',     label: 'Files & archival', description: 'Preserved files, snapshots and article text.', core: false, defaultOn: false, minTier: 'free', stage: STAGE_EXPERIMENTAL },
+  { id: 'progress',  label: 'Progress',    description: 'Stats and streaks.',                        core: false, defaultOn: false, minTier: 'free', stage: STAGE_BETA },
+  { id: 'tidy',      label: 'Tidy',        description: 'Batch cleanup of untagged entries.',        core: false, defaultOn: false, minTier: 'free', stage: STAGE_BETA },
   { id: 'import',    label: 'Import',      description: 'Bulk import and migration tools.',          core: false, defaultOn: false, minTier: 'free' },
   { id: 'widgets',   label: 'Side widgets',description: 'Weather, markets and clock in the side rail.', core: false, defaultOn: false, minTier: 'free' },
 
@@ -56,18 +72,36 @@ export const MODULES = [
   // 'assistant' is the natural first paid feature — move it to minTier 'paid'
   // when billing ships. Until then it stays internal rather than free, so the
   // shared AI key isn't exposed to signups before metering lands (task #4).
-  { id: 'assistant', label: 'Ask your library', description: 'Conversational search over your notes.', core: false, defaultOn: false, minTier: 'founder' },
+    // Intended as the first PAID feature. Stays experimental until AI metering
+  // (task #4) exists — shipping it without a cap exposes the shared key.
+  { id: 'assistant', label: 'Ask your library', description: 'Conversational search over your notes.', core: false, defaultOn: false, minTier: 'paid', stage: STAGE_EXPERIMENTAL },
   { id: 'interview', label: 'Interview',   description: 'Interview readiness tracker.',              core: false, defaultOn: false, minTier: 'founder' },
-  { id: 'metrics',   label: 'Metrics',     description: 'Operator analytics dashboard.',             core: false, defaultOn: false, minTier: 'founder' },
+  { id: 'metrics',   label: 'Metrics',     description: 'Operator analytics dashboard (not built).',  core: false, defaultOn: false, minTier: 'founder', stage: STAGE_EXPERIMENTAL },
   { id: 'uploads',   label: 'File uploads',description: 'Direct file uploads to storage.',           core: false, defaultOn: false, minTier: 'founder' },
   // Kept rather than deleted: the pipeline is parked (cron unscheduled, session
   // cookie never set) but the code and its setup notes stay reachable to a
   // founder. Retiring an experiment shouldn't erase it.
-  { id: 'reels',     label: 'Instagram Reels', description: 'Parked experiment — DM reel ingest via session cookie.', core: false, defaultOn: false, minTier: 'founder' },
+  { id: 'reels',     label: 'Instagram Reels', description: 'Parked experiment — DM reel ingest via session cookie.', core: false, defaultOn: false, minTier: 'founder', stage: STAGE_EXPERIMENTAL },
   { id: 'twitter',   label: 'Twitter token',   description: 'Auth token used by the opportunity radar.', core: false, defaultOn: false, minTier: 'founder' },
 ]
 
 export const MODULES_BY_ID = new Map(MODULES.map((m) => [m.id, m]))
+
+export const stageOf = (mod) => mod?.stage ?? STAGE_STABLE
+export const isPrerelease = (mod) => PRERELEASE.has(stageOf(mod))
+
+/**
+ * The tier actually required, after maturity is taken into account.
+ *
+ * A beta/experimental module is founder-only no matter what minTier claims, so
+ * `minTier` can record where a feature is *headed* while `stage` controls who
+ * can reach it *today*. Promoting a feature is a one-word change.
+ */
+export function effectiveMinTier(moduleId) {
+  const mod = MODULES_BY_ID.get(moduleId)
+  if (!mod) return 'founder'
+  return isPrerelease(mod) ? 'founder' : mod.minTier
+}
 
 // Ordered weakest → strongest so a numeric comparison answers "does this tier
 // reach that tier".
@@ -79,9 +113,8 @@ export function tierReaches(tier, minTier) {
 
 // Layer 1 — entitlement. Is the account ALLOWED this module?
 export function isEntitled(moduleId, tier) {
-  const mod = MODULES_BY_ID.get(moduleId)
-  if (!mod) return false
-  return tierReaches(tier, mod.minTier)
+  if (!MODULES_BY_ID.has(moduleId)) return false
+  return tierReaches(tier, effectiveMinTier(moduleId))
 }
 
 // Layer 2 — preference. Has the user CHOSEN to show it?
@@ -104,9 +137,8 @@ export function isEnabled(moduleId, prefs) {
 // everyone; it exists so internal surfaces can be demoed live. Migration 0057
 // turns it off, which is the intended resting state.
 export function isAvailable(moduleId, flags) {
-  const mod = MODULES_BY_ID.get(moduleId)
-  if (!mod) return false
-  return mod.minTier === 'founder' && Boolean(flags?.founderFeaturesPublic)
+  if (!MODULES_BY_ID.has(moduleId)) return false
+  return effectiveMinTier(moduleId) === 'founder' && Boolean(flags?.founderFeaturesPublic)
 }
 
 // Composed check. `isDev` is a local-development override and is deliberately
@@ -123,10 +155,17 @@ export function isModuleVisible(moduleId, { tier = 'free', prefs = null, isDev =
 // module converts better than one who never learns it exists, and it keeps the
 // registry a single list instead of diverging per tier.
 export function listModulesForSettings({ tier = 'free', prefs = null } = {}) {
-  return MODULES.filter((m) => m.minTier !== 'founder' || tierReaches(tier, 'founder'))
+  return MODULES
+    .filter((m) => effectiveMinTier(m.id) !== 'founder' || tierReaches(tier, 'founder'))
     .map((m) => ({
       ...m,
+      stage: stageOf(m),
       enabled: isEnabled(m.id, prefs),
       locked: !isEntitled(m.id, tier),
     }))
+}
+
+/** Every prerelease module, for the founder-facing audit view. */
+export function listPrerelease() {
+  return MODULES.filter(isPrerelease).map((m) => ({ ...m, stage: stageOf(m) }))
 }

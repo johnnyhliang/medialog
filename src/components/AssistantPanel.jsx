@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Sparkles, X, CornerDownLeft, Loader2, Plus, History, Trash2 } from 'lucide-react'
 import { askLibrarian } from '../lib/db/librarian.js'
+import { askAppHelp, looksLikeAppQuestion } from '../lib/appHelp.js'
 import {
   listConversations, createConversation, listMessages, addMessage,
   touchConversation, deleteConversation, titleFromQuestion,
@@ -38,7 +39,7 @@ function renderWithCitations(text, sources, onOpen) {
   })
 }
 
-export default function AssistantPanel({ supabase, onOpenEntry, onClose }) {
+export default function AssistantPanel({ supabase, onOpenEntry, onClose, isModuleVisible = () => true }) {
   const [messages, setMessages] = useState([]) // {role, content, sources?}
   const [conversationId, setConversationId] = useState(null)
   const [conversations, setConversations] = useState([])
@@ -118,8 +119,19 @@ export default function AssistantPanel({ supabase, onOpenEntry, onClose }) {
     } catch { /* persistence is best-effort */ }
 
     try {
-      const res = await askLibrarian(supabase, q, { history })
-      setMessages((prev) => [...prev, { role: 'assistant', content: res.answer, sources: res.sources }])
+      // Two different questions wear the same input box: "what did I save about
+      // X" is retrieval over notes; "how do I turn off X" is about the app. The
+      // router is conservative — anything ambiguous falls through to the library,
+      // which is the more common intent.
+      const res = looksLikeAppQuestion(q)
+        ? await askAppHelp(supabase, q, { isVisible: isModuleVisible, history })
+        : await askLibrarian(supabase, q, { history })
+      setMessages((prev) => [...prev, {
+        role: 'assistant',
+        content: res.answer,
+        sources: res.sources ?? [],
+        tabs: res.tabs ?? [],
+      }])
       try {
         if (convId) {
           await addMessage(supabase, convId, { role: 'assistant', content: res.answer, sources: res.sources })

@@ -46,6 +46,13 @@ export default function ModulesTab({ supabase, addToast }) {
         Turn off what you don’t use — it disappears from the sidebar. Your data stays put and
         comes back untouched if you turn it on again.
       </p>
+      {tier === 'founder' && (
+        <p className="settings-hint modules-stage-note">
+          <strong>experimental</strong> and <strong>beta</strong> modules are visible to you only.
+          They stay founder-gated regardless of their intended tier until promoted in{' '}
+          <code>src/lib/modules.js</code>.
+        </p>
+      )}
       <ul className="modules-list">
         {rows.map((mod) => (
           <li key={mod.id} className="modules-row">
@@ -61,6 +68,15 @@ export default function ModulesTab({ supabase, addToast }) {
                 <span className="modules-name">
                   {mod.label}
                   {mod.core && <span className="modules-badge">always on</span>}
+                  {/* Maturity is shown separately from entitlement: 'experimental'
+                      explains WHY something is founder-only, which a bare lock
+                      icon does not. */}
+                  {mod.stage === 'experimental' && (
+                    <span className="modules-badge modules-badge--exp">experimental</span>
+                  )}
+                  {mod.stage === 'beta' && (
+                    <span className="modules-badge modules-badge--beta">beta</span>
+                  )}
                   {mod.locked && <span className="modules-badge modules-badge--locked">upgrade</span>}
                 </span>
                 <span className="modules-desc">{mod.description}</span>

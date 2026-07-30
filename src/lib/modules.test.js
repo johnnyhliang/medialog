@@ -2,6 +2,7 @@ import { test, expect, describe } from 'vitest'
 import {
   MODULES, GRANDFATHERED_KEY, isEntitled, isEnabled, isModuleVisible,
   listModulesForSettings, tierReaches,
+  effectiveMinTier, listPrerelease, stageOf, isPrerelease,
 } from './modules.js'
 
 describe('entitlement layer', () => {
@@ -28,6 +29,48 @@ describe('entitlement layer', () => {
   test('unknown module ids are never visible', () => {
     expect(isEntitled('nope', 'founder')).toBe(false)
     expect(isModuleVisible('nope', { tier: 'founder' })).toBe(false)
+  })
+})
+
+describe('stage gating', () => {
+  // The point of `stage`: marking something experimental hides it from users
+  // automatically, so a half-built feature cannot ship by someone forgetting to
+  // also change minTier.
+  test('a prerelease module is founder-only regardless of its intended tier', () => {
+    // assistant declares minTier 'paid' but is experimental until metering exists.
+    expect(effectiveMinTier('assistant')).toBe('founder')
+    expect(isEntitled('assistant', 'paid')).toBe(false)
+    expect(isEntitled('assistant', 'founder')).toBe(true)
+  })
+
+  test('archival is experimental — half-built, so users cannot reach it', () => {
+    expect(stageOf({ stage: 'experimental' })).toBe('experimental')
+    expect(effectiveMinTier('files')).toBe('founder')
+    expect(isEntitled('files', 'free')).toBe(false)
+    expect(isEntitled('files', 'paid')).toBe(false)
+  })
+
+  test('beta is also founder-gated, not just labelled', () => {
+    expect(effectiveMinTier('reading')).toBe('founder')
+    expect(isEntitled('reading', 'free')).toBe(false)
+  })
+
+  test('stable modules keep their declared tier', () => {
+    expect(effectiveMinTier('career')).toBe('free')
+    expect(effectiveMinTier('feed')).toBe('free')
+    expect(isEntitled('career', 'free')).toBe(true)
+  })
+
+  test('modules default to stable when no stage is declared', () => {
+    expect(stageOf({})).toBe('stable')
+    expect(isPrerelease({})).toBe(false)
+  })
+
+  test('listPrerelease enumerates everything not yet shippable', () => {
+    const ids = listPrerelease().map((m) => m.id)
+    expect(ids).toContain('files')
+    expect(ids).toContain('assistant')
+    expect(ids).not.toContain('career')
   })
 })
 

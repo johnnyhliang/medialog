@@ -1314,6 +1314,7 @@ function Workspace() {
       )}
       {showFounder && assistantEnabled && assistantOpen && (
         <AssistantPanel
+          isModuleVisible={isModuleVisible}
           supabase={supabase}
           onOpenEntry={(src) => handleOpenRelated(src.entryId)}
           onClose={() => setAssistantOpen(false)}

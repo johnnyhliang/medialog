@@ -2637,6 +2637,9 @@ a.activity-title:hover { color: var(--accent); }
   padding: 1px 5px;
 }
 .modules-badge--locked { color: var(--accent); border-color: var(--accent); }
+.modules-badge--exp { color: #b45309; border-color: #b45309; }
+.modules-badge--beta { color: #0369a1; border-color: #0369a1; }
+.modules-stage-note { margin-top: 8px; font-size: 12px; line-height: 1.5; }
 
 /* A button that reads as a link — used for in-page navigation between Settings
    tabs, where an <a href> would be wrong (no destination URL). */
