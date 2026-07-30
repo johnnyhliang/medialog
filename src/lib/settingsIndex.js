@@ -25,7 +25,7 @@ export const SETTINGS_INDEX = [
   { tab: 'behavior',   label: 'Archive confirmation toast', keywords: 'archive toast confirm undo notification behaviour' },
   { tab: 'behavior',   label: 'Trash confirmation toast', keywords: 'trash delete toast confirm undo notification behaviour' },
   { tab: 'behavior',   label: 'Ask-your-library assistant', keywords: 'ai assistant chat rag ask library enable disable' },
-  { tab: 'behavior',   label: 'Usage this month', keywords: 'usage quota limit storage ai calls plan tier billing how much used' },
+  { tab: 'behavior',   label: 'Usage this month', keywords: 'usage quota limit storage ai calls plan tier billing how much used remaining reset window meter' },
 
   { tab: 'tags',       label: 'Tag colors', keywords: 'tag colour color label highlight' },
 

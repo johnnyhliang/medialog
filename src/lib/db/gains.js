@@ -24,3 +24,14 @@ export async function setMenuItemStatus(supabase, id, status) {
   const { error } = await supabase.from('menu_items').update({ status }).eq('id', id)
   if (error) throw new Error(error.message)
 }
+
+export async function addMenuItem(supabase, { track, title }) {
+  const { data: { user } } = await supabase.auth.getUser()
+  const { data, error } = await supabase
+    .from('menu_items')
+    .insert({ user_id: user.id, track, title })
+    .select()
+    .single()
+  if (error) throw new Error(error.message)
+  return data
+}

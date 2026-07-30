@@ -11,6 +11,16 @@
 // deliberately NOT limited — capping capture would poison the core loop at
 // exactly the moment someone decides they like the app, and notes are cheap.
 
+// Rolling window for AI limits. A monthly cap fails badly: burn it on day 2 and
+// you are dead for 29 days with nothing to show but a distant date. A short
+// rolling window recovers continuously, so "wait a bit" is always true — the same
+// reason Claude Code uses one.
+export const AI_WINDOW_HOURS = 5
+
+// Warn here rather than at 100%: a limit you discover by hitting it is a bug
+// report; one you see coming is a decision.
+export const WARN_AT = 0.9
+
 export const TIER_LIMITS = {
   free: {
     // 500 MB. Storage is the one dimension that grows without bound; the
@@ -23,14 +33,14 @@ export const TIER_LIMITS = {
     backupIntervalHours: 24,
     // TODO(metering): set from real data once ai_usage has a week of history.
     // Guessing this now is exactly what docs/metering-scope.md warns against —
-    // null keeps it unlimited and honest until then.
-    aiCallsPerMonth: null,
+    // null keeps it unlimited and honest until then. See docs/limits-runbook.md.
+    aiCallsPerWindow: null,
   },
   paid: {
     storageBytes: 10 * 1024 * 1024 * 1024, // 10 GB
     feeds: 100,
     backupIntervalHours: 1,
-    aiCallsPerMonth: null, // TODO(metering): same as above
+    aiCallsPerWindow: null, // TODO(metering): same as above
   },
   founder: {
     // Everything unlimited. Listed explicitly rather than left to the fallback so
@@ -38,7 +48,7 @@ export const TIER_LIMITS = {
     storageBytes: null,
     feeds: null,
     backupIntervalHours: null,
-    aiCallsPerMonth: null,
+    aiCallsPerWindow: null,
   },
 }
 
@@ -46,7 +56,7 @@ export const LIMIT_LABELS = {
   storageBytes: 'Storage',
   feeds: 'Feed sources',
   backupIntervalHours: 'Backup frequency',
-  aiCallsPerMonth: 'AI calls per month',
+  aiCallsPerWindow: `AI calls per ${AI_WINDOW_HOURS}h`,
 }
 
 /** The limit for a tier, or null when unlimited. Unknown tier → free (least privileged). */
@@ -85,11 +95,41 @@ export function formatBytes(n) {
   return `${v < 10 ? v.toFixed(1) : Math.round(v)} ${units[i]}`
 }
 
+/**
+ * Usage-meter state for a rolling window — the shape the UI renders.
+ *
+ * `resetsAt` comes from the DB (when the oldest bucket ages out) because in a
+ * rolling window nothing resets at once; capacity returns gradually, and the next
+ * return is what a user actually wants to know.
+ */
+export function meterState({ tier, key = 'aiCallsPerWindow', used = 0, resetsAt = null }) {
+  const max = limitFor(tier, key)
+  if (max === null) {
+    return { unlimited: true, used, max: null, pct: 0, level: 'ok', resetsAt }
+  }
+  const pct = max > 0 ? Math.min(1, used / max) : 0
+  const level = used >= max ? 'exceeded' : pct >= WARN_AT ? 'warn' : 'ok'
+  return { unlimited: false, used, max, pct, level, remaining: Math.max(0, max - used), resetsAt }
+}
+
+/** "in 2h 15m" / "now" — relative, because an absolute UTC time is unreadable. */
+export function formatResetIn(resetsAt, now = Date.now()) {
+  if (!resetsAt) return null
+  const ms = new Date(resetsAt).getTime() - now
+  if (!Number.isFinite(ms) || ms <= 0) return 'now'
+  const mins = Math.round(ms / 60000)
+  if (mins < 60) return `in ${mins}m`
+  const h = Math.floor(mins / 60)
+  const m = mins % 60
+  return m ? `in ${h}h ${m}m` : `in ${h}h`
+}
+
 /** Human summary of a limit, for Settings and the upgrade affordance. */
 export function describeLimit(tier, key) {
   const max = limitFor(tier, key)
   if (max === null) return 'unlimited'
   if (key === 'storageBytes') return formatBytes(max)
   if (key === 'backupIntervalHours') return max === 1 ? 'hourly' : `every ${max}h`
+  if (key === 'aiCallsPerWindow') return `${max} per ${AI_WINDOW_HOURS}h`
   return String(max)
 }

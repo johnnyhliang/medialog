@@ -67,6 +67,30 @@ Deno.serve(async (req) => {
     return json({ ok: true, userId, tier })
   }
 
+  // ── Emergency stop ────────────────────────────────────────────────────────
+  // Deliberately coarse. In an emergency — leaked key, runaway client, surprise
+  // bill — you want one lever that definitely works, not a nuanced policy.
+  if (action === 'set_ai_enabled') {
+    const { error } = await admin
+      .from('app_flags')
+      .update({ enabled: Boolean(body.enabled), updated_at: new Date().toISOString() })
+      .eq('key', 'ai_enabled')
+    if (error) return json({ error: error.message }, 500)
+    return json({ ok: true, aiEnabled: Boolean(body.enabled) })
+  }
+
+  // Single-account brake. Blocks AI without changing tier, so the account keeps
+  // its features and the suspension reads as temporary rather than a demotion.
+  if (action === 'set_suspended') {
+    if (!body.userId) return json({ error: 'userId is required' }, 400)
+    const { error } = await admin
+      .from('user_entitlements')
+      .update({ ai_suspended: Boolean(body.suspended), updated_at: new Date().toISOString() })
+      .eq('user_id', body.userId)
+    if (error) return json({ error: error.message }, 500)
+    return json({ ok: true, userId: body.userId, suspended: Boolean(body.suspended) })
+  }
+
   if (action !== 'overview') return json({ error: `unknown action: ${action}` }, 400)
 
   // ── Overview ──────────────────────────────────────────────────────────────
@@ -77,7 +101,7 @@ Deno.serve(async (req) => {
 
   const [usersRes, entRes, subsRes, usageRes, snapsRes, entriesRes] = await Promise.all([
     admin.auth.admin.listUsers({ perPage: 1000 }),
-    admin.from('user_entitlements').select('user_id, tier, source, expires_at'),
+    admin.from('user_entitlements').select('user_id, tier, source, expires_at, ai_suspended'),
     admin.from('subscriptions').select('user_id, status, current_period_end, cancel_at_period_end'),
     admin.from('ai_usage').select('user_id, function_name, calls, input_tokens, output_tokens, est_cost_usd')
       .gte('day', monthStartDay),
@@ -115,6 +139,7 @@ Deno.serve(async (req) => {
       lastSignInAt: u.last_sign_in_at ?? null,
       tier: ent?.tier ?? 'free',
       tierSource: ent?.source ?? null,
+      aiSuspended: Boolean(ent?.ai_suspended),
       subscriptionStatus: sub?.status ?? null,
       cancelAtPeriodEnd: Boolean(sub?.cancel_at_period_end),
       currentPeriodEnd: sub?.current_period_end ?? null,
@@ -131,7 +156,11 @@ Deno.serve(async (req) => {
   const costs = billable.map((a) => a.aiCostUsd).sort((x, y) => x - y)
   const at = (p: number) => costs.length ? costs[Math.min(costs.length - 1, Math.floor(costs.length * p))] : 0
 
+  const { data: aiFlag } = await admin
+    .from('app_flags').select('enabled').eq('key', 'ai_enabled').maybeSingle()
+
   return json({
+    aiEnabled: aiFlag?.enabled ?? true,
     generatedAt: new Date().toISOString(),
     monthStart: monthStartDay,
     totals: {

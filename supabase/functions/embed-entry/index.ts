@@ -27,6 +27,20 @@ Deno.serve(async (req) => {
   const { data: { user }, error: authErr } = await sb.auth.getUser()
   if (authErr || !user) return json({ error: 'unauthorized' }, 401)
 
+  // Same global kill switch as `ai`. Per-account suspension deliberately does NOT
+  // apply here: blocking embeddings silently degrades search rather than showing
+  // an error, so suspending one user would quietly break their app. The global
+  // switch is different — it is a deliberate outage you are choosing.
+  const admin = createClient(
+    Deno.env.get('SUPABASE_URL')!,
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+  )
+  const { data: aiFlag } = await admin
+    .from('app_flags').select('enabled').eq('key', 'ai_enabled').maybeSingle()
+  if (aiFlag && aiFlag.enabled === false) {
+    return json({ error: 'ai_disabled', message: 'Indexing is temporarily disabled.' }, 503)
+  }
+
   const body = await req.json().catch(() => null)
   const texts: string[] | null = Array.isArray(body?.texts)
     ? body.texts
@@ -67,10 +81,6 @@ Deno.serve(async (req) => {
     // Gemini's embedContent returns no token counts, so this is an ESTIMATE
     // (~4 chars/token). Recorded anyway because embeddings — not chat — are the
     // dominant AI cost: this fires on every entry save for every user.
-    const admin = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
-    )
     await recordUsage(admin, {
       userId: user.id,
       fn: 'embed-entry',

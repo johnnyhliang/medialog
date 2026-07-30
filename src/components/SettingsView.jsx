@@ -11,8 +11,9 @@ import GitHubTab from './settings/GitHubTab.jsx'
 import ModulesTab from './ModulesTab.jsx'
 import CaptureTokensTab from './settings/CaptureTokensTab.jsx'
 import { searchSettings } from '../lib/settingsIndex.js'
-import { getMyUsage, getMyStorage } from '../lib/db/adminMetrics.js'
-import { formatBytes, describeLimit } from '../lib/limits.js'
+import { getMyUsage, getMyStorage, getMyWindowUsage } from '../lib/db/adminMetrics.js'
+import { formatBytes, describeLimit, AI_WINDOW_HOURS } from '../lib/limits.js'
+import UsageMeter from './UsageMeter.jsx'
 import { loadEntitlement } from '../lib/entitlements.js'
 
 export default function SettingsView({ topics, onRefreshData, addToast, allTags = [], onUpdateTagColor, archiveToast, onToggleArchiveToast, trashToast, onToggleTrashToast, themePalette, themeStyle, onSetPalette, onSetStyle, assistantEnabled, onToggleAssistant, isModuleVisible = () => true }) {
@@ -40,8 +41,14 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
 
   useEffect(() => {
     if (tab !== 'behavior') return
-    Promise.all([getMyUsage(supabase), getMyStorage(supabase), loadEntitlement(supabase)])
-      .then(([rows, bytes, ent]) => setUsage({ rows, bytes, tier: ent?.tier ?? 'free' }))
+    Promise.all([
+      getMyUsage(supabase),
+      getMyStorage(supabase),
+      loadEntitlement(supabase),
+      getMyWindowUsage(supabase, AI_WINDOW_HOURS),
+    ])
+      .then(([rows, bytes, ent, window]) =>
+        setUsage({ rows, bytes, tier: ent?.tier ?? 'free', window }))
       .catch(() => setUsage(null))
   }, [tab])
 
@@ -394,11 +401,16 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
           <div className="card usage-card">
             {/* Shown as plain numbers, not charts: at this scale a chart would
                 dress up a single data point. Limits come from src/lib/limits.js. */}
+            <UsageMeter
+              tier={usage.tier}
+              used={usage.window?.calls ?? 0}
+              resetsAt={usage.window?.resetsAt}
+            />
             <div className="usage-row">
-              <span>AI calls</span>
+              <span>AI calls (this month)</span>
               <span>
                 {usage.rows.reduce((n, r) => n + Number(r.calls ?? 0), 0)}
-                <span className="usage-limit"> / {describeLimit(usage.tier, 'aiCallsPerMonth')}</span>
+
               </span>
             </div>
             <div className="usage-row">

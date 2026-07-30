@@ -24,6 +24,7 @@ line isn't.
 
 | Doc | State |
 |---|---|
+| `limits-runbook.md` | **Emergency stop + how to change limits.** Leads with the 2am stop button |
 | `metering-scope.md` | **Start here for metering** — sequenced build plan, ~1 day split by a week of measuring |
 | `metering-analytics-spec.md` | The fuller design behind it. Note its assumption that chat is the cost centre is wrong — embeddings are |
 | `preservation-v2-spec.md` | Not built. Supersedes the server-side archiver plan |

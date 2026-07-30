@@ -35,6 +35,23 @@ Deno.serve(async (req) => {
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
   )
 
+  // Emergency brakes, checked before any provider spend. Two levels because the
+  // useful question differs: "stop everything" (leaked key, runaway bill) versus
+  // "stop this one account". Both are founder-set from the Metrics dashboard.
+  //
+  // 503 rather than 403: this is a temporary operational state, not a permissions
+  // decision about the caller.
+  const [flagRes, entRes] = await Promise.all([
+    admin.from('app_flags').select('enabled').eq('key', 'ai_enabled').maybeSingle(),
+    admin.from('user_entitlements').select('ai_suspended').eq('user_id', user.id).maybeSingle(),
+  ])
+  if (flagRes.data && flagRes.data.enabled === false) {
+    return json({ error: 'ai_disabled', message: 'AI is temporarily disabled.' }, 503)
+  }
+  if (entRes.data?.ai_suspended) {
+    return json({ error: 'ai_suspended', message: 'AI is paused for this account.' }, 503)
+  }
+
   const body = await req.json().catch(() => null)
   if (!body || (!body.messages && !body.prompt)) {
     return json({ error: 'missing prompt or messages' }, 400)

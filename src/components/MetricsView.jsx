@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { loadAdminOverview, setAccountTier } from '../lib/db/adminMetrics.js'
+import { loadAdminOverview, setAccountTier, setEmergencyStop, setAccountSuspended } from '../lib/db/adminMetrics.js'
 import { formatBytes } from '../lib/limits.js'
 
 // Founder-only operator view: who exists, what tier they're on, what they cost.
@@ -27,6 +27,27 @@ export default function MetricsView({ supabase, addToast }) {
     } catch (e) {
       setError(e.message)
     }
+  }
+
+  async function toggleAi(enable) {
+    // No confirm on re-enable; confirm on stop, because it is user-visible.
+    if (!enable && !window.confirm('Disable AI for every account? Chat and indexing will return 503 until re-enabled.')) return
+    try {
+      await setEmergencyStop(supabase, enable)
+      setData((d) => ({ ...d, aiEnabled: enable }))
+      addToast?.(enable ? 'AI re-enabled' : 'AI stopped for all accounts', enable ? 'success' : 'error')
+    } catch (e) { addToast?.(e.message, 'error') }
+  }
+
+  async function toggleSuspend(account) {
+    const next = !account.aiSuspended
+    setData((d) => ({
+      ...d,
+      accounts: d.accounts.map((a) => (a.userId === account.userId ? { ...a, aiSuspended: next } : a)),
+    }))
+    try {
+      await setAccountSuspended(supabase, account.userId, next)
+    } catch (e) { addToast?.(e.message, 'error'); load() }
   }
 
   async function changeTier(account, tier) {
@@ -60,6 +81,25 @@ export default function MetricsView({ supabase, addToast }) {
         <button onClick={load}>refresh</button>
       </div>
 
+      {/* Emergency stop lives at the top, not buried in a settings tab: the whole
+          point is being able to reach it fast when spend is running away. */}
+      <div className={`metrics-emergency${data.aiEnabled === false ? ' metrics-emergency--off' : ''}`}>
+        <div>
+          <strong>{data.aiEnabled === false ? 'AI is OFF for everyone' : 'AI enabled'}</strong>
+          <span className="metrics-sub">
+            {data.aiEnabled === false
+              ? 'All chat and indexing calls return 503. Existing data is untouched.'
+              : 'Global kill switch — stops all AI spend immediately, for every account.'}
+          </span>
+        </div>
+        <button
+          className={data.aiEnabled === false ? '' : 'metrics-danger'}
+          onClick={() => toggleAi(data.aiEnabled === false)}
+        >
+          {data.aiEnabled === false ? 'turn AI back on' : 'emergency stop'}
+        </button>
+      </div>
+
       <div className="metrics-tiles">
         <Tile label="users" value={totals.users}
           sub={TIERS.map((t) => `${totals.byTier?.[t] ?? 0} ${t}`).join(' · ')} />
@@ -86,7 +126,7 @@ export default function MetricsView({ supabase, addToast }) {
               <th>account</th><th>tier</th><th>billing</th>
               <th className="num">AI calls</th><th className="num">cost</th>
               <th className="num">storage</th><th className="num">entries</th>
-              <th>last seen</th>
+              <th>last seen</th><th>AI</th>
             </tr>
           </thead>
           <tbody>
@@ -120,6 +160,15 @@ export default function MetricsView({ supabase, addToast }) {
                 <td className="num">{formatBytes(a.storageBytes)}</td>
                 <td className="num">{a.entryCount}</td>
                 <td>{fmtDate(a.lastSignInAt)}</td>
+                <td>
+                  <button
+                    className={a.aiSuspended ? 'metrics-danger' : ''}
+                    onClick={() => toggleSuspend(a)}
+                    title={a.aiSuspended ? 'AI paused for this account' : 'Pause AI for this account only'}
+                  >
+                    {a.aiSuspended ? 'paused' : 'pause'}
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>

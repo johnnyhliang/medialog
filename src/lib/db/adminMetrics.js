@@ -31,6 +31,23 @@ export async function getMyUsage(supabase) {
   return data ?? []
 }
 
+/** Rolling-window usage for the meter. Falls back to zeroes so the UI never breaks. */
+export async function getMyWindowUsage(supabase, hours) {
+  const { data, error } = await supabase.rpc('my_ai_usage_window', { p_hours: hours })
+  if (error) return { calls: 0, resetsAt: null }
+  const row = Array.isArray(data) ? data[0] : data
+  return { calls: Number(row?.calls ?? 0), resetsAt: row?.resets_at ?? null }
+}
+
+/** Emergency controls — founder only, enforced in the edge function. */
+export function setEmergencyStop(supabase, enabled) {
+  return call(supabase, { action: 'set_ai_enabled', enabled })
+}
+
+export function setAccountSuspended(supabase, userId, suspended) {
+  return call(supabase, { action: 'set_suspended', userId, suspended })
+}
+
 export async function getMyStorage(supabase) {
   const { data, error } = await supabase.rpc('my_storage_bytes')
   if (error) return 0

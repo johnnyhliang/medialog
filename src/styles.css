@@ -2664,6 +2664,44 @@ a.activity-title:hover { color: var(--accent); }
 }
 .linklike:hover { opacity: 0.8; }
 
+/* Emergency controls — visually distinct so they are never clicked by accident. */
+.metrics-emergency {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 12px 14px; margin-bottom: 16px; background: var(--surface);
+}
+.metrics-emergency--off { border-color: var(--danger, #c0392b); }
+.metrics-emergency--off strong { color: var(--danger, #c0392b); }
+.metrics-danger {
+  color: var(--danger, #c0392b) !important;
+  border-color: var(--danger, #c0392b) !important;
+}
+
+/* ── Usage meter (rolling window) ────────────────── */
+.usage-meter { display: flex; flex-direction: column; gap: 4px; padding: 10px 0; }
+.usage-meter--compact { padding: 6px 0; }
+.usage-meter-top, .usage-meter-bottom {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 10px;
+}
+.usage-meter-label { font-size: 12.5px; color: var(--text); }
+.usage-meter-count { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.usage-meter-track {
+  height: 6px; border-radius: 3px; background: var(--border); overflow: hidden;
+}
+.usage-meter-fill {
+  height: 100%; background: var(--accent); border-radius: 3px;
+  transition: width .3s ease;
+}
+.usage-meter-bottom { font-size: 11px; color: var(--muted); }
+.usage-meter-pct { font-variant-numeric: tabular-nums; flex-shrink: 0; }
+
+/* Colour only carries emphasis, never meaning on its own — the text already says
+   "limit reached" / "N left", so this reads the same without colour vision. */
+.usage-meter--warn .usage-meter-fill { background: #b45309; }
+.usage-meter--warn .usage-meter-bottom { color: #b45309; }
+.usage-meter--exceeded .usage-meter-fill { background: var(--danger, #c0392b); }
+.usage-meter--exceeded .usage-meter-bottom { color: var(--danger, #c0392b); font-weight: 500; }
+
 /* ── Settings usage readout ─────────────────────── */
 .usage-card { display: flex; flex-direction: column; gap: 2px; }
 .usage-row {
