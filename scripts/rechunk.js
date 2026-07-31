@@ -147,34 +147,50 @@ async function embedBatch(texts) {
   return out
 }
 
+async function askOnce(document, batch) {
+  const numbered = batch.map((c, j) => `<chunk index="${j}">\n${c.content}\n</chunk>`).join('\n')
+  const prompt = `<document>\n${document}\n</document>\n\nHere are ${batch.length} chunk(s) from the document above:\n${numbered}\n\nFor EACH chunk, give a short succinct context (1-2 sentences, under 100 tokens) situating it within the overall document, to improve search retrieval of that chunk. Do not repeat the chunk. Do not add commentary.\n\nReply with JSON only: {"contexts": ["context for chunk 0", ...]} with exactly ${batch.length} entries in order.`
+  const res = await fetch(`${AI_BASE_URL}/chat/completions`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${AI_API_KEY}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: AI_MODEL,
+      temperature: 0,
+      response_format: { type: 'json_object' },
+      messages: [
+        { role: 'system', content: 'You situate excerpts within their source document to improve search retrieval. Reply with JSON only.' },
+        { role: 'user', content: prompt },
+      ],
+    }),
+  })
+  const data = await res.json()
+  const parsed = JSON.parse(data?.choices?.[0]?.message?.content ?? '{}')
+  const contexts = Array.isArray(parsed.contexts) ? parsed.contexts : []
+  return batch.map((_, j) => (typeof contexts[j] === 'string' ? contexts[j].trim() : ''))
+}
+
+// Mirrors src/lib/contextualize.js — split and retry a short answer rather than
+// padding with ''. Kept in sync deliberately: this script and the app must
+// produce identically-shaped chunks, or a re-index changes retrieval quality for
+// reasons unrelated to the config you were testing.
+const MAX_SPLIT_DEPTH = 2
+async function contextualizeBatch(document, batch, depth = 0) {
+  let out
+  try { out = await askOnce(document, batch) } catch { out = batch.map(() => '') }
+  if (!out.some((c) => !c) || batch.length < 2 || depth >= MAX_SPLIT_DEPTH) return out
+  const mid = Math.ceil(batch.length / 2)
+  const retried = [
+    ...(await contextualizeBatch(document, batch.slice(0, mid), depth + 1)),
+    ...(await contextualizeBatch(document, batch.slice(mid), depth + 1)),
+  ]
+  return retried.filter(Boolean).length >= out.filter(Boolean).length ? retried : out
+}
+
 async function contextualize(document, chunks) {
   if (!canContextualize || chunks.length < CONTEXTUALIZE_MIN_CHUNKS) return chunks.map(() => '')
   const out = []
   for (let i = 0; i < chunks.length; i += CONTEXTUALIZE_BATCH_SIZE) {
-    const batch = chunks.slice(i, i + CONTEXTUALIZE_BATCH_SIZE)
-    const numbered = batch.map((c, j) => `<chunk index="${j}">\n${c.content}\n</chunk>`).join('\n')
-    const prompt = `<document>\n${document}\n</document>\n\nHere are ${batch.length} chunk(s) from the document above:\n${numbered}\n\nFor EACH chunk, give a short succinct context (1-2 sentences, under 100 tokens) situating it within the overall document, to improve search retrieval of that chunk. Do not repeat the chunk. Do not add commentary.\n\nReply with JSON only: {"contexts": ["context for chunk 0", ...]} with exactly ${batch.length} entries in order.`
-    try {
-      const res = await fetch(`${AI_BASE_URL}/chat/completions`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${AI_API_KEY}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: AI_MODEL,
-          temperature: 0,
-          response_format: { type: 'json_object' },
-          messages: [
-            { role: 'system', content: 'You situate excerpts within their source document to improve search retrieval. Reply with JSON only.' },
-            { role: 'user', content: prompt },
-          ],
-        }),
-      })
-      const data = await res.json()
-      const parsed = JSON.parse(data?.choices?.[0]?.message?.content ?? '{}')
-      const contexts = Array.isArray(parsed.contexts) ? parsed.contexts : []
-      out.push(...batch.map((_, j) => (typeof contexts[j] === 'string' ? contexts[j].trim() : '')))
-    } catch {
-      out.push(...batch.map(() => ''))
-    }
+    out.push(...(await contextualizeBatch(document, chunks.slice(i, i + CONTEXTUALIZE_BATCH_SIZE))))
   }
   return out
 }
