@@ -23,3 +23,4 @@ distilled/
 
 # Agent worktrees (own git repos + node_modules)
 .claude/worktrees/
+CLAUDE.md
