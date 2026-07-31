@@ -10,7 +10,7 @@ import ProgramsTab from './settings/ProgramsTab.jsx'
 import GitHubTab from './settings/GitHubTab.jsx'
 import ModulesTab from './ModulesTab.jsx'
 import CaptureTokensTab from './settings/CaptureTokensTab.jsx'
-import { searchSettings } from '../lib/settingsIndex.js'
+import { searchSettings, SETTINGS_TABS } from '../lib/settingsIndex.js'
 import { getMyUsage, getMyStorage, getMyWindowUsage } from '../lib/db/adminMetrics.js'
 import { formatBytes, describeLimit, AI_WINDOW_HOURS } from '../lib/limits.js'
 import UsageMeter from './UsageMeter.jsx'
@@ -171,24 +171,7 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
   // entitlement + preference check (src/lib/modules.js). Tabs with no `module` are
   // unconditional — the same rule NavSidebar uses, so there is one place that
   // decides who sees what rather than a second hardcoded list here.
-  const ALL_TABS = [
-    { id: 'appearance',  label: 'Appearance' },
-    { id: 'github',      label: 'GitHub' },
-    { id: 'twitter',     label: 'Twitter',       module: 'twitter' },
-    { id: 'shared',      label: 'Shared' },
-    { id: 'behavior',    label: 'Behavior' },
-    { id: 'tags',        label: 'Tag Colors' },
-    { id: 'companies',   label: 'Companies',     module: 'career' },
-    { id: 'keywords',    label: 'Keywords',      module: 'career' },
-    { id: 'programs',    label: 'Programs',      module: 'career' },
-    { id: 'bookmarklet', label: 'Bookmarklet' },
-    { id: 'mobile',      label: 'iOS Shortcut' },
-    { id: 'instagram',   label: 'Instagram',     module: 'reels' },
-    { id: 'keybinds',    label: 'Keybinds' },
-    { id: 'modules',     label: 'Modules' },
-    { id: 'tokens',      label: 'Capture tokens' },
-  ]
-  const TABS = ALL_TABS.filter((t) => !t.module || isModuleVisible(t.module))
+  const TABS = SETTINGS_TABS.filter((t) => !t.module || isModuleVisible(t.module))
 
   const searching = settingsQuery.trim().length > 0
   // A tab can disappear while it is open (module switched off in another tab), so

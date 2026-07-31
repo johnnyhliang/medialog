@@ -10,7 +10,43 @@
 // drift silently as tabs change; a wrong entry here is visible the moment you
 // search for it. Keep it in sync when adding a settings surface.
 
+import { getCommands } from './commands.js'
+
+// The tab list itself, so the index and the UI cannot disagree about which tabs
+// exist or which module gates them. SettingsView renders from this and filters
+// by isModuleVisible; settingsIndex.test.js asserts every tab has at least one
+// searchable entry, which turns "forgot to index a new setting" from a silent
+// gap into a failing test.
+export const SETTINGS_TABS = [
+  { id: 'appearance',  label: 'Appearance' },
+  { id: 'github',      label: 'GitHub' },
+  { id: 'twitter',     label: 'Twitter',       module: 'twitter' },
+  { id: 'shared',      label: 'Shared' },
+  { id: 'behavior',    label: 'Behavior' },
+  { id: 'tags',        label: 'Tag Colors' },
+  { id: 'companies',   label: 'Companies',     module: 'career' },
+  { id: 'keywords',    label: 'Keywords',      module: 'career' },
+  { id: 'programs',    label: 'Programs',      module: 'career' },
+  { id: 'bookmarklet', label: 'Bookmarklet' },
+  { id: 'mobile',      label: 'iOS Shortcut' },
+  { id: 'instagram',   label: 'Instagram',     module: 'reels' },
+  { id: 'keybinds',    label: 'Keybinds' },
+  { id: 'modules',     label: 'Modules' },
+  { id: 'tokens',      label: 'Capture tokens' },
+]
+
+// One index entry per actual keybind, not one opaque entry for the whole tab —
+// otherwise searching for a specific bind ("catch", "tidy", "snooze") matches
+// nothing because none of those words live in a single generic blob. Handlers
+// are never called here, so an empty ctx is safe.
+const KEYBIND_ENTRIES = getCommands({}).map((cmd) => ({
+  tab: 'keybinds',
+  label: cmd.label,
+  keywords: `${cmd.label} ${cmd.defaultKey ?? ''} ${cmd.category ?? ''} keybind hotkey shortcut keyboard bind remap`,
+}))
+
 export const SETTINGS_INDEX = [
+  ...KEYBIND_ENTRIES,
   { tab: 'appearance', label: 'Color palette', keywords: 'theme dark light mode colour warm nord catppuccin tokyo rose pine appearance' },
   { tab: 'appearance', label: 'Interface style', keywords: 'style density neobrutalism minimal look feel appearance' },
 
@@ -38,8 +74,6 @@ export const SETTINGS_INDEX = [
   { tab: 'mobile',     label: 'Recent captures', keywords: 'capture log history debug failed saved' },
 
   { tab: 'instagram',  label: 'Instagram Reels (parked)', module: 'reels', keywords: 'instagram reels video dm session cookie parked retired' },
-
-  { tab: 'keybinds',   label: 'Keyboard shortcuts', keywords: 'keybind hotkey shortcut keyboard bind remap' },
 
   { tab: 'modules',    label: 'Modules on/off', keywords: 'module feature enable disable hide show turn off simplify declutter' },
 
