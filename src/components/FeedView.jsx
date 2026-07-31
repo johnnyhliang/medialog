@@ -400,7 +400,8 @@ export default function FeedView({ supabase, topics, allTags = [], onSaveItem, a
           supabase={supabase}
           onOpenDeepTopic={onOpenDeepTopic}
           onOpenPatternTopic={onOpenPatternTopic}
-          recommended={displayItems.slice(0, 3)}
+          feedItems={items}
+          interestProfile={interestProfile}
         />
         {items.length > 0 && (
           <div className="feed-toolbar">

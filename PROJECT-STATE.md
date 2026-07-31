@@ -12,6 +12,25 @@ trust) · `docs/tech-debt.md` (severity-ranked problems) ·
 **Hard numbers:** 69 migrations · 16 edge functions · 73 components · 52 lib modules
 · 116 test files / 691 tests passing · 99 docs.
 
+
+# Feed engine stuff:
+The actual problem: Deep Topics being a separate topic kind, hidden from the main grid, was the mistake. It forces "PyTorch internals" to live in a different universe than "ML," when in your head they're the same thing — ML is one topic, and sometimes part of what's in it is structured (reading through TVM chapter by chapter) and most of it isn't (random saved links, quick notes). Two containers for one mental bucket is exactly the kind of fragmentation the whole app is designed against.
+
+My call: collapse it. Any topic can optionally carry one or more resources (a resource = a source + an ordered outline + a cursor). No more kind: 'deep' silo, no more separate hidden-from-grid view:
+- "ML" stays one topic. It has your usual scattered entries, plus zero or more active resources (e.g. "TVM paper," "ONNX spec") each with their own outline/cursor.
+- A takeaway written against a resource section is a normal entry in that topic's list — same grid, same search — just carrying a small tag ("TVM · §3") instead of living in a walled-off tab. Clutter is handled by making that tag a filter, not a separate universe.
+- Quant stops being special-cased too: "Quant" becomes a topic with its own resource (the order-book build, with build-rung "sections") plus the Strand B/C reading reps as either a second lightweight resource or just plain entries. One mechanism, not three.
+- The picker's job barely changes: instead of "pick a Deep Topic vs a menu_item," it's "pick a topic with an active resource whose cursor has a next todo section" — same rotation/staleness logic, one less concept to keep straight.
+
+This does mean reworking what's already shipped (topics.kind, DeepTopicView as an isolated page, the listTopics filter) rather than just extending it — real but contained: resource_sections mostly stays, DeepTopicView's outline+cursor UI becomes a panel inside the normal topic view instead of its own route, and the grid-hiding filter goes away entirely.
+
+On recommended content / other takes — that's a genuinely different capability, not a picker tweak: it's the Feed engine (already built, quality-gated RSS/HN/Reddit ingestion) getting a topic-aware mode. Two pieces, both additive, neither blocks the above:
+1. Passive boost: feed ranking already has a designed-t_focus layer (north-star Part 5) — once a topic has an active resource, items related to it should rank higher in your regular feed, so "other takes" surface on their own during Drift-mode browsing instead of requiring you to ask.
+2. Active pull: a "find more like this" action on a toh (reuses the RAG/agent infra already spec'd) and drops candidates into that topic's backlog for you to skim — never auto-added, always your call to promote.
+
+I'd sequence it: unify the topic model first (it's a correction, and everything else — picker, recommendations — is easier to reason about with one topic shape instead of two). Recommended content is real scope worth its own pass after.
+
+not sure how much of this is built out/fully functional
 ---
 
 ## 0b. Session synthesis — 2026-07-30 (evening)

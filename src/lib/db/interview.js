@@ -16,8 +16,8 @@ export async function listInterview(supabase) {
     .from('entries')
     // srs_interval + surface_after are needed for review scheduling and the
     // staleness/pace math in interviewPlan.js; updated_at feeds the actual-rate
-    // calculation. They were previously omitted, which is why the SRS columns
-    // existed but nothing time-aware could be computed.
+    // calculation. entries had no updated_at column until migration 0069 — see
+    // that migration for why this select was crashing every call.
     .select('id, topic_id, title, url, status, difficulty, confidence, srs_ef, srs_reps, srs_interval, surface_after, updated_at')
     .in('topic_id', ids)
     .is('deleted_at', null)

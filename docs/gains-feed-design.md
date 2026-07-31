@@ -153,6 +153,44 @@ Strictly opt-in, strictly stateless, never accrues and is never owed:
 Steps 1–2 ship standalone value (a working picker) before touching `topic_state`, so this can
 start even if the Manager build slips.
 
+**Status update (2026-07-30): steps 1, 2, and a first cut of 4 are built** —
+`menu_items` + starter-menu seeding (in-app button, no service role needed), `gainsPicker.js`
+with tests, and `GainsCard.jsx` wired into `FeedView`. Step 4 also picked up two things not in
+the original list: literal (non-percentage) progress markers per pick — Dev shows
+`section N of M` + takeaways written for that resource, Quant shows a done-count for the current
+strand, Interview surfaces the readiness math that already existed but was never shown anywhere
+— and hotlinked floor-bypass text (Zetamac links out, the interview floor points at a real
+problem URL, Harris stays plain text since no URL exists for it anywhere in the app). Steps 3,
+5, 6 are still open.
+
+## 7. Recommended content ("other takes") — scoped, mostly deferred
+
+`GainsCard`'s "other takes" section reuses Feed's existing keyword-relevance ranking
+(`feedRelevance.js`'s `sortByRelevance`) rather than anything new — worth being explicit that
+this is **not** semantic curation, just word-overlap between feed item titles/summaries and a
+term set. As of 2026-07-30 it's pick-aware: the current pick's title is tokenized and folded into
+the relevance profile for that render, so a Quant order-book pick nudges toward
+market-microstructure feed items instead of always showing the same 3 general-interest items
+regardless of what's on the card. This required no schema change — `GainsCard` now takes raw
+`feedItems`/`interestProfile` from `FeedView` instead of a precomputed list, and recomputes
+relevance itself once the pick loads.
+
+Two heavier pieces from the original north-star Part 5 design were named there but never
+captured against this spec specifically — recording them here so they don't get re-discovered
+from scratch:
+
+- **Passive boost** — feed ranking reading a `user_model`/`current_focus` signal so items related
+  to whatever you're *actually* mid-cursor on (not just your general interest profile) rank
+  higher during ordinary Drift-mode browsing, without you having to ask. Needs `topic_state`
+  (build order item 3 above) as a prerequisite — same dependency, not extra scope.
+- **Active pull** — a "find more like this" action on a topic/pick that fires a scoped search
+  (reuses the RAG/agent infra from `2026-06-25-ai-agent-rag-design.md`) and drops candidates into
+  that topic's backlog for you to skim, never auto-added. Independent of `topic_state`; could
+  ship whenever the agent search infra exists, in either order relative to item 3.
+
+Neither blocks anything already built. Sequence after `topic_state` lands, since passive boost
+reuses it directly and active pull benefits from the same context once it exists.
+
 ---
 
 ## Non-goals (restated for emphasis)
