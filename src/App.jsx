@@ -169,7 +169,10 @@ function Workspace() {
     cycleFocusedStatus,
     openSnooze: (entry) => entry && setSnoozeTarget(entry),
     openCatch: () => setCatchOpen(true),
-  }), [view, focusedEntry, topics, inboxTopic])
+    // Omitted entirely when the assistant is unavailable, so getCommands drops
+    // the binding rather than registering a shortcut that does nothing.
+    toggleAssistant: showFounder && assistantEnabled ? toggleAssistant : undefined,
+  }), [view, focusedEntry, topics, inboxTopic, showFounder, assistantEnabled])
 
   function navigateTo(v) {
     setView(v)
@@ -348,19 +351,16 @@ function Workspace() {
 
       const key = eventToKey(e)
 
-      // Toggle the library assistant (founder-only). Works even while editing.
-      if ((e.metaKey || e.ctrlKey) && e.key === '/' && showFounder && assistantEnabled) {
+      // Commands flagged whileEditing run before the isEditing guard, so they
+      // work with focus in an input. Previously ctrl+k was special-cased here and
+      // the assistant toggle was hardcoded outright — which made it the one
+      // shortcut that could not be discovered or remapped. Both are now ordinary
+      // registry entries.
+      const early = bindings.get(key)
+      if (early?.whileEditing) {
         e.preventDefault()
-        toggleAssistant()
+        early.handler()
         return
-      }
-
-      if (key === 'ctrl+k') {
-        if (bindings.has('ctrl+k')) {
-          e.preventDefault()
-          bindings.get('ctrl+k').handler()
-          return
-        }
       }
 
       if (isEditing) return
@@ -1009,6 +1009,7 @@ function Workspace() {
           <h1>MediaLog</h1>
           <button className="signout" onClick={() => supabase.auth.signOut()}>Sign out</button>
         </div>
+        {user?.email && <p className="account-indicator" title={user.id}>{user.email}</p>}
         {/* Nav and topics share one scroll region so the topic list can use
             the full sidebar height instead of a cramped nested scrollbox. */}
         <div className="sidebar-scroll">

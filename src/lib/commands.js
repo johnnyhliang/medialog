@@ -1,6 +1,9 @@
+// `whileEditing: true` means the binding fires even with focus in an input,
+// textarea or the editor. Reserve it for chorded/modifier keys: a bare letter
+// that works while editing would make the letter untypeable.
 export function getCommands(ctx) {
   // ctx: { setView, setSelectedId, inboxTopic, topics, focusedEntry,
-  //        openPalette, closePalette, openSnooze }
+  //        openPalette, closePalette, openSnooze, toggleAssistant }
   return [
     // App
     {
@@ -8,8 +11,21 @@ export function getCommands(ctx) {
       label: 'Open command palette',
       category: 'App',
       defaultKey: 'ctrl+k',
+      whileEditing: true,
       handler: () => ctx.openPalette?.(),
     },
+    // Registered rather than hardcoded in App.jsx, where it was invisible to
+    // both the keybinds editor and the palette — the one shortcut you could not
+    // discover or remap. Present only when the assistant is actually available,
+    // so the keybinds list never offers a bind for something you cannot open.
+    ...(ctx.toggleAssistant ? [{
+      id: 'app.assistant',
+      label: 'Toggle the library assistant',
+      category: 'App',
+      defaultKey: 'ctrl+/',
+      whileEditing: true,
+      handler: () => ctx.toggleAssistant(),
+    }] : []),
     {
       id: 'app.catch',
       label: 'Catch a thought (quick save to Inbox)',
