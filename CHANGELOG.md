@@ -11,6 +11,77 @@ section when you deploy. Detailed design rationale lives in `docs/superpowers/sp
 
 ## Unreleased
 
+### Operator audit log, activation metrics, and a per-account probe
+**Migration `0069`.** Three gaps in the founder dashboard, all of which get harder
+to add once real users exist.
+
+- **`admin_actions`** — every tier change, pause and emergency stop now prompts for
+  a reason and records the flag value **before and after**. That last part is the
+  point: undoing an action never requires remembering the old value. A reversible
+  control with no record of *why* is a trap — weeks later you find a paused account,
+  can't reconstruct what you saw, and "leave it paused" starts to feel like the safe
+  choice. It isn't, if they're paying you.
+- The table has **RLS enabled with no policies at all** — stronger than a
+  founder-only read policy, because it is unreachable from any client key. Verified
+  against production with data present: anon `select` → 0 rows, `insert` → `42501`,
+  RPC → `42501`. Reads are not logged; opening the dashboard is not an event, and
+  recording it would bury the rows that matter.
+- **Activation** — the definitions already existed in `supabase/queries/activation.sql`
+  and only ever ran by hand. Now surfaced: sorted-inbox-in-week-1 (primary),
+  captured-on-2+-days (secondary), captured-at-all. Founders excluded — the operator
+  activates by construction, and at small N one row swings the rate double digits.
+- **Account probe** — `inspect` on any row answers "what is actually true for this
+  account": index health with the verbatim embed error, preservation coverage, usage
+  by day, event counts, and every operator action taken on it — without hand-written
+  SQL against production. **Counts and statuses only**, never note text, titles, URLs
+  or search queries. Being the operator is not a licence to read someone's library.
+
+### Contextualisation cost halved
+Batch size 8 → **32**, which is the single largest cost lever in the pipeline:
+the entire document is re-sent with every contextualizer call, so cost tracks the
+number of **calls**, not the number of chunks.
+
+Measured on the real corpus (4,976 chunks / 396 documents; median 8 chunks per
+document, p90 31): batch 8 = 798 calls, batch 32 = 397, batch 50 = 369. **32 covers
+90% of documents in one call**, and past that the curve flattens.
+
+The reason it was ever 8 is that an over-large batch degraded **silently** — a model
+asked for 32 contexts sometimes returns 20, and the old code padded the rest with
+`''`. A context-free chunk is indistinguishable from a good one (same dimensions, no
+error), which is exactly how 4,971 chunks were written empty before anyone noticed.
+`contextualize.js` now halves and retries on a short answer, keeps whichever attempt
+filled more chunks, and is depth-bounded so a model that always answers short
+degrades instead of recursing forever. **That guard is what makes the larger batch
+safe.** `scripts/rechunk.js` mirrors it, so a re-index and a live save produce
+identically-shaped chunks.
+
+### The assistant shortcut is remappable
+`Ctrl+/` was hardcoded in `App.jsx`'s keydown handler, firing before the binding
+registry was consulted — so it appeared in neither the keybinds editor nor the
+command palette, the only shortcut in the app that could be neither discovered nor
+changed. It is now an ordinary `commands.js` entry. `Ctrl+K` had the same bespoke
+handling for the same reason (both must fire with focus inside an input); that is
+now a `whileEditing` flag any command can set, restricted by test to modifier or
+chorded keys, since a bare letter that fires while editing makes that letter
+untypeable.
+
+### One source of truth for settings tabs
+`SETTINGS_TABS` moved next to `SETTINGS_INDEX`; `SettingsView` renders from it. The
+index stays hand-maintained on purpose — deriving it from the DOM drifts silently,
+and a wrong entry here is visible the moment you search for it. What changed is that
+forgetting one is now a **failing test** rather than a setting that quietly can't be
+found: every tab must have an entry, every entry must point at a real tab, and
+entries must inherit their tab's module gate.
+
+### Fixed: the preservation checker called a working extractor broken
+`check-preservation.js` reported **FALLING BACK — the npm: specifiers are not
+resolving in Deno** from a single heuristic capture of danluu.com. Verified against
+live pages through the production code path: Paul Graham → `readability` 60,000
+chars, danluu.com → `heuristic` (correct — it's a link index Readability is supposed
+to decline), a 404 → `none`. The extractor works; one sample of a non-article can
+never be the evidence. The verdict now reads INCONCLUSIVE and asks for prose
+articles.
+
 ### Metering, tier limits, and a founder admin dashboard
 **Migration `0065`.** Measurement first, enforcement later — a cap guessed before
 seeing real usage would be wrong, so AI limits ship **unset** on purpose.

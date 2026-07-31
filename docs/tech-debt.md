@@ -39,6 +39,23 @@ from entries where full_text_at > now() - interval '10 minutes';
 `npm:` specifiers failed to resolve and it silently fell back — which is the whole
 reason this is top priority: nothing errors, the quality just quietly drops.
 
+**Update 2026-07-30 — the extraction logic is verified; only the Deno runtime path
+is not.** Run against live pages through the exact production code path
+(`makeReadabilityParser` + `extractArticle`, real Readability + linkedom):
+
+```
+readability   60000 chars   paulgraham.com/greatwork.html
+heuristic      8764 chars   danluu.com                  <- correct: a link index
+none              0 chars   danluu.com/productivity/    <- correct: a 404
+```
+
+**Use prose articles to verify.** A first attempt read a single heuristic capture
+of danluu.com as proof the deploy was broken, and it was nothing of the kind —
+Readability is *supposed* to decline a link index. `scripts/check-preservation.js`
+now reports INCONCLUSIVE for that case instead of FALLING BACK (`a7430b7`), but the
+underlying lesson stands: **one sample of a non-article can never be evidence
+either way.** Capture 2–3 blog posts or news pieces, then run the script.
+
 ### ~~Migrations written but never applied~~ — RESOLVED 2026-07-29
 All migrations through `0063` applied via `supabase db push`; `enrich` and `capture`
 both deployed. Note `0059` is permanently unused — parallel worktrees claimed numbers
@@ -167,9 +184,52 @@ Step 2 before step 4, or the opportunity to measure is gone. The cited benefit i
 ~35% fewer retrieval failures (~49% with a lexical arm); whether that holds on a
 personal notes corpus is exactly what the harness exists to find out.
 
-**Cost note:** step 4 re-embeds ~5k chunks and runs the contextualizer over ~360
-documents. Rate-limited by the Gemini key pool (5 keys) and the free-tier AI
-provider — expect it to take a while, and it is resumable via `source_hash`.
+**Cost note (updated 2026-07-30):** step 4 re-embeds ~5k chunks and runs the
+contextualizer over ~360 documents. At the old batch size of 8 that was 798
+contextualizer calls and ~$5.34; **at the new size of 32 it is 397 calls and
+~$2.70.** Rate-limited by the Gemini key pool (5 keys) and the free-tier AI
+provider, so expect it to take a while — resumable via `source_hash`.
+
+**Do the batch-size change before the re-index, not after.** It is already
+committed (`ca0e8d0`), so a re-index run today gets the cheaper path for free —
+but a re-index run from an older checkout would pay double and produce chunks
+shaped by a config you are no longer using.
+
+### `index_status = 'pending'` is declared everywhere and written nowhere
+Found 2026-07-30 while tracing the indexing paths end to end.
+
+`0068` defines `pending`. `IndexStatus`'s `STATES` map renders it ("Indexing…").
+`listUnindexed` selects on `index_status in ('pending','failed')`. But
+`chunkEntryAsync` only ever calls `markIndex` with `ok`, `empty` or `failed` —
+**nothing ever writes `pending`.**
+
+**Consequence:** indexing runs entirely in the browser, so closing a tab mid-import
+abandons the work. Those entries keep `index_status = null` (`not_attempted`),
+which `listUnindexed` does **not** select. The notes are unsearchable *and*
+invisible to the retry banner — the exact silent-unfindability failure that `0068`
+was written to eliminate, surviving in the one case where the work never finishes.
+
+**Fix:** write `pending` before the first source is processed. ~5 lines, no schema
+change, and worth doing before the queue exists rather than waiting for it.
+
+### Bulk import fires unbounded parallel indexing
+`src/App.jsx:798` (and 776, 838, 872):
+
+```js
+created.forEach(e => chunkEntryAsync(supabase, e))
+```
+
+No `await`, no concurrency limit. Importing 500 notes starts 500 indexing pipelines
+simultaneously — 500 contextualizer calls and 500 embed calls racing. Nothing paces
+them, nothing bounds them, and the work exists **only in browser memory**, so
+whatever hasn't run when the tab closes is simply lost.
+
+This is the concrete failure the jobs table (task #5) fixes. It is not a
+theoretical nicety, and it is also why there is currently no graceful way to
+handle running out of AI quota mid-import: deferred work needs somewhere to wait,
+and right now there is nowhere. `reindexBatch` already demonstrates the right
+shape — it paces retries at 3/second precisely so a retry can't recreate the burst
+that caused the failures — but the import path doesn't use it.
 
 ### Instagram session scraping is fragile and ToS-gray
 `fetch-reels` depends on a session cookie in `user_configs.twitter_auth_token`.

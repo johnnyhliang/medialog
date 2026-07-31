@@ -1,18 +1,64 @@
 # MediaLog — Project State
 
-**Regenerated 2026-07-30 (metering)** from the filesystem and git, not from memory.
-**Overwritten on each regeneration, never appended** — an append-only log is always
-partly wrong; a snapshot is always current.
+**Regenerated 2026-07-30 (operator tooling + indexing cost)** from the filesystem
+and git, not from memory. **Overwritten on each regeneration, never appended** — an
+append-only log is always partly wrong; a snapshot is always current.
 
 Companions: `CHANGELOG.md` (what shipped + why) · `docs/README.md` (which docs to
-trust) · `docs/tech-debt.md` (severity-ranked problems) · `IDEAS.md` (proposals).
+trust) · `docs/tech-debt.md` (severity-ranked problems) ·
+`docs/indexing-architecture.md` (how search indexing works + what it costs) ·
+`PRODUCTION.md` (cost model, scaling, closed-source list) · `IDEAS.md` (proposals).
 
-**Hard numbers:** 61 migrations · 15 edge functions · 69 components · 48 lib modules
-· 113 test files / 661 tests passing · 58 docs.
+**Hard numbers:** 69 migrations · 16 edge functions · 73 components · 52 lib modules
+· 116 test files / 691 tests passing · 99 docs.
 
 ---
 
-## 0. Session synthesis — 2026-07-30
+## 0b. Session synthesis — 2026-07-30 (evening)
+
+**Shipped:** operator audit log (`0069`), activation metrics, per-account probe,
+contextualisation batch 8 → 32 with a split-and-retry guard, settings-tab drift
+test, assistant keybind made remappable.
+
+Decisions worth keeping:
+
+- **Chat and indexing must NOT share a quota.** A shared budget means importing
+  your library exhausts your ability to ask questions about it — the app punishing
+  you for using its core feature, at the moment you're deciding whether you like
+  it. Chat gets a visible rolling window and a hard cap; indexing is cost-of-goods
+  with no user-facing cap, queued and drained.
+- **Contextualisation cost tracks CALLS, not chunks**, because the whole document
+  is re-sent every call. Measured on the real corpus (4,976 chunks / 396 docs,
+  median 8 chunks/doc, p90 31): batch 8 = 798 calls, batch 32 = 397, batch 50 =
+  369. Chose 32 — covers 90% of documents in one call, then the curve flattens.
+- **A short contextualizer answer must never be padded with `''`.** A
+  context-free chunk is indistinguishable from a good one, which is exactly how
+  4,971 chunks were written empty unnoticed. Split and retry instead; that guard
+  is what makes a large batch safe.
+- **Reversible controls need an audit trail.** Emergency stop and per-account
+  pause were booleans with no record of why. Weeks later that leaves a flag and no
+  memory, so "leave it paused" starts to feel safe — wrong for a paying user.
+  `admin_actions` records before/after, so undo never needs recall.
+- **Founders excluded from activation and cost stats.** The operator activates by
+  construction; one row swings a small-N rate by double digits.
+- **Backfilling `full_text` for old entries is NOT worth doing.** Measured: 948 of
+  956 unpreserved URL entries are bare bookmarks — github (248), YouTube (185),
+  reddit (88), leetcode (57). Readability has nothing to extract, and indexing
+  README boilerplate makes search worse. Any future backfill must filter to
+  entries that have a note or takeaway.
+- **The operator probe reports counts and statuses only** — never note text,
+  titles, URLs or search queries. Being the operator is not a licence to read
+  someone's library.
+
+Corrections from this session: the preservation checker's **"FALLING BACK"
+verdict was wrong** — it concluded a broken Deno deploy from one capture of
+danluu.com, which is a link index Readability is *supposed* to decline. Verified
+against live pages: Paul Graham → `readability` 60k chars, danluu.com →
+`heuristic` (correct), danluu.com/productivity/ → 404. **The extractor works.**
+
+---
+
+## 0. Session synthesis — 2026-07-30 (earlier)
 
 Decisions made here that aren't recoverable from the diff:
 
@@ -45,12 +91,25 @@ actually exploitable (`CAPTURE_USER_ID` was never set, so the legacy path 401'd)
 
 | Layer | State |
 |---|---|
-| `master` | `4057f98`, pushed |
-| Frontend | auto-deploys on push |
-| Migrations applied | **through `0063` — all current** |
-| Edge functions | **16** — `enrich`, `capture`, and the new `crawl-archive` all deployed |
-| `capture` auth | **verified live**: token path deployed, rejects bogus/absent/wrong credentials with `Invalid or missing capture token` |
+| `master` | 4 commits **UNPUSHED** — held at the user's request, see below |
+| Frontend | auto-deploys on push — **the batch-size change ships with the next deploy** |
+| Migrations applied | **through `0069` — all current** (`0070` is the parallel window's, uncommitted) |
+| Edge functions | **16**, `admin-metrics` redeployed with audit/activation/probe |
+| `capture` auth | **verified live**: rejects bogus/absent/wrong credentials |
 | `0059` | permanently skipped (parallel worktrees claimed numbers out of order) |
+
+**Unpushed local commits** (`704c478`, `ca0e8d0`, `0e3a9cd`, `352ee67`). A
+parallel session created a remote `main` branch and merged it to `master` via
+PR #5; local `master` sits on top of `main`'s history. Decided: **`master` stays
+trunk, `main` was a one-off.** To land: `git pull --rebase origin master`, push.
+
+**Careful with `git add -A` in this repo.** A parallel window works in the *same
+directory*; a blanket add swept 6 of its in-progress files into a commit
+(recovered by soft reset). Stage explicitly.
+
+**Verified live this session:** `admin_actions` RLS holds with data present —
+anon `select` returns 0 rows, `insert` → `42501`, `log_admin_action` RPC →
+`42501`. Anon hits on `audit`/`activation`/`account` actions all 401.
 
 **No migration or function gaps remain.** `scripts/set-tier.js` now works, so paid
 surfaces are testable: `node scripts/set-tier.js <email> paid`.
@@ -211,13 +270,31 @@ slash commands · episodic extraction · agent steps 3–5 *(deferred)* · MCP v
 
 ## 4. Known-broken — not merely unbuilt
 
-1. **⚠️ TOP — Readability extractor unverified.** Deployed today, but the
-   `npm:@mozilla/readability` / `npm:linkedom` specifiers have **never resolved at
-   runtime** (no local Deno). Imports are lazy + try/caught, so failure degrades
-   *silently* to the old regex heuristic — nothing errors, quality just drops.
-   **Verify:** capture an article, then
-   `select url, full_text_extractor from entries where full_text_at > now() - interval '10 minutes';`
-   `readability` = good, `heuristic` = the imports failed.
+1. ~~**Readability extractor unverified**~~ — **the extraction logic is verified,
+   the Deno runtime path is not.** Run against live pages through the exact
+   production code path: Paul Graham → `readability` 60,000 chars; danluu.com →
+   `heuristic` (correct — it's a link index Readability declines); a 404 → `none`.
+   **Still open:** whether `npm:` specifiers resolve inside Deno specifically.
+   Capture **2–3 prose articles** (not GitHub/YouTube/Reddit — Readability
+   correctly declines those) and run `node scripts/check-preservation.js`.
+   The checker's verdict logic was fixed (`a7430b7`): one heuristic capture now
+   reads INCONCLUSIVE, because it previously claimed a broken deploy from a
+   single sample of a page that could never have been a Readability hit.
+
+1b. **⚠️ `index_status = 'pending'` is never written.** The status exists in
+   `0068`, in `IndexStatus`'s `STATES` map, and in `listUnindexed`'s filter — but
+   `chunkEntryAsync` only ever writes `ok`, `empty`, `failed`. **Consequence:** a
+   tab closed mid-import leaves entries at `null` (`not_attempted`), which
+   `listUnindexed` does not select, so those notes are unsearchable **and
+   invisible to the retry banner**. ~5 lines to fix (write `pending` before the
+   work starts). Independently useful before the queue exists.
+
+1c. **⚠️ Bulk import fires unbounded parallel indexing.** `App.jsx:798` is
+   literally `created.forEach(e => chunkEntryAsync(supabase, e))` — no `await`, no
+   concurrency limit. Importing 500 notes starts 500 pipelines at once. The work
+   exists **only in browser memory**, so closing the tab loses whatever hasn't
+   run. This is the concrete failure the jobs table fixes; it is not a
+   theoretical nicety.
 
 2. ~~**`VITE_CAPTURE_SECRET` in the bundle**~~ — **RESOLVED 2026-07-30.** Tokens
    shipped (`0063`), `CAPTURE_SECRET` unset, Vercel var deleted, site rebuilt, and
@@ -238,9 +315,21 @@ slash commands · episodic extraction · agent steps 3–5 *(deferred)* · MCP v
    (needs a service-role key + a wired client) but must be re-gated or stripped
    to read-only before connecting it to anything.
 
-5. **Silent index staleness.** `chunkEntryAsync` never throws by design, and
-   nothing records per-entry index status, so semantic search can go stale
-   invisibly. `full_text_status` (`0060`) is the pattern to copy.
+5. ~~**Silent index staleness**~~ — **RESOLVED** by `0068`: `index_status`,
+   `indexed_at`, `index_error` per entry, surfaced by `IndexStatus` (quiet when
+   healthy), `IndexHealthBanner` ("N notes aren't searchable" + a retry paced at
+   3/s), and the operator probe. **But see 1b** — the `pending` state is declared
+   and never written, which leaves one real hole in the coverage.
+
+5b. **4,971 chunks have no context.** `scripts/rechunk.js` read the AI vars from
+   `process.env`, where they never existed (they're Supabase secrets), so
+   `canContextualize` was always false. The script warned; the warning scrolled
+   past, and a context-free chunk is indistinguishable from a good one. **Script
+   fixed** (`944a51b`) — it now reads `.env.local` and refuses to run without the
+   AI vars unless `--no-context` is passed explicitly. **The chunks are still
+   empty, deliberately:** re-indexing costs ~$2.70 at the new batch size, and
+   spending it before an eval baseline exists means never learning whether
+   contextual retrieval helps *this* corpus.
 
 6. ~~**`allorigins.win` SPOF**~~ — **RESOLVED 2026-07-30.** Zero references in
    runtime code; `crawl-archive` edge function replaces it. Parser verified against
@@ -281,6 +370,20 @@ everything and a second thing to forget to monitor.
 **Client gating is cosmetic — do not move a security boundary into it.** RLS is the
 real enforcement. A forged tier in devtools reveals nav items that lead nowhere.
 
+**Indexing orchestration runs in the browser.** `chunkEntryAsync` is called from
+nine places in `App.jsx`; the client sequences chunking, contextualisation and
+embedding, and the edge functions only perform the AI calls. So indexing progresses
+only while a tab is open, and unfinished work is lost on close. Every other
+weakness in the pipeline (1b, 1c, the missing quota pause) descends from this one
+fact, and the jobs table is what moves the work server-side.
+
+**Registry drift is now test-enforced in two places.** `SETTINGS_TABS` lives beside
+`SETTINGS_INDEX` (one source of truth, tests assert every tab is searchable and
+inherits its module gate), and every keybind must be a `commands.js` entry — the
+assistant toggle was hardcoded in `App.jsx` and was consequently the only shortcut
+that could be neither discovered nor remapped. Both are the same failure: a second
+place to declare something that the first place is supposed to own.
+
 **Hash-guard coupling.** `full_text` is a chunk source; improving extraction
 invalidates `source_hash` and forces re-embedding. Any extraction change is
 implicitly a re-index event, which is why the backfill throttles re-chunking inside
@@ -296,14 +399,35 @@ server-side on signup.
 
 | # | Action | Why | Spec |
 |---|---|---|---|
-| 1 | Verify the Readability extractor | One capture + one query; retires the ⚠️ | `tech-debt.md` |
-| 3 | **AI metering + cap** | Blocks tiering, pricing, signups | `metering-analytics-spec.md` §2 |
-| 4 | Interview progress UI | Data flows now, so rings aren't theatre | `interview-progress-spec.md` §4 |
-| 5 | Reminders + Agenda | Biggest product value; unblocked | `intentional-app-spec.md` Part 1 |
-| 6 | Wayback SPN2 rewrite | Fixes a broken feature, no new infra | `preservation-v2-spec.md` §2 |
-| 7 | Split `App.jsx` along existing seams | Merge pain is already real | `2026-06-19-app-modularization-design.md` |
-| 8 | Split `styles.css` (5422 lines) | Every feature appends to one file | `tech-debt.md` |
+| 0 | **Push the 4 local commits** | `git pull --rebase origin master` first | — |
+| 1 | Capture 2–3 prose articles, run `check-preservation.js` | Two minutes; retires the last ⚠️ | `tech-debt.md` |
+| 2 | **Write `index_status = 'pending'`** | ~5 lines; closes the mid-import blind spot (4.1b) | `indexing-architecture.md` |
+| 3 | **Eval fixture** (~20 query/entry pairs) | Harness exists, fixture doesn't. Gates the re-index decision. ~half a day | `indexing-architecture.md` §2 |
+| 4 | **`jobs` table** (task #5) | The keystone. Unblocks invisible indexing, safe bulk import, meterable indexing, AND the graceful quota path — deferred work needs somewhere to pause | `indexing-architecture.md` §3 |
+| 5 | Two-phase indexing | Rides on the queue. Makes contextualisation tier-differentiable and interruptible | `indexing-architecture.md` §4 |
+| 6 | Set `aiCallsPerWindow` from real data | Still `null`. Needs ~a week of `ai_usage` | `limits-runbook.md` |
+| 7 | Reminders + Agenda | Biggest product value; unblocked | `intentional-app-spec.md` Part 1 |
+| 8 | Interview progress UI | Data flows now, so rings aren't theatre | `interview-progress-spec.md` §4 |
+| 9 | Wayback SPN2 rewrite | Fixes a broken feature, no new infra | `preservation-v2-spec.md` §2 |
+| 10 | Split `App.jsx` (1343 lines) | Merge pain is already real — proven again this session | `2026-06-19-app-modularization-design.md` |
+| 11 | Split `styles.css` (5771 lines) | Every feature appends to one file | `tech-debt.md` |
 
-**Deliberately deferred:** agent steps 3–5 and MCP v2 (until the seams they depend
-on stop moving) · server-side page snapshots (replaced by the extension) · Stripe
-(until the app stabilizes).
+### The quota UX, designed but not built
+
+Blocked on #4 — a graceful path needs a queue to pause into. Agreed shape:
+
+- **Chat** — meter in the assistant panel from 75%; at the wall the composer
+  disables with *"Out of AI calls — more capacity in 38m"* and **keeps the typed
+  text**. **No automatic retries** (explicit user decision). 429 carries
+  `{ limit, used, resets_at }` so the UI states facts rather than guessing.
+- **Indexing** — never blocks, never errors at the user. Budget spent → the drain
+  **pauses**, jobs wait in the queue, resume when capacity returns. Only visible
+  artifact is the existing quiet *"N notes still indexing."*
+- `UsageMeter.jsx` already implements the bar, the 90% warning and the reset
+  copy — but renders only in Settings and returns `null` while limits are `null`.
+
+**Deliberately deferred:** agent steps 3–5 and MCP v2 · server-side page snapshots
+· Stripe (until metering data says what a user costs) · re-indexing the 4,971
+context-free chunks (until the eval fixture exists) · `full_text` backfill (measured
+as not worth doing).
+
