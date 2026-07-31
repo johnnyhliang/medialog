@@ -309,6 +309,10 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
   color: var(--muted);
 }
 .sidebar .signout:hover { color: var(--danger); background: transparent; }
+.account-indicator {
+  font-size: 11px; color: var(--muted); margin: -2px 0 4px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
 
 /* Collapsed sidebar (icon rail) */
 .app.sidebar-collapsed .sidebar {
@@ -318,6 +322,7 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
 }
 .app.sidebar-collapsed .sidebar h1,
 .app.sidebar-collapsed .brand-row .signout,
+.app.sidebar-collapsed .account-indicator,
 .app.sidebar-collapsed .nav button span,
 .app.sidebar-collapsed .topic-list-label,
 .app.sidebar-collapsed .topic-add,
@@ -2769,6 +2774,40 @@ a.activity-title:hover { color: var(--accent); }
 .metrics-sub { display: block; font-size: 10.5px; color: var(--muted); }
 .metrics-table select { font-size: 12px; padding: 2px 4px; }
 
+/* Per-account probe + operator log. Inset rather than boxed, so an expanded row
+   reads as detail belonging to the row above it and not a separate panel. */
+.metrics-probe {
+  padding: 12px 4px 4px;
+  border-left: 2px solid var(--accent);
+  padding-left: 12px;
+  margin: 4px 0;
+}
+.metrics-probe-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 10px 16px;
+  margin-bottom: 12px;
+}
+.metrics-fact { display: flex; flex-direction: column; gap: 2px; font-size: 12.5px; }
+.metrics-probe-block { margin: 10px 0; font-size: 12.5px; }
+.metrics-probe-block > strong { display: block; margin-bottom: 4px; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.metrics-statusrow { display: flex; flex-wrap: wrap; gap: 6px 14px; font-variant-numeric: tabular-nums; }
+.metrics-danger-text { color: var(--danger, #c0392b); font-weight: 600; }
+.metrics-warn {
+  margin: 8px 0;
+  padding: 8px 10px;
+  font-size: 12.5px;
+  border: 1px solid var(--danger, #c0392b);
+  border-radius: var(--radius);
+}
+.metrics-table--compact { font-size: 11.5px; margin-top: 4px; }
+.metrics-audit { list-style: none; margin: 0; padding: 0; font-size: 12px; line-height: 1.7; }
+.metrics-audit li { padding: 4px 0; border-bottom: 1px solid var(--border); }
+.metrics-audit li:last-child { border-bottom: none; }
+.metrics-audit .metrics-sub { display: inline; margin-right: 6px; }
+.metrics-audit code { font-size: 11px; color: var(--muted); }
+.metrics-audit em { color: var(--muted); }
+
 /* ── Settings search ────────────────────────────── */
 .settings-search-wrap { margin-bottom: 14px; }
 .settings-search {
@@ -4731,11 +4770,15 @@ a.iv-problem-title:hover { color: var(--accent); }
   line-height: 1;
 }
 .fw-refresh-btn:hover { color: var(--text); }
-.fw-rows { display: flex; flex-direction: column; }
+.fw-rows { display: flex; flex-direction: column; min-width: 0; }
 .fw-row {
   display: flex;
   align-items: center;
   gap: 6px;
+  /* Same fix as .opp-row: a flex item defaults to min-width:auto, which
+     refuses to shrink below its content, so a long title pushed the row past
+     the widget panel's edge instead of ellipsising. */
+  min-width: 0;
   padding: 6px 0;
   border-bottom: 1px solid var(--border);
   font-size: var(--text-sm);
@@ -4756,6 +4799,7 @@ a.iv-problem-title:hover { color: var(--accent); }
 }
 .fw-title {
   flex: 1;
+  min-width: 0;
   color: var(--text);
   white-space: nowrap;
   overflow: hidden;
@@ -5702,7 +5746,12 @@ a.digest-item-title:hover { text-decoration: underline; }
 .gains-track-tag {
   font-size: 11px; font-weight: 600; color: var(--accent); text-transform: uppercase;
 }
-.gains-pick-title { font-size: 15px; margin: 4px 0 10px; color: var(--text); }
+.gains-pick-title { font-size: 15px; margin: 4px 0 4px; color: var(--text); }
+.gains-progress { font-size: 12px; color: var(--text-dim); margin: 0 0 10px; }
+.gains-inline-link {
+  background: none; border: none; padding: 0; color: var(--accent);
+  text-decoration: underline; cursor: pointer; font-size: inherit;
+}
 .gains-pick-actions { display: flex; gap: 8px; align-items: center; }
 .gains-pick-actions button {
   display: flex; align-items: center; gap: 4px; padding: 6px 12px;

@@ -19,6 +19,8 @@ Synced via Supabase.
 | [`docs/README.md`](docs/README.md) | Which of the 58 docs to trust, and which are stale |
 | [`docs/tech-debt.md`](docs/tech-debt.md) | Known problems, ranked |
 | [`docs/limits-runbook.md`](docs/limits-runbook.md) | Emergency AI kill switch + how to change tier limits |
+| [`docs/indexing-architecture.md`](docs/indexing-architecture.md) | How search indexing works, what it costs, index health, and the queue/two-phase work not yet done |
+| [`PRODUCTION.md`](PRODUCTION.md) | Cost model, scaling, admin controls, what must not be open-sourced |
 
 ### Feature maturity & access
 

@@ -47,6 +47,34 @@ it just silently stops indexing — the user's notes quietly become unsearchable
 with no signal. That's a worse outcome than a bill. The global switch is
 different: it's a deliberate outage you're choosing, and you know it's on.
 
+### Every brake is logged
+Emergency stop, per-account pause and tier changes all prompt for a **reason** and
+write a row to `admin_actions` (migration `0069`) recording the value **before**
+and **after**. The log is visible at the bottom of Metrics, and per-account under
+**inspect**.
+
+The before/after matters more than it looks: it means undoing an action never
+requires remembering what the old state was. A reversible flag with no record of
+why is a trap — weeks later you find a paused account, can't reconstruct what you
+saw, and "leave it paused" starts to feel like the safe choice. It isn't, if
+they're paying you.
+
+`admin_actions` has RLS enabled with **no policies at all** — no client key can
+read or write it, verified against production. The only path is the service role
+inside `admin-metrics`, which does its own founder check. Reads are not logged:
+opening the dashboard is not an event, and recording it would bury the rows that
+matter.
+
+### Debugging one account
+Metrics → **inspect** on any row. Without writing SQL against production you get:
+tier and its source, billing status, entry count, active days, **index health**
+(and the verbatim error on any failed embed), article-preservation coverage,
+storage, AI usage by day and function for 30 days, product-event counts, and every
+operator action ever taken on that account.
+
+Counts and statuses only — never note text, titles, URLs or search queries. Being
+the operator is not a licence to read someone's library.
+
 ### After an incident
 1. Metrics → sort by **cost** (default) — the top row is your answer
 2. Check `ai_usage` for the shape of it:

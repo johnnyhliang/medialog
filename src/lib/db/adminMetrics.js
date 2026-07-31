@@ -20,8 +20,27 @@ export function loadAdminOverview(supabase) {
 }
 
 /** Manual tier change. Routed through set_tier_manual() so the founder guard holds. */
-export function setAccountTier(supabase, userId, tier) {
-  return call(supabase, { action: 'set_tier', userId, tier })
+export function setAccountTier(supabase, userId, tier, reason) {
+  return call(supabase, { action: 'set_tier', userId, tier, reason })
+}
+
+/** Week-one activation rates. Definitions live in supabase/queries/activation.sql. */
+export function loadActivation(supabase) {
+  return call(supabase, { action: 'activation' })
+}
+
+/**
+ * Everything true about one account: tier, billing, index health, preservation
+ * coverage, usage by day, event counts, and the operator actions taken on it.
+ * Counts and statuses only — never note text, titles, URLs or search queries.
+ */
+export function loadAccountProbe(supabase, userId) {
+  return call(supabase, { action: 'account', userId })
+}
+
+/** Operator action log, newest first. */
+export function loadAuditLog(supabase, limit = 50) {
+  return call(supabase, { action: 'audit', limit })
 }
 
 /** Own usage, for the Settings readout. Plain RLS-scoped RPCs, no admin rights. */
@@ -44,8 +63,12 @@ export function setEmergencyStop(supabase, enabled) {
   return call(supabase, { action: 'set_ai_enabled', enabled })
 }
 
-export function setAccountSuspended(supabase, userId, suspended) {
-  return call(supabase, { action: 'set_suspended', userId, suspended })
+export function setEmergencyStopWithReason(supabase, enabled, reason) {
+  return call(supabase, { action: 'set_ai_enabled', enabled, reason })
+}
+
+export function setAccountSuspended(supabase, userId, suspended, reason) {
+  return call(supabase, { action: 'set_suspended', userId, suspended, reason })
 }
 
 export async function getMyStorage(supabase) {
