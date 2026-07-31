@@ -20,6 +20,7 @@ Synced via Supabase.
 | [`docs/tech-debt.md`](docs/tech-debt.md) | Known problems, ranked |
 | [`docs/limits-runbook.md`](docs/limits-runbook.md) | Emergency AI kill switch + how to change tier limits |
 | [`docs/indexing-architecture.md`](docs/indexing-architecture.md) | How search indexing works, what it costs, index health, and the queue/two-phase work not yet done |
+| [`docs/git-learning.md`](docs/git-learning.md) | Git for this repo's actual situations — divergence, parallel sessions, stuck rebases, escape hatches |
 | [`PRODUCTION.md`](PRODUCTION.md) | Cost model, scaling, admin controls, what must not be open-sourced |
 
 ### Feature maturity & access

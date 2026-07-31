@@ -12,6 +12,27 @@ trust) · `docs/tech-debt.md` (severity-ranked problems) ·
 **Hard numbers:** 69 migrations · 16 edge functions · 73 components · 52 lib modules
 · 116 test files / 691 tests passing · 99 docs.
 
+**Git in the situations this repo gets into → [`docs/git-learning.md`](docs/git-learning.md).**
+Written from the real tangle on 2026-07-30 (two sessions in one working tree, a
+stray `main` branch, a rebase blocked by an untracked `CLAUDE.md`). Covers reading
+ahead/behind, why `git add -A` is dangerous here, what to do when a rebase stops,
+and the escape hatches. The codebase was never broken — 696 tests and the build
+passed throughout, and everything is on `origin/master`.
+
+also for ai search it doesnt have to run search every time unless the prompt specifies something like that
+
+deleting past ai conversation needs a confirm
+
+export button click should not automatically pull up the ui
+
+everything is ridiculously slow to load even the metrics page
+
+no way to save edits in settings appearance stays but programs nah need a button
+
+distinction for search within a topic not searching outside the topic is kind of weird and implicit definitely need to do some design there
+
+in feed the sort by should stay to a writer or source when you click it instead of generalized unless you go to some home page or something also some way to undo the floor? recommend problems? keep going - definite unsolved and some notes below
+
 
 # Feed engine stuff:
 The actual problem: Deep Topics being a separate topic kind, hidden from the main grid, was the mistake. It forces "PyTorch internals" to live in a different universe than "ML," when in your head they're the same thing — ML is one topic, and sometimes part of what's in it is structured (reading through TVM chapter by chapter) and most of it isn't (random saved links, quick notes). Two containers for one mental bucket is exactly the kind of fragmentation the whole app is designed against.
