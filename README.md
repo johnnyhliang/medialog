@@ -3,6 +3,8 @@
 A personal PWA media log — capture links, notes, and takeaways under flat topics.
 Synced via Supabase.
 
+> *I also want to make the disclaimer and don't want to shy away from the fact that much of the codebase was co-authored by Claude Code and has definitely still been a learning journey for me wasting time, finding issues, and overall of course not being as well versed as I would have been had I made everything from scratch. As a result, I know that this codebase is probably full of gaps but I wnat to take this as a low stakes opportunity to try to figure out my workflow, shipping something with new tools from scratch, and trying to find my limits. I don't enjoy it a whole lot because I like writing code, but take from this what you will* - I've also been quite lazy and have not gone through all the lint issues yet hence the CI github action failures
+
 > **⚠️ Source-available, not open source. All rights reserved.**
 > This repository is public so the work can be read. It carries **no licence**,
 > which under copyright means no permission is granted to use, copy, modify,
