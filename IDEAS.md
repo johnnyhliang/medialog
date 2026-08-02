@@ -51,6 +51,43 @@ until ② lands; mostly a visualization over data ② already produces.
 
 ## Big swings
 
+- ★ **Collapse Deep Topics into normal topics** — *a correction to shipped code, not
+  an extension.* Deep Topics being a separate topic kind, hidden from the main grid,
+  was the mistake: it forces "PyTorch internals" to live in a different universe than
+  "ML," when in your head they are the same thing. One topic, sometimes partly
+  structured (reading TVM chapter by chapter) and mostly not (saved links, quick
+  notes). Two containers for one mental bucket is exactly the fragmentation this app
+  exists to prevent.
+
+  The shape: any topic can optionally carry one or more **resources** (a resource =
+  a source + an ordered outline + a cursor). "ML" stays one topic with its usual
+  scattered entries plus zero or more active resources ("TVM paper", "ONNX spec").
+  A takeaway written against a resource section is a **normal entry** in that topic's
+  list — same grid, same search — carrying a small tag (`TVM · §3`) instead of living
+  in a walled-off tab; clutter is handled by making that tag a *filter*, not a
+  separate universe. Quant stops being special-cased too: a topic with an order-book
+  resource whose "sections" are build rungs, plus the Strand B/C reading reps as a
+  second lightweight resource or plain entries. One mechanism, not three. The
+  picker's job barely changes — "pick a topic with an active resource whose cursor
+  has a next todo section" replaces "pick a Deep Topic vs a menu_item".
+
+  Cost, honestly: this reworks `topics.kind`, `DeepTopicView` as an isolated route,
+  and the `listTopics` grid filter. Real but contained — `resource_sections` mostly
+  survives, the outline+cursor UI becomes a panel inside the normal topic view, and
+  the grid-hiding filter goes away entirely. **Sequence this first**, before any
+  recommendation work; everything downstream is easier to reason about with one
+  topic shape instead of two.
+
+- **Topic-aware feed (recommended content / other takes)** — a genuinely different
+  capability from the picker, and additive. Two pieces, neither blocking the above:
+  1. *Passive boost* — feed ranking already has a designed `t_focus` layer
+     (north-star Part 5); once a topic has an active resource, related items should
+     rank higher in the regular feed, so "other takes" surface on their own during
+     Drift-mode browsing instead of requiring you to ask.
+  2. *Active pull* — a "find more like this" action reusing the RAG/agent infra,
+     dropping candidates into that topic's backlog to skim. **Never auto-added** —
+     always your call to promote.
+
 - ★ **The Morning Open** — one composed daily screen (feed picks + a resurfaced highlight +
   tidy count + "you were reading X") designed to be the first thing you open instead of Discord.
   The Today idea taken to its conclusion: one screen that *is* the habit.

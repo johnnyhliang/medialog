@@ -67,7 +67,10 @@ history; `PROJECT-STATE.md` is authoritative.
 preservation v2 existed. Positioning is likely still sound; anything about
 features or pricing needs re-checking against current state.
 
-**`HANDOFF.md`** — a point-in-time handoff, now superseded by `PROJECT-STATE.md`.
+**`HANDOFF.md` and `HANDOFF-PRODUCTION.md`** — **deleted 2026-07-31.** Both were
+point-in-time session handoffs (2026-06-23 and 2026-07-22) fully superseded by
+`PROJECT-STATE.md`. A handoff doc is a snapshot with no regeneration story, so it
+goes stale silently and then competes with the file that *is* maintained.
 
 ---
 

@@ -1,15 +1,20 @@
 # MediaLog — The Complete Picture
 
-**Canonical overview.** Everything about this project: philosophy, what's built, what's
-specced, what's planned, and every idea hinted at or considered. Maintained as the single
-source of truth so context survives across sessions.
+> **⚠️ Historical, not current (flagged 2026-07-31).** This was written in June as
+> the canonical overview and is now a **snapshot of the project's philosophy and
+> early direction**, not its state. The "What's BUILT / SPECCED / PLANNED" sections
+> below are months behind. For anything factual — what is live, what is broken,
+> what is left — read **`PROJECT-STATE.md`** (regenerated from the filesystem),
+> **`docs/tech-debt.md`** (ranked problems) and **`IDEAS.md`** (proposals).
+> **Kept** because §1 Core Philosophy and the founding principles are still the
+> best statement of why the app is shaped this way, and nothing else records them.
 
 Source docs (detail lives here):
 - `docs/superpowers/specs/2026-06-07-medialog-design.md` — foundational design + North Star
 - `docs/superpowers/specs/2026-06-15-medialog-ultimate-vision.md` — "Singular Bucket" vision, 4 pillars
 - `docs/superpowers/specs/2026-06-17-strategic-roadmap.md` — the loop, competitive moat, phases
 - `docs/superpowers/specs/2026-06-17-file-preview-design.md`, `…-living-topic-docs-design.md`, `…-ui-polish-plan.md`
-- `docs/HANDOFF.md` — current state + next task
+- `PROJECT-STATE.md` — current state + next actions (replaced the deleted `HANDOFF.md`)
 
 ---
 

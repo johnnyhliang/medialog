@@ -9,8 +9,9 @@ trust) · `docs/tech-debt.md` (severity-ranked problems) ·
 `docs/indexing-architecture.md` (how search indexing works + what it costs) ·
 `PRODUCTION.md` (cost model, scaling, closed-source list) · `IDEAS.md` (proposals).
 
-**Hard numbers:** 69 migrations · 16 edge functions · 73 components · 52 lib modules
-· 116 test files / 691 tests passing · 99 docs.
+**Hard numbers (recounted 2026-07-31):** 68 migrations (`0070` is the highest;
+`0059` was never used) · 17 edge functions · 73 components · 71 lib modules ·
+117 test files · 100 docs.
 
 **Git in the situations this repo gets into → [`docs/git-learning.md`](docs/git-learning.md).**
 Written from the real tangle on 2026-07-30 (two sessions in one working tree, a
@@ -19,39 +20,14 @@ ahead/behind, why `git add -A` is dangerous here, what to do when a rebase stops
 and the escape hatches. The codebase was never broken — 696 tests and the build
 passed throughout, and everything is on `origin/master`.
 
-also for ai search it doesnt have to run search every time unless the prompt specifies something like that
+**Raw notes moved out 2026-07-31.** A block of untriaged observations sat above the
+first heading here — unsafe, because this file is *overwritten* on each regeneration
+and would have silently deleted them. They now live where they belong: eight
+reported UX problems in [`docs/tech-debt.md`](docs/tech-debt.md) (§ *Reported UX
+problems — untriaged*), and the Deep-Topics-collapse + topic-aware-feed proposal in
+[`IDEAS.md`](IDEAS.md) (§ *Big swings*). Nothing was discarded. **Put new
+observations in those two files, not in this one.**
 
-deleting past ai conversation needs a confirm
-
-export button click should not automatically pull up the ui
-
-everything is ridiculously slow to load even the metrics page
-
-no way to save edits in settings appearance stays but programs nah need a button
-
-distinction for search within a topic not searching outside the topic is kind of weird and implicit definitely need to do some design there
-
-in feed the sort by should stay to a writer or source when you click it instead of generalized unless you go to some home page or something also some way to undo the floor? recommend problems? keep going - definite unsolved and some notes below
-
-
-# Feed engine stuff:
-The actual problem: Deep Topics being a separate topic kind, hidden from the main grid, was the mistake. It forces "PyTorch internals" to live in a different universe than "ML," when in your head they're the same thing — ML is one topic, and sometimes part of what's in it is structured (reading through TVM chapter by chapter) and most of it isn't (random saved links, quick notes). Two containers for one mental bucket is exactly the kind of fragmentation the whole app is designed against.
-
-My call: collapse it. Any topic can optionally carry one or more resources (a resource = a source + an ordered outline + a cursor). No more kind: 'deep' silo, no more separate hidden-from-grid view:
-- "ML" stays one topic. It has your usual scattered entries, plus zero or more active resources (e.g. "TVM paper," "ONNX spec") each with their own outline/cursor.
-- A takeaway written against a resource section is a normal entry in that topic's list — same grid, same search — just carrying a small tag ("TVM · §3") instead of living in a walled-off tab. Clutter is handled by making that tag a filter, not a separate universe.
-- Quant stops being special-cased too: "Quant" becomes a topic with its own resource (the order-book build, with build-rung "sections") plus the Strand B/C reading reps as either a second lightweight resource or just plain entries. One mechanism, not three.
-- The picker's job barely changes: instead of "pick a Deep Topic vs a menu_item," it's "pick a topic with an active resource whose cursor has a next todo section" — same rotation/staleness logic, one less concept to keep straight.
-
-This does mean reworking what's already shipped (topics.kind, DeepTopicView as an isolated page, the listTopics filter) rather than just extending it — real but contained: resource_sections mostly stays, DeepTopicView's outline+cursor UI becomes a panel inside the normal topic view instead of its own route, and the grid-hiding filter goes away entirely.
-
-On recommended content / other takes — that's a genuinely different capability, not a picker tweak: it's the Feed engine (already built, quality-gated RSS/HN/Reddit ingestion) getting a topic-aware mode. Two pieces, both additive, neither blocks the above:
-1. Passive boost: feed ranking already has a designed-t_focus layer (north-star Part 5) — once a topic has an active resource, items related to it should rank higher in your regular feed, so "other takes" surface on their own during Drift-mode browsing instead of requiring you to ask.
-2. Active pull: a "find more like this" action on a toh (reuses the RAG/agent infra already spec'd) and drops candidates into that topic's backlog for you to skim — never auto-added, always your call to promote.
-
-I'd sequence it: unify the topic model first (it's a correction, and everything else — picker, recommendations — is easier to reason about with one topic shape instead of two). Recommended content is real scope worth its own pass after.
-
-not sure how much of this is built out/fully functional
 ---
 
 ## 0b. Session synthesis — 2026-07-30 (evening)
@@ -131,17 +107,16 @@ actually exploitable (`CAPTURE_USER_ID` was never set, so the legacy path 401'd)
 
 | Layer | State |
 |---|---|
-| `master` | 4 commits **UNPUSHED** — held at the user's request, see below |
-| Frontend | auto-deploys on push — **the batch-size change ships with the next deploy** |
-| Migrations applied | **through `0069` — all current** (`0070` is the parallel window's, uncommitted) |
+| `master` | **in sync with `origin/master`** — 0 ahead, 0 behind (verified 2026-07-31) |
+| Frontend | auto-deploys on push — the batch-size change shipped |
+| Migrations applied | **through `0070`** (`0070_entries_updated_at.sql` landed in `96d9049`) |
 | Edge functions | **16**, `admin-metrics` redeployed with audit/activation/probe |
 | `capture` auth | **verified live**: rejects bogus/absent/wrong credentials |
 | `0059` | permanently skipped (parallel worktrees claimed numbers out of order) |
 
-**Unpushed local commits** (`704c478`, `ca0e8d0`, `0e3a9cd`, `352ee67`). A
-parallel session created a remote `main` branch and merged it to `master` via
-PR #5; local `master` sits on top of `main`'s history. Decided: **`master` stays
-trunk, `main` was a one-off.** To land: `git pull --rebase origin master`, push.
+**Those commits are pushed.** A parallel session created a remote `main` branch and
+merged it to `master` via PR #5; local `master` sits on top of `main`'s history.
+Decided: **`master` stays trunk, `main` was a one-off.**
 
 **Careful with `git add -A` in this repo.** A parallel window works in the *same
 directory*; a blanket add swept 6 of its in-progress files into a commit
@@ -383,13 +358,13 @@ slash commands · episodic extraction · agent steps 3–5 *(deferred)* · MCP v
 
 ## 5. Architectural concerns
 
-**`src/App.jsx` — 1332 lines, 55 handlers, 26 `view ===` branches.** Hook
+**`src/App.jsx` — 1343 lines, 55 handlers, 26 `view ===` branches.** Hook
 extraction moved *state* out but left *orchestration*. Evidence it is costing real
 time: three parallel branches edited this file in one session and merged by luck,
 not design. Seams that already exist: `useShareTarget`, `useOAuthCallback`, and a
 routing module owning the view ladder. → `docs/superpowers/specs/2026-06-19-app-modularization-design.md`
 
-**`src/styles.css` — 5422 lines / 153 KB.** The whole design system in one file,
+**`src/styles.css` — 5771 lines / 153 KB.** The whole design system in one file,
 and every feature appends (three separate blocks today). Split into tokens →
 layout → per-view. No framework needed; the CSS is fine, the packaging isn't.
 
@@ -397,10 +372,12 @@ layout → per-view. No framework needed; the CSS is fine, the packaging isn't.
 each doing several jobs. `SettingsView` now has 13 tabs and inlines the bookmarklet
 template, the Wayback bulk submitter, and the modules tab.
 
-**Two competing gating mechanisms remain.** The three-layer model is authoritative,
-but `showFounderUploads` still resolves independently inside `NoteEditor.jsx` via
-its own `getUser()`. The `uploads` module exists in the registry and is unused.
-Uploads stay RLS-enforced regardless, so this is tidiness, not a hole.
+**~~Two competing gating mechanisms~~ — RESOLVED 2026-07-30.** `showFounderUploads`
+is gone; `NoteEditor.jsx:151` resolves uploads through `useModuleAccess('uploads')`,
+so the three-layer model is now the only gate. (This paragraph still claimed the old
+state on 2026-07-31 while `docs/tech-debt.md` had already marked it resolved — the
+same fact in two files drifted apart, which is the argument for one of them owning
+it.)
 
 **Queue duplication risk.** The import queue (task #5) and preservation jobs
 (`docs/preservation-v2-spec.md` §4) are the same shape: work too slow for a
@@ -439,7 +416,6 @@ server-side on signup.
 
 | # | Action | Why | Spec |
 |---|---|---|---|
-| 0 | **Push the 4 local commits** | `git pull --rebase origin master` first | — |
 | 1 | Capture 2–3 prose articles, run `check-preservation.js` | Two minutes; retires the last ⚠️ | `tech-debt.md` |
 | 2 | **Write `index_status = 'pending'`** | ~5 lines; closes the mid-import blind spot (4.1b) | `indexing-architecture.md` |
 | 3 | **Eval fixture** (~20 query/entry pairs) | Harness exists, fixture doesn't. Gates the re-index decision. ~half a day | `indexing-architecture.md` §2 |

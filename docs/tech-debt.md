@@ -56,10 +56,37 @@ now reports INCONCLUSIVE for that case instead of FALLING BACK (`a7430b7`), but 
 underlying lesson stands: **one sample of a non-article can never be evidence
 either way.** Capture 2–3 blog posts or news pieces, then run the script.
 
-### ~~Migrations written but never applied~~ — RESOLVED 2026-07-29
-All migrations through `0063` applied via `supabase db push`; `enrich` and `capture`
-both deployed. Note `0059` is permanently unused — parallel worktrees claimed numbers
-out of order. Current state always lives in `PROJECT-STATE.md` §1.
+---
+
+## Reported UX problems — untriaged
+
+Captured from use on 2026-07-30, moved here 2026-07-31 from a raw note block at the
+top of `PROJECT-STATE.md`, which is regenerated-and-overwritten and would have
+deleted them. **None have been reproduced or root-caused yet** — these are reports,
+not diagnoses. Verify before fixing.
+
+1. **AI search runs retrieval on every prompt.** It shouldn't have to, unless the
+   prompt actually asks for something from the library. Cheap wins here: fewer
+   embed calls per chat turn, faster replies.
+2. **Deleting a past AI conversation has no confirm.** Irreversible, one click.
+3. **The export button pulls up the export UI on click** when it shouldn't —
+   clicking export should export.
+4. **Everything is very slow to load, including the Metrics page.** Broad enough
+   that it needs measurement before a fix; Metrics being slow too suggests it is
+   not one heavy view but something shared (initial query fan-out, bundle size, or
+   an unbatched round trip per surface).
+5. **Settings has no save affordance for some tabs.** Appearance persists; Programs
+   does not — it needs an explicit save button, or the same auto-persist the
+   Appearance tab already has. Inconsistency between tabs is the real bug.
+6. **Topic-scoped search is implicit and unclear.** Searching inside a topic
+   silently excludes everything outside it, with no visible indication of scope or
+   way to widen. Needs design, not a patch.
+7. **Feed sort resets instead of sticking.** Clicking through to a writer or source
+   should keep the sort pinned to that source rather than reverting to the
+   generalized ordering — reset only on returning to a home/overview surface.
+8. **No way to undo the feed floor, and no "recommend problems" affordance.**
+   Open design question, unsolved. See also the topic-aware feed entry in
+   `IDEAS.md` under *Big swings*.
 
 ---
 
@@ -80,27 +107,6 @@ unlogged bulk mutation over the whole library, using a key that bypasses RLS.
 
 **Before reconnecting it to anything:** either re-gate the bulk tools behind the
 propose/confirm model, or strip them to read-only. Don't rely on remembering.
-
-### ~~`VITE_CAPTURE_SECRET` in the client bundle~~ — RESOLVED 2026-07-30
-Fully closed and verified. Per-user capture tokens (`0063`) shipped, then:
-`CAPTURE_SECRET` unset from Supabase secrets, `VITE_CAPTURE_SECRET` deleted from
-Vercel production, and the site rebuilt. Confirmed by fetching the live bundle and
-searching for the literal value — absent from the new `SettingsView` chunk.
-
-**Two findings from doing it, worth keeping:**
-
-1. **It was never exploitable.** `CAPTURE_USER_ID` had never been set as a Supabase
-   secret, so the legacy path had no account to attribute captures to — a probe with
-   the real secret returned 401. The exposed secret was a latent hole, not an open
-   door, and the bookmarklet had been silently broken for some time. Earlier notes
-   here claiming an attacker could write to the Inbox were wrong.
-2. **Removing an env var is not enough.** `VITE_`-prefixed values are inlined at
-   build time, so the deployed bundle keeps the secret until a rebuild replaces it.
-   Deleting the variable and *not* redeploying looks fixed and isn't.
-
-Original problem, for the record: `SettingsView.jsx` rendered bookmarklet / iOS
-Shortcut templates containing the shared capture secret, which shipped to every
-visitor who loaded that chunk.
 
 ### Bookmarklet tokens are plaintext by construction — accepted risk
 A bookmarklet is a string in your bookmarks with no secure storage, so whatever
@@ -259,30 +265,6 @@ The entire design system in one file, and every feature keeps appending to it
 then per-view — before it becomes unnavigable. No framework needed; the CSS
 itself is fine, it's the packaging that isn't.
 
-### ~~Dead landing backups~~ — RESOLVED 2026-07-29
-`LandingPage.backup.jsx`, `landing.backup.css` and the orphaned `src/lib/fetchFeed.js`
-deleted; all had zero references including the HTML entry points. Note
-`src/lib/retrievalEval.js` was checked and **kept** — it is a deliberate
-before/after harness for `chunkConfig` tuning, not forgotten code.
-
-### ~~`allorigins.win` SPOF~~ — RESOLVED 2026-07-30
-Zero references remain in runtime code. Feeds moved server-side earlier
-(`fetch-feeds`), the orphaned `src/lib/fetchFeed.js` was deleted, and
-`crawlArchive` now calls the new `crawl-archive` edge function.
-
-Parsing there is regex-based rather than DOM-based (Deno has no `DOMParser`),
-reusing the approach already proven in `fetch-feeds`. Verified against live sites
-before deploying: danluu 128/128 atom entries, simonwillison 30/30, jvns 20/20,
-and 16,808 URLs off simonwillison's sitemap. That last number prompted a
-`MAX_ITEMS = 500` cap — the uncapped response was multi-megabyte JSON that would
-also have overwhelmed the picker UI. The old client-side version had the same
-unbounded behaviour.
-
-The function requires a logged-in user; without that gate it would be an open URL
-fetcher anyone could point at arbitrary hosts using our egress. `isSafeUrl` is
-re-checked per fetched URL, not just on user input, because sitemap indexes point
-at child sitemaps a hostile site could aim at internal addresses.
-
 ### Feature sprawl — many near-products in one shell
 Reels, career/opportunities, interview bank, deep topics, digest, boards. The
 modules system (migration 0057) makes this *manageable* by letting each be turned
@@ -298,22 +280,6 @@ user-generated by anyone else. Use a parser-based sanitizer before that.
 
 ## Lower
 
-### ~~`showFounderUploads` outside the module system~~ — RESOLVED 2026-07-30
-Now the `uploads` module (`minTier: 'founder'`), resolved via the new
-`src/hooks/useModuleAccess.js` — `NoteEditor` has two callers, so a local hook
-beat threading entitlement through both. `src/lib/account.js` is down to `isDev`
-and `isFounder` (the latter only as the tier source for migration `0057`).
-
-**Behaviour change worth knowing:** uploads is `defaultOn: false`, so it is now
-opt-in per account rather than automatically on in dev. The grandfathered founder
-account has it; a fresh account must enable it in Settings → Modules. The old test
-encoded the previous always-on-in-dev behaviour and was rewritten to cover both
-directions.
-
-### ~~Duplicated `isSafeUrl`~~ — RESOLVED 2026-07-30
-`capture/index.ts` now imports from `_shared/isSafeUrl.ts`; the inline copy was
-byte-identical and is gone. `crawl-archive` uses the same shared module.
-
 ### Silent fire-and-forget chunk indexing
 `chunkEntryAsync` deliberately never throws — indexing must not break a save,
 which is right. But there's no signal anywhere when indexing fails, so semantic
@@ -327,6 +293,60 @@ same lines as the props it takes.
 
 ---
 
+## Resolved — kept for the lesson, not the status
+
+Moved out of the live list 2026-07-31. Each is closed; what earns it a place here is
+the thing that was learned doing it. Nothing below needs action.
+
+**Migrations written but never applied** *(2026-07-29)* — all applied via
+`supabase db push`. `0059` is permanently unused: parallel worktrees claimed numbers
+out of order. Applied state lives in `PROJECT-STATE.md` §1, not here.
+
+**`VITE_CAPTURE_SECRET` in the client bundle** *(2026-07-30)* — `SettingsView.jsx`
+rendered bookmarklet / iOS templates containing the shared capture secret, shipping
+it to every visitor who loaded that chunk. Closed by per-user tokens (`0063`), then
+unsetting `CAPTURE_SECRET`, deleting the Vercel var, and rebuilding; absence verified
+against the live bundle. Two lessons: (1) **it was never exploitable** —
+`CAPTURE_USER_ID` had never been set, so the legacy path had no account to attribute
+captures to and 401'd, meaning the bookmarklet had been quietly broken for some time,
+and earlier notes claiming an attacker could write to the Inbox were simply wrong;
+(2) **removing an env var is not enough** — `VITE_` values are inlined at build time,
+so the deployed bundle keeps the secret until a rebuild replaces it. Deleting the
+variable and not redeploying looks fixed and isn't.
+
+**Dead landing backups** *(2026-07-29)* — `LandingPage.backup.jsx`,
+`landing.backup.css`, orphaned `src/lib/fetchFeed.js` deleted; zero references
+anywhere, including the HTML entry points. `src/lib/retrievalEval.js` was checked
+and **kept** — a deliberate before/after harness for `chunkConfig` tuning, not
+forgotten code. "No importers" and "dead" are not the same thing for a tool.
+
+**`allorigins.win` SPOF** *(2026-07-30)* — replaced by the `crawl-archive` edge
+function. Parsing is regex-based (Deno has no `DOMParser`), reusing the approach
+proven in `fetch-feeds`, and was verified against live sites before deploy: danluu
+128/128 atom entries, simonwillison 30/30, jvns 20/20, plus 16,808 URLs off
+simonwillison's sitemap. That last number is why `MAX_ITEMS = 500` exists — the
+uncapped response was multi-megabyte JSON that would also have buried the picker UI,
+and the old client-side version had the same unbounded behaviour. The function
+requires a logged-in user; without that gate it is an open URL fetcher anyone could
+point at arbitrary hosts using our egress. `isSafeUrl` is re-checked **per fetched
+URL**, not just on user input, because a sitemap index points at child sitemaps a
+hostile site could aim at internal addresses.
+
+**`showFounderUploads` outside the module system** *(2026-07-30)* — now the `uploads`
+module (`minTier: 'founder'`) via `src/hooks/useModuleAccess.js`; `NoteEditor` has two
+callers, so a local hook beat threading entitlement through both. `src/lib/account.js`
+is down to `isDev` and `isFounder`. **Behaviour change worth knowing:** `uploads` is
+`defaultOn: false`, so it is opt-in per account rather than automatically on in dev —
+the grandfathered founder account has it, a fresh account must enable it in
+Settings → Modules. The old test encoded the previous always-on-in-dev behaviour and
+was rewritten to cover both directions.
+
+**Duplicated `isSafeUrl`** *(2026-07-30)* — `capture/index.ts` imports from
+`_shared/isSafeUrl.ts`; the inline copy was byte-identical. `crawl-archive` uses the
+same module.
+
+---
+
 ## Bottom line
 
 The core is genuinely good: search that isn't naively embedding-only, backup that
@@ -334,6 +354,6 @@ respects GitHub limits and secret boundaries, capture that works on iOS/Android,
 sharing that doesn't punch holes in RLS. Real constraints, closed loops.
 
 The cost is **concentration** — too much product surface and too much UI/CSS
-weight in too few files — plus two personal-app security tradeoffs
-(`CAPTURE_SECRET` in the bundle, IG cookies) that must be revisited before this
-stops being "just me."
+weight in too few files. The capture-secret tradeoff is closed (per-user tokens);
+what remains on the personal-app side is the IG session cookie and the plaintext
+bookmarklet token, both of which need revisiting before this stops being "just me."
