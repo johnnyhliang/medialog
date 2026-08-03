@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'vitest'
-import { buildFiles, parseFiles, summarize, renderEntryMarkdown, SYNC_TABLES } from '../../../src/lib/githubSync.js'
+import { buildFiles, parseFiles, summarize, renderEntryMarkdown, SYNC_TABLES, EXCLUDED_TABLES, CONFLICT_TARGETS } from '../../../src/lib/githubSync.js'
 
 const snapshot = {
   exported_at: '2026-07-22T00:00:00.000Z',
@@ -13,7 +13,10 @@ const snapshot = {
     tags: [{ id: 'g1', name: 'microstructure' }],
     entry_tags: [{ entry_id: 'e1111111-aaaa', tag_id: 'g1' }],
     entry_versions: [], highlights: [], resource_sections: [],
-    feeds: [], applications: [], opportunity_state: [],
+    feeds: [], opportunities: [], applications: [], opportunity_state: [],
+    assistant_conversations: [], assistant_messages: [],
+    menu_items: [], quick_links: [],
+    programs: [], companies: [], shared_items: [],
   },
 }
 
@@ -68,7 +71,7 @@ describe('buildFiles', () => {
     const manifest = JSON.parse(asMap(buildFiles(snapshot)).get('data/manifest.json'))
     expect(manifest.counts.entries).toBe(3)
     expect(manifest.counts.topics).toBe(2)
-    expect(manifest.schema_version).toBe(1)
+    expect(manifest.schema_version).toBe(2)
   })
 })
 
@@ -133,5 +136,95 @@ describe('summarize', () => {
     expect(counts.entries).toBe(3)
     expect(counts.highlights).toBe(0)
     expect(Object.keys(counts).sort()).toEqual([...SYNC_TABLES].sort())
+  })
+})
+
+describe('table coverage', () => {
+  // The bug this guards: opportunity_state.opportunity_id is NOT NULL with an FK
+  // to opportunities, but opportunities was not in SYNC_TABLES. Restoring into an
+  // empty database therefore failed on a foreign-key violation — in exactly the
+  // disaster-recovery case the backup exists for. applySnapshot walks SYNC_TABLES
+  // front to back, so ordering is a correctness property, not cosmetics.
+  const PARENT_BEFORE_CHILD = [
+    ['topics', 'entries'],
+    ['entries', 'entry_tags'],
+    ['tags', 'entry_tags'],
+    ['entries', 'entry_versions'],
+    ['entries', 'highlights'],
+    ['opportunities', 'opportunity_state'],
+    ['opportunities', 'applications'],
+    ['assistant_conversations', 'assistant_messages'],
+  ]
+
+  test.each(PARENT_BEFORE_CHILD)('%s is restored before %s', (parent, child) => {
+    const p = SYNC_TABLES.indexOf(parent)
+    const c = SYNC_TABLES.indexOf(child)
+    expect(p).toBeGreaterThanOrEqual(0)
+    expect(c).toBeGreaterThanOrEqual(0)
+    expect(p).toBeLessThan(c)
+  })
+
+  // Data that was silently absent before: losing any of these loses real user
+  // work with no way to notice until a restore comes up short.
+  test.each([
+    'assistant_conversations', 'assistant_messages',
+    'menu_items', 'quick_links',
+    'programs', 'companies', 'shared_items',
+  ])('%s is backed up', (table) => {
+    expect(SYNC_TABLES).toContain(table)
+  })
+
+  test('every table is either synced or explicitly excluded, never just forgotten', () => {
+    const overlap = SYNC_TABLES.filter((t) => t in EXCLUDED_TABLES)
+    expect(overlap).toEqual([])
+  })
+
+  // Upserting a global catalogue by id collides with its unique name/slug the
+  // moment the same row already exists under a different id.
+  test('global catalogues match on their natural key, not id', () => {
+    expect(CONFLICT_TARGETS.programs).toBe('name')
+    expect(CONFLICT_TARGETS.companies).toBe('slug')
+    expect(CONFLICT_TARGETS.shared_items).toBe('slug')
+  })
+
+  test('composite-keyed tables keep their pair targets', () => {
+    expect(CONFLICT_TARGETS.entry_tags).toBe('entry_id,tag_id')
+    expect(CONFLICT_TARGETS.opportunity_state).toBe('user_id,opportunity_id')
+  })
+
+  test('a v1 backup still restores, with the new tables reading as empty', () => {
+    const v1 = [
+      { path: 'data/manifest.json', content: JSON.stringify({ schema_version: 1, exported_at: 'x', counts: {} }) },
+      { path: 'data/entries.json', content: JSON.stringify([{ id: 'e1', title: 'kept' }]) },
+    ]
+    const snap = parseFiles(v1)
+    expect(snap.tables.entries).toHaveLength(1)
+    expect(snap.tables.assistant_conversations).toEqual([])
+  })
+})
+
+describe('the backup repo explains itself', () => {
+  // A plain-text backup is only durable if it can be understood without the app
+  // that wrote it. renderReadme existed but was never called, so the repo shipped
+  // with no explanation of what data/ was or what was missing from it.
+  const readme = () => asMap(buildFiles(snapshot)).get('README.md')
+
+  test('a README is committed alongside the data', () => {
+    expect(readme()).toBeDefined()
+  })
+
+  test('it lists every synced table with a row count', () => {
+    const text = readme()
+    for (const t of SYNC_TABLES) expect(text).toContain(`data/${t}.json`)
+    expect(text).toContain('- `data/entries.json` — 3 rows')
+  })
+
+  test('it names what is NOT included, so the gaps are discoverable', () => {
+    const text = readme()
+    for (const t of Object.keys(EXCLUDED_TABLES)) expect(text).toContain(t)
+  })
+
+  test('it does not confuse the restore, which reads only data/*.json', () => {
+    expect(parseFiles(buildFiles(snapshot)).tables.entries).toEqual(snapshot.tables.entries)
   })
 })

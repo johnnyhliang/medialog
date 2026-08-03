@@ -21,24 +21,66 @@ export const SYNC_TABLES = [
   'highlights',
   'resource_sections',
   'feeds',
+  // `opportunities` must precede the two tables that reference it.
+  // `opportunity_state.opportunity_id` is NOT NULL with an FK, so leaving this
+  // table out meant a restore into an empty database failed outright on a
+  // foreign-key violation — in precisely the disaster-recovery case backups
+  // exist for. It is scraped rather than authored, but FK integrity decides
+  // membership here, not authorship.
+  'opportunities',
   'applications',
   'opportunity_state',
+  // Parent before child: messages reference a conversation.
+  'assistant_conversations',
+  'assistant_messages',
+  'menu_items',
+  'quick_links',
+  'programs',
+  'companies',
+  'shared_items',
 ]
 
-// Deliberately NOT backed up:
-//   content_chunks — derived. ~950 rows x 768 floats would add megabytes of churn
-//                    to every commit, and `scripts/rechunk.js` rebuilds it.
-//   feed_items     — derived from feeds, regenerates on the next poll.
-//   capture_log    — an append-only log, not user content.
-//   user_configs   — holds the encrypted GitHub token. Never leaves the database.
+// Tables whose primary key is not `id`, or whose natural key is what a restore
+// should match on. `programs` and `companies` are global catalogues with no
+// user_id and a unique name/slug: upserting them by `id` would hit that unique
+// constraint whenever the same entry already exists under a different id, so
+// they match on the natural key instead. Nothing references either by id, which
+// is what makes that safe.
+export const CONFLICT_TARGETS = {
+  entry_tags: 'entry_id,tag_id',
+  opportunity_state: 'user_id,opportunity_id',
+  programs: 'name',
+  companies: 'slug',
+  shared_items: 'slug',
+}
+
+// Deliberately NOT backed up.
+//
+// The distinction is "can this be rebuilt, and would carrying it do harm" —
+// not "is it unimportant". Anything derived is cheaper to regenerate than to
+// diff on every commit; anything holding a credential must never leave the
+// database; anything the server owns must not be restorable from a file the
+// user can edit.
 export const EXCLUDED_TABLES = {
   content_chunks: 'derived from your notes — rebuilt by scripts/rechunk.js',
+  entry_embeddings: 'derived vectors — rebuilt alongside content_chunks',
   feed_items: 'refetched automatically from your feed list',
   capture_log: 'diagnostic log, not content',
   user_configs: 'contains your access token — intentionally never backed up',
+  capture_tokens: 'capture credentials — revocable secrets, never written to a file',
+  snapshots: 'rows describe files in the snapshots bucket; a git backup cannot carry the bytes',
+  user_entitlements: 'your tier is server-owned and must not be restorable from a file',
+  subscriptions: 'billing state, owned by the payment provider',
+  events: 'product analytics, not your content',
+  ai_usage: 'metering counters, rebuilt by use',
+  admin_actions: 'operator audit log, deliberately unreachable from any client',
+  app_flags: 'global operator switches, not per-account data',
 }
 
-const SCHEMA_VERSION = 1
+// Bumped to 2 when the table set above grew. Older backups still restore: a
+// missing data/<table>.json reads as an empty table, and parseFiles only
+// refuses a backup written by a *newer* schema than it understands.
+const SCHEMA_VERSION = 2
 
 function safeName(s, fallback = 'untitled') {
   const cleaned = String(s ?? '')
@@ -115,6 +157,12 @@ export function buildFiles(snapshot) {
       counts,
     }, null, 2)}\n`,
   })
+
+  // renderReadme existed but was never called, so the backup repo shipped with no
+  // explanation of itself — you would open it years later and have to infer what
+  // data/ was and what was missing from it. The whole point of a plain-text backup
+  // is that it survives without the app to interpret it.
+  files.push({ path: 'README.md', content: renderReadme(snapshot, counts) })
 
   // Readable mirror. Entries without a topic still get a home so nothing is
   // invisible when browsing the repo.

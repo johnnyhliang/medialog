@@ -1,4 +1,4 @@
-import { SYNC_TABLES, buildFiles, summarize } from '../githubSync.js'
+import { SYNC_TABLES, CONFLICT_TARGETS, buildFiles, summarize } from '../githubSync.js'
 
 // Reading and restoring the tables that make up a backup. Every query runs
 // through the user's own client, so RLS — not this file — decides what is
@@ -50,12 +50,7 @@ export async function applySnapshot(supabase, snapshot, onProgress) {
     // Re-stamp ownership: a backup restored into a different account must land
     // on that account, never carry the old user_id across.
     const owned = rows.map((r) => ('user_id' in r ? { ...r, user_id: user.id } : r))
-    // entry_tags is keyed by the pair, not a surrogate id.
-    const onConflict = table === 'entry_tags'
-      ? 'entry_id,tag_id'
-      : table === 'opportunity_state'
-        ? 'user_id,opportunity_id'
-        : 'id'
+    const onConflict = CONFLICT_TARGETS[table] ?? 'id'
 
     for (let i = 0; i < owned.length; i += 500) {
       const batch = owned.slice(i, i + 500)
