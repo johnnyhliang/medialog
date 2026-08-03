@@ -1,8 +1,9 @@
-import { useState } from 'react'
-import { GitBranch, Check, RefreshCw, Download, Upload, AlertTriangle, ExternalLink } from 'lucide-react'
+import { useRef, useState } from 'react'
+import { GitBranch, Check, RefreshCw, Download, Upload, AlertTriangle, ExternalLink, FileArchive } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient.js'
 import { parseFiles, summarize, SYNC_TABLES, EXCLUDED_TABLES } from '../../lib/githubSync.js'
 import { applySnapshot, runBackup } from '../../lib/db/githubBackup.js'
+import { downloadBackupZip, readBackupZip, applyBackupZip } from '../../lib/db/zipBackup.js'
 
 const TABLE_LABEL = {
   topics: 'topics',
@@ -15,6 +16,7 @@ const TABLE_LABEL = {
   feeds: 'feeds',
   applications: 'applications',
   opportunity_state: 'opportunity state',
+  user_configs: 'preferences',
 }
 
 function CountGrid({ counts }) {
@@ -27,6 +29,123 @@ function CountGrid({ counts }) {
         </li>
       ))}
     </ul>
+  )
+}
+
+// Local zip backup — no GitHub connection required. Same data/*.json format
+// buildFiles() already produces, just downloaded instead of committed.
+function LocalBackupSection({ addToast, onRefreshData }) {
+  const [busy, setBusy] = useState(null) // 'export' | 'import' | null
+  const [progress, setProgress] = useState(null)
+  const [pendingImport, setPendingImport] = useState(null)
+  const [lastImport, setLastImport] = useState(null)
+  const fileInputRef = useRef(null)
+
+  async function handleDownload() {
+    setBusy('export')
+    try {
+      await downloadBackupZip(supabase, (step) => setProgress(`${step}…`))
+      addToast('Backup downloaded', 'success')
+    } catch (e) {
+      addToast(`Backup failed: ${e.message}`, 'error')
+    }
+    setProgress(null)
+    setBusy(null)
+  }
+
+  function handlePickFile() {
+    fileInputRef.current?.click()
+  }
+
+  async function handleFileChosen(e) {
+    const file = e.target.files?.[0]
+    e.target.value = '' // allow re-picking the same file
+    if (!file) return
+    setBusy('import')
+    setLastImport(null)
+    try {
+      const snapshot = await readBackupZip(file)
+      setPendingImport({ snapshot, counts: summarize(snapshot) })
+    } catch (err) {
+      addToast(`Could not read backup: ${err.message}`, 'error')
+    }
+    setBusy(null)
+  }
+
+  async function handleConfirmImport() {
+    setBusy('import')
+    try {
+      const applied = await applyBackupZip(
+        supabase,
+        pendingImport.snapshot,
+        (t) => setProgress(`restoring ${TABLE_LABEL[t] ?? t}…`),
+      )
+      setPendingImport(null)
+      setLastImport(applied)
+      addToast('Import complete', 'success')
+      onRefreshData?.()
+    } catch (e) {
+      addToast(`Import failed: ${e.message}`, 'error')
+    }
+    setProgress(null)
+    setBusy(null)
+  }
+
+  return (
+    <div className="card">
+      <h3 className="gh-card-title">Local backup</h3>
+      <p className="muted gh-hint">
+        Download a zip of everything below, or restore from one you downloaded before —
+        after deleting your account, moving to a new one, or just as a copy outside GitHub.
+      </p>
+      <div className="actions">
+        <button className="primary" onClick={handleDownload} disabled={busy}>
+          <Download size={13} /> {busy === 'export' ? 'zipping…' : 'Download zip'}
+        </button>
+        <button onClick={handlePickFile} disabled={busy}>
+          <FileArchive size={13} /> {busy === 'import' ? 'reading…' : 'Import from zip'}
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".zip"
+          onChange={handleFileChosen}
+          style={{ display: 'none' }}
+        />
+      </div>
+
+      {progress && (
+        <p className="gh-progress"><RefreshCw size={12} className="gh-spin" /> {progress}</p>
+      )}
+
+      {pendingImport && (
+        <div className="card gh-restore">
+          <h3 className="gh-card-title">
+            <AlertTriangle size={15} /> Import this backup?
+          </h3>
+          <p className="muted">
+            Taken {new Date(pendingImport.snapshot.exported_at).toLocaleString()}. Rows are matched by
+            id, so anything already in your library is updated in place rather than duplicated.
+            Nothing is deleted. Any public share links in this backup are restored inactive —
+            re-enable them individually afterward.
+          </p>
+          <CountGrid counts={pendingImport.counts} />
+          <div className="actions">
+            <button className="danger" onClick={handleConfirmImport} disabled={busy}>
+              {busy === 'import' ? 'importing…' : 'Import'}
+            </button>
+            <button onClick={() => setPendingImport(null)} disabled={busy}>Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {lastImport && !pendingImport && (
+        <div className="card">
+          <h3 className="gh-card-title">Imported</h3>
+          <CountGrid counts={lastImport} />
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -161,6 +280,8 @@ export default function GitHubTab({ config, setConfig, addToast, onRefreshData }
           </div>
           <button className="primary" onClick={handleConnect}>Connect GitHub</button>
         </div>
+
+        <LocalBackupSection addToast={addToast} onRefreshData={onRefreshData} />
       </section>
     )
   }
@@ -306,6 +427,8 @@ export default function GitHubTab({ config, setConfig, addToast, onRefreshData }
           ))}
         </ul>
       </div>
+
+      <LocalBackupSection addToast={addToast} onRefreshData={onRefreshData} />
     </section>
   )
 }

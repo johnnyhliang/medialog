@@ -1,4 +1,4 @@
-import { SYNC_TABLES, CONFLICT_TARGETS, buildFiles, summarize } from '../githubSync.js'
+import { SYNC_TABLES, CONFLICT_TARGETS, USER_CONFIG_EXPORT_FIELDS, buildFiles, summarize } from '../githubSync.js'
 
 // Reading and restoring the tables that make up a backup. Every query runs
 // through the user's own client, so RLS — not this file — decides what is
@@ -26,7 +26,19 @@ export async function collectSnapshot(supabase, onProgress) {
     onProgress?.(table)
     tables[table] = await readAll(supabase, table)
   }
-  return { exported_at: new Date().toISOString(), tables }
+
+  onProgress?.('user_configs')
+  const { data: { user } } = await supabase.auth.getUser()
+  const { data: configRow } = await supabase
+    .from('user_configs')
+    .select(USER_CONFIG_EXPORT_FIELDS.join(','))
+    .eq('user_id', user.id)
+    .maybeSingle()
+  const user_config = configRow
+    ? Object.fromEntries(USER_CONFIG_EXPORT_FIELDS.map((f) => [f, configRow[f] ?? null]))
+    : null
+
+  return { exported_at: new Date().toISOString(), tables, user_config }
 }
 
 /**
@@ -36,7 +48,12 @@ export async function collectSnapshot(supabase, onProgress) {
  *
  * Nothing is deleted: a restore can only add rows back or update them in place.
  */
-export async function applySnapshot(supabase, snapshot, onProgress) {
+// `source: 'zip'` marks a restore as coming from a downloaded file rather than
+// the connected GitHub repo. Zip backups can be handed around (a new machine,
+// a re-created account) far more casually than a private repo, so a restored
+// share link is held inactive until the owner deliberately re-enables it —
+// GitHub restore keeps today's live-on-restore behavior.
+export async function applySnapshot(supabase, snapshot, onProgress, { source } = {}) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Not signed in')
 
@@ -49,7 +66,11 @@ export async function applySnapshot(supabase, snapshot, onProgress) {
 
     // Re-stamp ownership: a backup restored into a different account must land
     // on that account, never carry the old user_id across.
-    const owned = rows.map((r) => ('user_id' in r ? { ...r, user_id: user.id } : r))
+    const owned = rows.map((r) => {
+      const row = 'user_id' in r ? { ...r, user_id: user.id } : { ...r }
+      if (table === 'shared_items' && source === 'zip') row.active = false
+      return row
+    })
     const onConflict = CONFLICT_TARGETS[table] ?? 'id'
 
     for (let i = 0; i < owned.length; i += 500) {
@@ -59,6 +80,18 @@ export async function applySnapshot(supabase, snapshot, onProgress) {
       applied[table] += batch.length
     }
   }
+
+  if (snapshot.user_config) {
+    onProgress?.('user_configs')
+    // Payload carries only the allowlisted fields, so upsert cannot touch
+    // github_token/repo_name/auto_backup even though they share the row.
+    const { error } = await supabase
+      .from('user_configs')
+      .upsert({ user_id: user.id, ...snapshot.user_config }, { onConflict: 'user_id' })
+    if (error) throw new Error(`user_configs: ${error.message}`)
+    applied.user_configs = 1
+  }
+
   return applied
 }
 

@@ -40,8 +40,8 @@ Deno.serve(async (req) => {
   const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
 
   const { data: share } = await admin
-    .from('shared_items').select('kind, ref_id').eq('slug', slug).maybeSingle()
-  if (!share || share.kind !== 'entry') return notFound()
+    .from('shared_items').select('kind, ref_id, active').eq('slug', slug).maybeSingle()
+  if (!share || share.kind !== 'entry' || share.active === false) return notFound()
 
   const { data: entry } = await admin
     .from('entries').select('title, note, url, created_at').eq('id', share.ref_id).is('deleted_at', null).maybeSingle()

@@ -66,7 +66,6 @@ export const EXCLUDED_TABLES = {
   entry_embeddings: 'derived vectors — rebuilt alongside content_chunks',
   feed_items: 'refetched automatically from your feed list',
   capture_log: 'diagnostic log, not content',
-  user_configs: 'contains your access token — intentionally never backed up',
   capture_tokens: 'capture credentials — revocable secrets, never written to a file',
   snapshots: 'rows describe files in the snapshots bucket; a git backup cannot carry the bytes',
   user_entitlements: 'your tier is server-owned and must not be restorable from a file',
@@ -77,10 +76,16 @@ export const EXCLUDED_TABLES = {
   app_flags: 'global operator switches, not per-account data',
 }
 
-// Bumped to 2 when the table set above grew. Older backups still restore: a
-// missing data/<table>.json reads as an empty table, and parseFiles only
-// refuses a backup written by a *newer* schema than it understands.
-const SCHEMA_VERSION = 2
+// user_configs holds real preferences (theme, modules) alongside secrets
+// (github_token) and backup plumbing (repo_name, auto_backup) in one row.
+// Excluding the whole table — the simple option — throws the preferences out
+// with the secret. This is the one table backed up by field allowlist instead
+// of by whole row.
+export const USER_CONFIG_EXPORT_FIELDS = ['theme', 'modules']
+
+// Bumped to 3 for data/user_configs.json (theme/modules only). Older backups
+// still restore: a missing file reads as "no preferences to restore".
+const SCHEMA_VERSION = 3
 
 function safeName(s, fallback = 'untitled') {
   const cleaned = String(s ?? '')
@@ -121,6 +126,8 @@ function renderReadme(snapshot, counts) {
     '## Contents',
     '',
     ...SYNC_TABLES.map((t) => `- \`data/${t}.json\` — ${counts[t] ?? 0} rows`),
+    `- \`data/user_configs.json\` — theme + module preferences only ` +
+      `(${USER_CONFIG_EXPORT_FIELDS.join(', ')}); your GitHub token and repo settings are never written here`,
     '',
     '## Not included',
     '',
@@ -147,6 +154,15 @@ export function buildFiles(snapshot) {
       content: `${JSON.stringify(rows, null, 2)}\n`,
     })
   }
+
+  // Field allowlist, not a full row dump: github_token/repo_name/auto_backup
+  // etc. must never reach a file. userConfig is { theme, modules } or null.
+  const userConfig = snapshot.user_config ?? null
+  counts.user_configs = userConfig ? 1 : 0
+  files.push({
+    path: 'data/user_configs.json',
+    content: `${JSON.stringify(userConfig ? [userConfig] : [], null, 2)}\n`,
+  })
 
   files.push({
     path: 'data/manifest.json',
@@ -214,12 +230,29 @@ export function parseFiles(files) {
     if (!Array.isArray(parsed)) throw new Error(`data/${table}.json is not an array`)
     tables[table] = parsed
   }
-  return { exported_at: manifest.exported_at, schema_version: manifest.schema_version, tables }
+
+  // Read back through the same allowlist used to write it, in case an older
+  // or hand-edited backup file carries more than {theme, modules}.
+  let user_config = null
+  const userConfigRaw = byPath.get('data/user_configs.json')
+  if (userConfigRaw) {
+    const parsed = JSON.parse(userConfigRaw)
+    if (!Array.isArray(parsed)) throw new Error('data/user_configs.json is not an array')
+    if (parsed[0]) {
+      user_config = {}
+      for (const field of USER_CONFIG_EXPORT_FIELDS) {
+        if (field in parsed[0]) user_config[field] = parsed[0][field]
+      }
+    }
+  }
+
+  return { exported_at: manifest.exported_at, schema_version: manifest.schema_version, tables, user_config }
 }
 
 /** Row counts per table, for showing "what am I about to restore". */
 export function summarize(snapshot) {
   const out = {}
   for (const table of SYNC_TABLES) out[table] = (snapshot.tables?.[table] ?? []).length
+  out.user_configs = snapshot.user_config ? 1 : 0
   return out
 }

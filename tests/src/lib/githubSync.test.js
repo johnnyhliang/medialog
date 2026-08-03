@@ -36,7 +36,20 @@ describe('buildFiles', () => {
 
   test('never writes derived or secret tables', () => {
     const paths = buildFiles(snapshot).map((f) => f.path).join(' ')
-    expect(paths).not.toMatch(/content_chunks|feed_items|capture_log|user_configs/)
+    expect(paths).not.toMatch(/content_chunks|feed_items|capture_log/)
+  })
+
+  test('user_configs is written by allowlist only, never the secret fields', () => {
+    const files = asMap(buildFiles({ ...snapshot, user_config: { theme: { palette: 'warm' }, modules: {} } }))
+    const content = files.get('data/user_configs.json')
+    expect(content).toBeDefined()
+    expect(content).not.toMatch(/github_token|repo_name|auto_backup/)
+    expect(JSON.parse(content)).toEqual([{ theme: { palette: 'warm' }, modules: {} }])
+  })
+
+  test('user_configs with no snapshot preferences writes an empty array', () => {
+    const content = asMap(buildFiles(snapshot)).get('data/user_configs.json')
+    expect(JSON.parse(content)).toEqual([])
   })
 
   test('mirrors entries as markdown under their topic, sanitising path segments', () => {
@@ -71,7 +84,7 @@ describe('buildFiles', () => {
     const manifest = JSON.parse(asMap(buildFiles(snapshot)).get('data/manifest.json'))
     expect(manifest.counts.entries).toBe(3)
     expect(manifest.counts.topics).toBe(2)
-    expect(manifest.schema_version).toBe(2)
+    expect(manifest.schema_version).toBe(3)
   })
 })
 
@@ -95,6 +108,25 @@ describe('parseFiles', () => {
     const parsed = parseFiles(buildFiles(snapshot))
     expect(parsed.tables).toEqual(snapshot.tables)
     expect(parsed.exported_at).toBe(snapshot.exported_at)
+  })
+
+  test('round-trips user_config through the same allowlist, dropping anything else', () => {
+    const withConfig = { ...snapshot, user_config: { theme: { palette: 'warm' }, modules: { assistant: false } } }
+    const parsed = parseFiles(buildFiles(withConfig))
+    expect(parsed.user_config).toEqual({ theme: { palette: 'warm' }, modules: { assistant: false } })
+  })
+
+  test('strips secret fields even from a hand-edited backup file', () => {
+    const files = buildFiles(snapshot).map((f) =>
+      f.path === 'data/user_configs.json'
+        ? { ...f, content: JSON.stringify([{ theme: { palette: 'warm' }, github_token: 'leaked' }]) }
+        : f,
+    )
+    expect(parseFiles(files).user_config).toEqual({ theme: { palette: 'warm' } })
+  })
+
+  test('a backup with no preferences parses to a null user_config', () => {
+    expect(parseFiles(buildFiles(snapshot)).user_config).toBeNull()
   })
 
   test('ignores the markdown mirror entirely', () => {
@@ -135,7 +167,8 @@ describe('summarize', () => {
     const counts = summarize(snapshot)
     expect(counts.entries).toBe(3)
     expect(counts.highlights).toBe(0)
-    expect(Object.keys(counts).sort()).toEqual([...SYNC_TABLES].sort())
+    expect(counts.user_configs).toBe(0)
+    expect(Object.keys(counts).sort()).toEqual([...SYNC_TABLES, 'user_configs'].sort())
   })
 })
 
