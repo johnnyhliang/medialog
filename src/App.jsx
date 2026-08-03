@@ -56,7 +56,6 @@ const DeepTopicView = lazy(() => import('./components/DeepTopicView.jsx'))
 const MetricsView = lazy(() => import('./components/MetricsView.jsx'))
 import TopicView from './components/TopicView.jsx'
 import CatchOverlay from './components/CatchOverlay.jsx'
-import ExportModal from './components/ExportModal.jsx'
 import VersionHistoryModal from './components/VersionHistoryModal.jsx'
 import { useFilePreview } from './hooks/useFilePreview.js'
 import useToast from './hooks/useToast.js'
@@ -69,7 +68,6 @@ import { useTrash } from './hooks/useTrash.js'
 import { useRevisit } from './hooks/useRevisit.js'
 import { useTags } from './hooks/useTags.js'
 import { useVersions } from './hooks/useVersions.js'
-import { useExport } from './hooks/useExport.js'
 import { useArchiveToast } from './hooks/useArchiveToast.js'
 import { useTheme } from './hooks/useTheme.js'
 const FilePreviewModal = lazy(() => import('./components/FilePreviewModal.jsx'))
@@ -84,7 +82,7 @@ function Workspace() {
   const { revisitEntries, setRevisitEntries, recentActivity, setRecentActivity, applySeen } = useRevisit()
   const { allTags, setAllTags, tagColors, applyUpdateTagColor } = useTags()
   const { historyFor, versions, openHistory, closeHistory } = useVersions()
-  const { exportModal, openExportLoading, setExportResult, closeExportModal } = useExport()
+  const [exportBusy, setExportBusy] = useState(false)
   const { archiveToast, setArchiveToast } = useArchiveToast()
   const { palette: themePalette, style: themeStyle, setPalette, setStyle } = useTheme()
   const [trashToast, setTrashToast] = useState(() => {
@@ -949,34 +947,29 @@ function Workspace() {
     applySeen(entry.id)
   }
 
-  async function handleExportClick() {
-    openExportLoading()
+  // Export downloads directly. It used to open a confirm modal showing a size
+  // estimate, which cost a full extra `entries` scan purely to render a number the
+  // user could not act on — the only real choice was Export or Cancel, and they had
+  // already chosen by clicking Export. The attachment caveat that modal carried is
+  // now a toast, so nothing is lost but the interstitial.
+  async function handleExport() {
+    if (exportBusy) return
+    setExportBusy(true)
     try {
-      const { data, error } = await supabase
-        .from('entries')
-        .select('id, note, title, url')
-        .is('deleted_at', null)
-      if (error) throw error
-      const rawBytes = (data || []).reduce((sum, e) => {
-        return sum + (e.note?.length || 0) + (e.title?.length || 0) + (e.url?.length || 0)
-      }, 0)
-      const estimatedKB = Math.round((rawBytes * 1.15 * 0.35) / 1024) || 1
-      setExportResult(estimatedKB, data.length)
-    } catch {
-      setExportResult(null, null)
+      const all = []
+      for (const t of topics) {
+        const rows = await listEntriesByTopic(supabase, t.id)
+        all.push(...rows)
+      }
+      const files = buildMarkdownFiles(topics, all)
+      const blob = await buildZip(files)
+      downloadBlob(blob, `medialog-${new Date().toISOString().slice(0, 10)}.zip`)
+      addToast(`Exported ${all.length} entries — attachments aren’t included`, 'success')
+    } catch (e) {
+      addToast(e.message || 'Export failed', 'error')
+    } finally {
+      setExportBusy(false)
     }
-  }
-
-  async function handleExportConfirm() {
-    closeExportModal()
-    const all = []
-    for (const t of topics) {
-      const rows = await listEntriesByTopic(supabase, t.id)
-      all.push(...rows)
-    }
-    const files = buildMarkdownFiles(topics, all)
-    const blob = await buildZip(files)
-    downloadBlob(blob, `medialog-${new Date().toISOString().slice(0, 10)}.zip`)
   }
 
   // Single topic → single .md, sized to drop straight into a Claude Project.
@@ -1017,7 +1010,7 @@ function Workspace() {
             view={view}
             navigateTo={navigateTo}
             sideEffects={{ loadInbox, loadRevisit, loadTrash }}
-            onExport={handleExportClick}
+            onExport={handleExport}
             isModuleVisible={isModuleVisible}
           />
           <hr className="topic-divider" />
@@ -1268,14 +1261,6 @@ function Workspace() {
         </Suspense>
       )}
       <Toast toasts={toasts} onDismiss={dismissToast} />
-      {exportModal && (
-        <ExportModal
-          exportModal={exportModal}
-          topics={topics}
-          onConfirm={handleExportConfirm}
-          onClose={closeExportModal}
-        />
-      )}
       {historyFor && (
         <VersionHistoryModal
           versions={versions}

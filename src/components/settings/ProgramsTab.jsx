@@ -3,7 +3,12 @@ import { useEffect, useState, useCallback } from 'react'
 const CATEGORIES = ['fellowship', 'program', 'cohort', 'internship', 'research']
 const EMPTY_FORM = { name: '', url: '', category: 'fellowship', deadline: '', notes: '' }
 
-export default function ProgramsTab({ supabase }) {
+// These controls save on change rather than behind a Save button, which is the
+// right shape for a table of toggles and dates. What was wrong is that they
+// updated local state optimistically and never checked the write: a rejected
+// update left the row looking saved until a reload silently reverted it. Every
+// write now reverts its own optimistic change and says so.
+export default function ProgramsTab({ supabase, addToast = () => {} }) {
   const [programs, setPrograms] = useState([])
   const [showAdd, setShowAdd] = useState(false)
   const [form, setForm] = useState(EMPTY_FORM)
@@ -17,19 +22,30 @@ export default function ProgramsTab({ supabase }) {
 
   useEffect(() => { load() }, [load])
 
+  // On failure, reload rather than restoring a remembered value. Editing a date
+  // fires a change per keystroke, so each call would capture the *previous
+  // optimistic* value as its rollback target and undo only the last keystroke.
+  // Re-reading is the only thing that reliably makes the UI match the database.
+  async function revert(error) {
+    addToast(`Couldn’t save: ${error.message}`, 'error')
+    await load()
+  }
+
   async function toggleWindow(id, current) {
     setPrograms((prev) => prev.map((p) => p.id === id ? { ...p, window_open: !current } : p))
-    await supabase.from('programs').update({ window_open: !current }).eq('id', id)
+    const { error } = await supabase.from('programs').update({ window_open: !current }).eq('id', id)
+    if (error) await revert(error)
   }
 
   async function updateDeadline(id, deadline) {
     setPrograms((prev) => prev.map((p) => p.id === id ? { ...p, deadline: deadline || null } : p))
-    await supabase.from('programs').update({ deadline: deadline || null }).eq('id', id)
+    const { error } = await supabase.from('programs').update({ deadline: deadline || null }).eq('id', id)
+    if (error) await revert(error)
   }
 
   async function handleAdd(e) {
     e.preventDefault()
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('programs')
       .insert({
         name: form.name.trim(),
@@ -41,7 +57,13 @@ export default function ProgramsTab({ supabase }) {
       })
       .select()
       .single()
-    if (data) setPrograms((prev) => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)))
+    // Keep the form open and populated on failure — clearing it discards what the
+    // user typed for a program that was never actually created.
+    if (error || !data) {
+      addToast(`Couldn’t add program: ${error?.message ?? 'unknown error'}`, 'error')
+      return
+    }
+    setPrograms((prev) => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)))
     setForm(EMPTY_FORM)
     setShowAdd(false)
   }
@@ -105,6 +127,12 @@ export default function ProgramsTab({ supabase }) {
           <div>
             <label>Deadline</label>
             <input type="date" value={form.deadline} onChange={(e) => setForm((f) => ({ ...f, deadline: e.target.value }))} />
+          </div>
+          {/* `notes` was in the form state and the insert but had no input, so it
+              was written as null every time. */}
+          <div>
+            <label>Notes</label>
+            <input placeholder="Optional" value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} />
           </div>
           <button type="submit">Save</button>
           <button type="button" onClick={() => setShowAdd(false)} style={{ background: 'none', border: 'none', color: 'var(--muted)' }}>Cancel</button>

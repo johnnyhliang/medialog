@@ -6,6 +6,7 @@ import {
   listConversations, createConversation, listMessages, addMessage,
   touchConversation, deleteConversation, titleFromQuestion,
 } from '../lib/db/conversations.js'
+import ConfirmModal from './ConfirmModal.jsx'
 
 // Cursor-style docked assistant. Collapsed to a thin edge tab; expands to a
 // right-hand panel that answers questions from the user's own notes with
@@ -44,6 +45,7 @@ export default function AssistantPanel({ supabase, onOpenEntry, onClose, onOpenS
   const [conversationId, setConversationId] = useState(null)
   const [conversations, setConversations] = useState([])
   const [showHistory, setShowHistory] = useState(false)
+  const [pendingDelete, setPendingDelete] = useState(null)
   const [input, setInput] = useState('')
   const [busy, setBusy] = useState(false)
   // Which path the in-flight question took, so the spinner tells the truth. Since
@@ -84,11 +86,16 @@ export default function AssistantPanel({ supabase, onOpenEntry, onClose, onOpenS
     } catch { /* leave current thread as-is */ }
   }
 
-  async function removeConversation(id, e) {
-    e.stopPropagation()
-    try { await deleteConversation(supabase, id) } catch { /* best-effort */ }
-    setConversations((prev) => prev.filter((c) => c.id !== id))
-    if (id === conversationId) newChat()
+  // Deleting a thread is irreversible and the button sits inches from the row you
+  // click to open one, so it asks first. Confirm state holds the whole conversation
+  // rather than the id, so the prompt can name what is about to be lost.
+  async function removeConversation() {
+    const doomed = pendingDelete
+    if (!doomed) return
+    setPendingDelete(null)
+    try { await deleteConversation(supabase, doomed.id) } catch { /* best-effort */ }
+    setConversations((prev) => prev.filter((c) => c.id !== doomed.id))
+    if (doomed.id === conversationId) newChat()
   }
 
   // Move a thread to the top of the list after it gets a new message.
@@ -189,7 +196,7 @@ export default function AssistantPanel({ supabase, onOpenEntry, onClose, onOpenS
                 <span className="asst-history-title">{c.title}</span>
                 <button
                   className="asst-history-del"
-                  onClick={(e) => removeConversation(c.id, e)}
+                  onClick={(e) => { e.stopPropagation(); setPendingDelete(c) }}
                   aria-label={`Delete ${c.title}`}
                   title="Delete conversation"
                 >
@@ -264,6 +271,15 @@ export default function AssistantPanel({ supabase, onOpenEntry, onClose, onOpenS
           <CornerDownLeft size={15} />
         </button>
       </div>
+
+      {pendingDelete && (
+        <ConfirmModal
+          message={`Delete “${pendingDelete.title}”? This conversation and its messages are gone for good.`}
+          confirmLabel="Delete"
+          onConfirm={removeConversation}
+          onCancel={() => setPendingDelete(null)}
+        />
+      )}
     </aside>
   )
 }

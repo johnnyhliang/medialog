@@ -4,7 +4,9 @@ const ATS_OPTIONS = ['greenhouse', 'lever', 'ashby']
 
 const EMPTY_FORM = { slug: '', name: '', ats: 'greenhouse', tags: 'startup' }
 
-export default function CompaniesTab({ supabase }) {
+// Saves on change, not behind a Save button. Every write reverts its own
+// optimistic update on failure — see ProgramsTab for why.
+export default function CompaniesTab({ supabase, addToast = () => {} }) {
   const [rows, setRows] = useState([])
   const [form, setForm] = useState(EMPTY_FORM)
   const [loading, setLoading] = useState(true)
@@ -17,26 +19,38 @@ export default function CompaniesTab({ supabase }) {
 
   useEffect(() => { load() }, [load])
 
+  // Reload rather than restore a remembered value — see ProgramsTab for why.
+  async function revert(error, verb = 'save') {
+    addToast(`Couldn’t ${verb}: ${error.message}`, 'error')
+    await load()
+  }
+
   async function toggleEnabled(id, current) {
     setRows((prev) => prev.map((r) => r.id === id ? { ...r, enabled: !current } : r))
-    await supabase.from('companies').update({ enabled: !current }).eq('id', id)
+    const { error } = await supabase.from('companies').update({ enabled: !current }).eq('id', id)
+    if (error) await revert(error)
   }
 
   async function deleteRow(id) {
     setRows((prev) => prev.filter((r) => r.id !== id))
-    await supabase.from('companies').delete().eq('id', id)
+    const { error } = await supabase.from('companies').delete().eq('id', id)
+    if (error) await revert(error, 'delete')
   }
 
   async function handleAdd(e) {
     e.preventDefault()
     if (!form.slug.trim() || !form.name.trim()) return
     const tags = form.tags.split(',').map((t) => t.trim()).filter(Boolean)
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('companies')
       .insert({ slug: form.slug.trim(), name: form.name.trim(), ats: form.ats, tags, enabled: true })
       .select()
       .single()
-    if (data) setRows((prev) => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)))
+    if (error || !data) {
+      addToast(`Couldn’t add company: ${error?.message ?? 'unknown error'}`, 'error')
+      return
+    }
+    setRows((prev) => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)))
     setForm(EMPTY_FORM)
   }
 

@@ -1,6 +1,8 @@
 import { useEffect, useState, useCallback } from 'react'
 
-export default function KeywordsTab({ supabase }) {
+// Saves on change, not behind a Save button. The write reverts its own optimistic
+// update on failure — see ProgramsTab for why.
+export default function KeywordsTab({ supabase, addToast = () => {} }) {
   const [keywords, setKeywords] = useState([])
   const [userId, setUserId] = useState(null)
   const [input, setInput] = useState('')
@@ -23,15 +25,22 @@ export default function KeywordsTab({ supabase }) {
 
   async function save(next) {
     setKeywords(next)
-    await supabase.from('user_configs').update({ radar_keywords: next }).eq('user_id', userId)
+    const { error } = await supabase.from('user_configs').update({ radar_keywords: next }).eq('user_id', userId)
+    if (error) {
+      addToast(`Couldn’t save: ${error.message}`, 'error')
+      await load()
+      return false
+    }
+    return true
   }
 
   async function add(e) {
     e.preventDefault()
     const kw = input.trim().toLowerCase()
     if (!kw || keywords.includes(kw)) return
-    await save([...keywords, kw])
-    setInput('')
+    // Only clear the input once the keyword is actually persisted, so a failed
+    // save doesn't also lose what was typed.
+    if (await save([...keywords, kw])) setInput('')
   }
 
   async function remove(kw) {

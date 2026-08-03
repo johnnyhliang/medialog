@@ -19,7 +19,6 @@ import { loadEntitlement } from '../lib/entitlements.js'
 export default function SettingsView({ topics, onRefreshData, addToast, allTags = [], onUpdateTagColor, archiveToast, onToggleArchiveToast, trashToast, onToggleTrashToast, themePalette, themeStyle, onSetPalette, onSetStyle, assistantEnabled, onToggleAssistant, isModuleVisible = () => true }) {
   const [config, setConfig] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
   const [pendingColors, setPendingColors] = useState({})
   const [tab, setTab] = useState('appearance')
   const [twitterToken, setTwitterToken] = useState('')
@@ -75,23 +74,6 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
       setTwitterToken(data.twitter_auth_token ?? '')
     }
     setLoading(false)
-  }
-
-
-  async function handleSave() {
-    setSaving(true)
-    const { error } = await supabase
-      .from('user_configs')
-      .update({
-        repo_name: config.repo_name,
-        is_private: config.is_private,
-        auto_backup: config.auto_backup,
-      })
-      .eq('user_id', config.user_id)
-    
-    if (error) addToast(`Error: ${error.message}`, 'error')
-    else addToast('Settings saved', 'success')
-    setSaving(false)
   }
 
 
@@ -211,7 +193,12 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
                   >
                     <span className="settings-result-label">{r.label}</span>
                     <span className="settings-result-tab">
-                      {(ALL_TABS.find((t) => t.id === r.tab) || {}).label || r.tab}
+                      {/* Was `ALL_TABS`, which does not exist — this threw a
+                          ReferenceError the moment any settings search result
+                          rendered. The unfiltered list is right here: the label
+                          should name the tab a result lives in even while the
+                          module filter is narrowing what's shown. */}
+                      {(SETTINGS_TABS.find((t) => t.id === r.tab) || {}).label || r.tab}
                     </span>
                   </button>
                 </li>
@@ -469,9 +456,9 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
         </section>
       )}
 
-      {activeTab === 'companies' && <CompaniesTab supabase={supabase} />}
-      {activeTab === 'keywords' && <KeywordsTab supabase={supabase} />}
-      {activeTab === 'programs' && <ProgramsTab supabase={supabase} />}
+      {activeTab === 'companies' && <CompaniesTab supabase={supabase} addToast={addToast} />}
+      {activeTab === 'keywords' && <KeywordsTab supabase={supabase} addToast={addToast} />}
+      {activeTab === 'programs' && <ProgramsTab supabase={supabase} addToast={addToast} />}
 
       {activeTab === 'bookmarklet' && (
         <section>

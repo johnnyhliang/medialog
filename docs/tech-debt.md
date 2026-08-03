@@ -68,16 +68,39 @@ not diagnoses. Verify before fixing.
 1. **AI search runs retrieval on every prompt.** It shouldn't have to, unless the
    prompt actually asks for something from the library. Cheap wins here: fewer
    embed calls per chat turn, faster replies.
-2. **Deleting a past AI conversation has no confirm.** Irreversible, one click.
-3. **The export button pulls up the export UI on click** when it shouldn't —
-   clicking export should export.
+2. ~~**Deleting a past AI conversation has no confirm.**~~ — **FIXED 2026-07-31.**
+   Now routed through the existing `ConfirmModal`, naming the thread in the prompt
+   (a bare "Are you sure?" gives no way to notice the wrong row's button was hit —
+   the trash icon sits inside the row you click to open a conversation).
+3. ~~**The export button pulls up the export UI on click.**~~ — **FIXED
+   2026-07-31.** Export downloads directly. The modal it opened showed a size
+   estimate that cost **a full extra `entries` scan** to compute, in service of a
+   choice the user had already made by clicking Export. `ExportModal.jsx` and
+   `useExport.js` are deleted; the attachments caveat moved into the success toast.
 4. **Everything is very slow to load, including the Metrics page.** Broad enough
    that it needs measurement before a fix; Metrics being slow too suggests it is
    not one heavy view but something shared (initial query fan-out, bundle size, or
    an unbatched round trip per surface).
-5. **Settings has no save affordance for some tabs.** Appearance persists; Programs
-   does not — it needs an explicit save button, or the same auto-persist the
-   Appearance tab already has. Inconsistency between tabs is the real bug.
+5. ~~**Settings has no save affordance for some tabs** (Programs doesn't stick).~~ —
+   **FIXED 2026-07-31, and it was not a missing button.** Programs *does* save on
+   change; what was broken is that `ProgramsTab`, `CompaniesTab` and `KeywordsTab`
+   all updated local state optimistically and **never checked the write's error**.
+   A rejected update left the row looking saved until a reload silently reverted
+   it — indistinguishable from "there's no save button." All three now surface the
+   failure and re-read from the server.
+
+   **Rolling back to a remembered previous value is not sufficient**, which the
+   first attempt got wrong: a date field fires a change per keystroke, so each call
+   captures the *previous optimistic* value as its rollback target and undoes only
+   the last keystroke. Re-reading is the only thing that reliably makes the UI match
+   the database.
+
+   Two things found while in there: `ALL_TABS` was referenced in `SettingsView.jsx`
+   and **does not exist** — a `ReferenceError` that fired the moment any settings
+   *search result* rendered (now `SETTINGS_TABS`); and `ProgramsTab`'s `notes` field
+   was in the form state and the insert but had **no input**, so it was written as
+   null every time. Every existing test for these tabs mocked `error: null`, so the
+   entire failure path had no coverage — that is why this survived.
 6. **Topic-scoped search is implicit and unclear.** Searching inside a topic
    silently excludes everything outside it, with no visible indication of scope or
    way to widen. Needs design, not a patch.
