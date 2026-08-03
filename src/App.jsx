@@ -1147,8 +1147,9 @@ function Workspace() {
           )}
           {view === 'progress' && (
             <ProgressView
-              topicName={topics.find((t) => t.id === selectedId)?.name || ''}
-              entries={entries}
+              supabase={supabase}
+              topics={topics}
+              initialTopicId={selectedId}
             />
           )}
           {view === 'revisit' && (
