@@ -69,6 +69,7 @@ import { useRevisit } from './hooks/useRevisit.js'
 import { useTags } from './hooks/useTags.js'
 import { useVersions } from './hooks/useVersions.js'
 import { useArchiveToast } from './hooks/useArchiveToast.js'
+import { readBoolPref, writePref } from './lib/localPref.js'
 import { useTheme } from './hooks/useTheme.js'
 const FilePreviewModal = lazy(() => import('./components/FilePreviewModal.jsx'))
 
@@ -85,9 +86,7 @@ function Workspace() {
   const [exportBusy, setExportBusy] = useState(false)
   const { archiveToast, setArchiveToast } = useArchiveToast()
   const { palette: themePalette, style: themeStyle, setPalette, setStyle } = useTheme()
-  const [trashToast, setTrashToast] = useState(() => {
-    try { return localStorage.getItem('medialog_trash_toast') !== 'false' } catch { return true }
-  })
+  const [trashToast, setTrashToast] = useState(() => readBoolPref('medialog_trash_toast', true))
   const { previewUrl, openPreview, closePreview } = useFilePreview()
   const { toasts, addToast, dismissToast } = useToast()
 
@@ -112,9 +111,7 @@ function Workspace() {
   )
   const showFounder = tier === 'founder' || isDev
   // Assistant: founder-only, and separately enable/disableable (persisted).
-  const [assistantEnabled, setAssistantEnabled] = useState(() => {
-    try { return localStorage.getItem('medialog_assistant_enabled') !== 'false' } catch { return true }
-  })
+  const [assistantEnabled, setAssistantEnabled] = useState(() => readBoolPref('medialog_assistant_enabled', true))
   const [assistantOpen, setAssistantOpen] = useState(false)
   function toggleAssistant() {
     setAssistantOpen((v) => !v)
@@ -576,7 +573,7 @@ function Workspace() {
 
   function handleToggleTrashToast(val) {
     setTrashToast(val)
-    try { localStorage.setItem('medialog_trash_toast', val) } catch {}
+    writePref('medialog_trash_toast', val)
   }
 
   async function handleUndoTrash(entry) {
@@ -1178,7 +1175,7 @@ function Workspace() {
               assistantEnabled={showFounder ? assistantEnabled : undefined}
               onToggleAssistant={showFounder ? ((v) => {
                 setAssistantEnabled(v)
-                try { localStorage.setItem('medialog_assistant_enabled', String(v)) } catch {}
+                writePref('medialog_assistant_enabled', v)
                 if (!v) setAssistantOpen(false)
               }) : undefined}
             />

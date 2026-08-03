@@ -101,6 +101,29 @@ not diagnoses. Verify before fixing.
    was in the form state and the insert but had **no input**, so it was written as
    null every time. Every existing test for these tabs mocked `error: null`, so the
    entire failure path had no coverage — that is why this survived.
+
+   **The first pass at this was incomplete.** It fixed writes that *failed*, but the
+   report was also about state not surviving navigation, which is a different fault
+   with two more causes, both fixed 2026-08-02:
+
+   - **`useArchiveToast` never persisted at all** — a bare `useState(true)`, no
+     write anywhere. Turning the archive toast off lasted until the next reload and
+     then silently came back. Its three siblings (trash toast, assistant, theme)
+     were all persisted, and that inconsistency is exactly what made it read as
+     "settings don't save" rather than as one missing write.
+   - **The settings tab reset to Appearance on every visit.** `SettingsView`
+     unmounts when you navigate away, and `tab` was plain `useState('appearance')`,
+     so returning always dropped you on a different tab from the one you had been
+     editing — indistinguishable from your changes having been discarded.
+
+   Both now go through `src/lib/localPref.js`, which replaces four hand-rolled
+   `try/catch` localStorage blocks. `readBoolPref` keeps **absent** distinct from
+   **`'false'`**, so a preference nobody has touched takes the caller's default
+   instead of silently reading as off.
+
+   **Why the existing tests missed it:** `useArchiveToast.test.js` asserted the
+   setter updates the value, which passes whether or not anything is persisted,
+   because the test never remounted the hook. The suite had no reload. It does now.
 6. **Topic-scoped search is implicit and unclear.** Searching inside a topic
    silently excludes everything outside it, with no visible indication of scope or
    way to widen. Needs design, not a patch.

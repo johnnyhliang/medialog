@@ -15,12 +15,25 @@ import { getMyUsage, getMyStorage, getMyWindowUsage } from '../lib/db/adminMetri
 import { formatBytes, describeLimit, AI_WINDOW_HOURS } from '../lib/limits.js'
 import UsageMeter from './UsageMeter.jsx'
 import { loadEntitlement } from '../lib/entitlements.js'
+import { readPref, writePref } from '../lib/localPref.js'
+
+const SETTINGS_TAB_KEY = 'medialog_settings_tab'
 
 export default function SettingsView({ topics, onRefreshData, addToast, allTags = [], onUpdateTagColor, archiveToast, onToggleArchiveToast, trashToast, onToggleTrashToast, themePalette, themeStyle, onSetPalette, onSetStyle, assistantEnabled, onToggleAssistant, isModuleVisible = () => true }) {
   const [config, setConfig] = useState(null)
   const [loading, setLoading] = useState(true)
   const [pendingColors, setPendingColors] = useState({})
-  const [tab, setTab] = useState('appearance')
+  // SettingsView unmounts when you navigate away, so a plain useState sent you
+  // back to Appearance every time — which reads as "my changes are gone" when the
+  // tab you were actually editing is a different one.
+  const [tab, setTabState] = useState(() => {
+    const saved = readPref(SETTINGS_TAB_KEY, null)
+    return SETTINGS_TABS.some((t) => t.id === saved) ? saved : 'appearance'
+  })
+  function setTab(id) {
+    setTabState(id)
+    writePref(SETTINGS_TAB_KEY, id)
+  }
   const [twitterToken, setTwitterToken] = useState('')
   const [twitterSaving, setTwitterSaving] = useState(false)
   const [bulkTopic, setBulkTopic] = useState('')
