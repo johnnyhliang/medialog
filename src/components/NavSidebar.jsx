@@ -1,14 +1,15 @@
 import { useState } from 'react'
 import {
-  Home, Search, Upload, PackageOpen, Archive, Inbox, Briefcase, Highlighter,
+  Home, Search, Upload, Archive, Inbox, Briefcase, Highlighter,
   RotateCcw, BarChart2, BookOpen, Settings2, Trash2 as TrashIcon, FolderOpen,
-  Rss, ScrollText, Download, ChevronRight, Sparkles, GraduationCap, BookMarked,
+  Rss, ScrollText, ChevronRight, Sparkles, GraduationCap, BookMarked,
 } from 'lucide-react'
 
 // Declarative nav config, grouped by how often each view is reached for.
-// `side` runs an extra loader when navigating (e.g. fetch inbox). `action`
-// items are buttons that don't select a view (Export). The "more" group is
-// collapsed by default so daily views stay above the fold.
+// `side` runs an extra loader when navigating (e.g. fetch inbox). The "more"
+// group is collapsed by default so daily views stay above the fold. Backup
+// import/export and the one-off migration importer live in Settings > Data &
+// Backup instead of here — they're occasional, not daily navigation.
 const SECTIONS = [
   {
     id: 'daily',
@@ -41,8 +42,6 @@ const SECTIONS = [
     collapsible: true,
     items: [
       { view: 'bulk', label: 'Bulk Import', icon: Upload, module: 'import' },
-      { view: 'migration', label: 'Import', icon: PackageOpen, module: 'import' },
-      { action: 'export', label: 'Export', icon: Download },
       { view: 'guide', label: 'Guide', icon: BookOpen },
       { view: 'settings', label: 'Settings', icon: Settings2 },
       { view: 'trash', label: 'Trash', icon: TrashIcon, side: 'loadTrash' },
@@ -62,7 +61,7 @@ function digestStale() {
   }
 }
 
-export default function NavSidebar({ view, navigateTo, sideEffects = {}, onExport, isModuleVisible = () => true }) {
+export default function NavSidebar({ view, navigateTo, sideEffects = {}, isModuleVisible = () => true }) {
   const [moreOpen, setMoreOpen] = useState(() => {
     try { return localStorage.getItem(MORE_OPEN_KEY) === 'true' } catch { return false }
   })
@@ -75,15 +74,6 @@ export default function NavSidebar({ view, navigateTo, sideEffects = {}, onExpor
 
   function renderItem(item) {
     const Icon = item.icon
-    if (item.action === 'export') {
-      return (
-        <li key="export">
-          <button onClick={onExport} title={item.label}>
-            <Icon size={16} /><span>{item.label}</span>
-          </button>
-        </li>
-      )
-    }
     const showBadge = item.badge === 'digestStale' && digestStale()
     return (
       <li key={item.view}>

@@ -40,7 +40,6 @@ import NavSidebar from './components/NavSidebar.jsx'
 // Heavy / infrequently-opened views are code-split so they don't bloat the
 // initial bundle. They render inside the <Suspense> around the view area.
 const BulkImport = lazy(() => import('./components/BulkImport.jsx'))
-const MigrationView = lazy(() => import('./components/MigrationView.jsx'))
 const ArchiveView = lazy(() => import('./components/ArchiveView.jsx'))
 const SettingsView = lazy(() => import('./components/SettingsView.jsx'))
 const FeedView = lazy(() => import('./components/FeedView.jsx'))
@@ -1007,7 +1006,6 @@ function Workspace() {
             view={view}
             navigateTo={navigateTo}
             sideEffects={{ loadInbox, loadRevisit, loadTrash }}
-            onExport={handleExport}
             isModuleVisible={isModuleVisible}
           />
           <hr className="topic-divider" />
@@ -1178,6 +1176,9 @@ function Workspace() {
                 writePref('medialog_assistant_enabled', v)
                 if (!v) setAssistantOpen(false)
               }) : undefined}
+              onImportEntries={handleMigrationImport}
+              onExportAll={handleExport}
+              exportBusy={exportBusy}
             />
           )}
           {view === 'guide' && <GuideView />}
@@ -1215,13 +1216,6 @@ function Workspace() {
               onSelectTopic={(id) => { setSelectedId(id); setView('browse') }}
               onUnarchiveTopic={handleUnarchiveTopic}
               onDeleteTopic={handleDeleteTopic}
-            />
-          )}
-          {view === 'migration' && (
-            <MigrationView
-              topics={topics}
-              onImportEntries={handleMigrationImport}
-              addToast={addToast}
             />
           )}
           {view === 'metrics' && isModuleVisible('metrics') && (

@@ -70,7 +70,7 @@ const APP_PATTERNS = [
   /\b(enable|disable|hide|show) (the |a )?\w+/i,
   /\bwhat (does|is) (the )?\w+ (tab|module|setting|button|feature)\b/i,
   /\bsettings?\b.*\?/i,
-  /\b(shortcut|keybind|bookmarklet|export|backup|revoke|token)\b/i,
+  /\b(shortcut|keybind|bookmarklet|export|import|backup|restore|migrat\w*|revoke|token)\b/i,
 ]
 
 export function looksLikeAppQuestion(text) {

@@ -2,7 +2,10 @@ import { useState, useRef } from 'react'
 import { supabase } from '../lib/supabaseClient.js'
 import { parseTabs, parseAppleNotesHtml, parseKeepJson, parseObsidianZip } from '../lib/parseMigration.js'
 
-const FORMATS = [
+// Exported so settingsIndex.js can derive its search keywords from the same
+// list — adding a format here makes it findable in Settings search without a
+// second place to remember to update.
+export const FORMATS = [
   { id: 'tabs',    label: 'Chrome / Browser Tabs', hint: 'Paste URLs or "Title - URL" lines (one per line). Supports OneTab export format.' },
   { id: 'notes',   label: 'Apple Notes', hint: 'Export from Notes app → File → Export as HTML, then upload the .html file.' },
   { id: 'keep',    label: 'Google Keep', hint: 'Download via Google Takeout → Keep → JSON file.' },

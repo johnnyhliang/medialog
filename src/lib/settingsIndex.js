@@ -11,6 +11,7 @@
 // search for it. Keep it in sync when adding a settings surface.
 
 import { getCommands } from './commands.js'
+import { FORMATS as MIGRATION_FORMATS } from '../components/MigrationView.jsx'
 
 // The tab list itself, so the index and the UI cannot disagree about which tabs
 // exist or which module gates them. SettingsView renders from this and filters
@@ -19,7 +20,7 @@ import { getCommands } from './commands.js'
 // gap into a failing test.
 export const SETTINGS_TABS = [
   { id: 'appearance',  label: 'Appearance' },
-  { id: 'github',      label: 'GitHub' },
+  { id: 'data',        label: 'Data & Backup' },
   { id: 'twitter',     label: 'Twitter',       module: 'twitter' },
   { id: 'shared',      label: 'Shared' },
   { id: 'behavior',    label: 'Behavior' },
@@ -50,9 +51,21 @@ export const SETTINGS_INDEX = [
   { tab: 'appearance', label: 'Color palette', keywords: 'theme dark light mode colour warm nord catppuccin tokyo rose pine appearance' },
   { tab: 'appearance', label: 'Interface style', keywords: 'style density neobrutalism minimal look feel appearance' },
 
-  { tab: 'github',     label: 'GitHub backup', keywords: 'git sync backup repository repo export mirror restore token oauth' },
-  { tab: 'github',     label: 'Repository name', keywords: 'repo name private public backup github' },
-  { tab: 'github',     label: 'Automatic backup', keywords: 'auto backup schedule github sync' },
+  { tab: 'data',       label: 'GitHub backup', keywords: 'git sync backup repository repo export mirror restore token oauth data' },
+  { tab: 'data',       label: 'Repository name', keywords: 'repo name private public backup github' },
+  { tab: 'data',       label: 'Automatic backup', keywords: 'auto backup schedule github sync' },
+  { tab: 'data',       label: 'Local backup (zip download)', keywords: 'zip download local backup export data offline file save copy no github' },
+  { tab: 'data',       label: 'Import from zip', keywords: 'import zip restore backup upload file drop data recover recovery new account deleted account' },
+  { tab: 'data',       label: 'Markdown export', keywords: 'export markdown md download zip readable claude project obsidian' },
+  // Keywords come from the same FORMATS list MigrationView renders its format
+  // picker from, so a new importer is searchable the moment it's added.
+  {
+    tab: 'data',
+    label: 'Import from other apps',
+    keywords: `import migration migrate bring in content bookmarks ${
+      MIGRATION_FORMATS.map((f) => f.label).join(' ')
+    }`,
+  },
 
   { tab: 'twitter',    label: 'Twitter auth token', module: 'twitter', keywords: 'twitter x token cookie auth opportunity radar scraper' },
 

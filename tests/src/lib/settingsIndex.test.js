@@ -50,7 +50,7 @@ describe('searchSettings', () => {
   })
 
   it('finds a setting by what it does', () => {
-    expect(searchSettings('repo', all).some((h) => h.tab === 'github')).toBe(true)
+    expect(searchSettings('repo', all).some((h) => h.tab === 'data')).toBe(true)
   })
 
   it('hides entries whose module is off', () => {

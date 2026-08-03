@@ -7,7 +7,7 @@ import CompaniesTab from './settings/CompaniesTab.jsx'
 import KeybindsTab from './settings/KeybindsTab.jsx'
 import KeywordsTab from './settings/KeywordsTab.jsx'
 import ProgramsTab from './settings/ProgramsTab.jsx'
-import GitHubTab from './settings/GitHubTab.jsx'
+import DataBackupTab from './settings/DataBackupTab.jsx'
 import ModulesTab from './ModulesTab.jsx'
 import CaptureTokensTab from './settings/CaptureTokensTab.jsx'
 import { searchSettings, SETTINGS_TABS } from '../lib/settingsIndex.js'
@@ -19,7 +19,7 @@ import { readPref, writePref } from '../lib/localPref.js'
 
 const SETTINGS_TAB_KEY = 'medialog_settings_tab'
 
-export default function SettingsView({ topics, onRefreshData, addToast, allTags = [], onUpdateTagColor, archiveToast, onToggleArchiveToast, trashToast, onToggleTrashToast, themePalette, themeStyle, onSetPalette, onSetStyle, assistantEnabled, onToggleAssistant, isModuleVisible = () => true }) {
+export default function SettingsView({ topics, onRefreshData, addToast, allTags = [], onUpdateTagColor, archiveToast, onToggleArchiveToast, trashToast, onToggleTrashToast, themePalette, themeStyle, onSetPalette, onSetStyle, assistantEnabled, onToggleAssistant, isModuleVisible = () => true, onImportEntries, onExportAll, exportBusy }) {
   const [config, setConfig] = useState(null)
   const [loading, setLoading] = useState(true)
   const [pendingColors, setPendingColors] = useState({})
@@ -334,12 +334,16 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
   </section>
 )}
 
-      {activeTab === 'github' && (
-        <GitHubTab
+      {activeTab === 'data' && (
+        <DataBackupTab
           config={config}
           setConfig={setConfig}
           addToast={addToast}
           onRefreshData={onRefreshData}
+          topics={topics}
+          onImportEntries={onImportEntries}
+          onExportAll={onExportAll}
+          exportBusy={exportBusy}
         />
       )}
 

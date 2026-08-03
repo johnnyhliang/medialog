@@ -1,9 +1,10 @@
 import { useRef, useState } from 'react'
-import { GitBranch, Check, RefreshCw, Download, Upload, AlertTriangle, ExternalLink, FileArchive } from 'lucide-react'
+import { GitBranch, Check, RefreshCw, Download, Upload, AlertTriangle, ExternalLink, FileArchive, FileDown } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient.js'
 import { parseFiles, summarize, SYNC_TABLES, EXCLUDED_TABLES } from '../../lib/githubSync.js'
 import { applySnapshot, runBackup } from '../../lib/db/githubBackup.js'
 import { downloadBackupZip, readBackupZip, applyBackupZip } from '../../lib/db/zipBackup.js'
+import MigrationView from '../MigrationView.jsx'
 
 const TABLE_LABEL = {
   topics: 'topics',
@@ -149,7 +150,47 @@ function LocalBackupSection({ addToast, onRefreshData }) {
   )
 }
 
-export default function GitHubTab({ config, setConfig, addToast, onRefreshData }) {
+// Human-readable markdown export — one file per topic, no IDs, not meant to
+// round-trip. For reading elsewhere (Claude Projects, Obsidian), not restore.
+function MarkdownExportSection({ onExportAll, exportBusy }) {
+  if (!onExportAll) return null
+  return (
+    <div className="card">
+      <h3 className="gh-card-title">Markdown export</h3>
+      <p className="muted gh-hint">
+        Every topic as a readable .md file in a zip — good for reading elsewhere or dropping into
+        another tool. Attachments aren't included, and this format isn't meant to be re-imported;
+        use Local backup above for a restorable copy.
+      </p>
+      <div className="actions">
+        <button onClick={onExportAll} disabled={exportBusy}>
+          <FileDown size={13} /> {exportBusy ? 'exporting…' : 'Download markdown export'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// One-time migration from another app's export format. Distinct from the
+// zip backup above: this creates new inbox entries rather than restoring
+// existing ones, and has no concept of round-tripping.
+function ImportFromOtherAppsSection({ topics, onImportEntries, addToast }) {
+  if (!onImportEntries) return null
+  return (
+    <div className="card">
+      <h3 className="gh-card-title">Import from other apps</h3>
+      <p className="muted gh-hint">
+        Bring in content from Chrome tabs, Apple Notes, Google Keep, or Obsidian. Entries land in
+        your inbox for triage — this is a one-time migration, not a restore.
+      </p>
+      <MigrationView topics={topics} onImportEntries={onImportEntries} addToast={addToast} />
+    </div>
+  )
+}
+
+export default function DataBackupTab({
+  config, setConfig, addToast, onRefreshData, topics, onImportEntries, onExportAll, exportBusy,
+}) {
   const [repos, setRepos] = useState(null)
   const [loadingRepos, setLoadingRepos] = useState(false)
   const [busy, setBusy] = useState(null) // 'backup' | 'restore' | null
@@ -268,7 +309,7 @@ export default function GitHubTab({ config, setConfig, addToast, onRefreshData }
   if (!connected) {
     return (
       <section>
-        <h2>GitHub sync</h2>
+        <h2>Data & Backup</h2>
         <div className="card gh-connect">
           <GitBranch size={28} />
           <div>
@@ -282,6 +323,8 @@ export default function GitHubTab({ config, setConfig, addToast, onRefreshData }
         </div>
 
         <LocalBackupSection addToast={addToast} onRefreshData={onRefreshData} />
+        <MarkdownExportSection onExportAll={onExportAll} exportBusy={exportBusy} />
+        <ImportFromOtherAppsSection topics={topics} onImportEntries={onImportEntries} addToast={addToast} />
       </section>
     )
   }
@@ -290,9 +333,10 @@ export default function GitHubTab({ config, setConfig, addToast, onRefreshData }
 
   return (
     <section className="gh-tab">
-      <h2>GitHub sync</h2>
+      <h2>Data & Backup</h2>
 
       <div className="card">
+        <h3 className="gh-card-title">GitHub sync</h3>
         <div className="gh-status">
           <Check size={15} className="gh-ok" />
           <span>Connected as <strong>{config.github_user}</strong></span>
@@ -416,7 +460,7 @@ export default function GitHubTab({ config, setConfig, addToast, onRefreshData }
       )}
 
       <div className="card">
-        <h3 className="gh-card-title">What a backup contains</h3>
+        <h3 className="gh-card-title">What a GitHub backup contains</h3>
         <p className="muted gh-hint">
           <code>data/*.json</code> — the exact rows, used to restore.{' '}
           <code>notes/</code> — the same entries as markdown, one file per entry, readable on GitHub.
@@ -429,6 +473,8 @@ export default function GitHubTab({ config, setConfig, addToast, onRefreshData }
       </div>
 
       <LocalBackupSection addToast={addToast} onRefreshData={onRefreshData} />
+      <MarkdownExportSection onExportAll={onExportAll} exportBusy={exportBusy} />
+      <ImportFromOtherAppsSection topics={topics} onImportEntries={onImportEntries} addToast={addToast} />
     </section>
   )
 }
