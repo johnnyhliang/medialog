@@ -1,7 +1,6 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import IndexStatus from './IndexStatus.jsx'
 import { ChevronUp, Clock, History, MoreVertical, Pencil, Pin, PinOff, Plus, Trash2, Archive, BookOpen, Share2, Check } from 'lucide-react'
-import WaybackPopup from './WaybackPopup.jsx'
 import ReaderModal from './ReaderModal.jsx'
 import TagInput from './TagInput.jsx'
 import MarkdownView from './MarkdownView.jsx'
@@ -75,7 +74,6 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
   const [takeawayPrompt, setTakeawayPrompt] = useState(false)
   const [takeaway, setTakeaway] = useState('')
   const [fetchingTitle, setFetchingTitle] = useState(false)
-  const [showWayback, setShowWayback] = useState(false)
   const [showSnoozePicker, setShowSnoozePicker] = useState(false)
   const [showReader, setShowReader] = useState(false)
   const [shareCopied, setShareCopied] = useState(false)
@@ -447,16 +445,18 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
             >
               {shareCopied ? <Check size={15} /> : <Share2 size={15} />}
             </button>
-            {entry.url && (
-              <button
-                className="icon-btn"
-                aria-label="archive to Wayback Machine"
-                title="Wayback Machine"
-                onClick={(e) => { e.stopPropagation(); setShowWayback(true) }}
-              >
-                <Archive size={15} />
-              </button>
-            )}
+            {/* Wayback button hidden 2026-08-06. `submitArchive` is a bare
+                window.open, so it cannot know whether anything was archived — yet
+                the caller wrote `wayback_submitted_at` regardless, and this popup
+                then reported it as done. An unverified claim of preservation is
+                worse than none: you only discover it was false at the moment you
+                needed the copy. Showing nothing is honest.
+
+                The DATA is deliberately kept — `wayback_submitted_at` still
+                records that an attempt was made, which is what a future SPN2
+                implementation needs to know which entries to re-check rather than
+                blindly re-submitting. Restore this button when submission is
+                actually verified. See PROJECT-STATE §6 row 19. */}
             {entry.full_text && (
               <button
                 className="icon-btn"
@@ -692,14 +692,6 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
         />
       )}
 
-      {showWayback && (
-        <WaybackPopup
-          entry={entry}
-          supabase={supabaseClient || supabase}
-          onClose={() => setShowWayback(false)}
-          onEntryUpdate={(updated) => { onEntryUpdate?.(updated); setShowWayback(false) }}
-        />
-      )}
       {showReader && (
         <ReaderModal entry={entry} onClose={() => setShowReader(false)} />
       )}

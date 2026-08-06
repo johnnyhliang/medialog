@@ -1,3 +1,23 @@
+// ⚠️ UNMOUNTED ON PURPOSE since 2026-08-06 — nothing renders this today.
+//
+// Not dead code, and not an oversight. `submitArchive` is a bare `window.open`,
+// so it cannot learn whether archive.org accepted anything; the caller wrote
+// `wayback_submitted_at` regardless and this popup then displayed it as done.
+// Reporting a preservation you never verified is worse than reporting none,
+// because the error surfaces only when you reach for the copy.
+//
+// `checkArchive` in the same lib is fine — it queries the availability API and
+// returns a real answer. It is the *submit* half that cannot be trusted.
+//
+// Re-mount this once submission is verifiable via archive.org's SPN2 API (POST
+// with S3-style keys → job id → poll status). That needs an edge function: the
+// call is CORS-blocked from the browser and the keys must never ship in the
+// bundle. See PROJECT-STATE §6 row 19 and IDEAS.md § External archival.
+//
+// Recorded here because a complete-but-uncalled function already cost this repo
+// once this session (`renderReadme` shipped backups with no README for months).
+// If you find this file and cannot tell why nothing imports it, that is the
+// failure this comment exists to prevent.
 import { useEffect, useState } from 'react'
 import Modal from './Modal.jsx'
 import { checkArchive, submitArchive } from '../lib/wayback.js'

@@ -1,7 +1,5 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient.js'
-import { submitArchive } from '../lib/wayback.js'
-import { listEntriesByTopic, updateEntry } from '../lib/db/entries.js'
 import SharedManager from './SharedManager.jsx'
 import CompaniesTab from './settings/CompaniesTab.jsx'
 import KeybindsTab from './settings/KeybindsTab.jsx'
@@ -36,13 +34,6 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
   }
   const [twitterToken, setTwitterToken] = useState('')
   const [twitterSaving, setTwitterSaving] = useState(false)
-  const [bulkTopic, setBulkTopic] = useState('')
-  const [skipSubmitted, setSkipSubmitted] = useState(true)
-  const [bulkRunning, setBulkRunning] = useState(false)
-  const [bulkPaused, setBulkPaused] = useState(false)
-  const [bulkProgress, setBulkProgress] = useState(null)
-  const bulkPausedRef = useRef(false)
-  const bulkCancelledRef = useRef(false)
   const [captureLog, setCaptureLog] = useState(null)
   const [settingsQuery, setSettingsQuery] = useState('')
   const [usage, setUsage] = useState(null)
@@ -102,63 +93,21 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
     setTwitterSaving(false)
   }
 
-  async function handleBulkArchive() {
-    if (!bulkTopic) return
-    setBulkRunning(true)
-    setBulkPaused(false)
-    bulkPausedRef.current = false
-    bulkCancelledRef.current = false
-
-    const entries = await listEntriesByTopic(supabase, bulkTopic)
-    let queue = entries.filter((e) => e.url)
-    if (skipSubmitted) queue = queue.filter((e) => !e.wayback_submitted_at)
-
-    setBulkProgress({ done: 0, total: queue.length, errors: [] })
-
-    for (let i = 0; i < queue.length; i++) {
-      if (bulkCancelledRef.current) break
-
-      while (bulkPausedRef.current) {
-        await new Promise((r) => setTimeout(r, 200))
-        if (bulkCancelledRef.current) break
-      }
-      if (bulkCancelledRef.current) break
-
-      const entry = queue[i]
-      try {
-        await submitArchive(entry.url)
-        await updateEntry(supabase, entry.id, { wayback_submitted_at: new Date().toISOString() })
-      } catch {
-        setBulkProgress((p) => ({ ...p, errors: [...p.errors, entry.url] }))
-      }
-
-      setBulkProgress((p) => ({ ...p, done: i + 1 }))
-
-      if (i < queue.length - 1) {
-        await new Promise((r) => setTimeout(r, 5000))
-      }
-    }
-
-    setBulkRunning(false)
-  }
-
-  function handlePause() {
-    bulkPausedRef.current = true
-    setBulkPaused(true)
-  }
-
-  function handleResume() {
-    bulkPausedRef.current = false
-    setBulkPaused(false)
-  }
-
-  function handleCancel() {
-    bulkCancelledRef.current = true
-    bulkPausedRef.current = false
-    setBulkRunning(false)
-    setBulkPaused(false)
-    setBulkProgress(null)
-  }
+  // The bulk Wayback submitter lived here and was REMOVED 2026-08-06, not merely
+  // hidden. `submitArchive` is a bare `window.open`, so the progress bar counted
+  // tabs opened and reported them as "submitted" — and the skip-already-submitted
+  // filter then excluded those entries from every future run. That pairing turns
+  // an unverified guess into a permanent one.
+  //
+  // Deleted rather than left behind a flag because dead code that lint has to be
+  // told to ignore is worse than code in git: this session already lost months to
+  // a complete-but-uncalled function (`renderReadme`). The pacing, pause/resume
+  // and cancel logic was correct and is worth reusing — recover it with
+  // `git log -S handleBulkArchive -- src/components/SettingsView.jsx`.
+  //
+  // The DATA is kept: `wayback_submitted_at` still records that an attempt was
+  // made, which is what a future SPN2 implementation needs to know which entries
+  // to re-check instead of blindly re-submitting. See PROJECT-STATE §6 row 19.
 
   if (loading) return <p>Loading settings...</p>
 
@@ -619,82 +568,6 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
       {activeTab === 'modules' && <ModulesTab supabase={supabase} addToast={addToast} />}
       {activeTab === 'tokens' && <CaptureTokensTab supabase={supabase} addToast={addToast} />}
 
-      {activeTab === 'behavior' && <section style={{ marginTop: 32, borderTop: '1px solid var(--border)', paddingTop: 24 }}>
-        <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 4, marginTop: 0 }}>Bulk archive to Wayback Machine</h3>
-        <p className="muted" style={{ fontSize: 13, marginBottom: 16 }}>
-          Submits all URLs in a topic to archive.org one at a time, with a 5-second gap to stay within rate limits.
-        </p>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 360 }}>
-          <select
-            className="explore-filter-select"
-            value={bulkTopic}
-            onChange={(e) => setBulkTopic(e.target.value)}
-            disabled={bulkRunning}
-          >
-            <option value="">Select a topic…</option>
-            {topics.map((t) => (
-              <option key={t.id} value={t.id}>{t.name}</option>
-            ))}
-          </select>
-
-          <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer' }}>
-            <input
-              type="checkbox"
-              checked={skipSubmitted}
-              onChange={(e) => setSkipSubmitted(e.target.checked)}
-              disabled={bulkRunning}
-            />
-            Skip already submitted entries
-          </label>
-
-          {!bulkRunning && (
-            <button
-              className="btn-small"
-              onClick={handleBulkArchive}
-              disabled={!bulkTopic}
-              style={{ alignSelf: 'flex-start' }}
-            >
-              Start archiving
-            </button>
-          )}
-
-          {bulkRunning && bulkProgress && (
-            <>
-              <div style={{ fontSize: 13 }}>
-                {bulkProgress.done} / {bulkProgress.total} submitted
-              </div>
-              <div style={{ background: 'var(--surface-2)', borderRadius: 4, height: 6, overflow: 'hidden' }}>
-                <div
-                  style={{
-                    background: 'var(--accent)',
-                    height: '100%',
-                    width: `${bulkProgress.total > 0 ? (bulkProgress.done / bulkProgress.total) * 100 : 0}%`,
-                    transition: 'width 0.3s ease',
-                  }}
-                />
-              </div>
-              <div style={{ display: 'flex', gap: 8 }}>
-                {bulkPaused ? (
-                  <button className="btn-small" onClick={handleResume}>Resume</button>
-                ) : (
-                  <button className="btn-small btn-ghost" onClick={handlePause}>Pause</button>
-                )}
-                <button className="btn-small btn-ghost" onClick={handleCancel}>Cancel</button>
-              </div>
-            </>
-          )}
-
-          {!bulkRunning && bulkProgress && bulkProgress.done === bulkProgress.total && (
-            <p style={{ fontSize: 13, color: 'var(--accent)', margin: 0 }}>
-              Done — {bulkProgress.total} URLs submitted.
-              {bulkProgress.errors.length > 0 && (
-                <> {bulkProgress.errors.length} failed: {bulkProgress.errors.join(', ')}</>
-              )}
-            </p>
-          )}
-        </div>
-      </section>}
 
     </div>
   )

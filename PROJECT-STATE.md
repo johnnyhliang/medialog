@@ -198,7 +198,7 @@ actually exploitable (`CAPTURE_USER_ID` was never set, so the legacy path 401'd)
 |---|---|
 | `master` | **in sync with `origin/master`** — 0 ahead, 0 behind (verified 2026-08-06) |
 | Frontend | auto-deploys on push |
-| Migrations | **`0071` is the highest** (`0071_shared_items_active.sql`). ⚠️ **Written, not confirmed applied** — `0070`/`0071` landed from a parallel session; verify with `supabase db push` before trusting |
+| Migrations | ✅ **`0071` applied and verified 2026-08-06** via `supabase migration list --linked` — every migration matches Local and Remote, no drift |
 | Edge functions | **17** |
 | `capture` auth | **verified live**: rejects bogus/absent/wrong credentials |
 | `0059` | permanently skipped (parallel worktrees claimed numbers out of order) |
@@ -423,11 +423,20 @@ share one table with preservation jobs) and the deferred agent steps 3–5.
    bookmarklet had been quietly broken. An earlier note here claiming an attacker
    could write to the Inbox was wrong.
 
-3. **Wayback records unverified successes.** `submitArchive` is a bare
-   `window.open`; the caller writes `wayback_submitted_at` regardless, and the
-   bulk submitter then **permanently skips** those entries. One `catch` collapses
-   rate-limit / CORS / timeout / malformed into one `'error'` indistinguishable
-   from "not archived" — the ambiguous UI you noticed.
+3. ~~**Wayback records unverified successes.**~~ — **NO LONGER USER-VISIBLE
+   2026-08-06.** `submitArchive` is a bare `window.open`; the caller wrote
+   `wayback_submitted_at` regardless, and the bulk submitter then **permanently
+   skipped** those entries — an unverified guess made permanent. One `catch`
+   collapsed rate-limit / CORS / timeout / malformed into a single `'error'`
+   indistinguishable from "not archived", which is the ambiguous UI you noticed.
+
+   **The UI is gone, the defect is not fixed.** The entry-card button and popup
+   are unmounted and the bulk submitter is deleted (recover with
+   `git log -S handleBulkArchive`), so nothing claims a preservation that was
+   never verified. `checkArchive` was always sound — it queries the availability
+   API and returns a real answer; only the *submit* half is untrustworthy.
+   `wayback_submitted_at` is deliberately retained so a future SPN2 pass knows
+   which entries to re-check rather than re-submitting blindly.
 
 4. **`mcp-server/` exposes ungated bulk writes.** `bulk_move_entries`,
    `bulk_create_entries` mutate directly with no proposal step and no
@@ -544,7 +553,7 @@ detail; that file, not this table, is authoritative on *how*.
 | # | Action | Kind | Why | Detail |
 |---|---|---|---|---|
 | 0 | **Turn on Supabase automatic backups** | ops | Free tier has **none** and pauses on inactivity. No app-level backup substitutes. Dashboard, not code — **only you can do it** | `README.md` § *Not losing your data* |
-| 1 | Confirm `0070`/`0071` are applied | ops | Both landed from a parallel session; written ≠ applied | `supabase db push` |
+| ~~1~~ | ~~Confirm `0070`/`0071` are applied~~ | ops | ✅ **DONE 2026-08-06.** `supabase migration list --linked` shows every migration in both Local and Remote, no drift | — |
 | 2 | **Fix "everything is slow, incl. Metrics"** | bug | The one hurting daily use. *Measure first* — Metrics being slow too suggests one shared cause, not seven | `tech-debt.md` § UX #4 |
 | 3 | Capture 2–3 prose articles, run `check-preservation.js` | bug | Two minutes; retires the last ⚠️ on the extractor | `tech-debt.md` |
 | 4 | **Write `index_status = 'pending'`** | bug | ~5 lines; closes the mid-import blind spot (§4.1b) — notes unsearchable *and* invisible to the retry banner | `indexing-architecture.md` |
@@ -562,7 +571,7 @@ detail; that file, not this table, is authoritative on *how*.
 | 16 | `user_model` v1 + feed ranking (north-star ⑥) | north star | **Start logging the dismiss signal now — it's free and it's the input** | north-star spec Part 5 |
 | 17 | Collapse Deep Topics into normal topics | feature | A *correction* to shipped code, not an extension. Sequence before any recommendation work | `IDEAS.md` § Big swings |
 | 18 | Interview progress UI | feature | Data flows now, so rings aren't theatre | `interview-progress-spec.md` §4 |
-| 19 | **Hide the Wayback UI** (keep the data) | bug | It reports successes it never verified — `submitArchive` is a bare `window.open`. Showing nothing beats showing fiction, and this is minutes of work. SPN2 verification is the real fix but is now parked | `IDEAS.md` § External archival |
+| ~~19~~ | ~~Hide the Wayback UI~~ | bug | ✅ **DONE 2026-08-06.** Entry-card button and popup unmounted, bulk submitter removed. `wayback_submitted_at` **kept** — a future SPN2 pass needs it to know which entries to re-check. SPN2 itself stays parked | `IDEAS.md` § External archival |
 | 19b | Video capture: transcript + metadata + thumbnail | feature | One fetch at capture time. Transcripts are plain HTTP (~50 KB, no worker) and are *the information* for a talk; stored thumbnails survive deletion, which hotlinked ones cannot. ~$1.30 to backfill 185 YouTube entries | `preservation-v2-spec.md` §3 |
 | 19c | Background activity log | infra | The structural fix for this codebase's defining failure mode — background work that fails into silence. `capture_log` is already this for one case | `IDEAS.md` § Background activity log |
 | 20 | Undo the feed floor / recommend problems | design | Open question, unsolved | `tech-debt.md` § UX #8 |
