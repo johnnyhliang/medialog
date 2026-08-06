@@ -37,6 +37,48 @@ observations in those two files, not in this one.**
 
 ---
 
+## 0. Session synthesis — 2026-08-06 (docs consolidation + backup format)
+
+**Shipped:** the profile-field backup fix and its boundary enforcement · a manual
+QA checklist · one ranked backlog · `IDEAS.md` as the proposal registry · 18
+corrected spec statuses · the editions split · changelog brought current.
+
+Decisions that are not recoverable from the diff:
+
+- **Storage today counts only the `snapshots` bucket.** `my_storage_bytes()` sums
+  file bytes; notes, `full_text`, versions and all 4,976 embedding chunks count as
+  **zero**. The 500 MB / 10 GB limit is a file-storage limit wearing the name
+  "storage". **If it ever becomes one pool, do not count embeddings against the
+  user** — they are derived and unchosen, and charging for them repeats the
+  mistake the AI-quota decision already rejected ("importing your library must not
+  exhaust your ability to ask questions about it").
+- **A credential allowlist must be enforced where bytes leave**, not upstream. It
+  lived in `collectSnapshot` only, so `buildFiles` wrote whatever it was handed —
+  a caller with a fuller row would have written `github_token` into a git repo.
+- **"Does anything import this file" is the wrong question** for unreachable code.
+  Per-export counting moved `interviewPlan.js` from "wholly unreachable" to "two of
+  eight live" — see §2.
+- **Every table and column must be *classified*, not necessarily backed up.**
+  Carried, or excluded with a stated reason; tests parse the migrations and fail on
+  anything unclassified. Seven tables and four profile fields had gone missing with
+  nothing failing.
+- **`IDEAS.md` is the proposal registry; §6 is the only ranking.** Six fully-specced
+  features had no entry in `IDEAS.md` at all — the proposals developed *furthest*
+  were invisible when browsing ideas. Two shadow lists were deleted rather than
+  updated.
+- **Self-hosted constraints are a bug, not a courtesy** (`docs/editions.md`). Nearly
+  every quota exists because someone else pays, others share the blast radius, or
+  the operator is liable. None hold for one person on their own machine.
+- **Background work that fails into silence is one architectural gap, not six bugs**
+  — hence the activity log proposal, scoped to what happens *without* you.
+
+Corrections issued this session: `archive_toast` **did** persist (to the database
+all along; what it lacked was a synchronous first paint) — an earlier note here
+claiming otherwise was wrong. And rolling back to a remembered previous value is
+not a valid revert when a field fires a change per keystroke.
+
+---
+
 ## 0a. Session synthesis — 2026-08-02 → 08-06 (UX bugs + backup coverage)
 
 **Shipped:** four of eight reported UX bugs · backup coverage for seven tables that
@@ -194,14 +236,23 @@ generate token-based code. Manage or revoke at Settings → Capture tokens.
 The largest source of "did that get built?" confusion. All of it is real, tested,
 committed — and **nothing in the UI imports it**.
 
-| Module | Lines | What's missing | Spec |
+**Re-measured 2026-08-06 per *export*, not per file** — which changed one answer.
+Counting whole modules said "nothing imports it"; counting exports shows two of
+these are partly live, and the dead part is the specific feature, not the module.
+
+| Module | Exports used | Actually missing | Spec |
 |---|---|---|---|
-| `src/lib/interviewPlan.js` | 210 | Readiness rings, staleness dot, gap list, target-date + focus editor | `docs/interview-progress-spec.md` §4 step 4 |
-| `src/lib/db/studyPlan.js` | 33 | Same UI as above; `prep_target_date`/`prep_focus` are never read | same |
-| `src/lib/billingPlan.js` | 121 | Stripe webhook + checkout. **Inert by design** — status→tier mapping is done and tested | `docs/metering-scope.md` |
-| `src/lib/goals.js` | 85 | Entire feature. Pure lib, no migration (goals = entries w/ frontmatter) | `docs/superpowers/specs/2026-07-17-goals-tracker-design.md` |
-| `src/lib/preservation.js` | 48 | `preservationPatch` **is** wired; `preservationCoverage` has no UI (◆ marker, "N of M preserved") | `docs/content-preservation-plan.md` T3 |
-| `scripts/backfill-full-text.js` | 224 | Never run against real data | same |
+| `src/lib/interviewPlan.js` (249) | **2 of 8** — `suggestNext` (5 uses) and `dueReviews` (3) are **live in `GainsCard.jsx`** | ⚠️ **Correction: this was listed as wholly unreachable and is not.** The unused six are exactly the readiness surface: `patternStaleness`, `remainingProblems`, `paceStatus`, `actualWeeklyRate`, `trackWeightsFromFocus`, `identifyGaps` | `docs/interview-progress-spec.md` §4 step 4 |
+| `src/lib/db/studyPlan.js` (32) | **0 of 2** | Whole module. `prep_target_date`/`prep_focus` are written by nothing and read by nothing — though they *are* now carried in backups | same |
+| `src/lib/goals.js` (84) | **0 of 6** | Entire feature. Pure lib, no migration (goals = entries w/ frontmatter) | `2026-07-17-goals-tracker-design.md` |
+| `src/lib/billingPlan.js` (120) | **0 of 3** | Stripe webhook + checkout. **Inert by design** — the status→tier mapping is done and tested, waiting on a decision, not on code | `docs/metering-scope.md` |
+| `src/lib/preservation.js` (48) | **1 of 2** — `preservationPatch` has 4 callers | `preservationCoverage` has no UI (the ◆ marker, "N of M preserved") | `content-preservation-plan.md` T3 |
+| `src/lib/retrievalEval.js` | 0 importers **by design** | Nothing. It is a tuning harness you run, like a script — **not dead code**, and this has been mistakenly flagged before | `indexing-architecture.md` §2 |
+| `scripts/backfill-full-text.js` (224) | n/a | Never run against real data | `content-preservation-plan.md` |
+
+**The lesson worth keeping:** "does anything import this file" is the wrong
+question. A 249-line module with two live exports reads as reachable at file level
+and as fully built at feature level, and it is neither. Ask per export.
 
 **Dead code — REMOVED 2026-07-29:** `src/lib/fetchFeed.js` (86 lines, orphaned when
 feeds moved server-side in `fbdc2d7`), `src/components/LandingPage.backup.jsx`
@@ -540,4 +591,27 @@ Blocked on #4 — a graceful path needs a queue to pause into. Agreed shape:
 · Stripe (until metering data says what a user costs) · re-indexing the 4,971
 context-free chunks (until the eval fixture exists) · `full_text` backfill (measured
 as not worth doing).
+
+**Parked 2026-08-06, after costing them out — decided, not forgotten:**
+
+- **Video capture (19b): stored thumbnails, transcripts, liveness.** Parked
+  *because the analysis came back cheap*, which removes the urgency rather than
+  creating it. Today's approach — `enrich` stores an `og_image` **URL** and the
+  card hotlinks it — costs ~100 bytes an entry and **zero egress**, because the
+  browser fetches from `i.ytimg.com` directly. The only real defect is durability:
+  a hotlinked thumbnail dies with the video, and you cannot store a copy
+  retroactively. Numbers if it is picked up: ~30 KB per thumbnail (~5.5 MB for the
+  185 existing YouTube entries), transcripts ~50 KB each over plain HTTP with no
+  worker, ~$1.30 to index them all. **Non-issue at this scale; revisit before any
+  large video import.**
+- **External archival (19): now "hide the Wayback UI", nothing more.** The idea has
+  real merit — a copy you don't host, zero storage, a citable URL — and is written
+  up in `IDEAS.md` § *External archival*. It is not being built now. The only
+  action retained is removing the UI that claims successes it never verified,
+  because an unverified submission is worse than none: it reports safety that does
+  not exist and is discovered only when you needed the copy.
+
+**Next session's intent: performance (§6 row 2).** Measure before changing
+anything — Metrics being slow *too* points at one shared cause rather than seven
+separate ones, and guessing wastes the pass.
 
