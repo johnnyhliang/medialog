@@ -430,7 +430,18 @@ function Workspace() {
 
   async function handleToggleArchiveToast(val) {
     setArchiveToast(val)
-    await supabase.from('user_configs').update({ archive_toast: val }).eq('user_id', (await supabase.auth.getUser()).data.user.id)
+    const { data: { user } } = await supabase.auth.getUser()
+    const { error } = await supabase
+      .from('user_configs')
+      .update({ archive_toast: val })
+      .eq('user_id', user.id)
+    // The database is the record and the local value is only a cache, so an
+    // unchecked failure here reads as saved until the next load quietly reverts
+    // it — the same silent-revert this session fixed in the career tabs.
+    if (error) {
+      setArchiveToast(!val)
+      addToast(`Couldn’t save: ${error.message}`, 'error')
+    }
   }
 
   async function handleSearchAll(q) {
