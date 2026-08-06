@@ -113,6 +113,76 @@ until ② lands; mostly a visualization over data ② already produces.
 - **Voice catch** — hold-to-record in the PWA, Whisper → Inbox note. Side-thoughts arrive while
   walking; typing is the friction.
 
+## Background activity log — ★ the structural fix for silent failure
+
+**The single recurring failure mode in this codebase is background work that fails
+into silence.** In one session (2026-08): auto-backup had done nothing for months;
+4,971 chunks were written context-free past a warning that scrolled by; a complete
+`renderReadme` was never called; Wayback recorded successes it never verified;
+`index_status = 'pending'` was declared and never written; three settings tabs
+claimed saves that never happened. Those are not six unrelated bugs — they are one
+architectural gap. **Work that happens without a user watching has nowhere to
+report, so it reports nowhere.**
+
+**Scope it to things that happened *without* you.** A log of your own actions is
+low value — you just did them, and Trash plus version history already cover
+recovery. What you cannot observe is the automated half:
+
+- auto-backup ran / failed, with the reason
+- indexing: N notes queued, N failed, why
+- feed polls: which sources returned nothing, which errored
+- archival submissions and their verified outcome (see below)
+- cron work: inbox archiving, revisit surfacing
+- AI agent mutations, when those exist — the agent spec already requires an
+  `agent_actions` log for undo (`docs/superpowers/specs/2026-06-25-ai-agent-rag-design.md`)
+
+**`capture_log` is already this**, for one narrow case: `(ok, message, created_at)`,
+surfaced as the last 8 in Settings. Generalising it is a small step, not a new
+subsystem — same shape, more producers.
+
+**Call it Activity, not Audit log.** *Audit* implies compliance and blame; *activity*
+says "here is what happened while you weren't looking", which is what it is for a
+single-user app and the reason someone would actually open it. Distinct from
+`admin_actions`, which is the operator's log and is deliberately unreachable from
+any client.
+
+Design notes: append-only, retention-capped (a log that grows forever becomes a
+storage bill and nobody reads row 40,000); quiet when healthy, following the
+`IndexStatus` precedent; and **failures must be legible without opening it** —
+the log is the detail, not the alarm.
+
+## External archival — silent, logged, and never claiming success it hasn't verified
+
+*Future consideration, deliberately.* An external archive is a copy **you do not
+host**: zero storage cost, a citable URL, and it survives losing your account
+entirely. Nothing you build yourself gives you that. The potential is real.
+
+**What was wrong was never the idea.** `submitArchive` is a bare `window.open` at
+`web.archive.org/save/<url>`, so it cannot know whether anything was archived — and
+the caller writes `wayback_submitted_at` regardless, after which the bulk submitter
+permanently skips that entry. **An unverified submission is worse than none**, because
+it reports safety that does not exist, and only ever gets discovered at the moment
+you needed the copy.
+
+The agreed shape:
+
+- **Submit in the background. Never claim success in the UI.** Until an outcome is
+  verified there is nothing honest to display, so display nothing.
+- **Write every attempt and outcome to the activity log above**, which is what makes
+  it debuggable without being a feature surface.
+- **Hide the current Wayback UI** rather than leaving it reporting fiction. The data
+  it wrote stays; the claim goes.
+- Real verification needs archive.org's **SPN2** API — POST with S3-style keys, get a
+  job id, poll for status. That is CORS-blocked and credential-bearing, so it belongs
+  in an **edge function**, never the client (the `VITE_CAPTURE_SECRET` lesson).
+- **Worth checking: [Perma.cc](https://perma.cc)** is free through participating
+  university libraries and is built for permanent citation, with a real API — a
+  stronger guarantee than Wayback for things that matter. Verify eligibility before
+  designing around it.
+
+Pages first; **video is a separate problem** — see the transcript/metadata/liveness
+work, since no external service archives YouTube for you.
+
 ## Specced but not built — each already has a full design doc
 
 These were the *most* developed proposals here and, until 2026-08-06, the only ones

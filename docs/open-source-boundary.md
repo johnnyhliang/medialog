@@ -1,5 +1,13 @@
 # What could be open-sourced, and what shouldn't be
 
+> **Related but different question:** [`editions.md`](editions.md) asks what changes
+> if someone runs *the whole app* themselves — which quotas exist only because of
+> multi-tenancy, and what a self-hoster can do that a hosted service can't (yt-dlp,
+> full page snapshots, no caps). The answers differ: `limits.js` is on the
+> keep-closed list below because it reveals pricing, but a self-hosted build still
+> **needs** a limits module — one that returns unlimited. The module isn't the
+> secret, the numbers are.
+
 **2026-07-30.** The repo is public with all rights reserved. This is the analysis
 of which parts could safely become genuinely open source, and which are the
 business.

@@ -486,6 +486,7 @@ detail; that file, not this table, is authoritative on *how*.
 | What already shipped | `CHANGELOG.md` | history + why |
 | Which of the 100 docs to trust | `docs/README.md` | the index |
 | Cost, scaling, launch checklist | `PRODUCTION.md` | incl. the **unchecked** backups box |
+| Hosted vs self-hosted split | `docs/editions.md` | what differs per edition |
 
 ### Ranked
 
@@ -510,7 +511,9 @@ detail; that file, not this table, is authoritative on *how*.
 | 16 | `user_model` v1 + feed ranking (north-star ⑥) | north star | **Start logging the dismiss signal now — it's free and it's the input** | north-star spec Part 5 |
 | 17 | Collapse Deep Topics into normal topics | feature | A *correction* to shipped code, not an extension. Sequence before any recommendation work | `IDEAS.md` § Big swings |
 | 18 | Interview progress UI | feature | Data flows now, so rings aren't theatre | `interview-progress-spec.md` §4 |
-| 19 | Wayback SPN2 rewrite | bug | Fixes a broken feature, no new infra | `preservation-v2-spec.md` §2 |
+| 19 | **Hide the Wayback UI** (keep the data) | bug | It reports successes it never verified — `submitArchive` is a bare `window.open`. Showing nothing beats showing fiction, and this is minutes of work. SPN2 verification is the real fix but is now parked | `IDEAS.md` § External archival |
+| 19b | Video capture: transcript + metadata + thumbnail | feature | One fetch at capture time. Transcripts are plain HTTP (~50 KB, no worker) and are *the information* for a talk; stored thumbnails survive deletion, which hotlinked ones cannot. ~$1.30 to backfill 185 YouTube entries | `preservation-v2-spec.md` §3 |
+| 19c | Background activity log | infra | The structural fix for this codebase's defining failure mode — background work that fails into silence. `capture_log` is already this for one case | `IDEAS.md` § Background activity log |
 | 20 | Undo the feed floor / recommend problems | design | Open question, unsolved | `tech-debt.md` § UX #8 |
 | 21 | Split `App.jsx` (1320 lines) | debt | Merge pain is already real — a parallel session edited it again this week | `2026-06-19-app-modularization-design.md` |
 | 22 | Split `styles.css` (5784 lines) | debt | Every feature appends to one file | `tech-debt.md` |
