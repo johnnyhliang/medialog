@@ -1,17 +1,24 @@
 # MediaLog — Project State
 
-**Regenerated 2026-07-30 (operator tooling + indexing cost)** from the filesystem
-and git, not from memory. **Overwritten on each regeneration, never appended** — an
-append-only log is always partly wrong; a snapshot is always current.
+**Updated 2026-08-06 (UX bugs + backup coverage)** from the filesystem and git, not
+from memory. **Overwritten on each regeneration, never appended** — an append-only
+log is always partly wrong; a snapshot is always current.
 
 Companions: `CHANGELOG.md` (what shipped + why) · `docs/README.md` (which docs to
 trust) · `docs/tech-debt.md` (severity-ranked problems) ·
 `docs/indexing-architecture.md` (how search indexing works + what it costs) ·
 `PRODUCTION.md` (cost model, scaling, closed-source list) · `IDEAS.md` (proposals).
 
-**Hard numbers (recounted 2026-07-31):** 68 migrations (`0070` is the highest;
-`0059` was never used) · 17 edge functions · 73 components · 71 lib modules ·
-117 test files · 100 docs.
+**Hard numbers (recounted 2026-08-06):** 69 migrations (`0071` is the highest;
+`0059` was never used) · 17 edge functions · 72 components · 73 lib modules ·
+116 test files / **731 tests passing** · 100 docs · `App.jsx` 1320 lines ·
+`styles.css` 5784 lines.
+
+## → Start here: [§6 Ranked next actions](#6-ranked-next-actions-the-single-backlog)
+
+That table is **the one list** — bugs, features and north-star work ranked together,
+each row pointing at the file that owns the detail. Read it before anything else in
+this document.
 
 **Git in the situations this repo gets into → [`docs/git-learning.md`](docs/git-learning.md).**
 Written from the real tangle on 2026-07-30 (two sessions in one working tree, a
@@ -27,6 +34,46 @@ reported UX problems in [`docs/tech-debt.md`](docs/tech-debt.md) (§ *Reported U
 problems — untriaged*), and the Deep-Topics-collapse + topic-aware-feed proposal in
 [`IDEAS.md`](IDEAS.md) (§ *Big swings*). Nothing was discarded. **Put new
 observations in those two files, not in this one.**
+
+---
+
+## 0a. Session synthesis — 2026-08-02 → 08-06 (UX bugs + backup coverage)
+
+**Shipped:** four of eight reported UX bugs · backup coverage for seven tables that
+were never carried · a local zip backup and a Data & Backup settings tab (parallel
+session) · Progress topic picker (parallel session).
+
+Decisions and findings worth keeping:
+
+- **"No save button" was not a missing button.** Programs already saved on change;
+  three career tabs updated state optimistically and never checked the write's
+  error, so a rejected update rendered as saved until a reload reverted it. Adding
+  the requested button would have shipped a second way to trigger the same unchecked
+  write. **Read a UX report as a symptom, not a diagnosis.**
+- **Rolling back to a remembered value is not a valid revert.** A date field fires a
+  change per keystroke, so each call captures the previous *optimistic* value and
+  undoes only the last keystroke. Re-reading from the server is the only thing that
+  reliably makes the UI match the database. The first fix was wrong; a test caught it.
+- **A backup that omits an FK parent is not a backup.** `opportunity_state`
+  references `opportunities` NOT NULL, which was not synced — a restore into an
+  empty database failed outright, in exactly the disaster-recovery case backups
+  exist for. Table *ordering* in `SYNC_TABLES` is now test-asserted: `applySnapshot`
+  walks it front to back, so order is correctness.
+- **Tests that never remount cannot catch a persistence bug.** `useArchiveToast`
+  shipped with no write at all; its test asserted the setter updates the value,
+  which passes either way. The setting worked until you reloaded, and nothing in
+  the suite ever reloaded.
+- **Code written but never called is indistinguishable from code that doesn't
+  exist.** `renderReadme` had been complete for months and was never wired in, so
+  backup repos shipped with no explanation of themselves. Found by lint, not by a
+  test. Nearly documented behaviour that didn't happen.
+- **The parallel-session hazard is live, not historical.** Three commits landed on
+  top of this session's work from a window in the *same directory*. Nothing
+  collided, but a `git add -A` here could have swept in-progress files. Stage
+  explicitly.
+
+**Still only you can do it:** Supabase automatic backups are off on the free tier
+and no application-level backup substitutes for them. §6 row 0.
 
 ---
 
@@ -107,12 +154,13 @@ actually exploitable (`CAPTURE_USER_ID` was never set, so the legacy path 401'd)
 
 | Layer | State |
 |---|---|
-| `master` | **in sync with `origin/master`** — 0 ahead, 0 behind (verified 2026-07-31) |
-| Frontend | auto-deploys on push — the batch-size change shipped |
-| Migrations applied | **through `0070`** (`0070_entries_updated_at.sql` landed in `96d9049`) |
-| Edge functions | **16**, `admin-metrics` redeployed with audit/activation/probe |
+| `master` | **in sync with `origin/master`** — 0 ahead, 0 behind (verified 2026-08-06) |
+| Frontend | auto-deploys on push |
+| Migrations | **`0071` is the highest** (`0071_shared_items_active.sql`). ⚠️ **Written, not confirmed applied** — `0070`/`0071` landed from a parallel session; verify with `supabase db push` before trusting |
+| Edge functions | **17** |
 | `capture` auth | **verified live**: rejects bogus/absent/wrong credentials |
 | `0059` | permanently skipped (parallel worktrees claimed numbers out of order) |
+| Tests / build | **731 passing, build clean** (verified 2026-08-06) |
 
 **Those commits are pushed.** A parallel session created a remote `main` branch and
 merged it to `master` via PR #5; local `master` sits on top of `main`'s history.
@@ -358,13 +406,13 @@ slash commands · episodic extraction · agent steps 3–5 *(deferred)* · MCP v
 
 ## 5. Architectural concerns
 
-**`src/App.jsx` — 1343 lines, 55 handlers, 26 `view ===` branches.** Hook
+**`src/App.jsx` — 1320 lines, 55 handlers, 26 `view ===` branches.** Hook
 extraction moved *state* out but left *orchestration*. Evidence it is costing real
 time: three parallel branches edited this file in one session and merged by luck,
 not design. Seams that already exist: `useShareTarget`, `useOAuthCallback`, and a
 routing module owning the view ladder. → `docs/superpowers/specs/2026-06-19-app-modularization-design.md`
 
-**`src/styles.css` — 5771 lines / 153 KB.** The whole design system in one file,
+**`src/styles.css` — 5784 lines / 153 KB.** The whole design system in one file,
 and every feature appends (three separate blocks today). Split into tokens →
 layout → per-view. No framework needed; the CSS is fine, the packaging isn't.
 
@@ -412,21 +460,57 @@ server-side on signup.
 
 ---
 
-## 6. Ranked next actions
+## 6. Ranked next actions (the single backlog)
 
-| # | Action | Why | Spec |
-|---|---|---|---|
-| 1 | Capture 2–3 prose articles, run `check-preservation.js` | Two minutes; retires the last ⚠️ | `tech-debt.md` |
-| 2 | **Write `index_status = 'pending'`** | ~5 lines; closes the mid-import blind spot (4.1b) | `indexing-architecture.md` |
-| 3 | **Eval fixture** (~20 query/entry pairs) | Harness exists, fixture doesn't. Gates the re-index decision. ~half a day | `indexing-architecture.md` §2 |
-| 4 | **`jobs` table** (task #5) | The keystone. Unblocks invisible indexing, safe bulk import, meterable indexing, AND the graceful quota path — deferred work needs somewhere to pause | `indexing-architecture.md` §3 |
-| 5 | Two-phase indexing | Rides on the queue. Makes contextualisation tier-differentiable and interruptible | `indexing-architecture.md` §4 |
-| 6 | Set `aiCallsPerWindow` from real data | Still `null`. Needs ~a week of `ai_usage` | `limits-runbook.md` |
-| 7 | Reminders + Agenda | Biggest product value; unblocked | `intentional-app-spec.md` Part 1 |
-| 8 | Interview progress UI | Data flows now, so rings aren't theatre | `interview-progress-spec.md` §4 |
-| 9 | Wayback SPN2 rewrite | Fixes a broken feature, no new infra | `preservation-v2-spec.md` §2 |
-| 10 | Split `App.jsx` (1343 lines) | Merge pain is already real — proven again this session | `2026-06-19-app-modularization-design.md` |
-| 11 | Split `styles.css` (5771 lines) | Every feature appends to one file | `tech-debt.md` |
+**This table is the one list.** Bugs, features, north-star steps and infrastructure
+ranked against each other, because they compete for the same hours — a backlog split
+by category can't tell you what to do next. Each row names the file that owns the
+detail; that file, not this table, is authoritative on *how*.
+
+### Where each kind of thing lives
+
+| Looking for | Read | Owns |
+|---|---|---|
+| **What to do next** | **this table** | the ranking |
+| Bugs & things already wrong | `docs/tech-debt.md` | severity-ranked defects, incl. § *Reported UX problems* |
+| Feature proposals | `IDEAS.md` | roadmap ①–④, Big swings, cuts |
+| The north star | `docs/superpowers/specs/2026-07-04-north-star-experience-design.md` | four moods, Manager, `user_model`, build order ①–⑧ |
+| Where it is *now* | §§1–5 above | deployment truth, gaps, known-broken, architecture |
+| What already shipped | `CHANGELOG.md` | history + why |
+| Which of the 100 docs to trust | `docs/README.md` | the index |
+| Cost, scaling, launch checklist | `PRODUCTION.md` | incl. the **unchecked** backups box |
+
+### Ranked
+
+| # | Action | Kind | Why | Detail |
+|---|---|---|---|---|
+| 0 | **Turn on Supabase automatic backups** | ops | Free tier has **none** and pauses on inactivity. No app-level backup substitutes. Dashboard, not code — **only you can do it** | `README.md` § *Not losing your data* |
+| 1 | Confirm `0070`/`0071` are applied | ops | Both landed from a parallel session; written ≠ applied | `supabase db push` |
+| 2 | **Fix "everything is slow, incl. Metrics"** | bug | The one hurting daily use. *Measure first* — Metrics being slow too suggests one shared cause, not seven | `tech-debt.md` § UX #4 |
+| 3 | Capture 2–3 prose articles, run `check-preservation.js` | bug | Two minutes; retires the last ⚠️ on the extractor | `tech-debt.md` |
+| 4 | **Write `index_status = 'pending'`** | bug | ~5 lines; closes the mid-import blind spot (§4.1b) — notes unsearchable *and* invisible to the retry banner | `indexing-architecture.md` |
+| 5 | Feed sort resets instead of sticking | bug | Small, self-contained | `tech-debt.md` § UX #7 |
+| 6 | AI search runs retrieval on every prompt | bug | Needs a routing decision, not a patch. Cheaper + faster chat | `tech-debt.md` § UX #1 |
+| 7 | Topic-scoped search is implicit | design | Needs design, not a fix | `tech-debt.md` § UX #6 |
+| 8 | **Eval fixture** (~20 query/entry pairs) | infra | Harness exists, fixture doesn't. **Gates the re-index decision** — spend it before this and you never learn whether contextual retrieval helped | `indexing-architecture.md` §2 |
+| 9 | **`jobs` table** | infra | **The keystone.** Unblocks invisible indexing, safe bulk import, meterable indexing, and the graceful quota path — deferred work needs somewhere to pause | `indexing-architecture.md` §3 |
+| 10 | Two-phase indexing | infra | Rides on the queue. Makes contextualisation tier-differentiable and interruptible | `indexing-architecture.md` §4 |
+| 11 | Set `aiCallsPerWindow` from real data | infra | Still `null` on purpose. Needs ~a week of `ai_usage` | `limits-runbook.md` |
+| 12 | **Reminders + Agenda** | feature | **Biggest product value, unblocked.** Reminders are entries with a `due_at`, so they inherit capture/topics/search/backup free. Also the answer to "can MediaLog hold my writing tasks" | `intentional-app-spec.md` Part 1 |
+| 13 | Tidy queue (north-star ①) | north star | One-card triage; queries already exist, it's a card UI | north-star spec Part 6 |
+| 14 | Related-entries footer (north-star ④) | north star | pgvector exists; agent step ① as visible value | north-star spec Part 6 |
+| 15 | Manager + resume cards (north-star ⑤) | north star | The genuinely missing surface | north-star spec Part 2 |
+| 16 | `user_model` v1 + feed ranking (north-star ⑥) | north star | **Start logging the dismiss signal now — it's free and it's the input** | north-star spec Part 5 |
+| 17 | Collapse Deep Topics into normal topics | feature | A *correction* to shipped code, not an extension. Sequence before any recommendation work | `IDEAS.md` § Big swings |
+| 18 | Interview progress UI | feature | Data flows now, so rings aren't theatre | `interview-progress-spec.md` §4 |
+| 19 | Wayback SPN2 rewrite | bug | Fixes a broken feature, no new infra | `preservation-v2-spec.md` §2 |
+| 20 | Undo the feed floor / recommend problems | design | Open question, unsolved | `tech-debt.md` § UX #8 |
+| 21 | Split `App.jsx` (1320 lines) | debt | Merge pain is already real — a parallel session edited it again this week | `2026-06-19-app-modularization-design.md` |
+| 22 | Split `styles.css` (5784 lines) | debt | Every feature appends to one file | `tech-debt.md` |
+
+**Not on this list on purpose:** anything under *Deliberately deferred* below, and
+anything in `IDEAS.md` that has not earned a rank yet. A proposal is not a backlog
+item until it is ranked here — that is what keeps `IDEAS.md` free to be speculative.
 
 ### The quota UX, designed but not built
 

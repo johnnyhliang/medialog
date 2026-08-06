@@ -173,10 +173,10 @@ not the database.
 
 ### 2. Turn on GitHub backup, then confirm it is actually running
 
-Settings → GitHub connects a repo and pushes your library to it as **both** exact
-JSON rows (`data/*.json`, what a restore reads) and browsable Markdown
-(`notes/<topic>/*.md`, one file per entry). The Markdown matters: it stays readable
-in any text editor and outlives MediaLog itself.
+**Settings → Data & Backup** connects a repo and pushes your library to it as
+**both** exact JSON rows (`data/*.json`, what a restore reads) and browsable
+Markdown (`notes/<topic>/*.md`, one file per entry). The Markdown matters: it stays
+readable in any text editor and outlives MediaLog itself.
 
 Two things to know about the automatic version:
 
@@ -187,15 +187,21 @@ Two things to know about the automatic version:
   `user_configs.last_error` and look at your backup repo's commit history. This path
   did silently nothing for months once, which is why that column exists.
 
-Press **Back up now** in Settings → GitHub after any session you would hate to redo.
+Press **Back up now** after any session you would hate to redo.
 
-### 3. Export a zip periodically
+### 3. Download a zip periodically — the copy nobody else controls
 
-Sidebar → Export downloads every topic as Markdown with YAML front-matter. It is a
-single click, needs no third-party account, and is the copy that survives you losing
-access to both Supabase and GitHub. Keep one somewhere neither service controls.
+**Settings → Data & Backup → Download zip** writes the *same* `data/*.json` format
+as the GitHub backup, in one file, with **no third-party account involved**. This is
+the copy that survives losing access to Supabase *and* GitHub at once, so keep one
+somewhere neither service can reach. **Import from zip** restores it.
 
-### What the GitHub backup does and does not carry
+Distinct from **Export** in the sidebar, which writes every topic as readable
+Markdown with YAML front-matter. That is for reading elsewhere or dropping into
+another tool — it is a rendering, not a restorable backup. Use the zip for
+recovery and the Markdown export for portability.
+
+### What the backup does and does not carry
 
 Backed up (`SYNC_TABLES` in `src/lib/githubSync.js` is the authoritative list):
 
@@ -211,7 +217,7 @@ Backed up (`SYNC_TABLES` in `src/lib/githubSync.js` is the authoritative list):
 | **Uploaded files, images, PDFs** | The `snapshots` storage bucket holds bytes; a git backup carries text. **These have one copy.** |
 | Embeddings & chunks | Derived — rebuilt by `scripts/rechunk.js`. Backing them up would add megabytes of churn to every commit. |
 | `feed_items` | Refetched from your feed list on the next poll. |
-| `user_configs` | Holds your encrypted GitHub token. Never leaves the database. |
+| Most of `user_configs` | **Your theme and module preferences *are* carried** (`USER_CONFIG_EXPORT_FIELDS`, an allowlist). The rest of the row — GitHub token, repo settings — never leaves the database. |
 | `capture_tokens` | Capture credentials. Revocable secrets do not belong in a file. |
 | Billing, entitlements, telemetry | Server-owned. Restoring your own tier from an editable file is not a feature. |
 
@@ -225,7 +231,8 @@ project loses them.
 
 ### Restoring
 
-Settings → GitHub → Restore reads `data/*.json` and **upserts by primary key**, so
+**Settings → Data & Backup → Restore** (from the repo) or **Import from zip** (from
+a downloaded file) both read `data/*.json` and **upsert by primary key**, so
 restoring twice is a no-op rather than a library duplicated. Nothing is ever
 deleted by a restore; it can only add rows back or update them in place. A backup
 restored into a different account is re-stamped to that account's `user_id`.

@@ -288,7 +288,7 @@ that caused the failures — but the import path doesn't use it.
 It will break without warning and can't be defended if challenged. Already listed
 under *Cuts / quiet retirements* in `IDEAS.md` — park unless used weekly.
 
-### `App.jsx` is a god object — 1332 lines, 55 handlers, 26 `view ===` branches
+### `App.jsx` is a god object — 1320 lines, 55 handlers, 26 `view ===` branches
 The hook extraction (`useTopics`, `useEntries`, `useInbox`, …) moved *state* out
 but left *orchestration* in. Share-target handling, imports, OAuth callback,
 revisit, trash, export, entitlement loading and now event tracking all live in one
@@ -305,7 +305,7 @@ count — `useShareTarget`, `useOAuthCallback`, and a routing module that owns t
 
 ## Medium
 
-### `styles.css` monolith — 5422 lines / 153 KB
+### `styles.css` monolith — 5784 lines / 153 KB
 The entire design system in one file, and every feature keeps appending to it
 (this session added three separate blocks). Split by surface — tokens, layout,
 then per-view — before it becomes unnavigable. No framework needed; the CSS
