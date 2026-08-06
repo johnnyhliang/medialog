@@ -77,7 +77,34 @@ not diagnoses. Verify before fixing.
    estimate that cost **a full extra `entries` scan** to compute, in service of a
    choice the user had already made by clicking Export. `ExportModal.jsx` and
    `useExport.js` are deleted; the attachments caveat moved into the success toast.
-4. **Everything is very slow to load, including the Metrics page.** Broad enough
+4. **Everything is very slow to load, including the Metrics page.**
+
+   **First measurements, 2026-08-06** (`vite build`, production output). Not a
+   diagnosis yet — nothing has been profiled in a browser — but the shape supports
+   the "one shared cause" hypothesis rather than seven separate slow views:
+
+   | Asset | Size |
+   |---|---|
+   | `app-*.js` | **1,142 KB** |
+   | `supabaseClient-*.js` | 346 KB |
+   | `app-*.css` | 126 KB |
+   | next three chunks | 101 / 95 / 69 KB |
+
+   **~1.5 MB of JavaScript parses before anything renders.** That would explain why
+   *Metrics is slow too* — Metrics is lazily loaded and small, so if it feels slow,
+   the cost is the shell it loads into, not the view. Vite already warns that
+   chunks exceed 500 KB.
+
+   Two more candidates found while looking, neither confirmed as a cause:
+   **`EntryCard` is not memoised** (~700 lines, one per entry, and the CS topic has
+   400+), and **`App.jsx` runs 10 `useEffect`s on mount**, several issuing their own
+   queries.
+
+   **Still measure in a browser first.** Bundle size is the loudest number, not
+   necessarily the felt one — a waterfall of sequential queries on mount can hurt
+   more than parse time, and these are testable apart. Original report follows.
+
+   Broad enough
    that it needs measurement before a fix; Metrics being slow too suggests it is
    not one heavy view but something shared (initial query fan-out, bundle size, or
    an unbatched round trip per surface).
