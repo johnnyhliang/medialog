@@ -11,6 +11,89 @@ section when you deploy. Detailed design rationale lives in `docs/superpowers/sp
 
 ## Unreleased
 
+### One ranked backlog, and `IDEAS.md` as the proposal registry
+Feature proposals lived in five places. The cost turned out not to be duplication
+but a **gap**: six features with complete design documents — collections, table/grid
+editor, live preview + slash commands, episodic extraction, video archiver, MCP v2 —
+had no entry in `IDEAS.md` at all. The proposals developed furthest were the ones
+invisible when browsing the file called Ideas.
+
+All six now have a line and a link to their spec, including the fact that four of
+them form **one order-dependent chain** (table editor → slash commands →
+collections), because each reuses the previous one's widget.
+
+Two lists were **deleted rather than updated**, both being second indexes of the
+first: `PROJECT-STATE.md` §3.5, half of whose entries were already cross-references
+into `IDEAS.md` by number and which still called `ai_usage` and the admin dashboard
+unbuilt months after they shipped; and the README's *Features (planned)*, which
+listed full-text mirroring as planned long after Readability shipped it.
+
+`PROJECT-STATE.md` §6 is now the single backlog — bugs, features, north-star steps
+and infrastructure ranked against each other, because they compete for the same
+hours and a per-category list cannot answer "what next".
+
+### Eighteen specs corrected — they described shipped work as unbuilt
+An audit of every doc carrying a Status line, checked against the codebase rather
+than against the line. All eighteen were wrong in the same direction. The clearest:
+entry version history said *Idea / Future Consideration* while `VersionHistoryModal`
+had been in the tree and tested for months.
+
+Two needed more than a status change. **Deep topics** is built *and* its central
+decision has been reversed — a deep topic being a separate hidden kind is now
+considered the mistake, with the agreed direction being to collapse it into ordinary
+topics carrying resources. **The modularization design** documents `useExport()` and
+`ExportModal.jsx`, both since deleted.
+
+### Backup: seven missing tables, and a restore that would have failed
+`assistant_conversations`, `assistant_messages`, `menu_items`, `quick_links`,
+`programs`, `companies` and `shared_items` were never carried in a backup. Losing
+`shared_items` alone breaks every public URL you have handed out.
+
+Worse, and found while auditing: `opportunity_state.opportunity_id` is NOT NULL with
+a foreign key to `opportunities`, which was **not synced** — so a restore into an
+empty database failed outright on a foreign-key violation, in precisely the
+disaster-recovery case backups exist for. Table *ordering* in `SYNC_TABLES` is now
+test-asserted, since `applySnapshot` walks it front to back and order is therefore
+correctness, not tidiness.
+
+`programs` and `companies` are global catalogues with a unique name/slug and no
+`user_id`, so they upsert on the **natural key** — by `id` they would collide.
+
+`renderReadme` had been complete for months and was never called, so backup repos
+shipped with no explanation of themselves. Now committed, rendering the
+excluded-tables list, so the repo documents its own gaps. Schema version 2; older
+backups still restore.
+
+### Local zip backup, and a single Data & Backup tab
+Full-fidelity `data/*.json` download and restore with **no GitHub account required**
+(`src/lib/zipBackup.js`) — the copy that survives losing Supabase and GitHub at
+once. Import/export/migration folded into one **Settings → Data & Backup** tab.
+Theme and module preferences are now backed up by field allowlist, so restoring
+brings them back without the GitHub token ever reaching a file.
+
+### Settings that claimed saves they never made
+Three career tabs updated state optimistically and **never checked the write's
+error**, so a rejected update rendered as saved until a reload reverted it. Reported
+as "no save button"; adding one would have shipped a second way to trigger the same
+unchecked write. All three now re-read from the server on failure — rolling back to
+a remembered value is *not* sufficient, because a date field fires a change per
+keystroke and each call captures the previous optimistic value.
+
+Also: `useArchiveToast` never persisted at all, so the toggle reset on every reload
+while its three siblings persisted; the settings tab reset to Appearance on every
+visit; and `SettingsView` referenced `ALL_TABS`, which does not exist — a
+`ReferenceError` the moment any settings *search result* rendered.
+
+Preferences now go through `src/lib/localPref.js`, which keeps **absent** distinct
+from **`'false'`** so an untouched preference takes its default rather than reading
+as off.
+
+### Deleting an AI conversation asks first; export just exports
+The delete icon sits inside the row you click to open a thread, and was one click
+and irreversible. The export button opened a modal to show a size estimate that cost
+a full extra `entries` scan, in service of a decision already made by clicking
+Export.
+
 ### Operator audit log, activation metrics, and a per-account probe
 **Migration `0069`.** Three gaps in the founder dashboard, all of which get harder
 to add once real users exist.
