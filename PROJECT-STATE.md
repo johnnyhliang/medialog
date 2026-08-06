@@ -478,6 +478,7 @@ detail; that file, not this table, is authoritative on *how*.
 | Looking for | Read | Owns |
 |---|---|---|
 | **What to do next** | **this table** | the ranking |
+| What to click through by hand | `docs/qa-checklist.md` | manual verification |
 | Bugs & things already wrong | `docs/tech-debt.md` | severity-ranked defects, incl. § *Reported UX problems* |
 | Feature proposals | `IDEAS.md` | roadmap ①–④, Big swings, cuts |
 | The north star | `docs/superpowers/specs/2026-07-04-north-star-experience-design.md` | four moods, Manager, `user_model`, build order ①–⑧ |
