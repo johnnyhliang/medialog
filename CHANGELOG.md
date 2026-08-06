@@ -11,6 +11,35 @@ section when you deploy. Detailed design rationale lives in `docs/superpowers/sp
 
 ## Unreleased
 
+### Profile fields you authored are now backed up — and the allowlist holds at the boundary
+`user_configs` is carried by field allowlist, and that allowlist was
+`{theme, modules}`. Four hand-authored fields were in no backup at all:
+**`radar_keywords`** (the career list you curate), **`prep_target_date`** and
+**`prep_focus`** (interview deadline and target tracks), and `archive_toast`.
+Nothing regenerates any of them.
+
+The security half matters more. The allowlist was applied in `collectSnapshot`
+only, so `buildFiles` wrote whatever object it was handed — any caller passing a
+fuller row would have written `github_token` into a file bound for a git repo. It
+now filters at the write boundary too, and a test poisons a snapshot with a secret
+and asserts no trace reaches the output. **That test failed before the fix.**
+
+New tests parse the actual migrations and require every table *and* every
+`user_configs` column to be classified — carried, or excluded with a stated reason.
+The rule is not "everything must be backed up", it is "everything must be decided".
+Schema version 4; older backups restore unchanged.
+
+**Correction:** an earlier note claimed `archive_toast` never persisted. It did —
+`App.jsx` has always written it to the database. What it lacked was a *synchronous*
+initial value, so the first paint showed the default and then corrected itself. The
+local layer is a cache, not the record.
+
+### A manual QA checklist
+`docs/qa-checklist.md`, ordered by what it costs to be wrong rather than by screen.
+Every bug this session passed its tests, so the gap was never coverage — it was
+that nobody had clicked through. Top item: **the backup/restore round trip has
+never been run against real data**, and that format changed twice this week.
+
 ### One ranked backlog, and `IDEAS.md` as the proposal registry
 Feature proposals lived in five places. The cost turned out not to be duplication
 but a **gap**: six features with complete design documents — collections, table/grid
