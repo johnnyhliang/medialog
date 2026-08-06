@@ -1,6 +1,14 @@
 # Public Sharing — Scoping Spec
 
-Status: **scoping, not built.** Goal: make individual entries (and later topics / synthesis
+Status: ✅ **BUILT** — corrected 2026-08-06. The `public-share` edge function,
+`shared_items`, `SharedManager` and Settings → Shared all ship, and migration
+`0071_shared_items_active.sql` extended it further. Two things this document does
+*not* record: sharing sanitises HTML with a regex rather than a parser
+(`docs/tech-debt.md`, fine while you author everything, not fine otherwise), and
+`shared_items` is now carried in backups — losing it breaks every public URL you
+have handed out.
+
+Original goal: make individual entries (and later topics / synthesis
 outputs) publicly viewable via an unguessable link, with a central manager in Settings to flip things
 public/private. Shared pages are **fully rendered, read-only, no login**. Removing an item from the
 list = it goes private immediately.

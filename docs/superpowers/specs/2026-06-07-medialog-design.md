@@ -3,7 +3,10 @@
 # MediaLog — Design Spec
 
 **Date:** 2026-06-07
-**Status:** Approved design, pre-implementation
+**Status:** ✅ **BUILT — this is the founding design, kept as history.** Corrected
+2026-08-06; it said *pre-implementation* long after the entire app existed. Read it
+for **why** MediaLog is shaped this way (the four buckets, triage-is-mandatory,
+flat-over-nested). Do **not** read it for what exists — `PROJECT-STATE.md` owns that.
 
 ## Purpose
 

@@ -1,4 +1,6 @@
 > **[Audit 2026-07-29]** **PARTIALLY DONE.** Hooks were extracted (`useTopics`, `useEntries`, `useInbox`, ...) but orchestration stayed in `App.jsx`, which is still ~1200 lines with 50+ handlers. Three parallel branches edited it in one session and merged by luck. Remaining seams: `useShareTarget`, `useOAuthCallback`, and a routing module for the ~25-branch `view ===` ladder. Tracked in `docs/tech-debt.md`.
+>
+> **[Update 2026-08-06]** `App.jsx` is now **1320 lines** — it has grown, not shrunk, since that audit. Two pieces described below **no longer exist**: `useExport()` and `ExportModal.jsx` were deleted (`b2410c7`) when export became a direct download, so the sections documenting them describe removed code. `useArchiveToast` is still here but is no longer `useState(true)` — it persists via `src/lib/localPref.js`. Everything else in this design still stands, and the remaining seams are unchanged.
 
 # App.jsx Modularization Design
 

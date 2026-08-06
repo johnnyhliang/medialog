@@ -4,7 +4,10 @@
 
 **Date:** 2026-06-21
 **Phase:** C
-**Status:** Spec / not yet planned
+**Status:** ✅ **BUILT** — corrected 2026-08-06. Chunking, embeddings and hybrid
+retrieval ship (`src/lib/chunkEntry.js`, `content_chunks`, `askLibrarian`). The
+design here was also *extended* after the fact by contextual retrieval — see
+`docs/indexing-architecture.md`, which is authoritative on how indexing works now.
 
 ## Goal
 

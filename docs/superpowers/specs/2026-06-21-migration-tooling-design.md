@@ -4,7 +4,9 @@
 
 **Date:** 2026-06-21
 **Phase:** 1 (make it your daily tool)
-**Status:** Ready to plan
+**Status:** ✅ **BUILT** — corrected 2026-08-06. `src/components/MigrationView.jsx`
+ships. Note it has since been **folded into Settings → Data & Backup** (`3594169`),
+so it is no longer its own sidebar destination.
 
 ## Goal
 

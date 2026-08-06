@@ -3,7 +3,10 @@
 # Entry Version History — Spec
 
 **Date:** 2026-06-19
-**Status:** Idea / Future Consideration
+**Status:** ✅ **BUILT** — corrected 2026-08-06. `VersionHistoryModal.jsx`,
+`entry_versions`, snapshot-on-Done and restore have all been in the tree and tested
+for months. This said *Idea / Future Consideration* the whole time, which made it
+the clearest example of the failure `docs/README.md` was written to catch.
 **Inspiration:** Google Docs revision history
 
 ---

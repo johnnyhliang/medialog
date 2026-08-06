@@ -4,7 +4,11 @@
 
 **Date:** 2026-06-21
 **Phase:** 1 (make it your daily tool)
-**Status:** Ready to plan
+**Status:** ⚠️ **PARTIALLY BUILT** — corrected 2026-08-06. Persisted assistant
+threads ship (`assistant_conversations`, `assistant_messages`,
+`src/lib/db/conversations.js`, history + delete in `AssistantPanel`). Check the
+rest of this spec against the code before planning from it — the conversation
+*capture* pieces are not all present.
 
 ## Goal
 

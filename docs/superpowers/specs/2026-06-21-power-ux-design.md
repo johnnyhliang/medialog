@@ -3,7 +3,11 @@
 # MediaLog — Power UX: Command Palette, Keyboard Nav, Recent Searches, Snooze
 
 **Date:** 2026-06-21
-**Status:** Approved design — ready for implementation
+**Status:** ✅ **BUILT** — corrected 2026-08-06. Command palette, remappable
+keybinds (`src/lib/keybindings.js`, `commands.js`) and the Keybinds settings tab
+ship. **Since then:** every keybind must be a `commands.js` entry — the assistant
+toggle was hardcoded in `App.jsx` and was consequently the one shortcut that could
+be neither discovered nor remapped (`c687a0f`).
 **Inspired by:** `2026-06-19-tuxedo-analysis.md`
 
 ---

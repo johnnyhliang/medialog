@@ -3,7 +3,12 @@
 # Chunk-Level Retrieval — Design Spec
 
 **Date:** 2026-07-15
-**Status:** Draft (for review)
+**Status:** ✅ **BUILT AND DEPLOYED** — corrected 2026-08-06. See
+`docs/superpowers/specs/2026-07-20-plan2-activation-scope.md` for what remains
+(consumers/backfill), and **`docs/indexing-architecture.md`, which is authoritative**
+on how indexing works and what it costs. Known gap: ~4,971 chunks were written
+without contextual retrieval and have not been re-indexed — deliberately, until an
+eval fixture exists (`PROJECT-STATE.md` §6 row 8).
 **Supersedes:** the "Retrieval (Tier 2)" section of `2026-06-25-ai-agent-rag-design.md`. That spec's
 agent/chat/tool layers are **not** in scope here (see Deferred).
 **Relates to:** north-star build step ④ (related entries).

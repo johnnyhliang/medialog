@@ -3,7 +3,22 @@
 # Deep Topics — Design Spec
 
 **Date:** 2026-07-08
-**Status:** Draft (for review)
+**Status:** ⚠️ **BUILT, AND THE DESIGN HAS SINCE BEEN REVERSED** — 2026-08-06.
+
+`DeepTopicView.jsx`, `topics.kind` and `resource_sections` all ship, so this is not
+a proposal. But the central decision here — that a deep topic is a *separate kind*
+of topic, hidden from the main grid — has been **called a mistake**: it forces
+"PyTorch internals" to live in a different universe from "ML" when they are one
+thing in your head, which is the fragmentation the app exists to prevent.
+
+The agreed direction is to **collapse this into normal topics**: any topic can carry
+one or more *resources* (source + ordered outline + cursor), the outline/cursor UI
+becomes a panel inside the ordinary topic view rather than its own route, and the
+grid-hiding filter goes away. `resource_sections` mostly survives.
+
+**Read `IDEAS.md` § Big swings before building anything from this file**, and note
+it is ranked at `PROJECT-STATE.md` §6 row 17. This document is now the record of
+what was built, not of what is wanted.
 **Part of:** the "Gains System" vision (`gains-system.md`). This is **sub-project 1 of 2**.
 The **Gains Feed** (the "when bored" pull surface that replaces doomscrolling, absorbs the
 interview tracker, and adds the menus/floors/capture-to-shelf philosophy) is a **separate later

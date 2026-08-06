@@ -8,7 +8,16 @@
 
 # Content Preservation — Implementation Plan
 
-Status: **scoping, not built.** Goal: stop losing important articles and videos when they get taken
+Status: ⚠️ **PARTIALLY BUILT** — corrected 2026-08-06. Shipped: the `snapshots`
+bucket and `snapshot` function (images/PDFs), article text via `enrich` +
+Readability, and `preservationPatch`. Not shipped: `preservationCoverage` has no UI,
+`scripts/backfill-full-text.js` has never been run against real data, and Wayback
+submission records unverified successes. **Also known now, and not reflected below:**
+entries created by the capture endpoint are never enriched at all, and wiring that
+up naively would store paywalls as article text — see `docs/tech-debt.md`.
+`PROJECT-STATE.md` §3.3 has the tier-by-tier state.
+
+Goal, as written: stop losing important articles and videos when they get taken
 off the internet. Snapshot-at-save on your own storage, tiered by content type. Phase 1 (hotlinked
 image/PDF archiver) is **already shipped** (`snapshots` table, `public-share`… no —
 `snapshot` edge function, migration 0054). This plan covers article text and full pages/video.

@@ -4,7 +4,8 @@
 
 **Date:** 2026-06-21
 **Phase:** B
-**Status:** Spec / not yet planned
+**Status:** ✅ **BUILT** — corrected 2026-08-06. `src/components/DigestView.jsx`
+ships. Verify current behaviour against the code, not this document.
 
 ## Goal
 

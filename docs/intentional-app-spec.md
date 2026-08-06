@@ -1,6 +1,13 @@
 # Intentional App — Reminders, Modularity, and Defeating Paradox-of-Choice
 
-Status: **scoping, not built.** Three deeply related asks that share one thesis: MediaLog should feel
+Status: ⚠️ **1 OF 3 BUILT** — corrected 2026-08-06. **Part 2 (modularity) ships** as
+the three-layer module system (migration `0057`, `src/lib/modules.js`, Settings →
+Modules). **Part 1 (Reminders + Agenda) and Part 3 (Today / Morning Open) are not
+built** — Part 1 is the highest-value unbuilt feature in the project
+(`PROJECT-STATE.md` §6 row 12) and Part 3 depends on it. Part 3 is also the more
+current statement of the bounded/closeable philosophy than the north-star spec.
+
+Original framing: three deeply related asks that share one thesis: MediaLog should feel
 *calm and bounded*, not like another pile that grows forever. Each person turns on only what they
 need; the app decides what to show today so you never doom-scroll your own library or fear gaps.
 

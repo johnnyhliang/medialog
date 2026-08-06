@@ -1,10 +1,14 @@
 # Zip-based backup export/import — Implementation Plan
 
-Status: **scoping, not built.** Goal: let a user download a full-fidelity local backup
-of their MediaLog data and restore it later — same account, a fresh account after
-deletion, or after moving off GitHub sync entirely. Lives in the same Settings →
-GitHub tab as the existing GitHub-backed backup/restore, as one unified backup
-section, but does not require GitHub to be connected.
+Status: ✅ **BUILT 2026-08-0x** (`c5a1ea1`) — corrected 2026-08-06.
+`src/lib/db/zipBackup.js` ships, with **Download zip** and **Import from zip** in
+the UI. **The tab moved:** this plan says Settings → GitHub, but `3594169` folded
+import/export/migration into a single **Settings → Data & Backup** tab
+(`GitHubTab.jsx` → `DataBackupTab.jsx`), which is where the buttons actually live.
+
+Goal, as written: let a user download a full-fidelity local backup of their
+MediaLog data and restore it later — same account, a fresh account after deletion,
+or after moving off GitHub sync entirely, without requiring GitHub to be connected.
 
 ---
 

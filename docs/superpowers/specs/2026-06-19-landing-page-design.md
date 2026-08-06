@@ -3,7 +3,10 @@
 # MediaLog Landing Page — Design Spec
 
 **Date:** 2026-06-19
-**Status:** Approved design, pre-implementation
+**Status:** ✅ **BUILT** — corrected 2026-08-06. `LandingPage.jsx` ships. **Since
+redesigned** beyond this spec: the paper-and-pencil identity in `BRAND.md` and a
+story-scroll hero, so treat this as the original brief rather than a description of
+the current page.
 **Route:** `/landing.html` — standalone self-contained file, not part of the React app
 
 ---

@@ -3,7 +3,10 @@
 # Career Section — Design Spec
 
 **Date:** 2026-06-26  
-**Status:** Approved — ready for writing-plans
+**Status:** ✅ **BUILT** — corrected 2026-08-06. `src/components/CareerView.jsx`,
+`companies`/`programs`/`applications`/`opportunities` and the `fetch-opportunities`
+and `fetch-programs` functions all ship. **Changed from this spec:** `career` moved
+from founder-only to **free** (it scrapes public boards on a shared cron).
 
 ---
 

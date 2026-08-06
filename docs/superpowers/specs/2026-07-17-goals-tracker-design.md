@@ -3,7 +3,11 @@
 # Goals — Life Tracker v1 (Design Spec)
 
 **Date:** 2026-07-17
-**Status:** Approved, ready for planning
+**Status:** ⚠️ **LIBRARY BUILT, NO UI** — corrected 2026-08-06. `src/lib/goals.js`
+(85 lines) exists and is tested; **nothing in the UI imports it**, and there is no
+migration because goals are entries with frontmatter. This is the "did that get
+built?" trap catalogued in `PROJECT-STATE.md` §2 — the answer is *half*, and the
+half that is missing is the entire user-visible feature.
 **Build order:** Feature A of A→B→C→D1→D2 (see companion specs)
 
 ## Purpose

@@ -1,6 +1,10 @@
 # Spec: Metering, Product Analytics & Internal Dashboard
 
-**Status:** ready to build · **Written:** 2026-07-29 · **Intended for:** a fresh session in a worktree
+**Status:** ✅ **BUILT AND DEPLOYED 2026-07-30** — corrected 2026-08-06.
+`_shared/meter.ts`, `0065_ai_usage.sql`, `src/lib/limits.js`, `admin-metrics` and
+`MetricsView.jsx` all ship. **Caps are still deliberately unset** —
+`aiCallsPerWindow` is `null` on purpose until there is real `ai_usage` history to
+set it from; see `docs/limits-runbook.md`. · **Written:** 2026-07-29
 
 This document is self-contained. It assumes no memory of the conversation that produced it.
 Read it top to bottom before writing code — the ordering constraint in §0 is the reason the
