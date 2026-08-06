@@ -322,12 +322,18 @@ archival, versioning and GitHub backup for free. Unblocked now that modules exis
 so it can ship behind a toggle from day one. **Today must come after** — it is a
 view *over* reminders.
 
-### 3.5 Everything else not built
-`ai_usage` · admin dashboard · import queue (should share one table with
-preservation jobs) · topic synthesis (`IDEAS.md` ①) · wikilinks/backlinks (②) ·
-audio overview (③) · graph view (④) · collections · table/grid editor ·
-slash commands · episodic extraction · agent steps 3–5 *(deferred)* · MCP v2
-*(deferred)*.
+### 3.5 Everything else not built → [`IDEAS.md`](IDEAS.md)
+
+**This list was deleted 2026-08-06 rather than updated.** It had become a second
+index of the first — half its entries were already cross-references (*topic synthesis
+(`IDEAS.md` ①)*, *wikilinks (②)*), which means two lists to keep in sync and
+therefore one that is always wrong. `ai_usage` and the admin dashboard were still
+listed here as unbuilt months after they shipped, which is exactly that failure.
+
+**`IDEAS.md` is the registry of every proposal.** The subset that is actually next is
+ranked in §6 below. Nothing was lost in the deletion: the two genuinely-unbuilt
+infrastructure items it named live on as §6 row 9 (the `jobs` table, which should
+share one table with preservation jobs) and the deferred agent steps 3–5.
 
 ---
 

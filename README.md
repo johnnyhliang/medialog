@@ -255,15 +255,27 @@ Spec: `docs/superpowers/specs/2026-06-21-mcp-v2-design.md`
 ## TODO
 
 ### Activate (manual steps)
+- [ ] **⚠️ Supabase automatic backups** — free-tier projects get **none**, and pause on inactivity. Dashboard setting, Pro tier. No application-level backup substitutes for it; see [Not losing your data](#not-losing-your-data). This is `PROJECT-STATE.md` §6 row 0.
+- [ ] **Confirm migrations `0070`/`0071` are applied** — both landed from a parallel session; written ≠ applied. `supabase db push`
 - [ ] **`app.supabase_url` GUC** — run `alter database postgres set app.supabase_url = 'https://<ref>.supabase.co';` in SQL editor (needed for cron callbacks)
 - [ ] **`app.cron_secret` GUC** — run `alter database postgres set app.cron_secret = '<CRON_SECRET>';` in SQL editor
 - [ ] **iOS Shortcut** — verify with a real Safari share (guide in Settings → iOS Shortcut tab)
 - [ ] **Instagram Reels** — deploy function + set `INSTAGRAM_SESSION_ID` secret (guide in Settings → Instagram tab)
 
-### Features (planned)
-- [ ] **Full-text mirroring** — store article body at capture time (Mozilla Readability); unlocks reader mode, highlights, SRS
-- [ ] **Semantic links sidebar** — "Related entries" panel using existing `match_entries` RPC; quick win, no new infra
-- [ ] **MCP server v2** — rebuild against current schema. Spec: `docs/superpowers/specs/2026-06-21-mcp-v2-design.md`
+### Features (planned) → see `IDEAS.md` and `PROJECT-STATE.md` §6
+
+**This list was deleted 2026-08-06 rather than updated**, because a fourth place to
+write down planned features is how you get four answers to "what's next". It had also
+gone stale in the way that costs real time: *full-text mirroring* was listed as
+planned long after `enrich` + Readability shipped it.
+
+- **Every proposal** → [`IDEAS.md`](IDEAS.md) — the registry
+- **What is actually next**, ranked → [`PROJECT-STATE.md` §6](PROJECT-STATE.md#6-ranked-next-actions-the-single-backlog)
+
+Of the three items that were here: full-text mirroring is **built**; the semantic
+links sidebar is north-star ④ and ranked at §6 row 14; MCP v2 is in `IDEAS.md` under
+*Specced but not built* (and note the v1 server has ungated bulk-write tools — do not
+connect it to anything before re-gating it).
 
 ### Tech Debt
 - [ ] **`frontend-design` plugin** — shows as `unknown` version in Claude Code; may be broken. Low priority.

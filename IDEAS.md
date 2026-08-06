@@ -6,6 +6,19 @@ is committed work. Promote items into `docs/superpowers/specs/` when they get re
 
 ★ = would genuinely prioritize.
 
+**This file is the registry of every proposal** (as of 2026-08-06). If an idea exists
+anywhere — a stray thought, or a fully written design doc — it gets a line here. That
+rule exists because it was being broken: six features with complete specs had no entry
+in this file at all, so the ideas you had developed furthest were the ones invisible
+when browsing your own ideas. A proposal with a spec keeps its detail in the spec and
+gets **one line** here pointing at it.
+
+**Nothing here is scheduled.** A proposal becomes work only when it is ranked in
+[`PROJECT-STATE.md` §6](PROJECT-STATE.md#6-ranked-next-actions-the-single-backlog),
+which is the one list that answers "what next". That separation is deliberate: it
+keeps this file free to hold half-formed and unlikely ideas without implying any of
+them are planned.
+
 ---
 
 ## Roadmap — replace Obsidian + NotebookLM
@@ -99,6 +112,41 @@ until ② lands; mostly a visualization over data ② already produces.
   three months of a learning journey in one glance. The "wow" screen the app lacks.
 - **Voice catch** — hold-to-record in the PWA, Whisper → Inbox note. Side-thoughts arrive while
   walking; typing is the friction.
+
+## Specced but not built — each already has a full design doc
+
+These were the *most* developed proposals here and, until 2026-08-06, the only ones
+missing from this file: each earned a whole design document, and none of them had a
+line in the idea list. Reviewing "what have I dreamed up" would have skipped exactly
+the six you thought hardest about. Entries stay one line each — **the spec is the
+detail, this is only the index.**
+
+Four of them form one chain, meant to be built in order (**A→B→C→D**), because each
+reuses the last one's widget:
+
+- **Table / grid editor** *(chain B)* — edit GFM pipe tables in the note editor as an
+  inline spreadsheet-style grid. → `docs/superpowers/specs/2026-07-17-table-grid-editor-design.md`
+- **Live preview + slash commands** *(chain C, after B — reuses the table widget)* —
+  an Obsidian-style live-preview editing experience, `/` to insert blocks.
+  → `docs/superpowers/specs/2026-07-17-live-preview-slash-commands-design.md`
+- **Collections + embedded views** *(chain D, largest — split D1/D2)* — replace
+  Coda-style databases: query structured data and embed live views inside a note.
+  → `docs/superpowers/specs/2026-07-17-collections-embedded-views-design.md`
+- **Episodic extraction** — today's retrieval is *topical* (hybrid vector + lexical +
+  trigram, RRF-fused); this adds the *episodic* axis, "what happened when". Depends on
+  the chunk-retrieval engine (built, dormant).
+  → `docs/superpowers/specs/2026-07-20-episodic-extraction-design.md`
+- **Video archiver** — informational YouTube videos get deleted or made private before
+  you rewatch them. **Superseded in approach** by `docs/preservation-v2-spec.md` §3:
+  transcripts move to an edge function (captions are plain HTTP, no worker), media
+  becomes opt-in on R2. Private-YouTube-reupload was considered and **rejected** —
+  Content ID scans private uploads and a claim lands on the same Google account as
+  your Gmail. → `docs/superpowers/specs/2026-06-28-video-archiver-design.md`
+- **MCP v2** *(deferred)* — rebuild the MCP server against the current schema so you
+  can query the library from Claude directly. The v1 server predates feeds, files,
+  radar, topic lifecycle, Wayback and version history. **Do not connect v1 to
+  anything first** — it has ungated bulk-write tools (`docs/tech-debt.md`).
+  → `docs/superpowers/specs/2026-06-21-mcp-v2-design.md`
 
 ## Medium features
 
