@@ -2,7 +2,7 @@ import { useState } from 'react'
 import {
   Home, Search, Upload, Archive, Inbox, Briefcase, Highlighter,
   RotateCcw, BarChart2, BookOpen, Settings2, Trash2 as TrashIcon, FolderOpen,
-  Rss, ScrollText, ChevronRight, Sparkles, GraduationCap, BookMarked,
+  Rss, ScrollText, ChevronRight, GraduationCap, BookMarked,
   CalendarClock,
 } from 'lucide-react'
 
@@ -18,9 +18,11 @@ const SECTIONS = [
       { view: 'home', label: 'Home', icon: Home },
       { view: 'explore', label: 'Explore', icon: Search },
       { view: 'feed', label: 'Feed', icon: Rss, module: 'feed' },
-      { view: 'sort', label: 'Sort Inbox', icon: Inbox, side: 'loadInbox' },
+      // Triage is one surface (Sort Inbox folded into Tidy). Deliberately
+      // ungated: filing what you capture is part of the core loop, so it must
+      // not inherit the founder-only 'tidy' module gate.
+      { view: 'sort', label: 'Triage', icon: Inbox },
       { view: 'agenda', label: 'Agenda', icon: CalendarClock, side: 'loadAgenda', module: 'agenda' },
-      { view: 'tidy', label: 'Tidy', icon: Sparkles, module: 'tidy' },
       { view: 'career', label: 'Career', icon: Briefcase, module: 'career' },
       { view: 'interview', label: 'Interview Prep', icon: GraduationCap, module: 'interview' },
     ],

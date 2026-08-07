@@ -36,10 +36,10 @@ export function getCommands(ctx) {
     // Navigation
     {
       id: 'nav.tidy',
-      label: 'Go to Tidy queue',
+      label: 'Go to Triage queue',
       category: 'Navigation',
       defaultKey: 'g y',
-      handler: () => ctx.setView?.('tidy'),
+      handler: () => ctx.setView?.('sort'),
     },
     {
       id: 'nav.home',

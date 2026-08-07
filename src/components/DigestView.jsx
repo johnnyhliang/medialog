@@ -53,7 +53,7 @@ export default function DigestView({ topics, inboxTopicId, onSortInbox, onGoToVi
             <div className="digest-ctas">
               {data.oldInbox.length > 0 && onSortInbox && (
                 <button className="digest-cta digest-cta--warn" onClick={onSortInbox}>
-                  Sort Inbox ({data.oldInbox.length} old item{data.oldInbox.length === 1 ? '' : 's'})
+                  Triage ({data.oldInbox.length} old item{data.oldInbox.length === 1 ? '' : 's'})
                 </button>
               )}
               {data.readingQueue.length > 3 && onGoToView && (

@@ -71,7 +71,11 @@ export const MODULES = [
   // Wayback records unconfirmed successes. Experimental until that settles.
   { id: 'files',     label: 'Files & archival', description: 'Preserved files, snapshots and article text.', core: false, defaultOn: false, minTier: 'free', stage: STAGE_EXPERIMENTAL },
   { id: 'progress',  label: 'Progress',    description: 'Stats and streaks.',                        core: false, defaultOn: false, minTier: 'free', stage: STAGE_BETA },
-  { id: 'tidy',      label: 'Tidy',        description: 'Batch cleanup of untagged entries.',        core: false, defaultOn: false, minTier: 'free', stage: STAGE_BETA },
+  // 'tidy' was removed 2026-08-07. Sort Inbox folded into Tidy to give one
+  // triage surface, and triage is part of the core capture→sort loop, so the
+  // merged view is ungated rather than a beta founder-only module. A registry
+  // entry gating nothing would be worse than none. Leftover `tidy` keys in
+  // user_configs.modules are inert — isEnabled ignores unknown ids.
   { id: 'import',    label: 'Import',      description: 'Bulk import and migration tools.',          core: false, defaultOn: false, minTier: 'free' },
   { id: 'widgets',   label: 'Side widgets',description: 'Weather, markets and clock in the side rail.', core: false, defaultOn: false, minTier: 'free' },
 

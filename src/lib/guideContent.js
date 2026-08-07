@@ -20,7 +20,7 @@ you can defend** — without it becoming another Obsidian mess.
 1. **Capture cheaply.** Paste a link, answer *"what's worth remembering about this?"* in one
    line. That sentence is a contract with future-you. It lands in **Inbox**. Don't try to
    understand it now — capture and understanding are different steps.
-2. **Triage daily.** Hit **Sort Inbox** once a day. Assign each item to a **topic** + a **tag**,
+2. **Triage daily.** Hit **Triage** once a day. Assign each item to a **topic** + a **tag**,
    and decide its difficulty (tag hard ones \`#deep\`). Nothing is "learned" until it's placed
    in a context.
 3. **Consume** the resource. For hard things, use an LLM to lower the activation energy first

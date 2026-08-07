@@ -3,18 +3,26 @@ import { updateEntry, softDeleteEntry, snoozeEntry } from '../lib/db/entries.js'
 import { Sparkles } from 'lucide-react'
 
 // Drift-mode maintenance: a finite, one-card-at-a-time queue of entries that
-// need a decision — old inbox items and stale backlog. Every action advances
-// the queue; the empty state is the reward.
+// need a decision. This is the app's single triage surface — it absorbed the
+// old Sort Inbox view, so the queue is EVERY inbox item (oldest first) followed
+// by stale backlog. Every action advances the queue; the empty state is the
+// reward.
 
-const FOURTEEN_DAYS = 14 * 24 * 60 * 60 * 1000
 const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000
 
 function daysAgo(dateStr) {
   return Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000)
 }
 
+// Fresh captures now enter the queue, and "in inbox 0d" reads like a bug rather
+// than a fact. Anything under a day gets words instead of a number.
+function reason(verb, dateStr) {
+  const d = daysAgo(dateStr)
+  if (d < 1) return verb === 'inbox' ? 'just captured' : 'untouched today'
+  return verb === 'inbox' ? `in inbox ${d}d` : `untouched ${d}d`
+}
+
 async function fetchTidyQueue(supabase, inboxTopicId) {
-  const inboxCutoff = new Date(Date.now() - FOURTEEN_DAYS).toISOString()
   const staleCutoff = new Date(Date.now() - THIRTY_DAYS).toISOString()
 
   const [oldInboxRes, staleRes] = await Promise.all([
@@ -23,7 +31,6 @@ async function fetchTidyQueue(supabase, inboxTopicId) {
           .from('entries')
           .select('*, topics(name)')
           .eq('topic_id', inboxTopicId)
-          .lt('created_at', inboxCutoff)
           .neq('status', 'done')
           .is('deleted_at', null)
           .order('created_at', { ascending: true })
@@ -43,16 +50,16 @@ async function fetchTidyQueue(supabase, inboxTopicId) {
   const queue = []
   for (const e of oldInboxRes.data ?? []) {
     seen.add(e.id)
-    queue.push({ ...e, tidyReason: `in inbox ${daysAgo(e.created_at)}d` })
+    queue.push({ ...e, tidyReason: reason('inbox', e.created_at) })
   }
   for (const e of staleRes.data ?? []) {
     if (seen.has(e.id) || e.topic_id === inboxTopicId) continue
-    queue.push({ ...e, tidyReason: `untouched ${daysAgo(e.updated_at)}d` })
+    queue.push({ ...e, tidyReason: reason('stale', e.updated_at) })
   }
   return queue
 }
 
-export default function TidyView({ supabase, topics, inboxTopicId, onOpenEntry, addToast }) {
+export default function TidyView({ supabase, topics, inboxTopicId, onOpenEntry, onTriaged, addToast }) {
   const [queue, setQueue] = useState(null)
   const [index, setIndex] = useState(0)
   const [doneCount, setDoneCount] = useState(0)
@@ -76,10 +83,17 @@ export default function TidyView({ supabase, topics, inboxTopicId, onOpenEntry, 
     setIndex((i) => i + 1)
   }
 
-  async function act(fn, failMsg) {
+  // The nav inbox badge counts rows still sitting in the Inbox topic, and it
+  // lives in App where it cannot observe our writes. So report only the actions
+  // that actually take a row OUT of that count — move and trash. Done/snooze
+  // leave the entry in the inbox, so reporting them would drift the badge low.
+  async function act(fn, failMsg, exitsInbox = false) {
     const entry = current
     try {
       await fn(entry)
+      if (exitsInbox && entry.topic_id === inboxTopicId) {
+        onTriaged?.(entry.id, { filed: exitsInbox === 'filed' })
+      }
       advance()
     } catch {
       addToast?.(failMsg, 'error')
@@ -87,13 +101,13 @@ export default function TidyView({ supabase, topics, inboxTopicId, onOpenEntry, 
   }
 
   const handleMove = () => moveTopicId &&
-    act((e) => updateEntry(supabase, e.id, { topic_id: moveTopicId }), 'Failed to move entry')
+    act((e) => updateEntry(supabase, e.id, { topic_id: moveTopicId }), 'Failed to move entry', 'filed')
   const handleDone = () =>
     act((e) => updateEntry(supabase, e.id, { status: 'done' }), 'Failed to mark done')
   const handleSnooze = () =>
     act((e) => snoozeEntry(supabase, e.id, new Date(Date.now() + THIRTY_DAYS).toISOString()), 'Failed to snooze')
   const handleTrash = () =>
-    act((e) => softDeleteEntry(supabase, e.id), 'Failed to trash entry')
+    act((e) => softDeleteEntry(supabase, e.id), 'Failed to trash entry', true)
   const handleKeep = () => { setMoveTopicId(''); setIndex((i) => i + 1) }
 
   if (queue === null) {

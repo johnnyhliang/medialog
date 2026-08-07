@@ -29,7 +29,7 @@ beforeEach(() => {
 })
 
 describe('DigestView CTAs', () => {
-  it('renders Sort Inbox CTA when old inbox items exist', async () => {
+  it('renders Triage CTA when old inbox items exist', async () => {
     computeDigest.mockResolvedValue(makeData({
       oldInbox: [
         { id: '1', title: 'Old Item', created_at: '2026-05-01T00:00:00Z' },
@@ -49,11 +49,11 @@ describe('DigestView CTAs', () => {
     )
 
     await waitFor(() => {
-      expect(screen.getByText(/Sort Inbox \(2 old items\)/)).toBeTruthy()
+      expect(screen.getByText(/Triage \(2 old items\)/)).toBeTruthy()
     })
   })
 
-  it('calls onSortInbox when Sort Inbox CTA is clicked', async () => {
+  it('calls onSortInbox when Triage CTA is clicked', async () => {
     const onSortInbox = vi.fn()
     computeDigest.mockResolvedValue(makeData({
       oldInbox: [{ id: '1', title: 'Old', created_at: '2026-05-01T00:00:00Z' }],
@@ -71,14 +71,14 @@ describe('DigestView CTAs', () => {
     )
 
     await waitFor(() => {
-      expect(screen.getByText(/Sort Inbox/)).toBeTruthy()
+      expect(screen.getByText(/Triage/)).toBeTruthy()
     })
 
-    fireEvent.click(screen.getByText(/Sort Inbox/))
+    fireEvent.click(screen.getByText(/Triage/))
     expect(onSortInbox).toHaveBeenCalledOnce()
   })
 
-  it('does not render Sort Inbox CTA when old inbox is empty', async () => {
+  it('does not render Triage CTA when old inbox is empty', async () => {
     computeDigest.mockResolvedValue(makeData())
 
     render(
@@ -93,7 +93,7 @@ describe('DigestView CTAs', () => {
     )
 
     await waitFor(() => {
-      expect(screen.queryByText(/Sort Inbox/)).toBeNull()
+      expect(screen.queryByText(/Triage/)).toBeNull()
     })
   })
 })

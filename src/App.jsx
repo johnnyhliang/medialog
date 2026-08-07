@@ -31,7 +31,6 @@ import { buildZip, downloadBlob } from './lib/buildZip.js'
 import AuthGate from './components/AuthGate.jsx'
 import TopicList from './components/TopicList.jsx'
 // import QuickAdd from './components/QuickAdd.jsx'
-import SortInbox from './components/SortInbox.jsx'
 import ProgressView from './components/ProgressView.jsx'
 import Revisit from './components/Revisit.jsx'
 import AgendaView from './components/AgendaView.jsx'
@@ -64,7 +63,6 @@ import Toast from './components/Toast.jsx'
 import { useTopics } from './hooks/useTopics.js'
 import { useEntries } from './hooks/useEntries.js'
 import { usePendingArchive } from './hooks/usePendingArchive.js'
-import { useInbox } from './hooks/useInbox.js'
 import { useTrash } from './hooks/useTrash.js'
 import { useRevisit } from './hooks/useRevisit.js'
 import { useTags } from './hooks/useTags.js'
@@ -81,7 +79,6 @@ function Workspace() {
   const [agendaEntries, setAgendaEntries] = useState([])
   const { entries, setEntries, globalSearchResults, setGlobalSearchResults, applyUpdateEntry, applyDeleteEntry, applyMoveEntry } = useEntries()
   const { pendingArchiveIds, addPending, removePending } = usePendingArchive(selectedId)
-  const { inboxEntries, setInboxEntries, applyAssign, applySortDelete } = useInbox()
   const { trashEntries, setTrashEntries, applyRestore, applyClear } = useTrash()
   const { revisitEntries, setRevisitEntries, recentActivity, setRecentActivity, applySeen } = useRevisit()
   const { allTags, setAllTags, tagColors, applyUpdateTagColor } = useTags()
@@ -726,13 +723,8 @@ function Workspace() {
     closeHistory()
   }
 
-  async function loadInbox() {
-    if (inboxTopic) setInboxEntries(await listEntriesByTopic(supabase, inboxTopic.id))
-  }
-
   function handleSortInbox() {
     setView('sort')
-    loadInbox()
   }
 
   function handleSelectTopic(topic) {
@@ -888,18 +880,13 @@ function Workspace() {
     return total
   }
 
-  async function handleAssign(entryId, topicId) {
-    await updateEntry(supabase, entryId, { topic_id: topicId })
-    // The activation metric. One event per entry filed, so `sum(count)` gives
-    // sorting volume while `exists` gives activation.
-    track(supabase, 'inbox_sorted', { count: 1 })
-    applyAssign(entryId)
-    setInboxCount((prev) => Math.max(0, prev - 1))
-  }
-
-  async function handleSortDelete(entryId) {
-    await softDeleteEntry(supabase, entryId)
-    applySortDelete(entryId)
+  // Triage moved into TidyView, which writes to the DB itself. All App still
+  // owes it is the two side effects the writes can't do: the activation metric
+  // and keeping the nav inbox badge in step.
+  function handleTriaged(entryId, { filed = false } = {}) {
+    // The activation metric. One event per entry FILED (not merely trashed), so
+    // `sum(count)` gives sorting volume while `exists` gives activation.
+    if (filed) track(supabase, 'inbox_sorted', { count: 1 })
     setInboxCount((prev) => Math.max(0, prev - 1))
   }
 
@@ -1048,7 +1035,7 @@ function Workspace() {
           <NavSidebar
             view={view}
             navigateTo={navigateTo}
-            sideEffects={{ loadInbox, loadRevisit, loadTrash, loadAgenda }}
+            sideEffects={{ loadRevisit, loadTrash, loadAgenda }}
             isModuleVisible={isModuleVisible}
           />
           <hr className="topic-divider" />
@@ -1154,20 +1141,16 @@ function Workspace() {
               topics={topics}
             />
           )}
-          {view === 'sort' && (
-            <SortInbox
-              entries={inboxEntries}
-              topics={topics}
-              onAssign={handleAssign}
-              onDelete={handleSortDelete}
-            />
-          )}
-          {view === 'tidy' && (
+          {/* One triage surface. 'sort' is the nav/palette route the rest of the
+              app links to; 'tidy' is kept as an alias so the existing `g y`
+              bind and any saved state keep landing somewhere real. */}
+          {(view === 'sort' || view === 'tidy') && (
             <TidyView
               supabase={supabase}
               topics={topics}
               inboxTopicId={inboxTopic?.id ?? null}
               onOpenEntry={handleSelectEntry}
+              onTriaged={handleTriaged}
               addToast={addToast}
             />
           )}
