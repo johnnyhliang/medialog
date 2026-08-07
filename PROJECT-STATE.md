@@ -581,6 +581,8 @@ detail; that file, not this table, is authoritative on *how*.
 | 19b | Video capture: transcript + metadata + thumbnail | feature | One fetch at capture time. Transcripts are plain HTTP (~50 KB, no worker) and are *the information* for a talk; stored thumbnails survive deletion, which hotlinked ones cannot. ~$1.30 to backfill 185 YouTube entries | `preservation-v2-spec.md` §3 |
 | 19c | Background activity log | infra | The structural fix for this codebase's defining failure mode — background work that fails into silence. `capture_log` is already this for one case | `IDEAS.md` § Background activity log |
 | 20 | Undo the feed floor / recommend problems | design | Open question, unsolved | `tech-debt.md` § UX #8 |
+| 20b | **Pull 18 components back through the db layer** | debt | Measured 2026-08-07: 124 `.from()` calls in `src/lib/db/` and **18 components query Supabase directly anyway**, so the same filters get re-typed and drift, and a self-fetching component can't be unit-tested. Own pass, own commit — **do not fold into a feature**. Mechanical, delegable | `tech-debt.md` § Query sprawl |
+| 20c | Test `TidyView` | debt | The only untested view, and after the Triage merge it is the single triage surface on the core loop. Blocked-ish on 20b: move its fetch to the db layer, then test it there with `mockSupabase` | `tech-debt.md` |
 | 21 | Split `App.jsx` (1320 lines) | debt | Merge pain is already real — a parallel session edited it again this week | `2026-06-19-app-modularization-design.md` |
 | 22 | Split `styles.css` (5784 lines) | debt | Every feature appends to one file | `tech-debt.md` |
 
@@ -626,7 +628,35 @@ as not worth doing).
   because an unverified submission is worse than none: it reports safety that does
   not exist and is discovered only when you needed the copy.
 
-**Next session's intent: performance (§6 row 2).** Measure before changing
-anything — Metrics being slow *too* points at one shared cause rather than seven
-separate ones, and guessing wastes the pass.
+### Deferred 2026-08-07 — decided, not forgotten
+
+Everything set aside during the Manager scoping pass, so none of it is lost:
+
+- **Query consolidation (row 20b)** — kept out of the Manager work on purpose.
+  Standing rule while it waits: *new work does not add to the 18*.
+- **Digest + Progress merge** — deferred until the Manager exists. They share a
+  mood, not a shape (Digest is actionable, Progress is read-only stats), so
+  pairing them today is shuffling. Reconsider all three together once the
+  Manager owns "state of my world". `manager-scope.md` §5 stage 4.
+- **Whether the reading / deep-topics flow is wanted at all** — there is no
+  deep-topics data, so it may be a feature built and never used. If so, step 4
+  is a straight ~280-line deletion rather than an absorption. Decide *after*
+  using the Manager. `manager-scope.md` §10.
+- **The Agenda** (row 12) — built, beta-gated, invisible. `entries.due_at`
+  (`0072`) and `src/lib/timezone.js` (`0073`) retained: `target:` dates need the
+  same column and the same day-boundary math.
+- **Layout at 400 ms pre-FCP** — the largest remaining block after the bundle
+  work, and unmoved by it. First evidence that could implicate `styles.css`
+  (row 22), but unmeasured. Measure before touching a file ranked as
+  maintainability rather than speed.
+- **`NoteEditor` chunk is 657 KB** and trips Vite's warning alone. Off the
+  critical path since the lazy-boundary work, but it is what you wait for when
+  you click into an editor.
+- **Four status enums / seven progress mechanisms** — recorded so the count stops
+  growing, not scheduled. `tech-debt.md`.
+
+**Next session's intent: the Manager (§6 row 15).** Scope is settled in
+`docs/manager-scope.md` — read §2's UI boundary first: a project is a topic in
+the *data*, and `TopicView` does not change. Additive only; one new table,
+no `ALTER`, no existing row touched.
 

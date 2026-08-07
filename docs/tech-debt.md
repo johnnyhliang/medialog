@@ -332,6 +332,54 @@ count — `useShareTarget`, `useOAuthCallback`, and a routing module that owns t
 
 ## Medium
 
+### Query sprawl — 18 components bypass the db layer
+**Measured 2026-08-07.** The stated convention is that `src/lib/db/` owns every
+query and components receive data as props (that separation is what makes the db
+layer testable with a mock client). **124 `.from()` calls live in `src/lib/db/`,
+and 18 components query Supabase directly anyway:**
+
+`ApplicationsView` · `FileRow` · `FilesView` · `HighlightsView` ·
+`HomeReviewSummary` · `OpportunityView` · `ReaderModal` · `SettingsView` ·
+`TidyView` · `WatchlistTab` · `settings/{CompaniesTab,DataBackupTab,KeywordsTab,ProgramsTab}` ·
+`widgets/{DeadlineAlertBanner,FocusWidget,OpportunitiesWidget,ResurfaceWidget}`
+
+Consequences: queries cannot be found or counted from one place, the same filters
+(`deleted_at is null`, the `surface_after` snooze guard) get re-typed per call
+site and drift, and a component that self-fetches cannot be unit-tested without a
+DOM plus a mock client.
+
+**Deliberately deferred 2026-08-07** — pulling these back through the db layer
+touches career, files, settings and widgets, which are unrelated to the Manager
+work in flight. Do it as its own pass with its own commit, not folded into a
+feature. Mechanical enough to delegate.
+
+**Rule while it stands:** new work does not add to this list. The Manager's
+queries go in `src/lib/db/`.
+
+### TidyView is the only untested view, and now the busiest
+It self-fetches (`fetchTidyQueue` is module-private, not exported) and has no
+test file at all. After the Triage merge (2026-08-07) it is the single triage
+surface for both new inbox items and stale backlog, so the untested surface is
+now on the core loop. Testing it means building a query-builder mock for a
+component that self-fetches — which is an argument for moving its fetch into
+`src/lib/db/` first, per the entry above, and testing it there with the existing
+`mockSupabase` helper.
+
+### Four status enums for what is mostly one idea
+`entries.status` (`backlog|active|done`) · `applications.status`
+(`saved|applied|screen|interview|offer|rejected|ghosted`) ·
+`resource_sections.status` (`todo|reading|done`) · `gains_*.status`
+(`open|done|dropped`). Three of the four are `todo/doing/done` spelled
+differently. Alongside them sit **seven** progress-tracking mechanisms, three of
+which have no UI (`goals.js`, `studyPlan.js`, most of `interviewPlan.js`).
+
+`applications` is genuinely a different geometry — a pipeline moving toward a
+binary outcome, not "how far through a body of work am I" — so it should stay.
+The other three are candidates for unification, but **not urgently**: this is
+recorded so the count stops growing, not as a scheduled refactor. Every new
+feature that invents an eighth progress mechanism makes it worse.
+See `docs/manager-scope.md`, which exists partly to stop that.
+
 ### `styles.css` monolith — 5784 lines / 153 KB
 The entire design system in one file, and every feature keeps appending to it
 (this session added three separate blocks). Split by surface — tokens, layout,
