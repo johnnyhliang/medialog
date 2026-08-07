@@ -290,3 +290,60 @@ export async function unsnoozeEntry(supabase, id) {
     .eq('id', id)
   if (error) throw new Error(error.message)
 }
+
+// --- Reminders (docs/intentional-app-spec.md Part 1) ---------------------
+//
+// A reminder is an entry with `due_at` set. There is no reminders table and no
+// reminders query beyond this one: everything else an entry can do, a reminder
+// does for free.
+
+// Every dated, unfinished entry, soonest first. Deliberately returns a flat
+// list rather than groups — the Overdue/Today/This week/Later split is pure
+// date arithmetic that belongs in `src/lib/agenda.js`, where it can be tested
+// against a fixed clock without a database.
+export async function listAgenda(supabase) {
+  const { data, error } = await supabase
+    .from('entries')
+    .select(`${TAG_SELECT}, topics(name)`)
+    .is('deleted_at', null)
+    .not('due_at', 'is', null)
+    // Done reminders leave the agenda on their own — the spec's "archive on
+    // done". Note this filter also keeps rows whose status is null, which is
+    // most entries: `status` is nullable and a reminder captured in a hurry
+    // will not have one. `.neq()` alone would drop those, because in SQL
+    // `null != 'done'` is null, not true.
+    .or('status.is.null,status.neq.done')
+    // The snooze filter, same as every other list query. `surface_after` is
+    // SCHEDULED and `due_at` is DEADLINE, so an entry can legitimately be due
+    // Friday but hidden until Monday — and while hidden it stays off the
+    // agenda, which is the point of snoozing it.
+    .or('surface_after.is.null,surface_after.lte.now()')
+    .order('due_at', { ascending: true })
+  if (error) throw new Error(error.message)
+  return data.map((row) => ({ ...flattenTags(row), topicName: row.topics?.name ?? null }))
+}
+
+// Set or move a deadline. `isoDate` of null clears it, which is also how an
+// entry stops being a reminder — there is no separate "delete reminder".
+export async function setDueDate(supabase, id, isoDate) {
+  const { error } = await supabase
+    .from('entries')
+    .update({ due_at: isoDate })
+    .eq('id', id)
+  if (error) throw new Error(error.message)
+}
+
+// Return at most 'limit' entries that are already past due, soonest first
+export async function listOverdue(supabase, limit = 5) {
+  const { data, error } = await supabase
+    .from('entries')
+    .select(`${TAG_SELECT}, topics(name)`)
+    .is('deleted_at', null)
+    .lt('due_at', new Date().toISOString())
+    .or('status.is.null,status.neq.done')
+    .or('surface_after.is.null,surface_after.lte.now()')
+    .order('due_at', { ascending: true })
+    .limit(limit)
+  if (error) throw new Error(error.message)
+  return data.map((row) => ({ ...flattenTags(row), topicName: row.topics?.name ?? null }))
+}

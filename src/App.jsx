@@ -7,6 +7,7 @@ import {
   listEntriesByTopic, createEntry, updateEntry, searchEntries,
   bulkCreateEntries, listForRevisit, markSurfaced, listRecentActivity,
   softDeleteEntry, listTrashedEntries, restoreEntry, emptyTrash, snoozeEntry, rateRevisit,
+  listAgenda,
 } from './lib/db/entries.js'
 import { setEntryTags, listTags, updateTagColor } from './lib/db/tags.js'
 import { seedStarterTopic } from './lib/starterTopic.js'
@@ -29,16 +30,17 @@ import { buildMarkdownFiles, buildTopicMarkdown, topicFilename } from './lib/exp
 import { buildZip, downloadBlob } from './lib/buildZip.js'
 import AuthGate from './components/AuthGate.jsx'
 import TopicList from './components/TopicList.jsx'
-import QuickAdd from './components/QuickAdd.jsx'
+// import QuickAdd from './components/QuickAdd.jsx'
 import SortInbox from './components/SortInbox.jsx'
 import ProgressView from './components/ProgressView.jsx'
 import Revisit from './components/Revisit.jsx'
+import AgendaView from './components/AgendaView.jsx'
 import TrashView from './components/TrashView.jsx'
 import HomeView from './components/HomeView.jsx'
 import GuideView from './components/GuideView.jsx'
 import NavSidebar from './components/NavSidebar.jsx'
 // Heavy / infrequently-opened views are code-split so they don't bloat the
-// initial bundle. They render inside the <Suspense> around the view area.
+// initial bundle. They render inside the <Suspense> around the view area. ai generated slop in the lines below but i think it actually works really well
 const BulkImport = lazy(() => import('./components/BulkImport.jsx'))
 const ArchiveView = lazy(() => import('./components/ArchiveView.jsx'))
 const SettingsView = lazy(() => import('./components/SettingsView.jsx'))
@@ -76,6 +78,7 @@ const FilePreviewModal = lazy(() => import('./components/FilePreviewModal.jsx'))
 function Workspace() {
   const { topics, setTopics, activeTopics, archivedTopics, selectedId, setSelectedId, inboxCount, setInboxCount, selectedTopic, inboxTopic, applyAddTopic, applyArchiveTopic, applyUnarchiveTopic, applyDeleteTopic, applyRestoreDeletedTopic } = useTopics()
   const [deletedTopics, setDeletedTopics] = useState([])
+  const [agendaEntries, setAgendaEntries] = useState([])
   const { entries, setEntries, globalSearchResults, setGlobalSearchResults, applyUpdateEntry, applyDeleteEntry, applyMoveEntry } = useEntries()
   const { pendingArchiveIds, addPending, removePending } = usePendingArchive(selectedId)
   const { inboxEntries, setInboxEntries, applyAssign, applySortDelete } = useInbox()
@@ -86,9 +89,10 @@ function Workspace() {
   const [exportBusy, setExportBusy] = useState(false)
   const { archiveToast, setArchiveToast } = useArchiveToast()
   const { palette: themePalette, style: themeStyle, setPalette, setStyle } = useTheme()
-  // Resolved once here and passed down, so every surface agrees about what day
-  // it is. Mounting the hook twice would give two independent copies of the
-  // state and a settings change would not reach the clock until a reload.
+  // Resolved once here and passed down, so the clock and the agenda can never
+  // disagree about what day it is. Mounting the hook twice would give two
+  // independent copies of the state and a settings change would not reach the
+  // clock until a reload.
   const { preference: tzPreference, timezone, setTimezone } = useTimezone()
   const [trashToast, setTrashToast] = useState(() => readBoolPref('medialog_trash_toast', true))
   const { previewUrl, openPreview, closePreview } = useFilePreview()
@@ -949,6 +953,29 @@ function Workspace() {
     setRecentActivity(await listRecentActivity(supabase, 30))
   }
 
+  async function loadAgenda() {
+    setAgendaEntries(await listAgenda(supabase))
+  }
+
+  // Done reminders leave the agenda on their own — `listAgenda` filters
+  // status='done'. Dropping the row locally keeps the list in step without a
+  // refetch, the same optimistic pattern the other views use.
+  async function handleCompleteReminder(entry) {
+    await updateEntry(supabase, entry.id, { status: 'done' })
+    setAgendaEntries((prev) => prev.filter((e) => e.id !== entry.id))
+    applyUpdateEntry(entry.id, { ...entry, status: 'done' })
+  }
+
+  // Snooze sets `surface_after`, which hides the entry until then WITHOUT
+  // touching its deadline — SCHEDULED moves, DEADLINE does not. That is why
+  // this reuses the existing snooze plumbing rather than editing `due_at`.
+  async function handleSnoozeReminder(entry) {
+    const tomorrow = new Date(Date.now() + 86400000).toISOString()
+    await snoozeEntry(supabase, entry.id, tomorrow)
+    setAgendaEntries((prev) => prev.filter((e) => e.id !== entry.id))
+    applyUpdateEntry(entry.id, { ...entry, surface_after: tomorrow })
+  }
+
   async function handleSeen(entryId) {
     await markSurfaced(supabase, entryId)
     applySeen(entryId)
@@ -1021,7 +1048,7 @@ function Workspace() {
           <NavSidebar
             view={view}
             navigateTo={navigateTo}
-            sideEffects={{ loadInbox, loadRevisit, loadTrash }}
+            sideEffects={{ loadInbox, loadRevisit, loadTrash, loadAgenda }}
             isModuleVisible={isModuleVisible}
           />
           <hr className="topic-divider" />
@@ -1171,6 +1198,15 @@ function Workspace() {
           )}
           {view === 'revisit' && (
             <Revisit entries={revisitEntries} onSeen={handleSeen} onRate={handleRateRevisit} recentActivity={recentActivity} />
+          )}
+          {view === 'agenda' && (
+            <AgendaView
+              entries={agendaEntries}
+              timezone={timezone}
+              onComplete={handleCompleteReminder}
+              onSnooze={handleSnoozeReminder}
+              onOpen={handleSelectEntry}
+            />
           )}
           {view === 'settings' && (
             <SettingsView

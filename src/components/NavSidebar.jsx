@@ -3,6 +3,7 @@ import {
   Home, Search, Upload, Archive, Inbox, Briefcase, Highlighter,
   RotateCcw, BarChart2, BookOpen, Settings2, Trash2 as TrashIcon, FolderOpen,
   Rss, ScrollText, ChevronRight, Sparkles, GraduationCap, BookMarked,
+  CalendarClock,
 } from 'lucide-react'
 
 // Declarative nav config, grouped by how often each view is reached for.
@@ -18,6 +19,7 @@ const SECTIONS = [
       { view: 'explore', label: 'Explore', icon: Search },
       { view: 'feed', label: 'Feed', icon: Rss, module: 'feed' },
       { view: 'sort', label: 'Sort Inbox', icon: Inbox, side: 'loadInbox' },
+      { view: 'agenda', label: 'Agenda', icon: CalendarClock, side: 'loadAgenda', module: 'agenda' },
       { view: 'tidy', label: 'Tidy', icon: Sparkles, module: 'tidy' },
       { view: 'career', label: 'Career', icon: Briefcase, module: 'career' },
       { view: 'interview', label: 'Interview Prep', icon: GraduationCap, module: 'interview' },

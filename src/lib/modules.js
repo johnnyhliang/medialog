@@ -59,6 +59,13 @@ export const MODULES = [
   // that one is personal curriculum, not product.
   { id: 'career',    label: 'Opportunities',description: 'Job/fellowship radar from public boards, plus the application tracker.', core: false, defaultOn: false, minTier: 'free' },
   { id: 'revisit',   label: 'Revisit',     description: 'Spaced resurfacing of older entries.',      core: false, defaultOn: false, minTier: 'free' },
+  // Beta, which forces founder-only regardless of minTier — deliberate while
+  // the capture half is missing. The agenda can currently only SHOW due dates;
+  // nothing in the UI can set one yet, so for anyone but the operator it would
+  // be a permanently empty view. Promote to 'stable' when the "remind me"
+  // affordance ships. The intended home is the default-on set
+  // (docs/intentional-app-spec.md Part 2), hence defaultOn: true.
+  { id: 'agenda',    label: 'Agenda',      description: 'Reminders and deadlines, grouped by when they are due.', core: false, defaultOn: true, minTier: 'free', stage: STAGE_BETA },
   { id: 'archive',   label: 'Archive',     description: 'Archived entries.',                         core: false, defaultOn: false, minTier: 'free' },
     // Archival is half-built: image/PDF copies work, article text is unverified,
   // Wayback records unconfirmed successes. Experimental until that settles.

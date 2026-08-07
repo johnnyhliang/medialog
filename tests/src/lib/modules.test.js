@@ -100,7 +100,15 @@ describe('preference layer', () => {
 
   test('a new account (no prefs row) gets the lean default set', () => {
     const on = MODULES.filter((m) => isEnabled(m.id, null)).map((m) => m.id)
-    expect(on).toEqual(['home', 'capture', 'topics', 'search', 'settings', 'digest'])
+    // `agenda` is on this list because docs/intentional-app-spec.md Part 2
+    // names Reminders in the minimal default set — it is part of the
+    // capture→sort→resurface spine, not a power feature.
+    //
+    // Note this is the PREFERENCE layer only. `agenda` is stage: 'beta', so
+    // effectiveMinTier still forces it founder-only and no ordinary account
+    // sees it yet. Enabled-by-preference and visible are different questions,
+    // which is the whole reason the layers are separate.
+    expect(on).toEqual(['home', 'capture', 'topics', 'search', 'settings', 'digest', 'agenda'])
   })
 })
 
