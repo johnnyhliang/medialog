@@ -1,4 +1,6 @@
-import JSZip from 'jszip'
+// jszip is ~95 KB and is only needed by parseObsidianZip. A static import here
+// put it in the entry chunk and defeated the dynamic imports buildZip.js and
+// zipBackup.js already use, so every page load paid for it.
 
 // Returns Array<{ title, url, note, suggestedTopic }>
 
@@ -98,6 +100,7 @@ export function parseKeepJson(json) {
 }
 
 export async function parseObsidianZip(file) {
+  const { default: JSZip } = await import('jszip')
   const zip = await JSZip.loadAsync(file)
   const results = []
   const files = Object.values(zip.files).filter(

@@ -1,5 +1,9 @@
-import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
-import TopicDocEditor from './TopicDocEditor.jsx'
+import { lazy, Suspense, useEffect, useMemo, useRef, useState, useCallback } from 'react'
+// TopicDocEditor pulls in CodeMirror and its lezer grammars — ~520 KB, 46% of
+// the entry bundle, evaluated on every page load including Metrics. EntryCard
+// already lazy-loads NoteEditor for the same reason; this static import was
+// cancelling that boundary out, since both reach CodeMirror through NoteEditor.
+const TopicDocEditor = lazy(() => import('./TopicDocEditor.jsx'))
 import MarkdownView from './MarkdownView.jsx'
 import EntryList from './EntryList.jsx'
 import QuickAdd from './QuickAdd.jsx'
@@ -273,13 +277,15 @@ export default function TopicView({
       {mode === 'doc' && (
         <div className={`master-doc doc-width-${docWidth}`}>
           {(docEditing || !liveDoc.trim()) ? (
-            <TopicDocEditor
-              topicId={topic.id}
-              initialDoc={topic.master_doc || ''}
-              candidates={allCandidates}
-              scopeCtxRef={scopeCtxRef}
-              onChange={handleDocChange}
-            />
+            <Suspense fallback={<p className="muted">Loading editor…</p>}>
+              <TopicDocEditor
+                topicId={topic.id}
+                initialDoc={topic.master_doc || ''}
+                candidates={allCandidates}
+                scopeCtxRef={scopeCtxRef}
+                onChange={handleDocChange}
+              />
+            </Suspense>
           ) : (
             <div onClick={() => setDocEditing(true)} style={{ cursor: 'text' }}>
               <MarkdownView getEntry={getEntry} onJump={handleJump} onPreview={onPreview}>

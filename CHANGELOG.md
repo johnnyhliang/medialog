@@ -11,6 +11,48 @@ section when you deploy. Detailed design rationale lives in `docs/superpowers/sp
 
 ## Unreleased
 
+### The app bundle was 64% editor nobody had opened yet
+"Everything is slow to load, including Metrics" was one shared cause, and Metrics
+being slow was the clue that mattered: Metrics is lazily loaded and small, so the
+cost had to be the shell it loads into.
+
+Profiled before changing anything (headless Chrome over CDP, production build, 4×
+CPU throttle, authenticated, mocked backend at a fixed 120 ms so round-trip *count
+and sequencing* stay real). The result split the two candidate causes cleanly:
+**the first Supabase request left at 1,730 ms — after first contentful paint at
+1,660 ms.** The mount fan-out is 22 queries but only **3 dependency waves**, so it
+was never the waterfall. It was ~580 ms of `v8.evaluateModule` before anything
+rendered.
+
+Sourcemap attribution named the cargo: **CodeMirror and its lezer grammars were
+520 KB — 46% of the entry chunk**, plus 95 KB of jszip. Both were single static
+imports cancelling out lazy boundaries that already existed. `EntryCard` has always
+done `lazy(() => import('./NoteEditor.jsx'))`, but `TopicView` imported
+`TopicDocEditor` eagerly, and that reaches CodeMirror through the same
+`NoteEditor` — so the boundary bought nothing. Likewise `buildZip.js` and
+`zipBackup.js` both `await import('jszip')`, while `parseMigration.js` pulled it in
+statically.
+
+| | Before | After |
+|---|---|---|
+| `app-*.js` | 1,142 KB | **411 KB** |
+| `v8.evaluateModule` @4× | 582 ms | **139 ms** |
+| FCP, cold, authenticated | ~1,660 ms | **~1,050 ms** |
+| Open a 400-entry topic | 734 ms | 494 ms |
+
+The prediction was 620 KB and ~330 ms — **both were beaten**, because CodeMirror
+was anchoring more than itself; the grammars and part of the markdown tail were
+only in the entry chunk because it was.
+
+Two things the profile *disproved*, both of which had looked like obvious suspects:
+`TopicView` already caps rendering at 50 cards, so an unmemoised `EntryCard` and
+missing virtualisation are not top-tier costs; and `App.jsx`'s ten mount effects
+fire in one burst, not a chain. Neither `App.jsx` nor `styles.css` was touched.
+
+**Next, on measurement rather than suspicion:** Layout is now the largest
+remaining pre-FCP block at ~400 ms, unmoved by this pass and bigger than all JS
+evaluation combined. That is the first real evidence pointing at the stylesheet.
+
 ### Profile fields you authored are now backed up — and the allowlist holds at the boundary
 `user_configs` is carried by field allowlist, and that allowlist was
 `{theme, modules}`. Four hand-authored fields were in no backup at all:
