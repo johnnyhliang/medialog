@@ -158,7 +158,10 @@ Supabase is a hosted Postgres, which means **your data has exactly as many copie
 as you have arranged for it to have.** Nothing here is automatic. The list below is
 ordered by how much it protects you per minute spent.
 
-### 1. Turn on Supabase backups — this is the one that matters
+### 1. Supabase backups — ✅ enabled 2026-08-07
+
+**This is on.** It is listed first because it remains the thing that matters most,
+and because anyone forking this repo starts where this project started: with none.
 
 Free-tier projects get **no automatic database backups at all**, and they pause
 after a period of inactivity. Daily backups start on the Pro tier; point-in-time
@@ -255,7 +258,7 @@ Spec: `docs/superpowers/specs/2026-06-21-mcp-v2-design.md`
 ## TODO
 
 ### Activate (manual steps)
-- [ ] **⚠️ Supabase automatic backups** — free-tier projects get **none**, and pause on inactivity. Dashboard setting, Pro tier. No application-level backup substitutes for it; see [Not losing your data](#not-losing-your-data). This is `PROJECT-STATE.md` §6 row 0.
+- [x] **Supabase automatic backups** — enabled 2026-08-07. Free-tier projects get **none**, and pause on inactivity; this needed the Pro tier and a dashboard setting. No application-level backup substitutes for it; see [Not losing your data](#not-losing-your-data). Was `PROJECT-STATE.md` §6 row 0.
 - [ ] **Confirm migrations `0070`/`0071` are applied** — both landed from a parallel session; written ≠ applied. `supabase db push`
 - [ ] **`app.supabase_url` GUC** — run `alter database postgres set app.supabase_url = 'https://<ref>.supabase.co';` in SQL editor (needed for cron callbacks)
 - [ ] **`app.cron_secret` GUC** — run `alter database postgres set app.cron_secret = '<CRON_SECRET>';` in SQL editor

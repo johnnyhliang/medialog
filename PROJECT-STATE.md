@@ -114,8 +114,11 @@ Decisions and findings worth keeping:
   collided, but a `git add -A` here could have swept in-progress files. Stage
   explicitly.
 
-**Still only you can do it:** Supabase automatic backups are off on the free tier
-and no application-level backup substitutes for them. §6 row 0.
+**Resolved 2026-08-07: Supabase automatic backups are ENABLED.** This was §6 row 0
+— the longest-standing open item and the only one no amount of code could close.
+The application-level backups (GitHub sync, local zip) were never a substitute:
+they carry authored data by an explicit allowlist, not the database, so they
+cannot restore auth, RLS policies, functions or anything outside `SYNC_TABLES`.
 
 ---
 
@@ -552,7 +555,7 @@ detail; that file, not this table, is authoritative on *how*.
 
 | # | Action | Kind | Why | Detail |
 |---|---|---|---|---|
-| 0 | **Turn on Supabase automatic backups** | ops | Free tier has **none** and pauses on inactivity. No app-level backup substitutes. Dashboard, not code — **only you can do it** | `README.md` § *Not losing your data* |
+| ~~0~~ | ~~Turn on Supabase automatic backups~~ | ops | ✅ **DONE 2026-08-07.** Enabled in the dashboard. The one item on this list that no code could close, open since the list was written | `README.md` § *Not losing your data* |
 | ~~1~~ | ~~Confirm `0070`/`0071` are applied~~ | ops | ✅ **DONE 2026-08-06.** `supabase migration list --linked` shows every migration in both Local and Remote, no drift | — |
 | 2 | **Fix "everything is slow, incl. Metrics"** | bug | The one hurting daily use. *Measure first* — Metrics being slow too suggests one shared cause, not seven | `tech-debt.md` § UX #4 |
 | 3 | Capture 2–3 prose articles, run `check-preservation.js` | bug | Two minutes; retires the last ⚠️ on the extractor | `tech-debt.md` |

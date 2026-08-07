@@ -253,8 +253,8 @@ order they pay off:
 - [ ] **Secrets hygiene.** Service-role key never shipped to the client bundle; `CRON_SECRET`,
   `CAPTURE_SECRET`, provider API keys set as Supabase secrets / host env, not in the repo. Confirm
   `.env.local` is git-ignored and no secret leaked into git history.
-- [ ] **Backups on.** Supabase Pro daily backups enabled; evaluate the PITR add-on once real user
-  data exists.
+- [x] **Backups on.** Supabase automatic backups enabled 2026-08-07; evaluate the PITR add-on once
+  real user data exists.
 - [ ] **Auth flows verified end-to-end** on the production domain: email confirmation, password
   reset (`resetPasswordForEmail` redirect), and GitHub OAuth redirect all point at the prod URL,
   not localhost. Enable Supabase auth rate limits.
