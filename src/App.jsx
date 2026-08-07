@@ -166,7 +166,7 @@ function Workspace() {
     // Omitted entirely when the assistant is unavailable, so getCommands drops
     // the binding rather than registering a shortcut that does nothing.
     toggleAssistant: showFounder && assistantEnabled ? toggleAssistant : undefined,
-  }), [view, focusedEntry, topics, inboxTopic, showFounder, assistantEnabled])
+  }), [view, focusedEntry, topics, inboxTopic, showFounder, assistantEnabled, setSelectedId, focusNextEntry, focusPrevEntry, editFocusedEntry, cycleFocusedStatus])
 
   function navigateTo(v) {
     setView(v)
@@ -202,7 +202,7 @@ function Workspace() {
   function toggleSidebar() {
     setSidebarOpen((prev) => {
       const next = !prev
-      try { localStorage.setItem('medialog_sidebar_open', String(next)) } catch {}
+      try { localStorage.setItem('medialog_sidebar_open', String(next)) } catch (e) {}
       return next
     })
   }
