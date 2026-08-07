@@ -8,6 +8,7 @@ import ProgramsTab from './settings/ProgramsTab.jsx'
 import DataBackupTab from './settings/DataBackupTab.jsx'
 import ModulesTab from './ModulesTab.jsx'
 import CaptureTokensTab from './settings/CaptureTokensTab.jsx'
+import TimezoneTab from './settings/TimezoneTab.jsx'
 import { searchSettings, SETTINGS_TABS } from '../lib/settingsIndex.js'
 import { getMyUsage, getMyStorage, getMyWindowUsage } from '../lib/db/adminMetrics.js'
 import { formatBytes, describeLimit, AI_WINDOW_HOURS } from '../lib/limits.js'
@@ -17,7 +18,7 @@ import { readPref, writePref } from '../lib/localPref.js'
 
 const SETTINGS_TAB_KEY = 'medialog_settings_tab'
 
-export default function SettingsView({ topics, onRefreshData, addToast, allTags = [], onUpdateTagColor, archiveToast, onToggleArchiveToast, trashToast, onToggleTrashToast, themePalette, themeStyle, onSetPalette, onSetStyle, assistantEnabled, onToggleAssistant, isModuleVisible = () => true, onImportEntries, onExportAll, exportBusy }) {
+export default function SettingsView({ topics, onRefreshData, addToast, allTags = [], onUpdateTagColor, archiveToast, onToggleArchiveToast, trashToast, onToggleTrashToast, themePalette, themeStyle, onSetPalette, onSetStyle, assistantEnabled, onToggleAssistant, isModuleVisible = () => true, onImportEntries, onExportAll, exportBusy, tzPreference, timezone, onSetTimezone }) {
   const [config, setConfig] = useState(null)
   const [loading, setLoading] = useState(true)
   const [pendingColors, setPendingColors] = useState({})
@@ -562,6 +563,10 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
             </p>
           </div>
         </section>
+      )}
+
+      {activeTab === 'timezone' && (
+        <TimezoneTab preference={tzPreference} timezone={timezone} onChange={onSetTimezone} />
       )}
 
       {activeTab === 'keybinds' && <KeybindsTab />}

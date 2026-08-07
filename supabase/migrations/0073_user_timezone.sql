@@ -1,0 +1,15 @@
+-- Timezone override for the clock and the agenda.
+--
+-- NULL means "follow the browser", which is deliberately also the default and
+-- the value every existing row already has — so this needs no backfill and no
+-- migration of behaviour. See `src/lib/timezone.js` for why the inferred
+-- default is not stored: a timezone captured at signup silently follows the
+-- user to a different continent and is wrong there.
+--
+-- Stored as free text rather than an enum or a check constraint against a list
+-- of IANA names. The IANA database changes a few times a year — zones are added,
+-- renamed and merged — and a check constraint would turn a routine upstream
+-- release into a failed write. Validation lives in `isValidTimezone()`, which
+-- asks Intl what it actually supports on the machine doing the asking, and an
+-- unrecognised value falls back to the browser rather than throwing.
+alter table user_configs add column if not exists timezone text;

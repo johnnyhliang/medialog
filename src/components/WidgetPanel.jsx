@@ -8,10 +8,10 @@ import FeedWidget from './widgets/FeedWidget.jsx'
 import FocusWidget from './widgets/FocusWidget.jsx'
 import ResurfaceWidget from './widgets/ResurfaceWidget.jsx'
 
-export default function WidgetPanel({ supabase, onTrack, onSaveFeedItem, onGoToFeed, onOpenEntry }) {
+export default function WidgetPanel({ supabase, onTrack, onSaveFeedItem, onGoToFeed, onOpenEntry, timezone }) {
   return (
     <div className="widget-panel">
-      <ClockWidget />
+      <ClockWidget timezone={timezone} />
       <WeatherWidget />
       <div className="kw-divider" />
       <FocusWidget supabase={supabase} onOpenEntry={onOpenEntry} />

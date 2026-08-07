@@ -96,6 +96,12 @@ export const USER_CONFIG_EXPORT_FIELDS = [
   // Interview prep: a deadline you chose and the tracks you are targeting.
   'prep_target_date',
   'prep_focus',
+  // Carried, not excluded, even though it is null for anyone on the browser
+  // default — an explicit override is a choice the user made, and losing it on
+  // restore would silently move every reminder's deadline by hours without
+  // anything visibly failing. NULL restores as "follow the browser", which is
+  // the correct default for a machine we know nothing about.
+  'timezone',
 ]
 
 // The other half of the allowlist, kept as data so a test can assert that every

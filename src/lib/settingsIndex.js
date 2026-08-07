@@ -24,6 +24,7 @@ export const SETTINGS_TABS = [
   { id: 'twitter',     label: 'Twitter',       module: 'twitter' },
   { id: 'shared',      label: 'Shared' },
   { id: 'behavior',    label: 'Behavior' },
+  { id: 'timezone',    label: 'Timezone' },
   { id: 'tags',        label: 'Tag Colors' },
   { id: 'companies',   label: 'Companies',     module: 'career' },
   { id: 'keywords',    label: 'Keywords',      module: 'career' },
@@ -75,6 +76,8 @@ export const SETTINGS_INDEX = [
   { tab: 'behavior',   label: 'Trash confirmation toast', keywords: 'trash delete toast confirm undo notification behaviour' },
   { tab: 'behavior',   label: 'Ask-your-library assistant', keywords: 'ai assistant chat rag ask library enable disable' },
   { tab: 'behavior',   label: 'Usage this month', keywords: 'usage quota limit storage ai calls plan tier billing how much used remaining reset window meter' },
+
+  { tab: 'timezone',   label: 'Timezone', keywords: 'timezone time zone clock utc gmt offset local browser default region city travel today overdue due date reminder agenda daylight saving dst' },
 
   { tab: 'tags',       label: 'Tag colors', keywords: 'tag colour color label highlight' },
 

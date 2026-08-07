@@ -5,7 +5,7 @@ import WidgetPanel from './WidgetPanel.jsx'
 import HomeReviewSummary from './HomeReviewSummary.jsx'
 import IndexHealthBanner from './IndexHealthBanner.jsx'
 
-export default function HomeView({ topics, inboxCount, addToast, onSelectTopic, onSortInbox, onTopicIconChange, supabase, onTrack, onSaveFeedItem, onGoToFeed, onOpenEntry, onGoToDigest }) {
+export default function HomeView({ topics, inboxCount, addToast, onSelectTopic, onSortInbox, onTopicIconChange, supabase, onTrack, onSaveFeedItem, onGoToFeed, onOpenEntry, onGoToDigest, timezone }) {
   const nonInbox = topics.filter((t) => t.name !== 'Inbox')
 
   return (
@@ -20,7 +20,7 @@ export default function HomeView({ topics, inboxCount, addToast, onSelectTopic, 
         <TopicsGrid topics={nonInbox} onSelectTopic={onSelectTopic} onTopicIconChange={onTopicIconChange} supabase={supabase} />
       </div>
       <div className="home-right">
-        <WidgetPanel supabase={supabase} onTrack={onTrack} onSaveFeedItem={onSaveFeedItem} onGoToFeed={onGoToFeed} onOpenEntry={onOpenEntry} />
+        <WidgetPanel supabase={supabase} onTrack={onTrack} onSaveFeedItem={onSaveFeedItem} onGoToFeed={onGoToFeed} onOpenEntry={onOpenEntry} timezone={timezone} />
       </div>
     </div>
   )

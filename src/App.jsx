@@ -70,6 +70,7 @@ import { useVersions } from './hooks/useVersions.js'
 import { useArchiveToast } from './hooks/useArchiveToast.js'
 import { readBoolPref, writePref } from './lib/localPref.js'
 import { useTheme } from './hooks/useTheme.js'
+import { useTimezone } from './hooks/useTimezone.js'
 const FilePreviewModal = lazy(() => import('./components/FilePreviewModal.jsx'))
 
 function Workspace() {
@@ -85,6 +86,10 @@ function Workspace() {
   const [exportBusy, setExportBusy] = useState(false)
   const { archiveToast, setArchiveToast } = useArchiveToast()
   const { palette: themePalette, style: themeStyle, setPalette, setStyle } = useTheme()
+  // Resolved once here and passed down, so every surface agrees about what day
+  // it is. Mounting the hook twice would give two independent copies of the
+  // state and a settings change would not reach the clock until a reload.
+  const { preference: tzPreference, timezone, setTimezone } = useTimezone()
   const [trashToast, setTrashToast] = useState(() => readBoolPref('medialog_trash_toast', true))
   const { previewUrl, openPreview, closePreview } = useFilePreview()
   const { toasts, addToast, dismissToast } = useToast()
@@ -1059,6 +1064,7 @@ function Workspace() {
               onSaveFeedItem={(item) => handleSaveFromFeed(item, inboxTopic?.id ?? topics[0]?.id)}
               onGoToFeed={() => setView('feed')}
               onOpenEntry={handleSelectEntry}
+              timezone={timezone}
               onGoToDigest={() => navigateTo('digest')}
             />
           )}
@@ -1176,6 +1182,9 @@ function Workspace() {
               onUpdateTagColor={handleUpdateTagColor}
               archiveToast={archiveToast}
               onToggleArchiveToast={handleToggleArchiveToast}
+              tzPreference={tzPreference}
+              timezone={timezone}
+              onSetTimezone={setTimezone}
               trashToast={trashToast}
               onToggleTrashToast={handleToggleTrashToast}
               themePalette={themePalette}
