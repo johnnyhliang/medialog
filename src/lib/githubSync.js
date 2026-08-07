@@ -14,6 +14,11 @@
 // restore can satisfy foreign keys by applying the list front to back.
 export const SYNC_TABLES = [
   'topics',
+  // Carried, and placed immediately after `topics` because its PK is an FK to
+  // topics and applySnapshot walks this array front to back. `next_action` and
+  // `parked_note` are hand-written text — the rest of the Manager is derived and
+  // would rebuild itself, but no restore could regenerate a sentence you wrote.
+  'topic_state',
   'entries',
   'tags',
   'entry_tags',
@@ -48,6 +53,8 @@ export const SYNC_TABLES = [
 // is what makes that safe.
 export const CONFLICT_TARGETS = {
   entry_tags: 'entry_id,tag_id',
+  // PK is topic_id, not id.
+  topic_state: 'topic_id',
   opportunity_state: 'user_id,opportunity_id',
   programs: 'name',
   companies: 'slug',

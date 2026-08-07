@@ -12,6 +12,7 @@ const snapshot = {
     ],
     tags: [{ id: 'g1', name: 'microstructure' }],
     entry_tags: [{ entry_id: 'e1111111-aaaa', tag_id: 'g1' }],
+    topic_state: [],
     entry_versions: [], highlights: [], resource_sections: [],
     feeds: [], opportunities: [], applications: [], opportunity_state: [],
     assistant_conversations: [], assistant_messages: [],

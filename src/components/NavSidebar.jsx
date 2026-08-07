@@ -3,7 +3,7 @@ import {
   Home, Search, Upload, Archive, Inbox, Briefcase, Highlighter,
   RotateCcw, BarChart2, BookOpen, Settings2, Trash2 as TrashIcon, FolderOpen,
   Rss, ScrollText, ChevronRight, GraduationCap, BookMarked,
-  CalendarClock,
+  CalendarClock, LayoutList,
 } from 'lucide-react'
 
 // Declarative nav config, grouped by how often each view is reached for.
@@ -31,6 +31,9 @@ const SECTIONS = [
     id: 'library',
     label: 'library',
     items: [
+      // A Review-mood surface: "where am I across everything", alongside
+      // Revisit and Digest rather than in the daily capture group.
+      { view: 'manager', label: 'Manager', icon: LayoutList, side: 'loadManager', module: 'manager' },
       { view: 'reading', label: 'Reading', icon: BookMarked, module: 'reading' },
       { view: 'highlights', label: 'Highlights', icon: Highlighter, module: 'highlights' },
       { view: 'revisit', label: 'Revisit', icon: RotateCcw, side: 'loadRevisit', module: 'revisit' },

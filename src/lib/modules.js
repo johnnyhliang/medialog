@@ -66,6 +66,13 @@ export const MODULES = [
   // affordance ships. The intended home is the default-on set
   // (docs/intentional-app-spec.md Part 2), hence defaultOn: true.
   { id: 'agenda',    label: 'Agenda',      description: 'Reminders and deadlines, grouped by when they are due.', core: false, defaultOn: true, minTier: 'free', stage: STAGE_BETA },
+  // The Manager (docs/manager-scope.md). Beta, which forces founder-only — §1 is
+  // explicit that MediaLog the PRODUCT does not manage tasks, and this is the
+  // personal-tool exception, on the same precedent as 'interview'.
+  // defaultOn: false deliberately: it is an opt-in surface, not part of the
+  // capture→sort→resurface spine, so it stays out of the lean default set that
+  // tests/src/lib/modules.test.js pins.
+  { id: 'manager',   label: 'Manager',     description: 'Where every topic stands, with a resume card each.', core: false, defaultOn: false, minTier: 'free', stage: STAGE_BETA },
   { id: 'archive',   label: 'Archive',     description: 'Archived entries.',                         core: false, defaultOn: false, minTier: 'free' },
     // Archival is half-built: image/PDF copies work, article text is unverified,
   // Wayback records unconfirmed successes. Experimental until that settles.

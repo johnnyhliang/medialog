@@ -2,6 +2,7 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Search, Upload, Inbox, RotateCcw, BarChart2, Settings2, Trash2 as TrashIcon, Download, Menu, Home, FolderOpen, Rss, Briefcase, PackageOpen, Archive, ScrollText, Highlighter, BookOpen } from 'lucide-react'
 import { supabase } from './lib/supabaseClient.js'
+import { loadManagerData, setNextAction, parkTopic, unparkTopic } from './lib/db/managerState.js'
 import { listTopics, createTopic, getTopicByName, listDeletedTopics, archiveTopic, unarchiveTopic, softDeleteTopic, restoreDeletedTopic, togglePinTopic } from './lib/db/topics.js'
 import {
   listEntriesByTopic, createEntry, updateEntry, searchEntries,
@@ -54,6 +55,7 @@ const InterviewView = lazy(() => import('./components/InterviewView.jsx'))
 const ReadingView = lazy(() => import('./components/ReadingView.jsx'))
 const DeepTopicView = lazy(() => import('./components/DeepTopicView.jsx'))
 const MetricsView = lazy(() => import('./components/MetricsView.jsx'))
+const ManagerView = lazy(() => import('./components/ManagerView.jsx'))
 import TopicView from './components/TopicView.jsx'
 import CatchOverlay from './components/CatchOverlay.jsx'
 import VersionHistoryModal from './components/VersionHistoryModal.jsx'
@@ -77,6 +79,10 @@ function Workspace() {
   const { topics, setTopics, activeTopics, archivedTopics, selectedId, setSelectedId, inboxCount, setInboxCount, selectedTopic, inboxTopic, applyAddTopic, applyArchiveTopic, applyUnarchiveTopic, applyDeleteTopic, applyRestoreDeletedTopic } = useTopics()
   const [deletedTopics, setDeletedTopics] = useState([])
   const [agendaEntries, setAgendaEntries] = useState([])
+  // The Manager loads on navigation (sideEffects.loadManager), never at mount —
+  // it must not add to the 22 round trips the app already makes on boot.
+  const [managerData, setManagerData] = useState({ states: [], entries: [] })
+  const [managerLoading, setManagerLoading] = useState(false)
   const { entries, setEntries, globalSearchResults, setGlobalSearchResults, applyUpdateEntry, applyDeleteEntry, applyMoveEntry } = useEntries()
   const { pendingArchiveIds, addPending, removePending } = usePendingArchive(selectedId)
   const { trashEntries, setTrashEntries, applyRestore, applyClear } = useTrash()
@@ -944,6 +950,52 @@ function Workspace() {
     setAgendaEntries(await listAgenda(supabase))
   }
 
+  async function loadManager() {
+    setManagerLoading(true)
+    try {
+      setManagerData(await loadManagerData(supabase))
+    } catch (e) {
+      addToast(e.message || 'Could not load the Manager', 'error')
+    } finally {
+      setManagerLoading(false)
+    }
+  }
+
+  // The three Manager mutations. Each writes through the db layer and patches
+  // `states` locally rather than refetching — the derivation is pure, so the
+  // cards recompute from the new row for free.
+  function applyTopicState(row) {
+    setManagerData((prev) => ({
+      ...prev,
+      states: [...prev.states.filter((s) => s.topic_id !== row.topic_id), row],
+    }))
+  }
+
+  async function handleSetNextAction(topicId, text) {
+    try {
+      applyTopicState(await setNextAction(supabase, topicId, text))
+    } catch (e) {
+      addToast(e.message || 'Could not save', 'error')
+    }
+  }
+
+  async function handleParkTopic(topicId, note) {
+    try {
+      applyTopicState(await parkTopic(supabase, topicId, note))
+      addToast('Parked — it stays visible on the shelf', 'success')
+    } catch (e) {
+      addToast(e.message || 'Could not park', 'error')
+    }
+  }
+
+  async function handleUnparkTopic(topicId) {
+    try {
+      applyTopicState(await unparkTopic(supabase, topicId))
+    } catch (e) {
+      addToast(e.message || 'Could not unpark', 'error')
+    }
+  }
+
   // Done reminders leave the agenda on their own — `listAgenda` filters
   // status='done'. Dropping the row locally keeps the list in step without a
   // refetch, the same optimistic pattern the other views use.
@@ -1035,7 +1087,7 @@ function Workspace() {
           <NavSidebar
             view={view}
             navigateTo={navigateTo}
-            sideEffects={{ loadRevisit, loadTrash, loadAgenda }}
+            sideEffects={{ loadRevisit, loadTrash, loadAgenda, loadManager }}
             isModuleVisible={isModuleVisible}
           />
           <hr className="topic-divider" />
@@ -1181,6 +1233,18 @@ function Workspace() {
           )}
           {view === 'revisit' && (
             <Revisit entries={revisitEntries} onSeen={handleSeen} onRate={handleRateRevisit} recentActivity={recentActivity} />
+          )}
+          {view === 'manager' && isModuleVisible('manager') && (
+            <ManagerView
+              topics={topics}
+              entries={managerData.entries}
+              states={managerData.states}
+              loading={managerLoading}
+              onResume={navigateToTopic}
+              onSetNextAction={handleSetNextAction}
+              onPark={handleParkTopic}
+              onUnpark={handleUnparkTopic}
+            />
           )}
           {view === 'agenda' && (
             <AgendaView
