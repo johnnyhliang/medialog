@@ -86,6 +86,30 @@ Concretely, using primitives that already exist:
 Manager reads progress out of `master_doc` using it. No new entity, no new UI
 for goals, no migration.
 
+### The UI boundary — decided 2026-08-07, and it is half the decision
+
+**A topic is the project in the DATA. The topic SCREEN does not change.**
+
+These are separate claims and an earlier draft of this section conflated them,
+which produced a proposal — one topic screen showing plan chrome for every
+topic — that was correctly rejected. Stated plainly:
+
+| Layer | Rule |
+|---|---|
+| Data | a project is a topic with entries. No projects table, nothing to mirror |
+| UI | `TopicView` stays what it is: master doc, entries, notes. **Nothing project-shaped is added to it** |
+| Where plans render | **the Manager, and only the Manager** |
+
+A basketball topic must never carry progress bars, phase trackers or cursors it
+does not use. `VISION.md` is explicit that complexity is exposed *progressively,
+not upfront*, and a topic screen that grows a plan section for all topics
+because some are projects is the graveyard pattern applied to UI.
+
+So the Manager is not merely the aggregator — it is the **containment
+boundary**. Everything plan-shaped lives on one surface you open deliberately.
+That is what keeps "topics are topics" true while still letting a topic be the
+home of a project's data.
+
 ---
 
 ## 3. The Manager
@@ -169,8 +193,8 @@ performed as arbitrary pairings.
 | Stage | Change | Confidence |
 |---|---|---|
 | 1 | ✅ **DONE 2026-08-07. Sort Inbox folded into Tidy**, one surface named **Triage**. Tidy's actions (move/done/snooze/trash/keep) were a strict superset of Sort Inbox's (assign/delete), so widening the queue to all inbox items and deleting `SortInbox.jsx` lost nothing. `useInbox` went with it — `inboxEntries` had become write-only. **Correction to this row as first written:** the badge risk was *not* `inboxEntries`; `inboxCount` comes from `useTopics` as a `count: exact` query and was never exposed. The real risk was the decrement path, which lived only in the deleted handlers — and it must fire on **move and trash only**, because done/snooze leave the row in the Inbox topic and would drift the count low. The `inbox_sorted` activation metric lived there too and would have been silently deleted. | high |
-| 2 | **Deep-topics UI collapses** into normal topics/entries, cursor retained per §4. | high |
-| 3 | **Manager ships**, absorbing the cursor and `[park]`. | — |
+| 2 | **Manager ships**, absorbing the cursor and `[park]`. | — |
+| 3 | **Deep-topics UI collapses** into normal topics/entries, cursor retained per §4. **Resequenced 2026-08-07 to come AFTER the Manager**, which is the reverse of the first draft. The collapse's payoff only exists once something renders where-you-are for an ordinary topic; doing it first deletes a working reading UI and leaves a gap until the Manager lands. Afterwards it is a real simplification, because the resume card already shows what `DeepTopicView` was showing. | high |
 | 4 | **Digest + Progress reconsidered** — only *after* the Manager exists. Digest is actionable (`onStatusChange`, `onDelete`), Progress is read-only stats; they share a mood, not a shape, so pairing them today is shuffling. Once the Manager owns "state of my world", Digest becomes what the spec already calls it: *"the weekly narrative version of the same data."* | deferred |
 
 ---
@@ -252,17 +276,24 @@ Recorded so this conversation does not recur.
 ## 10. Build order
 
 1. This document. ✅
-2. Sort Inbox → Tidy (§5 stage 1)
-3. Deep-topics UI collapse, cursor retained (§5 stage 2, §4)
-4. **Manager** — `topic_state`, resume cards, `[park]`, progress read from
-   `master_doc` via `goals.js`
+2. Sort Inbox → Tidy, now **Triage**. ✅ 2026-08-07
+3. **Manager** — `topic_state`, resume cards, `[park]`, progress read from
+   `master_doc` via `goals.js`. **Its own surface** (§2, the UI boundary):
+   `TopicView` is not touched by this work.
+4. Deep-topics UI collapse, cursor retained (§5 stage 3, §4) — *after* 3, not before
 5. Seed `quantdevplan.xlsx` (§7)
 6. Contribution grid (§6)
 7. AI `next_action` drafting (§9, last)
 
-**Steps 2–4 are the ones that address the stated problem** — things drowning on
-the backburner. Park and derived momentum do most of that work. The grid and the
-AI are polish on top; if only 1–4 ever happen, the need is met.
+**Step 3 is the one that addresses the stated problem** — things drowning on the
+backburner. Park and derived momentum do most of that work. Everything after is
+polish; if only 1–3 ever happen, the need is met.
+
+**An open question step 3 does not have to answer.** Whether the book-reading
+flow is wanted at all is undecided: there is no deep-topics data, so `reading`
+may simply be a feature that was built and never used, in which case step 4 is a
+straight deletion of ~280 lines rather than an absorption. Decide after using the
+Manager, not before.
 
 Keybinds for fast editing are cheap whenever wanted: `src/lib/commands.js` is
 already a registry and every bind is remappable, with a test asserting no
