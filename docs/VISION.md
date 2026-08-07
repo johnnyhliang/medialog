@@ -146,7 +146,11 @@ The challenge with productivity tools is that they're designed for the kind of p
 
 ## What MediaLog Is Not
 
-- Not a task manager (TickTick owns that slot)
+- Not a task manager (TickTick owns that slot) — **still true for the product**, and
+  reaffirmed 2026-08-07. A founder-only Manager module exists for personal project
+  tracking on the same precedent as the interview tracker ("personal curriculum, not
+  product surface"); it is not a public feature and never a paid upsell. The scope
+  and its limits: [`manager-scope.md`](manager-scope.md).
 - Not a calendar (Google Calendar owns that slot)
 - Not a social tool (yet — audience layer is Phase D)
 - Not a Notion replacement in general (it's an opinionated subset: personal media diet)

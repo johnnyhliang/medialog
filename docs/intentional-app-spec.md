@@ -18,6 +18,15 @@ use; the Today screen + synthesis is the antidote to overwhelm. Build order at t
 
 ## Part 1 — Manual reminders (org-mode philosophy, not a todo dumping ground)
 
+> ⚠️ **SUPERSEDED 2026-08-07 by [`manager-scope.md`](manager-scope.md).** The core
+> instinct here — reminders are entries, not a new pile — was right, and the wider
+> version of it is that *a topic is the project* and the plan lives in
+> `topics.master_doc`. What this section got wrong was making due dates the primary
+> surface: an Overdue bucket contradicts `gains-system.md` ("there are no dates and
+> no 'behind'"), and a per-task deadline is how a plan becomes a nag list. The
+> Agenda built against this section is parked and beta-gated; `entries.due_at`
+> (`0072`) is retained for `target:` dates. **Read `manager-scope.md` instead.**
+
 The trap: a reminders feature becomes a 200-item guilt list. Org-mode's antidotes, adapted to
 MediaLog's existing model (entries, `status`, `surface_after`, topics, tags):
 

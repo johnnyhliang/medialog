@@ -29,7 +29,8 @@ line isn't.
 | `metering-analytics-spec.md` | The fuller design behind it. Note its assumption that chat is the cost centre is wrong — embeddings are |
 | `preservation-v2-spec.md` | Not built. Supersedes the server-side archiver plan |
 | `interview-progress-spec.md` | Algorithm built (`src/lib/interviewPlan.js`); UI pending |
-| `intentional-app-spec.md` | Part 2 (modules) **built**. Parts 1 (reminders) + 3 (Today) not |
+| **`manager-scope.md`** | **Authoritative on projects/tasks/goals.** A topic *is* the project; the Manager is the work. Reconciles VISION with the north-star spec; lists what is deliberately out of scope |
+| `intentional-app-spec.md` | Part 2 (modules) **built**. Part 3 (Today) not. ⚠️ **Part 1 (reminders) superseded by `manager-scope.md`** |
 | `open-source-boundary.md` | What could safely be open-sourced vs what is the business. Measured coupling, not guesses |
 | `product-scope-audit.md` | **What ships vs waits vs never.** Every surface judged against the thesis; explains the `stage` mechanism |
 

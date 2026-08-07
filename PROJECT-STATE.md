@@ -1,5 +1,8 @@
 # MediaLog — Project State
 
+### unreachable code for refactor plan:
+stuff like interview readiness, goals.js, metering features, to be checked later
+
 **Updated 2026-08-06 (UX bugs + backup coverage)** from the filesystem and git, not
 from memory. **Overwritten on each regeneration, never appended** — an append-only
 log is always partly wrong; a snapshot is always current.
@@ -567,12 +570,12 @@ detail; that file, not this table, is authoritative on *how*.
 | 9 | **`jobs` table** | infra | **The keystone.** Unblocks invisible indexing, safe bulk import, meterable indexing, and the graceful quota path — deferred work needs somewhere to pause | `indexing-architecture.md` §3 |
 | 10 | Two-phase indexing | infra | Rides on the queue. Makes contextualisation tier-differentiable and interruptible | `indexing-architecture.md` §4 |
 | 11 | Set `aiCallsPerWindow` from real data | infra | Still `null` on purpose. Needs ~a week of `ai_usage` | `limits-runbook.md` |
-| 12 | **Reminders + Agenda** | feature | **Biggest product value, unblocked.** Reminders are entries with a `due_at`, so they inherit capture/topics/search/backup free. Also the answer to "can MediaLog hold my writing tasks" | `intentional-app-spec.md` Part 1 |
+| ~~12~~ | ~~Reminders + Agenda~~ | feature | ⛔ **SUPERSEDED 2026-08-07 → row 15.** Built and **parked** (beta-gated, invisible). Due dates as the primary surface contradict `gains-system.md`; the replacement is *a topic is the project*, plan in `master_doc`, aggregated by the Manager. `due_at` + `src/lib/timezone.js` retained | `manager-scope.md` |
 | 13 | Tidy queue (north-star ①) | north star | One-card triage; queries already exist, it's a card UI | north-star spec Part 6 |
 | 14 | Related-entries footer (north-star ④) | north star | pgvector exists; agent step ① as visible value | north-star spec Part 6 |
-| 15 | Manager + resume cards (north-star ⑤) | north star | The genuinely missing surface | north-star spec Part 2 |
+| **15** | **Manager + resume cards** | north star | ⬆️ **PROMOTED 2026-08-07 — now the main line of work.** The genuinely missing surface, and the one that answers "important things drown on the backburner": `[park]` kills cold-topic guilt, momentum is *derived* so nothing is hand-prioritised, and it aggregates 24 modules into one place to look. Absorbs rows 12, 17, 18 and both dead progress libraries (`goals.js`, `studyPlan.js`) | **`manager-scope.md`** · north-star spec Part 2 |
 | 16 | `user_model` v1 + feed ranking (north-star ⑥) | north star | **Start logging the dismiss signal now — it's free and it's the input** | north-star spec Part 5 |
-| 17 | Collapse Deep Topics into normal topics | feature | A *correction* to shipped code, not an extension. Sequence before any recommendation work | `IDEAS.md` § Big swings |
+| 17 | Collapse Deep Topics into normal topics | feature | A *correction* to shipped code, not an extension. ⚠️ **The UI collapses; the CURSOR does not.** `topics.cursor_section_id` is the only "where did I leave off" mechanism in the app and is the prototype of the Manager's resume card — absorb it, do not drop the table until the Manager reads it | `manager-scope.md` §4 |
 | 18 | Interview progress UI | feature | Data flows now, so rings aren't theatre | `interview-progress-spec.md` §4 |
 | ~~19~~ | ~~Hide the Wayback UI~~ | bug | ✅ **DONE 2026-08-06.** Entry-card button and popup unmounted, bulk submitter removed. `wayback_submitted_at` **kept** — a future SPN2 pass needs it to know which entries to re-check. SPN2 itself stays parked | `IDEAS.md` § External archival |
 | 19b | Video capture: transcript + metadata + thumbnail | feature | One fetch at capture time. Transcripts are plain HTTP (~50 KB, no worker) and are *the information* for a talk; stored thumbnails survive deletion, which hotlinked ones cannot. ~$1.30 to backfill 185 YouTube entries | `preservation-v2-spec.md` §3 |
