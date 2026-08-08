@@ -28,7 +28,7 @@ function domain(url) {
   try { return new URL(url).hostname.replace(/^www\./, '') } catch { return url }
 }
 
-export default function FeedView({ supabase, topics, allTags = [], onSaveItem, addToast, onOpenDeepTopic, onOpenPatternTopic }) {
+export default function FeedView({ supabase, topics, allTags = [], onSaveItem, addToast, onOpenTopic, onOpenPatternTopic }) {
   const [feeds, setFeeds] = useState([])
   const [recentTitles, setRecentTitles] = useState([])
   const [counts, setCounts] = useState({})
@@ -398,7 +398,7 @@ export default function FeedView({ supabase, topics, allTags = [], onSaveItem, a
       <div className="feed-items">
         <GainsCard
           supabase={supabase}
-          onOpenDeepTopic={onOpenDeepTopic}
+          onOpenTopic={onOpenTopic}
           onOpenPatternTopic={onOpenPatternTopic}
           feedItems={items}
           interestProfile={interestProfile}

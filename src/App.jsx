@@ -3,7 +3,10 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } fro
 import { Search, Upload, Inbox, RotateCcw, BarChart2, Settings2, Trash2 as TrashIcon, Download, Menu, Home, FolderOpen, Rss, Briefcase, PackageOpen, Archive, ScrollText, Highlighter, BookOpen } from 'lucide-react'
 import { supabase } from './lib/supabaseClient.js'
 import { loadManagerData, setNextAction, parkTopic, unparkTopic } from './lib/db/managerState.js'
-import { listTopics, createTopic, getTopicByName, listDeletedTopics, archiveTopic, unarchiveTopic, softDeleteTopic, restoreDeletedTopic, togglePinTopic } from './lib/db/topics.js'
+import { listTopics, createTopic, getTopicByName, listDeletedTopics, archiveTopic, unarchiveTopic, softDeleteTopic, restoreDeletedTopic, togglePinTopic, updateTopicDoc } from './lib/db/topics.js'
+import { listContributions, recordContribution, unrecordContribution } from './lib/db/contributions.js'
+import { todayKey } from './lib/contributions.js'
+import { toggleStep } from './lib/goals.js'
 import {
   listEntriesByTopic, createEntry, updateEntry, searchEntries,
   bulkCreateEntries, listForRevisit, markSurfaced, listRecentActivity,
@@ -52,8 +55,6 @@ const ExploreView = lazy(() => import('./components/ExploreView.jsx'))
 const FilesView = lazy(() => import('./components/FilesView.jsx'))
 const TidyView = lazy(() => import('./components/TidyView.jsx'))
 const InterviewView = lazy(() => import('./components/InterviewView.jsx'))
-const ReadingView = lazy(() => import('./components/ReadingView.jsx'))
-const DeepTopicView = lazy(() => import('./components/DeepTopicView.jsx'))
 const MetricsView = lazy(() => import('./components/MetricsView.jsx'))
 const ManagerView = lazy(() => import('./components/ManagerView.jsx'))
 import TopicView from './components/TopicView.jsx'
@@ -81,7 +82,7 @@ function Workspace() {
   const [agendaEntries, setAgendaEntries] = useState([])
   // The Manager loads on navigation (sideEffects.loadManager), never at mount —
   // it must not add to the 22 round trips the app already makes on boot.
-  const [managerData, setManagerData] = useState({ states: [], entries: [] })
+  const [managerData, setManagerData] = useState({ states: [], entries: [], contributions: [] })
   const [managerLoading, setManagerLoading] = useState(false)
   const { entries, setEntries, globalSearchResults, setGlobalSearchResults, applyUpdateEntry, applyDeleteEntry, applyMoveEntry } = useEntries()
   const { pendingArchiveIds, addPending, removePending } = usePendingArchive(selectedId)
@@ -102,7 +103,6 @@ function Workspace() {
   const { toasts, addToast, dismissToast } = useToast()
 
   const [view, setView] = useState('home')
-  const [deepTopicId, setDeepTopicId] = useState(null)
   const [catchOpen, setCatchOpen] = useState(false)
 
   const [paletteOpen, setPaletteOpen] = useState(false)
@@ -634,6 +634,20 @@ function Workspace() {
     }
     applyUpdateEntry(entryId, updated)
 
+    // The grid's second and last write event (manager-scope.md §6): finishing
+    // something. Fire-and-forget in both directions — a square is a record of
+    // the status change, never a precondition for it.
+    if (status === 'done' && prevStatus !== 'done') {
+      recordContribution(supabase, {
+        topicId: entry?.topic_id ?? null,
+        kind: 'done',
+        note: entry?.title || null,
+        tz: timezone,
+      }).catch(() => {})
+    } else if (prevStatus === 'done' && status !== 'done') {
+      unrecordContribution(supabase, { kind: 'done', note: entry?.title || null, tz: timezone }).catch(() => {})
+    }
+
     if (status === 'done') {
       if (archiveToast) {
         addPending(entryId)
@@ -953,7 +967,13 @@ function Workspace() {
   async function loadManager() {
     setManagerLoading(true)
     try {
-      setManagerData(await loadManagerData(supabase))
+      // Both in one hop, same as loadManagerData's own Promise.all — the grid
+      // must not turn one navigation into two sequential round trips.
+      const [data, contributions] = await Promise.all([
+        loadManagerData(supabase),
+        listContributions(supabase, { tz: timezone }),
+      ])
+      setManagerData({ ...data, contributions })
     } catch (e) {
       addToast(e.message || 'Could not load the Manager', 'error')
     } finally {
@@ -993,6 +1013,53 @@ function Workspace() {
       applyTopicState(await unparkTopic(supabase, topicId))
     } catch (e) {
       addToast(e.message || 'Could not unpark', 'error')
+    }
+  }
+
+  /**
+   * Tick or untick one step of a topic's plan — the only place a master_doc
+   * checkbox can be flipped (docs/manager-scope.md §2, §6).
+   *
+   * The doc write is what matters and is awaited. The contribution write is
+   * fire-and-forget: the grid is a record of work, not the work, so a failed
+   * square must never make a checkbox appear not to have saved.
+   */
+  async function handleToggleStep(topicId, lineIndex, { text, checked }) {
+    const topic = topics.find((t) => t.id === topicId)
+    if (!topic) return
+    const next = toggleStep(topic.master_doc || '', lineIndex)
+    if (next === topic.master_doc) return
+    try {
+      await updateTopicDoc(supabase, topicId, next)
+      handleDocChange(topicId, next)
+    } catch (e) {
+      addToast(e.message || 'Could not save the plan', 'error')
+      return
+    }
+
+    try {
+      if (checked) {
+        await recordContribution(supabase, { topicId, kind: 'step', note: text, tz: timezone })
+        setManagerData((prev) => ({
+          ...prev,
+          contributions: [{ day: todayKey(new Date(), timezone), topic_id: topicId, kind: 'step', note: text }, ...prev.contributions],
+        }))
+      } else {
+        await unrecordContribution(supabase, { kind: 'step', note: text, tz: timezone })
+        const today = todayKey(new Date(), timezone)
+        setManagerData((prev) => {
+          // Drop ONE matching square, not every one: the same step text can
+          // legitimately appear twice in a day if it was ticked, unticked and
+          // ticked again, and clearing them all would under-count the day.
+          const i = prev.contributions.findIndex(
+            (c) => c.day === today && c.kind === 'step' && c.note === text,
+          )
+          if (i === -1) return prev
+          return { ...prev, contributions: prev.contributions.toSpliced(i, 1) }
+        })
+      }
+    } catch {
+      // Deliberately silent — see above.
     }
   }
 
@@ -1209,21 +1276,6 @@ function Workspace() {
           {view === 'interview' && isModuleVisible('interview') && (
             <InterviewView supabase={supabase} addToast={addToast} />
           )}
-          {view === 'reading' && (
-            <ReadingView
-              supabase={supabase}
-              addToast={addToast}
-              onOpenTopic={(id) => { setDeepTopicId(id); setView('deeptopic') }}
-            />
-          )}
-          {view === 'deeptopic' && deepTopicId && (
-            <DeepTopicView
-              supabase={supabase}
-              topicId={deepTopicId}
-              addToast={addToast}
-              onBack={() => setView('reading')}
-            />
-          )}
           {view === 'progress' && (
             <ProgressView
               supabase={supabase}
@@ -1239,11 +1291,14 @@ function Workspace() {
               topics={topics}
               entries={managerData.entries}
               states={managerData.states}
+              contributions={managerData.contributions}
+              timezone={timezone}
               loading={managerLoading}
               onResume={navigateToTopic}
               onSetNextAction={handleSetNextAction}
               onPark={handleParkTopic}
               onUnpark={handleUnparkTopic}
+              onToggleStep={handleToggleStep}
             />
           )}
           {view === 'agenda' && (
@@ -1309,7 +1364,7 @@ function Workspace() {
               allTags={allTags}
               onSaveItem={handleSaveFromFeed}
               addToast={addToast}
-              onOpenDeepTopic={(id) => { setDeepTopicId(id); setView('deeptopic') }}
+              onOpenTopic={(id) => { setSelectedId(id); setView('browse') }}
               onOpenPatternTopic={(id) => { setSelectedId(id); setView('browse') }}
             />
           )}

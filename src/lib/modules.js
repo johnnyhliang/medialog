@@ -52,7 +52,6 @@ export const MODULES = [
 
   // ── opt-in power features ──
   { id: 'feed',      label: 'Feed',        description: 'RSS and creator feeds with relevance ranking.',  core: false, defaultOn: false, minTier: 'free' },
-  { id: 'reading',   label: 'Reading',     description: 'Books, courses and papers with section cursors.', core: false, defaultOn: false, minTier: 'free', stage: STAGE_BETA },
   { id: 'highlights',label: 'Highlights',  description: 'Saved highlights across your library.',     core: false, defaultOn: false, minTier: 'free' },
   // Free for everyone: the radar scrapes public GitHub job boards, so it costs
   // nothing per user beyond a shared cron. Interview prep stays founder-only —

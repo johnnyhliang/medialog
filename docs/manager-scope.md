@@ -173,6 +173,43 @@ the table until the Manager reads it.
 This is the difference between "does anything import this file" and "what does
 this actually do", the lesson already recorded in `PROJECT-STATE.md` §2.
 
+### Resolved 2026-08-07 — the UI was deleted, the data was kept
+
+The section above argued the cursor must survive because it was the only
+"where was I" mechanism. **The live data says it never became one.** Before
+touching anything:
+
+| | rows |
+|---|---|
+| `resource_sections` | **0** |
+| topics with `cursor_section_id` set | **0** |
+| entries with `section_id` / `takeaway` / `parent_id` | **0 / 0 / 0** |
+| topics with `kind = 'deep'` | 1, empty ("Little book of sephamores") |
+
+So there was no cursor to preserve — only the *idea* of one, which the Manager
+now implements properly as `next_action` plus derived momentum. §10's closing
+paragraph anticipated exactly this ("a straight deletion rather than an
+absorption") and that is the branch the data selected.
+
+**What was deleted:** `ReadingView.jsx`, `DeepTopicView.jsx`, `db/deepTopics.js`
+and their tests — ~600 lines, plus the `reading` module, its nav item, both view
+branches, `buildDeepTopicMarkdown`, and the `.rd-*`/`.dt-*` styles.
+
+**What was NOT deleted, deliberately:** `resource_sections`, `cursor_section_id`,
+`section_id`, `takeaway`, `parent_id`. Migration `0075` only runs
+`update topics set kind = 'note' where kind = 'deep'`. Dropping a table is
+irreversible and these hold nothing; keeping them costs nothing and the user's
+constraint on this whole pass was *"none of my existing data gets wiped, just
+reformatted."* The empty deep topic became a normal topic and kept its entries.
+
+**The one real casualty was elsewhere.** `GainsCard`'s *dev* track picked "the
+next `todo` section of the resource with a cursor" — it was the only consumer
+that did anything with deep topics. Rather than lose the track it was rewired to
+the primitive that replaced it: **the next unchecked step of a topic's
+`master_doc`**, read through `goals.js`. `gainsPicker.js` needed no change. The
+card now reads "step N of M" instead of "section N of M", and the takeaway count
+was removed rather than replaced with a fabricated stat.
+
 ---
 
 ## 5. Consolidation: the destination is one page

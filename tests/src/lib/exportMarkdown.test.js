@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'vitest'
-import { buildMarkdownFiles, buildTopicMarkdown, buildDeepTopicMarkdown, topicFilename } from '../../../src/lib/exportMarkdown.js'
+import { buildMarkdownFiles, buildTopicMarkdown, topicFilename } from '../../../src/lib/exportMarkdown.js'
 
 describe('buildMarkdownFiles', () => {
   test('produces one file per topic with entry sections', () => {
@@ -59,57 +59,6 @@ describe('buildTopicMarkdown', () => {
     const md = buildTopicMarkdown(topic, [])
     expect(md).toContain('the point')
     expect(md).not.toContain('## Entries')
-  })
-})
-
-describe('buildDeepTopicMarkdown', () => {
-  const data = {
-    topic: { id: 'd1', name: 'Attention Paper', source_url: 'http://arxiv.org/x' },
-    sections: [
-      { id: 's2', title: 'Results', position: 2, status: 'reading' },
-      { id: 's1', title: 'Method', position: 1, status: 'done' },
-    ],
-    takeaways: [
-      { id: 'k1', section_id: 's1', parent_id: null, takeaway: 'self-attention', note: 'quote here' },
-      { id: 'k2', section_id: 's1', parent_id: 'k1', takeaway: 'tangent on cost', note: '' },
-      { id: 'k3', section_id: 's2', parent_id: null, takeaway: 'beats baseline', note: '' },
-    ],
-  }
-
-  test('orders sections by position, not array order', () => {
-    const md = buildDeepTopicMarkdown(data)
-    expect(md.indexOf('## Method')).toBeLessThan(md.indexOf('## Results'))
-  })
-
-  test('nests tangents under their parent takeaway', () => {
-    const md = buildDeepTopicMarkdown(data)
-    expect(md).toContain('- self-attention')
-    expect(md).toContain('  quote here')
-    expect(md).toContain('  - tangent on cost')
-  })
-
-  test('records source and counts in front matter', () => {
-    const md = buildDeepTopicMarkdown(data)
-    expect(md).toContain('kind: deep-topic')
-    expect(md).toContain('source: http://arxiv.org/x')
-    expect(md).toContain('sections: 2')
-    expect(md).toContain('takeaways: 3')
-  })
-
-  test('marks empty sections instead of dropping them', () => {
-    const md = buildDeepTopicMarkdown({ ...data, sections: [{ id: 's9', title: 'Intro', position: 0 }], takeaways: [] })
-    expect(md).toContain('## Intro')
-    expect(md).toContain('_No takeaways._')
-  })
-
-  test('keeps takeaways whose section is missing under Unfiled', () => {
-    const md = buildDeepTopicMarkdown({
-      topic: { id: 'd1', name: 'X' },
-      sections: [],
-      takeaways: [{ id: 'k1', section_id: 'gone', parent_id: null, takeaway: 'orphan', note: '' }],
-    })
-    expect(md).toContain('## Unfiled')
-    expect(md).toContain('- orphan')
   })
 })
 

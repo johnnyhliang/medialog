@@ -19,6 +19,11 @@ export const SYNC_TABLES = [
   // `parked_note` are hand-written text — the rest of the Manager is derived and
   // would rebuild itself, but no restore could regenerate a sentence you wrote.
   'topic_state',
+  // After `topics` (FK) and, like topic_state, carried rather than derived:
+  // a contribution is the record that a day was worked, and nothing can
+  // reconstruct it. The doc it came from gets rewritten, the entry can be
+  // deleted, and the grid is a history — losing it silently rewrites the past.
+  'contributions',
   'entries',
   'tags',
   'entry_tags',

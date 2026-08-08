@@ -51,8 +51,8 @@ describe('stage gating', () => {
   })
 
   test('beta is also founder-gated, not just labelled', () => {
-    expect(effectiveMinTier('reading')).toBe('founder')
-    expect(isEntitled('reading', 'free')).toBe(false)
+    expect(effectiveMinTier('manager')).toBe('founder')
+    expect(isEntitled('manager', 'free')).toBe(false)
   })
 
   test('stable modules keep their declared tier', () => {

@@ -1,0 +1,33 @@
+-- 0075 — collapse the deep-topics ("Reading") feature.
+--
+-- docs/manager-scope.md §10 step 4. §4 of that document planned an ABSORPTION
+-- (keep the cursor, let the Manager own it). Live data settled it the other
+-- way: `resource_sections` has 0 rows, 0 topics have `cursor_section_id` set,
+-- and 0 entries have `section_id` / `takeaway` / `parent_id`. Exactly one topic
+-- carries kind='deep'. The feature was built and never used, so §10's open
+-- question resolves to "straight deletion", and the resume-card concept is
+-- rebuilt on `topics.master_doc` checkboxes instead (§2) — the primitive that
+-- actually has data behind it.
+--
+-- WHAT THIS MIGRATION DOES: reclassifies that one deep topic as a normal note
+-- topic so it stays visible now that `listTopics` no longer filters on kind.
+--
+-- WHAT THIS MIGRATION DELIBERATELY DOES NOT DO:
+--   * it does not drop `resource_sections`
+--   * it does not drop `topics.cursor_section_id`
+--   * it does not drop `entries.section_id`, `entries.takeaway`, `entries.parent_id`
+--
+-- Why they are retained-but-unused: dropping them is irreversible, they hold
+-- zero rows, and an empty table plus a handful of always-null columns cost
+-- nothing in storage, query time, or backup size. The standing constraint on
+-- this work is that no existing data is wiped, only reformatted — and a DROP
+-- can only ever subtract. If the Manager later wants a real cursor, the columns
+-- are still there to use. If they are ever removed, it should be a deliberate
+-- schema-cleanup migration of its own, taken after the Manager has settled.
+--
+-- Application code no longer reads or writes any of them. `resource_sections`
+-- intentionally remains in `src/lib/githubSync.js`'s SYNC_TABLES: syncing an
+-- empty table is a no-op, and keeping it there means an old backup restores
+-- cleanly.
+
+update topics set kind = 'note' where kind = 'deep';

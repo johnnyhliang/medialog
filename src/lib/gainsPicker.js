@@ -10,7 +10,7 @@ export const QUANT_STRANDS = ['quant-build', 'quant-read', 'quant-mental']
 // Verbatim from gains-system.md's dead-day floor — a bypass, not a picker output.
 export const FLOOR_ITEMS = {
   quant: '2 min of Zetamac, or read one paragraph of Harris',
-  dev: "Read one section heading of whatever's active in the Concept Bank",
+  dev: "Read one step of whatever plan is active in the Concept Bank",
   interview: 'Read (don\'t solve) one NeetCode solution',
 }
 
@@ -76,8 +76,8 @@ export function openMenuItems(menuItems = [], track) {
 /**
  * The picker. Tier 1: any due review across all tracks wins outright. Tier 2:
  * weighted-random track, then (for quant) a weighted-random strand, then the
- * least-recently-pulled open item in that strand. Dev pulls the next `todo`
- * section of the Active Concept Bank topic; Interview pulls its own due/next
+ * least-recently-pulled open item in that strand. Dev pulls the next unchecked
+ * step of the most recently active topic's master doc; Interview pulls its own due/next
  * problem (computed by interviewPlan.js — passed in, not recomputed here).
  *
  * Returns `null` if there's nothing pickable at all (every track empty) —

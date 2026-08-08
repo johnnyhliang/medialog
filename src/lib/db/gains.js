@@ -1,5 +1,5 @@
 // DB helpers for the Gains Feed's menu_items (Quant Strand A/B/C). Dev reads
-// deep-topic sections directly (src/lib/db/deepTopics.js); Interview reads its
+// topic master_doc steps directly (src/lib/goals.js); Interview reads its
 // own pattern/problem tables — neither needs helpers here. See
 // docs/gains-feed-design.md.
 

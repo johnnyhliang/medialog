@@ -122,6 +122,10 @@ export function buildResumeCards({ topics = [], entries = [], states = [], now =
       parkedAt: state?.parked_at || null,
       parkedNote: state?.parked_note || '',
       progress: progressFor(topic.master_doc, now),
+      // Carried so the card can render the plan's steps and tick them in place
+      // (ManagerView's PlanSteps). The doc is the plan — there is no separate
+      // steps table to read, which is §2 working as intended.
+      masterDoc: topic.master_doc || '',
     })
   }
   return cards

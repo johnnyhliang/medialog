@@ -2,13 +2,14 @@
 // short "other takes" list pulled from the existing feed relevance ranking.
 // See docs/gains-feed-design.md. Deliberately no forced entries for small
 // Quant reps — pulling/completing a menu item just updates its own row;
-// Dev/Interview picks link out to the existing flows that already write
-// takeaways/problems as entries.
+// Dev/Interview picks link out to the existing flows — the topic's master doc
+// and the interview pattern topics.
 
 import { useEffect, useMemo, useState } from 'react'
 import { ExternalLink, RefreshCw } from 'lucide-react'
 import { listMenuItems, markMenuItemPulled, setMenuItemStatus, seedStarterMenu } from '../lib/db/gains.js'
-import { listDeepTopics, getDeepTopic } from '../lib/db/deepTopics.js'
+import { listTopics } from '../lib/db/topics.js'
+import { parseGoal } from '../lib/goals.js'
 import { listInterview, patternReadiness } from '../lib/db/interview.js'
 import { suggestNext as suggestInterview } from '../lib/interviewPlan.js'
 import { suggestNext } from '../lib/gainsPicker.js'
@@ -31,7 +32,7 @@ function pickTitle(pick, context) {
   return null
 }
 
-export default function GainsCard({ supabase, onOpenDeepTopic, onOpenPatternTopic, feedItems = [], interestProfile = new Set() }) {
+export default function GainsCard({ supabase, onOpenTopic, onOpenPatternTopic, feedItems = [], interestProfile = new Set() }) {
   const [loading, setLoading] = useState(true)
   const [pick, setPick] = useState(null) // suggestNext() result, or 'floor' string track
   const [floorTrack, setFloorTrack] = useState(null)
@@ -42,37 +43,39 @@ export default function GainsCard({ supabase, onOpenDeepTopic, onOpenPatternTopi
   async function load() {
     setLoading(true)
     try {
-      const [menuItems, deepTopics, { patterns, problemsByTopic }] = await Promise.all([
+      const [menuItems, topics, { patterns, problemsByTopic }] = await Promise.all([
         listMenuItems(supabase),
-        listDeepTopics(supabase),
+        listTopics(supabase),
         listInterview(supabase),
       ])
 
-      // Dev: the next todo section of whichever deep topic has a cursor set
-      // (treated as "active" — same convention as the self-study one-active rule).
-      // Section counts are kept alongside so the pick can show "section N of M" —
-      // a literal position, not a percentage/pace, so it doesn't reintroduce the
-      // behind-indicator the design spec explicitly rules out.
+      // Dev: the first unchecked step of whichever topic's master doc is most
+      // recently active. Checkboxes in `topics.master_doc` are the plan
+      // primitive (docs/manager-scope.md §2) that replaced deep-topic sections.
+      // Step counts are kept alongside so the pick can show "step N of M" — a
+      // literal position, not a percentage/pace, so it doesn't reintroduce the
+      // behind-indicator the design spec explicitly rules out. No extra DB
+      // round-trip: listTopics selects '*', so master_doc is already loaded.
       let devNextSection = null
       let devTopic = null
       let devSectionIndex = null
       let devSectionCount = null
-      let devTakeawayCount = null // tangible output: takeaways actually written, not position
-      for (const t of deepTopics) {
-        if (!t.cursor_section_id) continue
-        const full = await getDeepTopic(supabase, t.id)
-        const cursorIdx = full.sections.findIndex((s) => s.id === t.cursor_section_id)
-        const next = full.sections[cursorIdx]?.status !== 'done'
-          ? full.sections[cursorIdx]
-          : full.sections[cursorIdx + 1]
-        if (next) {
-          devNextSection = next
-          devTopic = t
-          devSectionIndex = full.sections.indexOf(next)
-          devSectionCount = full.sections.length
-          devTakeawayCount = full.takeaways.length
-          break
+      const withSteps = topics
+        .map((t) => ({ topic: t, goal: parseGoal(t.master_doc) }))
+        .filter(({ goal }) => goal.steps.some((step) => !step.checked))
+        .sort((a, b) => new Date(b.topic.updated_at ?? 0) - new Date(a.topic.updated_at ?? 0))
+      const active = withSteps[0]
+      if (active) {
+        const idx = active.goal.steps.findIndex((step) => !step.checked)
+        devNextSection = {
+          title: active.goal.steps[idx].text,
+          topicId: active.topic.id,
+          index: idx,
+          total: active.goal.total,
         }
+        devTopic = active.topic
+        devSectionIndex = idx
+        devSectionCount = active.goal.total
       }
 
       const interviewSet = suggestInterview({ patterns, problemsByTopic, size: 1 })
@@ -92,7 +95,7 @@ export default function GainsCard({ supabase, onOpenDeepTopic, onOpenPatternTopi
       })
 
       setContext({
-        menuItems, devTopic, devSectionIndex, devSectionCount, devTakeawayCount,
+        menuItems, devTopic, devSectionIndex, devSectionCount, devNextSection,
         patterns, problemsByTopic, floorInterviewProblem,
       })
       setPick(next)
@@ -112,8 +115,8 @@ export default function GainsCard({ supabase, onOpenDeepTopic, onOpenPatternTopi
       if (pick.track === 'quant') {
         await setMenuItemStatus(supabase, pick.item.id, 'done')
       }
-      // Dev/Interview completion happens in their own views (writing a
-      // takeaway / solving a problem) — this card only points there.
+      // Dev/Interview completion happens in their own views (ticking a step in
+      // the topic's master doc / solving a problem) — this card only points there.
       await load()
     } finally { setBusy(false) }
   }
@@ -132,13 +135,13 @@ export default function GainsCard({ supabase, onOpenDeepTopic, onOpenPatternTopi
   }
 
   function handleOpen() {
-    if (pick?.track === 'dev' && context?.devTopic) onOpenDeepTopic?.(context.devTopic.id)
+    if (pick?.track === 'dev' && context?.devTopic) onOpenTopic?.(context.devTopic.id)
     if (pick?.track === 'interview' && pick.item?.patternId) onOpenPatternTopic?.(pick.item.patternId)
   }
 
   // "Other takes" shifts with the current pick — a Quant order-book pick
-  // nudges toward market-microstructure feed items, a Dev section toward that
-  // resource's subject — instead of always showing the same general-interest
+  // nudges toward market-microstructure feed items, a Dev step toward that
+  // topic's subject — instead of always showing the same general-interest
   // 3 items regardless of what's on the card. Falls back to the plain interest
   // profile once genuinely nothing is picked (floor state, no data).
   const recommended = useMemo(() => {
@@ -176,9 +179,10 @@ export default function GainsCard({ supabase, onOpenDeepTopic, onOpenPatternTopi
           )}
           {floorLabel === 'dev' && (
             <p className="gains-floor-text">
-              Read one section heading of {context?.devTopic
-                ? <button className="gains-inline-link" onClick={() => onOpenDeepTopic?.(context.devTopic.id)}>{context.devTopic.name}</button>
-                : 'whatever\'s active in the Concept Bank'}.
+              {context?.devTopic ? <>
+                Read one step of <button className="gains-inline-link" onClick={() => onOpenTopic?.(context.devTopic.id)}>{context.devTopic.name}</button>
+                {context.devNextSection?.title ? <> — {context.devNextSection.title}</> : null}.
+              </> : <>Read one step of whatever plan is active in the Concept Bank.</>}
             </p>
           )}
           {floorLabel === 'interview' && (
@@ -209,8 +213,7 @@ export default function GainsCard({ supabase, onOpenDeepTopic, onOpenPatternTopi
               (patternReadiness), which was built but never surfaced here. */}
           {pick.track === 'dev' && context?.devSectionCount != null && (
             <p className="gains-progress">
-              section {context.devSectionIndex + 1} of {context.devSectionCount}
-              {context.devTakeawayCount != null && ` — ${context.devTakeawayCount} takeaway${context.devTakeawayCount === 1 ? '' : 's'} written`}
+              step {context.devSectionIndex + 1} of {context.devSectionCount}
             </p>
           )}
           {pick.track === 'quant' && context?.menuItems && (() => {

@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
 import { Sparkles, ChevronRight, PauseCircle, PlayCircle } from 'lucide-react'
 import { buildManager, relativeDays } from '../lib/manager.js'
+import { parseFrontmatter, parseSteps } from '../lib/goals.js'
+import ContributionGrid from './ContributionGrid.jsx'
 
 // The Manager — one surface answering "where am I across everything".
 //
@@ -69,7 +71,80 @@ function Progress({ progress }) {
   )
 }
 
-function ResumeCard({ card, now, onResume, onSetNextAction, onPark }) {
+/**
+ * The plan itself — the steps of a topic's master_doc, tickable in place.
+ *
+ * This is the only place in the app a plan checkbox can be flipped. `toggleStep`
+ * has existed in goals.js since the goals tracker and was never wired to
+ * anything, which is why every progress bar could only ever read 0/N. Per §2's
+ * UI boundary this belongs to the Manager and nowhere else: TopicView still
+ * edits the doc as prose, and gains no plan chrome.
+ *
+ * Collapsed by default. A card is a glance; the steps are what you open when
+ * you have decided to work on it.
+ */
+function PlanSteps({ card, onToggleStep }) {
+  const [open, setOpen] = useState(false)
+  const [busy, setBusy] = useState(null)
+
+  const steps = useMemo(() => {
+    const { body } = parseFrontmatter(card.masterDoc ?? '')
+    return parseSteps(body).steps
+  }, [card.masterDoc])
+
+  if (!steps.length) return null
+
+  // parseSteps indexes lines within the BODY; the frontmatter block sits above
+  // it in the stored doc, so the offset has to be added back before writing.
+  const bodyOffset = (card.masterDoc ?? '').split('\n').length - parseFrontmatter(card.masterDoc ?? '').body.split('\n').length
+
+  async function toggle(step) {
+    setBusy(step.lineIndex)
+    try {
+      await onToggleStep(card.topicId, step.lineIndex + bodyOffset, {
+        text: step.text,
+        // Ticking records a contribution; unticking removes today's. Passed as
+        // intent rather than inferred later, so the grid can never disagree
+        // with what the doc now says.
+        checked: !step.checked,
+      })
+    } finally { setBusy(null) }
+  }
+
+  const remaining = steps.filter((s) => !s.checked).length
+
+  return (
+    <div className="manager-plan">
+      <button
+        className="manager-plan-toggle"
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
+      >
+        <ChevronRight size={12} className={`manager-plan-chevron${open ? ' open' : ''}`} />
+        <span>{open ? 'hide plan' : `plan · ${remaining} left`}</span>
+      </button>
+      {open && (
+        <ul className="manager-plan-steps">
+          {steps.map((step) => (
+            <li key={step.lineIndex} className={step.checked ? 'manager-step manager-step--done' : 'manager-step'}>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={step.checked}
+                  disabled={busy === step.lineIndex}
+                  onChange={() => toggle(step)}
+                />
+                <span>{step.text}</span>
+              </label>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
+}
+
+function ResumeCard({ card, now, onResume, onSetNextAction, onPark, onToggleStep }) {
   return (
     <div className={`manager-card manager-card--${card.momentum}`}>
       <div className="manager-card-head">
@@ -95,6 +170,8 @@ function ResumeCard({ card, now, onResume, onSetNextAction, onPark }) {
           <button className="btn-small manager-park-btn" onClick={() => onPark(card)}>park</button>
         </div>
       </div>
+
+      <PlanSteps card={card} onToggleStep={onToggleStep} />
     </div>
   )
 }
@@ -103,11 +180,14 @@ export default function ManagerView({
   topics = [],
   entries = [],
   states = [],
+  contributions = [],
+  timezone,
   loading = false,
   onResume,
   onSetNextAction,
   onPark,
   onUnpark,
+  onToggleStep,
 }) {
   const [shelfOpen, setShelfOpen] = useState(false)
   const now = useMemo(() => new Date(), [])
@@ -155,10 +235,16 @@ export default function ManagerView({
               onResume={onResume}
               onSetNextAction={onSetNextAction}
               onPark={handlePark}
+              onToggleStep={onToggleStep}
             />
           ))}
         </div>
       )}
+
+      {/* The grid sits BELOW the cards, not above. What needs doing outranks
+          what has been done — a history panel at the top of the page is a
+          trophy cabinet, and §6 is explicit that this is a log. */}
+      <ContributionGrid rows={contributions} tz={timezone} />
 
       {parked.length > 0 && (
         <section className="manager-shelf">

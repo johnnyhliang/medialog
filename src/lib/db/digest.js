@@ -27,21 +27,21 @@ export async function computeDigest(supabase, since, inboxTopicId) {
       : Promise.resolve({ data: [] }),
     supabase.from('entries').select('id, title, url, created_at, topic_id').eq('status', 'active').is('deleted_at', null).order('created_at', { ascending: true }).limit(20),
     supabase.from('entries').select('topic_id').gte('updated_at', thirtyDaysAgo).is('deleted_at', null),
-    supabase.from('topics').select('id, name, pattern_target, kind').is('archived_at', null),
+    supabase.from('topics').select('id, name, pattern_target').is('archived_at', null),
   ])
 
-  // Interview patterns are modeled as topics (pattern_target set) and deep-dive
-  // resources as kind='deep'; their entries are curriculum problems / takeaways,
-  // not library captures — keep them out of the digest entirely.
+  // Interview patterns are modeled as topics (pattern_target set); their
+  // entries are curriculum problems, not library captures — keep them out of
+  // the digest entirely.
   const allTopics = allTopicsRes.data || []
   const excluded = new Set(
-    allTopics.filter((t) => t.pattern_target != null || t.kind === 'deep').map((t) => t.id),
+    allTopics.filter((t) => t.pattern_target != null).map((t) => t.id),
   )
   const keep = (rows) => (rows || []).filter((r) => !excluded.has(r.topic_id)).slice(0, 20)
 
   const recentTopicIds = new Set((recentTopicIdsRes.data || []).map(r => r.topic_id))
   const dormantTopics = allTopics
-    .filter(t => !recentTopicIds.has(t.id) && !excluded.has(t.id) && t.pattern_target == null && t.kind !== 'deep')
+    .filter(t => !recentTopicIds.has(t.id) && !excluded.has(t.id) && t.pattern_target == null)
 
   return {
     captured: keep(capturedRes.data),
