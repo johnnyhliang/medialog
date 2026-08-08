@@ -97,7 +97,7 @@ export default function ArchiveCrawl({ topics, onImport }) {
       ) : null}
 
       {error && (
-        <p className="muted" style={{ fontSize: '0.8rem', color: 'var(--danger, #c0392b)' }}>
+        <p className="muted" style={{ fontSize: '0.8rem', color: 'var(--danger)' }}>
           {error}
         </p>
       )}

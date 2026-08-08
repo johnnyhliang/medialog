@@ -333,7 +333,7 @@ export default function FeedView({ supabase, topics, allTags = [], onSaveItem, a
                 aria-label="new category name"
               />
             )}
-            {addError && <p className="muted" style={{ fontSize: '0.75rem', color: 'var(--danger,#c0392b)' }}>{addError}</p>}
+            {addError && <p className="muted" style={{ fontSize: '0.75rem', color: 'var(--danger)' }}>{addError}</p>}
             <div style={{ display: 'flex', gap: '0.5rem' }}>
               <button onClick={handleAddFeed} disabled={addBusy || !newUrl || !newName}>
                 {addBusy ? 'adding…' : 'add'}

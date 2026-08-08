@@ -10,10 +10,10 @@ function passwordStrength(pw) {
   if (/[A-Z]/.test(pw)) score++
   if (/[0-9]/.test(pw)) score++
   if (/[^A-Za-z0-9]/.test(pw)) score++
-  if (score <= 1) return { score, label: 'weak', color: '#d9534f' }
-  if (score <= 2) return { score, label: 'fair', color: '#e8a838' }
-  if (score <= 3) return { score, label: 'good', color: '#5b9bd5' }
-  return { score, label: 'strong', color: '#3D5A4A' }
+  if (score <= 1) return { score, label: 'weak', color: 'var(--pw-weak)' }
+  if (score <= 2) return { score, label: 'fair', color: 'var(--pw-fair)' }
+  if (score <= 3) return { score, label: 'good', color: 'var(--pw-good)' }
+  return { score, label: 'strong', color: 'var(--pw-strong)' }
 }
 
 // Scroll reveals: elements with [data-reveal] fade/rise in once; sketches
@@ -236,7 +236,7 @@ export default function LandingPage() {
               />
               {password && (() => { const s = passwordStrength(password); return (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '-4px' }}>
-                  <div style={{ flex: 1, height: '3px', borderRadius: '2px', background: 'rgba(0,0,0,0.1)', overflow: 'hidden' }}>
+                  <div style={{ flex: 1, height: '3px', borderRadius: '2px', background: 'var(--pw-track)', overflow: 'hidden' }}>
                     <div style={{ height: '100%', borderRadius: '2px', width: `${(s.score / 4) * 100}%`, background: s.color, transition: 'width 0.2s, background 0.2s' }} />
                   </div>
                   <span style={{ fontSize: '11px', color: s.color, minWidth: '38px' }}>{s.label}</span>

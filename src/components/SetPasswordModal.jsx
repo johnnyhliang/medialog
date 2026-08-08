@@ -9,10 +9,10 @@ function passwordStrength(pw) {
   if (/[A-Z]/.test(pw)) score++
   if (/[0-9]/.test(pw)) score++
   if (/[^A-Za-z0-9]/.test(pw)) score++
-  if (score <= 1) return { score, label: 'weak', color: '#d9534f' }
-  if (score <= 2) return { score, label: 'fair', color: '#e8a838' }
-  if (score <= 3) return { score, label: 'good', color: '#5b9bd5' }
-  return { score, label: 'strong', color: '#3D5A4A' }
+  if (score <= 1) return { score, label: 'weak', color: 'var(--pw-weak)' }
+  if (score <= 2) return { score, label: 'fair', color: 'var(--pw-fair)' }
+  if (score <= 3) return { score, label: 'good', color: 'var(--pw-good)' }
+  return { score, label: 'strong', color: 'var(--pw-strong)' }
 }
 
 export default function SetPasswordModal({ onDone }) {
@@ -101,18 +101,18 @@ export default function SetPasswordModal({ onDone }) {
               onChange={(e) => setConfirm(e.target.value)}
               style={{
                 width: '100%', padding: '9px 12px', borderRadius: '6px',
-                border: `1px solid ${mismatch ? '#d9534f' : 'var(--border)'}`,
+                border: `1px solid ${mismatch ? 'var(--danger)' : 'var(--border)'}`,
                 background: 'var(--bg)', color: 'var(--text)', fontSize: '14px',
                 boxSizing: 'border-box',
               }}
             />
-            {error && <p style={{ color: '#d9534f', fontSize: '12px', margin: 0 }}>{error}</p>}
+            {error && <p style={{ color: 'var(--danger)', fontSize: '12px', margin: 0 }}>{error}</p>}
             <button
               type="submit"
               disabled={loading || !password || !confirm}
               style={{
                 padding: '10px', borderRadius: '6px', border: 'none',
-                background: 'var(--accent)', color: '#fff', fontSize: '14px',
+                background: 'var(--accent)', color: 'var(--on-accent)', fontSize: '14px',
                 fontWeight: 600, cursor: 'pointer', marginTop: '4px',
                 opacity: (loading || !password || !confirm) ? 0.6 : 1,
               }}

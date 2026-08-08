@@ -8,6 +8,14 @@
   --surface:  #F2EDE3;
   --surface-2:#EAE4D8;
   --pencil:   #8A8174;
+
+  /* Password strength ramp. The landing page never loads styles.css, so these
+     are declared here too — same names, same values as the light palette. */
+  --pw-weak:   #d9534f;
+  --pw-fair:   #e8a838;
+  --pw-good:   #5b9bd5;
+  --pw-strong: var(--accent);
+  --pw-track:  rgba(0,0,0,0.1);
 }
 
 /* ── Scroll reveals + hand-drawn layer (see BRAND.md) ── */

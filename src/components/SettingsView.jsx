@@ -516,7 +516,7 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
                       return (
                         <tr key={row.id} style={{ borderBottom: '1px solid var(--border)' }}>
                           <td style={{ padding: '6px 0', width: 16 }}>
-                            <span style={{ color: row.ok ? 'var(--success, #38a169)' : 'var(--error, #e53e3e)', fontSize: 10 }}>
+                            <span style={{ color: row.ok ? 'var(--success)' : 'var(--error)', fontSize: 10 }}>
                               {row.ok ? '●' : '✕'}
                             </span>
                           </td>
@@ -525,7 +525,7 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
                           </td>
                           <td style={{ padding: '6px 0', color: 'var(--muted)', whiteSpace: 'nowrap' }}>{label}</td>
                           {!row.ok && (
-                            <td style={{ padding: '6px 0 6px 8px', color: 'var(--error, #e53e3e)' }}>{row.message}</td>
+                            <td style={{ padding: '6px 0 6px 8px', color: 'var(--error)' }}>{row.message}</td>
                           )}
                         </tr>
                       )

@@ -168,7 +168,7 @@ export default function QuickAdd({ onAdd, disabled, onCheckDuplicate, supabase }
         <button type="submit" disabled={disabled || isSaving}>{buttonLabel}</button>
       </div>
       {isFailed && (
-        <p style={{ fontSize: 'var(--text-xs)', color: 'var(--error, #e53e3e)', margin: '4px 0 0' }}>
+        <p style={{ fontSize: 'var(--text-xs)', color: 'var(--error)', margin: '4px 0 0' }}>
           Save failed — please try again
         </p>
       )}

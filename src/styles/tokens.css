@@ -77,5 +77,14 @@
   --hl-green-bright:  #4ADE80;
   --hl-blue-bright:   #60A5FA;
   --hl-pink-bright:   #F9A8D4;
+
+  /* Password strength meter. A four-step ramp rather than a status colour —
+     "strong" deliberately lands on --accent so the bar finishes on the app's
+     own colour instead of a generic green. Mirrored in landing.css, which has
+     its own fixed palette and can't see these. */
+  --pw-weak:   var(--tint-red-fg);
+  --pw-fair:   var(--tint-amber-fg);
+  --pw-good:   var(--tint-blue-fg);
+  --pw-strong: var(--accent);
 }
 
