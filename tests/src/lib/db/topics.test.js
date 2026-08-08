@@ -120,3 +120,28 @@ describe('updateTopicDoc', () => {
     expect(row).toEqual({ id: 't1', master_doc: '# Hello' })
   })
 })
+
+describe('getTopicByName resilience', () => {
+  test('takes the oldest match instead of erroring on duplicates', async () => {
+    // `.single()` threw "Cannot coerce the result to a single JSON object" the
+    // moment two topics shared a name, and this is the fallback that resolves
+    // the inbox for CAPTURE — so a duplicate name broke saving things.
+    const c = mockClient({ data: { id: 't1', name: 'Inbox' }, error: null })
+    expect(await getTopicByName(c, 'Inbox')).toEqual({ id: 't1', name: 'Inbox' })
+    expect(c._chain.order).toHaveBeenCalledWith('created_at', { ascending: true })
+    expect(c._chain.limit).toHaveBeenCalledWith(1)
+    expect(c._chain.maybeSingle).toHaveBeenCalled()
+    expect(c._chain.single).not.toHaveBeenCalled()
+  })
+
+  test('a missing topic is null, not a throw', async () => {
+    const c = mockClient({ data: null, error: null })
+    expect(await getTopicByName(c, 'Nope')).toBe(null)
+  })
+
+  test('soft-deleted topics are not resolvable', async () => {
+    const c = mockClient({ data: null, error: null })
+    await getTopicByName(c, 'Inbox')
+    expect(c._chain.is).toHaveBeenCalledWith('deleted_at', null)
+  })
+})

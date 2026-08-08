@@ -21,12 +21,28 @@ export async function listDeletedTopics(supabase) {
   return (data ?? []).map((t) => ({ ...t, entry_count: t.entries?.[0]?.count ?? 0 }))
 }
 
+/**
+ * A topic by name — the oldest match, never an error on duplicates.
+ *
+ * This used `.single()`, which throws "Cannot coerce the result to a single
+ * JSON object" the moment two topics share a name. Nothing prevents that:
+ * there is no unique constraint on (user_id, name), and two topics called
+ * `Inbox` did exist. Since this is the fallback used when resolving the inbox
+ * for CAPTURE (App.jsx), a duplicate name broke saving things — the one path
+ * that must never fail.
+ *
+ * `.order('created_at').limit(1)` makes it deterministic: the original wins,
+ * not whichever row the planner returned first.
+ */
 export async function getTopicByName(supabase, name) {
   const { data, error } = await supabase
     .from('topics')
     .select('*')
     .eq('name', name)
-    .single()
+    .is('deleted_at', null)
+    .order('created_at', { ascending: true })
+    .limit(1)
+    .maybeSingle()
   if (error) throw new Error(error.message)
   return data
 }
