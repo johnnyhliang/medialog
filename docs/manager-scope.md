@@ -373,11 +373,19 @@ Recorded so this conversation does not recur.
 2. Sort Inbox → Tidy, now **Triage**. ✅ 2026-08-07
 3. **Manager** — `topic_state`, resume cards, `[park]`, progress read from
    `master_doc` via `goals.js`. **Its own surface** (§2, the UI boundary):
-   `TopicView` is not touched by this work.
-4. Deep-topics UI collapse, cursor retained (§5 stage 3, §4) — *after* 3, not before
+   `TopicView` is not touched by this work. ✅ 2026-08-07
+4. Deep-topics UI collapse (§5 stage 3, §4). ✅ 2026-08-07 — a *deletion*, not an
+   absorption; the data said there was no cursor to keep. See §4's correction.
 5. Seed `quantdevplan.xlsx` (§7). ✅ 2026-08-07 — `scripts/seed-quant-plan.js`
-6. Contribution grid (§6)
-7. AI `next_action` drafting (§9, last)
+6. Contribution grid (§6). ✅ 2026-08-07 — migration `0076`, and the plan
+   checkboxes that give it something to record.
+7. AI `next_action` drafting (§9, last). ✅ 2026-08-07 — a `suggest` button on
+   cards with no next action, drafting into an unsaved input.
+
+**All seven done, 2026-08-07.** Also built the same day, outside the numbered
+list because it belongs to §8's carve-out rather than the Manager: deadlines are
+live on Home for the `career` module only, and §8 now records which dates are
+allowed to be loud.
 
 **Step 3 is the one that addresses the stated problem** — things drowning on the
 backburner. Park and derived momentum do most of that work. Everything after is

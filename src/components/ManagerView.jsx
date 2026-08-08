@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Sparkles, ChevronRight, PauseCircle, PlayCircle } from 'lucide-react'
+import { Sparkles, ChevronRight, PauseCircle, PlayCircle, Wand2 } from 'lucide-react'
 import { buildManager, relativeDays } from '../lib/manager.js'
 import { parseFrontmatter, parseSteps } from '../lib/goals.js'
 import ContributionGrid from './ContributionGrid.jsx'
@@ -14,42 +14,81 @@ import ContributionGrid from './ContributionGrid.jsx'
 
 const MOMENTUM_LABEL = { warm: 'warm', cooling: 'cooling', cold: 'cold' }
 
-function NextAction({ card, onSetNextAction }) {
+function NextAction({ card, onSetNextAction, onSuggest }) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(card.nextAction)
+  const [suggesting, setSuggesting] = useState(false)
+  // True while the box holds a machine-written line the user has not accepted.
+  // Purely a label — the value is already editable text either way.
+  const [fromModel, setFromModel] = useState(false)
 
   async function commit() {
     setEditing(false)
+    setFromModel(false)
     const value = draft.trim()
     if (value === (card.nextAction || '')) return
     await onSetNextAction(card.topicId, value)
   }
 
+  /**
+   * Draft a line INTO the input. It is not saved: manager-scope §9 allows the
+   * model to suggest and never to decide, so accepting is still an explicit
+   * Enter, and Escape throws it away like any other unsaved edit.
+   */
+  async function suggest() {
+    setSuggesting(true)
+    try {
+      const line = await onSuggest(card.topicId)
+      if (line) {
+        setDraft(line)
+        setFromModel(true)
+        setEditing(true)
+      }
+    } finally { setSuggesting(false) }
+  }
+
   if (editing) {
     return (
-      <input
-        className="manager-next-input"
-        autoFocus
-        value={draft}
-        placeholder="one line — what happens next"
-        onChange={(e) => setDraft(e.target.value)}
-        onBlur={commit}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') e.currentTarget.blur()
-          if (e.key === 'Escape') { setDraft(card.nextAction); setEditing(false) }
-        }}
-      />
+      <span className="manager-next-edit">
+        <input
+          className="manager-next-input"
+          autoFocus
+          value={draft}
+          placeholder="one line — what happens next"
+          onChange={(e) => { setDraft(e.target.value); setFromModel(false) }}
+          onBlur={commit}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') e.currentTarget.blur()
+            if (e.key === 'Escape') { setDraft(card.nextAction); setFromModel(false); setEditing(false) }
+          }}
+        />
+        {fromModel && <span className="manager-next-draft">draft · enter to keep</span>}
+      </span>
     )
   }
 
   return (
-    <button
-      className={`manager-next${card.nextAction ? '' : ' manager-next--empty'}`}
-      onClick={() => { setDraft(card.nextAction); setEditing(true) }}
-      title="Click to edit"
-    >
-      {card.nextAction ? <><span className="manager-next-label">next:</span> {card.nextAction}</> : 'set a next action'}
-    </button>
+    <span className="manager-next-row">
+      <button
+        className={`manager-next${card.nextAction ? '' : ' manager-next--empty'}`}
+        onClick={() => { setDraft(card.nextAction); setEditing(true) }}
+        title="Click to edit"
+      >
+        {card.nextAction ? <><span className="manager-next-label">next:</span> {card.nextAction}</> : 'set a next action'}
+      </button>
+      {/* Offered only where it helps: a topic that already has a next action
+          does not need a machine guessing at a replacement. */}
+      {onSuggest && !card.nextAction && (
+        <button
+          className="manager-suggest"
+          onClick={suggest}
+          disabled={suggesting}
+          title="Draft one from this topic's plan and recent items"
+        >
+          <Wand2 size={11} /> {suggesting ? 'thinking…' : 'suggest'}
+        </button>
+      )}
+    </span>
   )
 }
 
@@ -144,7 +183,7 @@ function PlanSteps({ card, onToggleStep }) {
   )
 }
 
-function ResumeCard({ card, now, onResume, onSetNextAction, onPark, onToggleStep }) {
+function ResumeCard({ card, now, onResume, onSetNextAction, onPark, onToggleStep, onSuggest }) {
   return (
     <div className={`manager-card manager-card--${card.momentum}`}>
       <div className="manager-card-head">
@@ -164,7 +203,7 @@ function ResumeCard({ card, now, onResume, onSetNextAction, onPark, onToggleStep
       </div>
 
       <div className="manager-card-foot">
-        <NextAction card={card} onSetNextAction={onSetNextAction} />
+        <NextAction card={card} onSetNextAction={onSetNextAction} onSuggest={onSuggest} />
         <div className="manager-card-actions">
           <button className="btn-small" onClick={() => onResume(card.topicId)}>resume</button>
           <button className="btn-small manager-park-btn" onClick={() => onPark(card)}>park</button>
@@ -188,6 +227,7 @@ export default function ManagerView({
   onPark,
   onUnpark,
   onToggleStep,
+  onSuggest,
 }) {
   const [shelfOpen, setShelfOpen] = useState(false)
   const now = useMemo(() => new Date(), [])
@@ -236,6 +276,7 @@ export default function ManagerView({
               onSetNextAction={onSetNextAction}
               onPark={handlePark}
               onToggleStep={onToggleStep}
+              onSuggest={onSuggest}
             />
           ))}
         </div>

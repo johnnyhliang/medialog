@@ -6,7 +6,9 @@ import { loadManagerData, setNextAction, parkTopic, unparkTopic } from './lib/db
 import { listTopics, createTopic, getTopicByName, listDeletedTopics, archiveTopic, unarchiveTopic, softDeleteTopic, restoreDeletedTopic, togglePinTopic, updateTopicDoc } from './lib/db/topics.js'
 import { listContributions, recordContribution, unrecordContribution } from './lib/db/contributions.js'
 import { todayKey } from './lib/contributions.js'
-import { toggleStep } from './lib/goals.js'
+import { toggleStep, parseFrontmatter, parseSteps } from './lib/goals.js'
+import { callAI } from './lib/ai.js'
+import { buildDraftPrompt, cleanDraft, hasDraftContext } from './lib/nextActionDraft.js'
 import {
   listEntriesByTopic, createEntry, updateEntry, searchEntries,
   bulkCreateEntries, listForRevisit, markSurfaced, listRecentActivity,
@@ -1017,6 +1019,40 @@ function Workspace() {
   }
 
   /**
+   * Draft a `next_action` for one topic. Returns the line; the Manager puts it
+   * in the input as an UNSAVED draft (manager-scope.md §9 — suggest, never
+   * decide). Nothing here writes to the database.
+   *
+   * Runs only on an explicit click, never on load: a suggestion nobody asked
+   * for is a suggestion nobody reads, and it would spend a request per card
+   * every time the Manager opened.
+   */
+  async function handleSuggestNextAction(topicId) {
+    const topic = topics.find((t) => t.id === topicId)
+    if (!topic) return null
+
+    let topicEntries = []
+    try {
+      topicEntries = await listEntriesByTopic(supabase, topicId)
+    } catch { /* the plan alone is enough context to try with */ }
+
+    const { body } = parseFrontmatter(topic.master_doc || '')
+    const { steps } = parseSteps(body)
+    const context = { topic, entries: topicEntries, steps }
+
+    // Checked before spending a request: an empty topic yields a confident,
+    // generic line, which is exactly what teaches you to stop trusting this.
+    if (!hasDraftContext(context)) {
+      addToast('Not enough here yet to suggest from', 'info')
+      return null
+    }
+
+    const line = cleanDraft(await callAI(supabase, buildDraftPrompt(context)))
+    if (!line) addToast('No clear next action — write one yourself', 'info')
+    return line
+  }
+
+  /**
    * Tick or untick one step of a topic's plan — the only place a master_doc
    * checkbox can be flipped (docs/manager-scope.md §2, §6).
    *
@@ -1301,6 +1337,7 @@ function Workspace() {
               onPark={handleParkTopic}
               onUnpark={handleUnparkTopic}
               onToggleStep={handleToggleStep}
+              onSuggest={isModuleVisible('assistant') ? handleSuggestNextAction : null}
             />
           )}
           {view === 'agenda' && (

@@ -5975,6 +5975,21 @@ a.digest-item-title:hover { text-decoration: underline; }
   padding: 1px 0;
   outline: none;
 }
+.manager-next-row,
+.manager-next-edit { display: flex; align-items: center; gap: 8px; flex: 1 1 auto; min-width: 0; }
+/* Deliberately quiet. The model gets a small button at the edge of an empty
+   field, never a highlighted call to action — manager-scope §9: suggest, never
+   decide, and never look like the default. */
+.manager-suggest {
+  display: inline-flex; align-items: center; gap: 3px;
+  background: none; border: 0; padding: 0;
+  font-size: 11px; color: var(--muted); cursor: pointer;
+  flex-shrink: 0; opacity: 0.7;
+}
+.manager-suggest:hover:not(:disabled) { color: var(--accent); opacity: 1; }
+.manager-suggest:disabled { cursor: wait; }
+/* Says out loud that what is in the box is not saved yet. */
+.manager-next-draft { font-size: 10px; color: var(--muted); flex-shrink: 0; }
 
 .manager-empty {
   text-align: center;
