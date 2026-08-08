@@ -45,6 +45,7 @@ describe('topic lifecycle', () => {
       is: vi.fn(() => chain),
       not: vi.fn(() => chain),
       eq: vi.fn(() => chain),
+      neq: vi.fn(() => chain),
       order: vi.fn(() => Promise.resolve(resolveWith)),
       update: vi.fn(() => chain),
       single: vi.fn(() => Promise.resolve(resolveWith)),

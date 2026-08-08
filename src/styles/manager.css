@@ -381,3 +381,136 @@
 /* Not yet lived, so not drawn at all. */
 .cgrid-day--future { background: transparent; }
 .cgrid-foot { margin: 10px 0 0; font-size: 11px; }
+
+/* ── Manager: outline + agenda, two panes ────────────────────────────────────
+   Desktop gets the org-mode shape — the outline you work in, the dated view
+   beside it, both visible at once. That adjacency is the point: an agenda in a
+   separate tab is a thing you forget to open.
+
+   Mobile stacks, and the AGENDA COMES FIRST. On a phone the dated items are why
+   you opened the page; burying them under a scroll of cards makes them the one
+   thing you have to hunt for. Order is CSS-only, so the DOM keeps its reading
+   order (outline first) for screen readers and keyboard tabbing. */
+
+.manager-body {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 18px;
+}
+.manager-main { min-width: 0; }
+
+@media (min-width: 900px) {
+  .manager-body {
+    /* minmax(0,…) not `1fr`: without it a long unbroken step title blows the
+       column out and the agenda gets squeezed to nothing. */
+    grid-template-columns: minmax(0, 1fr) 300px;
+    align-items: start;
+    gap: 24px;
+  }
+  /* Sticky so the dated view stays put while you scroll a long outline. */
+  .agenda-pane { position: sticky; top: 12px; }
+}
+
+@media (max-width: 899px) {
+  .agenda-pane { order: -1; }
+}
+
+/* ── Agenda pane ─────────────────────────────────────────────────────────── */
+
+.agenda-pane {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  padding: 12px;
+  min-width: 0;
+}
+.agenda-pane-head {
+  display: flex; align-items: center; gap: 6px;
+  color: var(--muted); margin-bottom: 12px;
+}
+.agenda-pane-title {
+  font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase;
+}
+.agenda-pressing {
+  margin-left: auto; font-size: 11px;
+  color: var(--active); font-weight: 600;
+}
+.agenda-empty { font-size: 12px; line-height: 1.5; margin: 0; }
+.agenda-empty code {
+  font-size: 11px; background: var(--surface-3);
+  padding: 1px 4px; border-radius: 3px;
+}
+
+.agenda-group + .agenda-group { margin-top: 14px; }
+.agenda-group-label {
+  display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap;
+  margin: 0 0 6px;
+  font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase;
+}
+/* The two halves are told apart by colour before you read a word — that
+   separation is the whole model (manager-scope §8). */
+.agenda-group-label--deadline  { color: var(--active); }
+.agenda-group-label--scheduled { color: var(--muted); }
+.agenda-group-hint {
+  font-size: 10px; letter-spacing: 0; text-transform: none;
+  font-weight: 400;
+}
+
+.agenda-rows { list-style: none; margin: 0; padding: 0; display: grid; gap: 7px; }
+.agenda-row {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  gap: 2px 8px;
+  font-size: 12px;
+  line-height: 1.35;
+  padding-left: 7px;
+  border-left: 2px solid transparent;
+}
+.agenda-row--today { border-left-color: var(--active); }
+.agenda-row--soon  { border-left-color: var(--accent); }
+.agenda-row--later { border-left-color: var(--border); }
+.agenda-row--open  { border-left-color: var(--border); }
+/* A target gets NO urgency border, at any distance. §8: nothing you set for
+   your own pacing is ever allowed to shout. */
+.agenda-row--scheduled { border-left-color: transparent; }
+
+.agenda-when {
+  font-size: 10px; color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  padding-top: 1px;
+}
+.agenda-row--today .agenda-when { color: var(--active); font-weight: 600; }
+
+.agenda-row-title {
+  color: var(--text); text-decoration: none;
+  background: none; border: 0; padding: 0;
+  font: inherit; text-align: left; cursor: pointer;
+  min-width: 0; overflow-wrap: anywhere;
+}
+.agenda-row-title:hover { color: var(--accent); text-decoration: underline; }
+
+.agenda-row-project {
+  grid-column: 2;
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 10px;
+}
+
+/* A step's own date, shown inline in the outline so the agenda is not the only
+   place the schedule exists. */
+.manager-step-date {
+  margin-left: 6px;
+  font-size: 10px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Outline groups: projects, then topics. */
+.manager-group + .manager-group { margin-top: 20px; }
+.manager-group-label {
+  margin: 0 0 8px;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}

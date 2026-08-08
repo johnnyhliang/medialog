@@ -5,9 +5,45 @@ export async function listTopics(supabase) {
     .is('entries.deleted_at', null)
     .is('deleted_at', null)
     .is('pattern_target', null) // interview pattern-topics live in their own view
+    // Projects live in the Manager and nowhere else. Same precedent as the line
+    // above: a topic with a plan is still a topic in the DATA, but the sidebar
+    // is a list of subjects, and a book, a project and a subject rendering
+    // identically there is what made it unusable. docs/manager-scope.md §2.
+    .neq('kind', 'project')
     .order('name', { ascending: true })
   if (error) throw new Error(error.message)
   return (data ?? []).map((t) => ({ ...t, entry_count: t.entries?.[0]?.count ?? 0 }))
+}
+
+/**
+ * The projects: topics carrying a plan, for the Manager's outline.
+ *
+ * `kind` was dead after the reading UI was deleted (docs/tech-debt.md listed it
+ * for `0077`). Reusing it here is why the split needs no migration — the column
+ * already exists, defaults to 'note', and is indexed by nothing that cares.
+ */
+export async function listProjects(supabase) {
+  const { data, error } = await supabase
+    .from('topics')
+    .select('*, entries!entries_topic_id_fkey(count)')
+    .is('entries.deleted_at', null)
+    .is('deleted_at', null)
+    .eq('kind', 'project')
+    .order('name', { ascending: true })
+  if (error) throw new Error(error.message)
+  return (data ?? []).map((t) => ({ ...t, entry_count: t.entries?.[0]?.count ?? 0 }))
+}
+
+/** Promote a topic into a project, or demote it back to an ordinary topic. */
+export async function setTopicKind(supabase, id, kind) {
+  const { data, error } = await supabase
+    .from('topics')
+    .update({ kind: kind === 'project' ? 'project' : 'note' })
+    .eq('id', id)
+    .select()
+    .single()
+  if (error) throw new Error(error.message)
+  return data
 }
 
 export async function listDeletedTopics(supabase) {

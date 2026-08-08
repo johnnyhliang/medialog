@@ -3,6 +3,8 @@ import { Sparkles, ChevronRight, PauseCircle, PlayCircle, Wand2 } from 'lucide-r
 import { buildManager, relativeDays } from '../lib/manager.js'
 import { parseFrontmatter, parseSteps } from '../lib/goals.js'
 import ContributionGrid from './ContributionGrid.jsx'
+import AgendaPane from './AgendaPane.jsx'
+import { stepText, stepDate } from '../lib/orgAgenda.js'
 
 // The Manager — one surface answering "where am I across everything".
 //
@@ -173,7 +175,8 @@ function PlanSteps({ card, onToggleStep }) {
                   disabled={busy === step.lineIndex}
                   onChange={() => toggle(step)}
                 />
-                <span>{step.text}</span>
+                <span>{stepText(step.text)}</span>
+                {stepDate(step.text) && <span className="manager-step-date">{stepDate(step.text)}</span>}
               </label>
             </li>
           ))}
@@ -220,6 +223,8 @@ export default function ManagerView({
   entries = [],
   states = [],
   contributions = [],
+  projects = [],
+  deadlines = [],
   timezone,
   loading = false,
   onResume,
@@ -255,6 +260,8 @@ export default function ManagerView({
         <p className="muted">Coldest first — what is going quiet, not what is loudest.</p>
       </header>
 
+      <div className="manager-body">
+        <div className="manager-main">
       {active.length === 0 ? (
         <div className="manager-empty">
           <Sparkles size={28} />
@@ -266,21 +273,48 @@ export default function ManagerView({
           </p>
         </div>
       ) : (
-        <div className="manager-cards">
-          {active.map((card) => (
-            <ResumeCard
-              key={card.topicId}
-              card={card}
-              now={now}
-              onResume={onResume}
-              onSetNextAction={onSetNextAction}
-              onPark={handlePark}
-              onToggleStep={onToggleStep}
-              onSuggest={onSuggest}
-            />
+        <>
+          {/* Two groups, which IS the outline: things with a plan, then
+              everything else by how quiet it has gone. Projects are listed
+              first regardless of momentum — a plan is a commitment, and
+              sorting it below a subject topic you happened not to open would
+              bury the thing you came to manage. */}
+          {[
+            { id: 'projects', label: 'projects', cards: active.filter((c) => c.isProject) },
+            { id: 'topics', label: 'topics', cards: active.filter((c) => !c.isProject) },
+          ].map(({ id, label, cards }) => cards.length === 0 ? null : (
+            <section key={id} className="manager-group">
+              <p className="manager-group-label">{label} · {cards.length}</p>
+              <div className="manager-cards">
+                {cards.map((card) => (
+                  <ResumeCard
+                    key={card.topicId}
+                    card={card}
+                    now={now}
+                    onResume={onResume}
+                    onSetNextAction={onSetNextAction}
+                    onPark={handlePark}
+                    onToggleStep={onToggleStep}
+                    onSuggest={onSuggest}
+                  />
+                ))}
+              </div>
+            </section>
           ))}
-        </div>
+        </>
       )}
+        </div>
+
+        {/* Beside the outline on a wide screen, above it on a narrow one — the
+            dated things are the reason you opened this, so on mobile they must
+            not sit below a scroll of cards. Ordering is done in CSS. */}
+        <AgendaPane
+          projects={projects}
+          deadlines={deadlines}
+          timezone={timezone}
+          onOpen={onResume}
+        />
+      </div>
 
       {/* The grid sits BELOW the cards, not above. What needs doing outranks
           what has been done — a history panel at the top of the page is a

@@ -3,7 +3,7 @@ import {
   Home, Search, Upload, Archive, Inbox, Briefcase, Highlighter,
   RotateCcw, BarChart2, BookOpen, Settings2, Trash2 as TrashIcon, FolderOpen,
   Rss, ScrollText, ChevronRight, GraduationCap,
-  CalendarClock, LayoutList,
+  LayoutList,
 } from 'lucide-react'
 
 // Declarative nav config, grouped by how often each view is reached for.
@@ -22,7 +22,6 @@ const SECTIONS = [
       // ungated: filing what you capture is part of the core loop, so it must
       // not inherit the founder-only 'tidy' module gate.
       { view: 'sort', label: 'Triage', icon: Inbox },
-      { view: 'agenda', label: 'Agenda', icon: CalendarClock, side: 'loadAgenda', module: 'agenda' },
       { view: 'career', label: 'Career', icon: Briefcase, module: 'career' },
       { view: 'interview', label: 'Interview Prep', icon: GraduationCap, module: 'interview' },
     ],
@@ -32,7 +31,9 @@ const SECTIONS = [
     label: 'library',
     items: [
       // A Review-mood surface: "where am I across everything", alongside
-      // Revisit and Digest rather than in the daily capture group.
+      // Revisit and Digest rather than in the daily capture group. It absorbed
+      // the Agenda 2026-08-08: two surfaces for "what is pending" meant neither
+      // was obviously the one to open.
       { view: 'manager', label: 'Manager', icon: LayoutList, side: 'loadManager', module: 'manager' },
       { view: 'highlights', label: 'Highlights', icon: Highlighter, module: 'highlights' },
       { view: 'revisit', label: 'Revisit', icon: RotateCcw, side: 'loadRevisit', module: 'revisit' },

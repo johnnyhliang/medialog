@@ -64,7 +64,10 @@ export const MODULES = [
   // be a permanently empty view. Promote to 'stable' when the "remind me"
   // affordance ships. The intended home is the default-on set
   // (docs/intentional-app-spec.md Part 2), hence defaultOn: true.
-  { id: 'agenda',    label: 'Agenda',      description: 'Reminders and deadlines, grouped by when they are due.', core: false, defaultOn: true, minTier: 'free', stage: STAGE_BETA },
+  // Absorbed into the Manager 2026-08-08 (its agenda pane). Kept registered
+  // and OFF so the module registry stays a complete history of what exists and
+  // the settings toggle does not vanish from under anyone mid-session.
+  { id: 'agenda',    label: 'Agenda',      description: 'Folded into the Manager — its dated pane replaces this.', core: false, defaultOn: false, minTier: 'free', stage: STAGE_BETA },
   // The Manager (docs/manager-scope.md). Beta, which forces founder-only — §1 is
   // explicit that MediaLog the PRODUCT does not manage tasks, and this is the
   // personal-tool exception, on the same precedent as 'interview'.

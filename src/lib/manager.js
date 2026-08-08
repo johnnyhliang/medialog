@@ -126,6 +126,10 @@ export function buildResumeCards({ topics = [], entries = [], states = [], now =
       // (ManagerView's PlanSteps). The doc is the plan — there is no separate
       // steps table to read, which is §2 working as intended.
       masterDoc: topic.master_doc || '',
+      // Projects are topics that carry a plan (topics.kind). The Manager groups
+      // them above ordinary topics — that grouping IS the org-mode outline, and
+      // it is why they no longer need to sit in the sidebar.
+      isProject: topic.kind === 'project',
     })
   }
   return cards

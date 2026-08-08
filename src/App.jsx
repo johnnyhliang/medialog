@@ -3,8 +3,9 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } fro
 import { Search, Upload, Inbox, RotateCcw, BarChart2, Settings2, Trash2 as TrashIcon, Download, Menu, Home, FolderOpen, Rss, Briefcase, PackageOpen, Archive, ScrollText, Highlighter, BookOpen } from 'lucide-react'
 import { supabase } from './lib/supabaseClient.js'
 import { loadManagerData, setNextAction, parkTopic, unparkTopic } from './lib/db/managerState.js'
-import { listTopics, createTopic, getTopicByName, listDeletedTopics, archiveTopic, unarchiveTopic, softDeleteTopic, restoreDeletedTopic, togglePinTopic, updateTopicDoc } from './lib/db/topics.js'
+import { listTopics, createTopic, getTopicByName, listDeletedTopics, archiveTopic, unarchiveTopic, softDeleteTopic, restoreDeletedTopic, togglePinTopic, updateTopicDoc, listProjects } from './lib/db/topics.js'
 import { listContributions, recordContribution, unrecordContribution } from './lib/db/contributions.js'
+import { listDeadlines } from './lib/db/deadlines.js'
 import { todayKey } from './lib/contributions.js'
 import { toggleStep, parseFrontmatter, parseSteps } from './lib/goals.js'
 import { callAI } from './lib/ai.js'
@@ -84,7 +85,7 @@ function Workspace() {
   const [agendaEntries, setAgendaEntries] = useState([])
   // The Manager loads on navigation (sideEffects.loadManager), never at mount —
   // it must not add to the 22 round trips the app already makes on boot.
-  const [managerData, setManagerData] = useState({ states: [], entries: [], contributions: [] })
+  const [managerData, setManagerData] = useState({ states: [], entries: [], contributions: [], projects: [], deadlines: [] })
   const [managerLoading, setManagerLoading] = useState(false)
   const { entries, setEntries, globalSearchResults, setGlobalSearchResults, applyUpdateEntry, applyDeleteEntry, applyMoveEntry } = useEntries()
   const { pendingArchiveIds, addPending, removePending } = usePendingArchive(selectedId)
@@ -971,11 +972,16 @@ function Workspace() {
     try {
       // Both in one hop, same as loadManagerData's own Promise.all — the grid
       // must not turn one navigation into two sequential round trips.
-      const [data, contributions] = await Promise.all([
+      // One wave. The Manager is now the outline AND the agenda, so it needs
+      // the projects and the dated rows too — sequentially that would be five
+      // round trips on a single navigation.
+      const [data, contributions, projects, deadlines] = await Promise.all([
         loadManagerData(supabase),
         listContributions(supabase, { tz: timezone }),
+        listProjects(supabase),
+        listDeadlines(supabase, { tz: timezone }).catch(() => []),
       ])
-      setManagerData({ ...data, contributions })
+      setManagerData({ ...data, contributions, projects, deadlines })
     } catch (e) {
       addToast(e.message || 'Could not load the Manager', 'error')
     } finally {
@@ -1331,10 +1337,15 @@ function Workspace() {
           )}
           {view === 'manager' && isModuleVisible('manager') && (
             <ManagerView
-              topics={topics}
+              // Projects are filtered OUT of `topics` (they left the sidebar),
+              // so the Manager has to be handed both halves or its own cards
+              // would disappear.
+              topics={[...managerData.projects, ...topics]}
               entries={managerData.entries}
               states={managerData.states}
               contributions={managerData.contributions}
+              projects={managerData.projects}
+              deadlines={managerData.deadlines}
               timezone={timezone}
               loading={managerLoading}
               onResume={navigateToTopic}
