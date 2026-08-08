@@ -1,0 +1,78 @@
+/* Practice card — three problems at the top of Explore.
+   Quiet by construction: it sits above your own search results, so it must
+   read as a footnote, not a banner. */
+
+.practice {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  padding: 10px 12px;
+  margin-bottom: 14px;
+}
+
+.practice-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.practice-title {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.practice-sub { font-size: 11px; }
+
+.practice-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+
+.practice-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 13px;
+  min-width: 0;
+}
+
+/* Fixed width so the three titles line up into a column rather than stepping
+   in and out with the source name's length. */
+.practice-source {
+  flex-shrink: 0;
+  width: 76px;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.practice-source--leetcode { color: var(--active); }
+
+.practice-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text);
+  text-decoration: none;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.practice-link:hover { color: var(--accent); text-decoration: underline; }
+.practice-link svg { flex-shrink: 0; opacity: 0.5; }
+
+.practice-meta {
+  font-size: 11px;
+  margin-left: auto;
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Narrow: the source label stops earning a whole column, and the meta drops
+   under the title rather than squeezing it to nothing. */
+@media (max-width: 560px) {
+  .practice-row { flex-wrap: wrap; gap: 2px 8px; }
+  .practice-source { width: auto; }
+  .practice-link { flex-basis: 100%; }
+  .practice-meta { margin-left: 0; }
+}

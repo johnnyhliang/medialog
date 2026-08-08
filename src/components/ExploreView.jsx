@@ -4,6 +4,7 @@ import { annotateEmbedded } from '../lib/db/retrieval.js'
 import { track } from '../lib/track.js'
 import { Search, BookOpen, Clock } from 'lucide-react'
 import { buildSearchPreview, splitHighlightParts } from '../lib/searchSnippets.js'
+import PracticeCard from './PracticeCard.jsx'
 
 const STATUS_LABEL = { active: 'active', backlog: 'backlog' }
 const STATUS_CLASS = { active: 'status-active', backlog: 'status-backlog' }
@@ -88,7 +89,7 @@ function EntryRow({ entry, onSelect, query = '' }) {
   )
 }
 
-export default function ExploreView({ supabase, topics, onSelectEntry, onOrderedIds }) {
+export default function ExploreView({ supabase, topics, onSelectEntry, onOrderedIds, showPractice = false, timezone }) {
   const [query, setQuery] = useState('')
   const [searchResults, setSearchResults] = useState(null)
   const [queue, setQueue] = useState([])
@@ -177,6 +178,10 @@ export default function ExploreView({ supabase, topics, onSelectEntry, onOrdered
         <h2 className="explore-title">explore</h2>
         <p className="explore-subtitle">search everything · reading queue across all topics</p>
       </div>
+
+      {/* Hidden while searching: you came here to find something of your own,
+          and a suggestion box on top of your results is noise. */}
+      {showPractice && !isSearching && <PracticeCard supabase={supabase} timezone={timezone} />}
 
       <div className="explore-search-wrap">
         <Search size={15} className="explore-search-icon" />

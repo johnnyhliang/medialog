@@ -1248,6 +1248,11 @@ function Workspace() {
                 setView('browse')
               }}
               onOrderedIds={setOrderedEntryIds}
+              // Gated on the existing `interview` module rather than a new one:
+              // this is interview practice, and the registry has 24 modules
+              // already. No new entry for a three-row card.
+              showPractice={isModuleVisible('interview')}
+              timezone={timezone}
             />
           )}
           {view === 'browse' && selectedTopic && (
