@@ -660,3 +660,12 @@ Everything set aside during the Manager scoping pass, so none of it is lost:
 the *data*, and `TopicView` does not change. Additive only; one new table,
 no `ALTER`, no existing row touched.
 
+**Seeded 2026-08-07 (`manager-scope.md` §10 step 5).**
+`scripts/seed-quant-plan.js` turns `Documents/quantdevplan.xlsx` into real data:
+three topics (Quant Dev Plan / Order Book (C++) / C++ Curriculum) with 49 plan
+steps across their `master_doc`s and 15 entries, plus 14 firms into the existing
+`applications` table. **No schema change** — the plan is checkboxes that
+`goals.js` already parses, which is §2 working as intended. Idempotent; the
+spreadsheet is no longer a stray file. Remaining: step 6 (contribution grid) and
+step 7 (AI `next_action` drafting).
+

@@ -236,6 +236,34 @@ sheets map onto existing primitives; **no new tables beyond §6.**
 
 Founder account only. Three or four topics total.
 
+### Done 2026-08-07 — `scripts/seed-quant-plan.js`
+
+Landed as written. Three topics, **no new tables and no schema change at all**:
+
+| Topic | Steps | Entries | Window |
+|---|---|---|---|
+| Quant Dev Plan | 27 (timeline 15 + coursework 8 + sprint 4) | 6 | Aug 2026 → Oct 2027 |
+| Order Book (C++) | 6 phases | 3 | Oct 2026 → Jul 2027 |
+| C++ Curriculum | 16 | 6 | Aug 2026 → May 2027 |
+
+Plus 14 firms into the existing `applications` table at `status: 'saved'`.
+
+Three decisions worth keeping:
+
+- **`deadline` is left null on every application.** "Applications open ~Aug 2027"
+  is a rolling window, and writing it into a date column is exactly the alarm §8
+  rules out. It lives in the note.
+- **Weekly Habits is a markdown table, not checkboxes.** It is a rhythm, so it
+  belongs in the grid (§6) — and as checkboxes it would inflate the progress
+  denominator with items that are never "done".
+- **The cut coursework (Math 217, Stats 426, EECS 545) is prose, not unchecked
+  boxes,** for the same reason: a decision already made must not read as
+  outstanding work.
+
+The script is idempotent — topics are matched by name and skipped whole,
+applications by `(company, role)` — so re-running adds nothing and overwrites
+nothing.
+
 ---
 
 ## 8. Time model
@@ -281,7 +309,7 @@ Recorded so this conversation does not recur.
    `master_doc` via `goals.js`. **Its own surface** (§2, the UI boundary):
    `TopicView` is not touched by this work.
 4. Deep-topics UI collapse, cursor retained (§5 stage 3, §4) — *after* 3, not before
-5. Seed `quantdevplan.xlsx` (§7)
+5. Seed `quantdevplan.xlsx` (§7). ✅ 2026-08-07 — `scripts/seed-quant-plan.js`
 6. Contribution grid (§6)
 7. AI `next_action` drafting (§9, last)
 
