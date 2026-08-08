@@ -9,6 +9,8 @@
 // Conventions follow src/lib/db/entries.js: `supabase` first, throw on error,
 // filter soft-deleted rows out.
 
+import { fetchAllPages } from './paginate.js'
+
 const EMPTY = { states: [], entries: [] }
 
 /** The one piece of state the Manager stores rather than derives. */
@@ -26,12 +28,19 @@ export async function listTopicStates(supabase) {
  * no joins, no note bodies — because this is the row-count-heavy half.
  */
 export async function listTopicActivity(supabase) {
-  const { data, error } = await supabase
-    .from('entries')
-    .select('topic_id, status, updated_at')
-    .is('deleted_at', null)
-  if (error) throw new Error(error.message)
-  return data ?? []
+  // Paged, not a bare select: PostgREST silently truncates at 1000 rows, which
+  // made this return 1000 of 1419 entries — wrong counts on 21 of 48 cards and
+  // a wrong last-touched (so wrong momentum) on 16. `.order('id')` is what makes
+  // range paging stable, not cosmetic.
+  return fetchAllPages(
+    (from, to) => supabase
+      .from('entries')
+      .select('topic_id, status, updated_at')
+      .is('deleted_at', null)
+      .order('id')
+      .range(from, to),
+    'entries',
+  )
 }
 
 /**

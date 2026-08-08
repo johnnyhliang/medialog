@@ -1,23 +1,14 @@
+import { fetchAllPages } from './paginate.js'
 import { SYNC_TABLES, CONFLICT_TARGETS, USER_CONFIG_EXPORT_FIELDS, buildFiles, summarize } from '../githubSync.js'
 
 // Reading and restoring the tables that make up a backup. Every query runs
 // through the user's own client, so RLS — not this file — decides what is
 // visible. That means a backup can only ever contain the caller's own rows.
 
-const PAGE = 1000
-
-async function readAll(supabase, table) {
-  const rows = []
-  for (let from = 0; ; from += PAGE) {
-    const { data, error } = await supabase
-      .from(table)
-      .select('*')
-      .range(from, from + PAGE - 1)
-    if (error) throw new Error(`${table}: ${error.message}`)
-    rows.push(...(data ?? []))
-    if (!data || data.length < PAGE) return rows
-  }
-}
+// This file solved the 1000-row truncation first; the helper is now shared so
+// the next query does not have to rediscover it. See paginate.js.
+const readAll = (supabase, table) =>
+  fetchAllPages((from, to) => supabase.from(table).select('*').range(from, to), table)
 
 /** Read every synced table into a snapshot ready for buildFiles(). */
 export async function collectSnapshot(supabase, onProgress) {

@@ -6,6 +6,7 @@
 
 import { todayKey } from '../contributions.js'
 import { browserTimezone } from '../timezone.js'
+import { fetchAllPages } from './paginate.js'
 
 /**
  * Rows for the grid window. `days` back from today, inclusive.
@@ -16,13 +17,20 @@ import { browserTimezone } from '../timezone.js'
  */
 export async function listContributions(supabase, { days = 200, now = new Date(), tz = browserTimezone() } = {}) {
   const since = new Date(now.getTime() - days * 86400000)
-  const { data, error } = await supabase
-    .from('contributions')
-    .select('id, day, topic_id, kind, note')
-    .gte('day', todayKey(since, tz))
-    .order('day', { ascending: false })
-  if (error) throw new Error(error.message)
-  return data ?? []
+  // Paged for the same reason as listTopicActivity: 200 days of a busy account
+  // crosses PostgREST's 1000-row cap, and the truncation is silent. The grid
+  // would simply stop drawing the oldest weeks with no error anywhere.
+  // `.order('id')` breaks ties within a day so the paging is stable.
+  return fetchAllPages(
+    (from, to) => supabase
+      .from('contributions')
+      .select('id, day, topic_id, kind, note')
+      .gte('day', todayKey(since, tz))
+      .order('day', { ascending: false })
+      .order('id')
+      .range(from, to),
+    'contributions',
+  )
 }
 
 /**
