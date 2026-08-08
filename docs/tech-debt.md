@@ -373,12 +373,65 @@ component that self-fetches — which is an argument for moving its fetch into
 differently. Alongside them sit **seven** progress-tracking mechanisms, three of
 which have no UI (`goals.js`, `studyPlan.js`, most of `interviewPlan.js`).
 
+**Update 2026-08-07: down to three.** `resource_sections.status` went inert with
+the reading UI — the table survives with 0 rows and no readers (see *Orphaned
+schema* below), so the enum is dead without having been unified. Counting it
+would overstate the problem.
+
 `applications` is genuinely a different geometry — a pipeline moving toward a
 binary outcome, not "how far through a body of work am I" — so it should stay.
-The other three are candidates for unification, but **not urgently**: this is
+The other two are candidates for unification, but **not urgently**: this is
 recorded so the count stops growing, not as a scheduled refactor. Every new
 feature that invents an eighth progress mechanism makes it worse.
 See `docs/manager-scope.md`, which exists partly to stop that.
+
+### Orphaned schema from the reading-UI deletion — RETAINED ON PURPOSE, revisit before production
+
+**Decided 2026-08-07: keep it. This entry is the note that it exists**, because
+the whole point of retaining dead schema is that nothing will remind you later.
+
+Deleting the deep-topics UI (`manager-scope.md` §4) stranded a table and seven
+columns. Every one has **zero rows and zero code references** — verified against
+the live database, not inferred from the migrations:
+
+| Object | |
+|---|---|
+| `resource_sections` (table) | the only table in the DB both empty and referenced nowhere |
+| `topics.kind` | fully inert once `.eq('kind','note')` was removed. Every remaining `kind` in the codebase belongs to a different table or a plain object |
+| `topics.cursor_section_id`, `.source_kind`, `.source_url` | |
+| `entries.section_id`, `.parent_id` | `parent_id` is also `IDEAS.md`'s "the one place flat-over-nested was broken" — nothing uses it, so flattening stays free |
+| `user_configs.twitter_token` | unrelated and dead since `0022` |
+
+**Why it was kept rather than dropped.** `DROP COLUMN` is one-way, these hold
+nothing, and the constraint on the whole Manager pass was *"none of my existing
+data gets wiped, just reformatted."* A migration that drops them is a migration
+that can only be undone by remembering the exact types and constraints.
+
+**The trigger to revisit is production.** A schema shipped to other people is one
+where every column is a support question, a backup column and a thing the RLS
+audit has to reason about. Before that point, `0077` should drop the list above
+in one pass. Not before — there is no cost to carrying it for one user.
+
+**One item needs a decision, not just a drop: `entries.takeaway`.** It is the
+only orphan that is still *read*: `chunkEntry.js:35` feeds it to the search
+index and `githubSync.js:169` renders a `## Takeaway` section into backups.
+`DeepTopicView` was its only writer and it is gone, so this is a live read path
+against a column nothing can fill — the inverse of the dead-wire pattern in
+`PROJECT-STATE.md`'s 2026-08-07 synthesis. Either give it a writer or remove
+both readers; leaving it is the option that quietly rots.
+
+### Migration count is not the problem, and cannot be fixed anyway
+74 files / 2005 lines, and periodically someone will want to tidy them. They
+**cannot** be reduced: every one is recorded in
+`supabase_migrations.schema_migrations` remotely, so deleting a local file does
+not remove anything from the database — it makes local and remote disagree and
+leaves the next `db push` reasoning from an incomplete history. The permanently
+skipped `0059` is the same fact in miniature.
+
+`supabase db squash` would collapse them into a baseline. **Don't.** It buys a
+cosmetic file count and puts the one artifact that cannot be reconstructed —
+the schema's history — through a rewrite. The clutter worth removing is in the
+schema, not the folder; see the entry above.
 
 ### `styles.css` monolith — 5784 lines / 153 KB
 The entire design system in one file, and every feature keeps appending to it

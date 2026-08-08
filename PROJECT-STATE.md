@@ -12,10 +12,14 @@ trust) · `docs/tech-debt.md` (severity-ranked problems) ·
 `docs/indexing-architecture.md` (how search indexing works + what it costs) ·
 `PRODUCTION.md` (cost model, scaling, closed-source list) · `IDEAS.md` (proposals).
 
-**Hard numbers (recounted 2026-08-06):** 69 migrations (`0071` is the highest;
-`0059` was never used) · 17 edge functions · 72 components · 73 lib modules ·
-116 test files / **731 tests passing** · 100 docs · `App.jsx` 1320 lines ·
-`styles.css` 5784 lines.
+**Hard numbers (recounted 2026-08-07):** 74 migrations (`0076` is the highest;
+`0059` was never used) · 16 edge functions · 89 components · 81 lib modules ·
+121 test files / **880 tests passing** · 103 docs · `App.jsx` 1517 lines ·
+`styles.css` 6099 lines.
+
+`App.jsx` and `styles.css` both grew again this session (+197 / +315) and both
+are already logged in `tech-debt.md` as monoliths. Noting the direction because
+a number that only ever goes up is a decision nobody is making.
 
 ## → Start here: [§6 Ranked next actions](#6-ranked-next-actions-the-single-backlog)
 
@@ -699,6 +703,23 @@ dashboard SQL editor. The grid is inert until `0076` runs.
 
 **Still deferred, unchanged:** query consolidation (row 20b), Digest + Progress
 merge, TidyView tests.
+
+**Deferred with a named trigger: orphaned schema → `0077`, before production.**
+The reading-UI deletion stranded `resource_sections` plus seven columns
+(`topics.kind` / `.cursor_section_id` / `.source_kind` / `.source_url`,
+`entries.section_id` / `.parent_id`, `user_configs.twitter_token`) — all
+verified as 0 rows and 0 code references against the live database. Deliberately
+**not** dropped: `DROP COLUMN` is one-way and they cost nothing for one user. The
+cost appears when other people are on the schema, so `0077` drops them in one
+pass before it ships, and not before. `entries.takeaway` is the exception that
+needs a decision rather than a drop — it is still *read* by `chunkEntry.js` and
+`githubSync.js` with no writer left. Full detail in `docs/tech-debt.md`.
+
+**And the perennial one, answered so it stops being re-asked:** the 74 migration
+files cannot be reduced. They are an applied ledger in
+`supabase_migrations.schema_migrations`; deleting a local file removes nothing
+from the database and desynchronises the history. `db squash` is possible and is
+the wrong trade. The clutter worth removing is in the schema, not the folder.
 
 ---
 
