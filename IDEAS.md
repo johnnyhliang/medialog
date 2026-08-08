@@ -64,6 +64,52 @@ until ② lands; mostly a visualization over data ② already produces.
 
 ## Big swings
 
+- ★ **Views are queries, not tabs — named saved filters.** The single sharpest thing
+  to come out of the 2026-08-07 scoping session, and it is already implied by two
+  documents. `VISION.md` says *"views are queries, not folders"*; the Tuxedo analysis
+  (`2026-06-19-tuxedo-analysis.md`) ranks **named saved searches** third by leverage
+  and calls them *"the missing piece between 'search exists' and 'search is part of
+  your workflow'"*. Neither was ever built.
+  The realisation: **in org-mode the agenda is not a table, it is a saved query over
+  your files.** Every time this app has needed a new way to look at entries, it grew a
+  new tab and often a new table — which is how 24 modules and 20 nav items happened.
+  A saved filter would retire several outright: *Highlights* is arguably just
+  `has:highlight`, an agenda is `has:due sort:due`, a reading queue is
+  `status:active tag:book`. Prerequisite for any further nav consolidation, and it
+  reframes "should we build view X" as "is this a filter someone would save".
+- **The nav is a list of nouns; the app has four verbs.** From the north-star spec,
+  restated here because it is the test to apply to any new surface: Catch / Drift /
+  Work / Review. Measured 2026-08-07: **24 modules, 20 nav items, 26 `view ===`
+  branches, 16 settings tabs, 73 components.** Every feature works; the friction is
+  deciding which one to open. Candidate merges beyond the Triage one already done:
+  Digest+Progress (deferred until the Manager settles), Archive+Files+Trash ("things
+  not in the active list"), Highlights → a saved filter per above. Roughly 20 → 12
+  with no capability lost.
+- **A plan and a log are different geometries — keep both, don't merge them.**
+  From working through `quantdevplan.xlsx`, which is really five shapes wearing one
+  filename: a *plan* (intent, month by month), a *body of work* (ordered, a curriculum
+  or a project), a *log* (what actually happened), a *pipeline* (applications moving
+  toward a binary outcome), and a *library* (resources). Most "project management app"
+  confusion in that session came from smearing one word across all five.
+  The useful framing that survived: **what is wanted is intent and evidence side by
+  side** — the plan, and a record of what you actually did against it. That is why
+  `manager-scope.md` splits into master-doc checkboxes (plan) plus a contribution grid
+  (log), rather than one to-do list trying to be both. Pipelines stay in `career`,
+  which already models stages properly.
+- **A `kind` flag should be a label, not a route.** `topics.kind` (`'note'`, `'deep'`,
+  `'goals'`) is one column, but `kind='deep'` sends you to a different screen, so a
+  book and a project *feel* like different animals despite being the same rows in the
+  same table. The data was always unified; only the routing wasn't.
+  ⚠️ **Resolved narrowly 2026-08-07 and the resolution matters:** the fix is *not* one
+  topic screen showing everything — that floods `TopicView` with machinery most topics
+  never use. Keep the routing simple and put the specialised rendering on the Manager.
+  See `manager-scope.md` §2 *The UI boundary*. Recorded here because the underlying
+  observation is still true and will come up again.
+- **`parent_id` on entries is the one place the flat-over-nested rule was broken.**
+  Takeaways nest under takeaways (migration `0042`), against `PROJECT.md` principle 4
+  (*"flat over nested — nesting is what created the Obsidian mess"*). There is
+  currently no data using it, so flattening is free today and will not be later.
+
 - ★ **Collapse Deep Topics into normal topics** — *a correction to shipped code, not
   an extension.* Deep Topics being a separate topic kind, hidden from the main grid,
   was the mistake: it forces "PyTorch internals" to live in a different universe than
