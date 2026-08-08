@@ -573,9 +573,9 @@ detail; that file, not this table, is authoritative on *how*.
 | ~~12~~ | ~~Reminders + Agenda~~ | feature | ⛔ **SUPERSEDED 2026-08-07 → row 15.** Built and **parked** (beta-gated, invisible). Due dates as the primary surface contradict `gains-system.md`; the replacement is *a topic is the project*, plan in `master_doc`, aggregated by the Manager. `due_at` + `src/lib/timezone.js` retained | `manager-scope.md` |
 | 13 | Tidy queue (north-star ①) | north star | One-card triage; queries already exist, it's a card UI | north-star spec Part 6 |
 | 14 | Related-entries footer (north-star ④) | north star | pgvector exists; agent step ① as visible value | north-star spec Part 6 |
-| **15** | **Manager + resume cards** | north star | ⬆️ **PROMOTED 2026-08-07 — now the main line of work.** The genuinely missing surface, and the one that answers "important things drown on the backburner": `[park]` kills cold-topic guilt, momentum is *derived* so nothing is hand-prioritised, and it aggregates 24 modules into one place to look. Absorbs rows 12, 17, 18 and both dead progress libraries (`goals.js`, `studyPlan.js`) | **`manager-scope.md`** · north-star spec Part 2 |
+| ~~15~~ | ~~Manager + resume cards~~ | north star | ✅ **DONE 2026-08-07 — all seven steps of `manager-scope.md` §10.** Cards, `[park]`, derived momentum, tickable plan steps, the contribution grid, the seeded plan, and AI drafting. Originally: The genuinely missing surface, and the one that answers "important things drown on the backburner": `[park]` kills cold-topic guilt, momentum is *derived* so nothing is hand-prioritised, and it aggregates 24 modules into one place to look. Absorbs rows 12, 17, 18 and both dead progress libraries (`goals.js`, `studyPlan.js`) | **`manager-scope.md`** · north-star spec Part 2 |
 | 16 | `user_model` v1 + feed ranking (north-star ⑥) | north star | **Start logging the dismiss signal now — it's free and it's the input** | north-star spec Part 5 |
-| 17 | Collapse Deep Topics into normal topics | feature | A *correction* to shipped code, not an extension. ⚠️ **The UI collapses; the CURSOR does not.** `topics.cursor_section_id` is the only "where did I leave off" mechanism in the app and is the prototype of the Manager's resume card — absorb it, do not drop the table until the Manager reads it | `manager-scope.md` §4 |
+| ~~17~~ | ~~Collapse Deep Topics~~ | feature | ✅ **DONE 2026-08-07 — as a DELETION.** The warning here ("the cursor is the only 'where did I leave off' mechanism") was written from the code, not the data. Live check: `resource_sections` 0 rows, `cursor_section_id` 0 set, `takeaway`/`section_id`/`parent_id` 0. There was no cursor to preserve. ~600 lines removed; **no schema dropped** (`0075` is one UPDATE). `GainsCard`'s dev track was rewired to `master_doc` steps | `manager-scope.md` §4 |
 | 18 | Interview progress UI | feature | Data flows now, so rings aren't theatre | `interview-progress-spec.md` §4 |
 | ~~19~~ | ~~Hide the Wayback UI~~ | bug | ✅ **DONE 2026-08-06.** Entry-card button and popup unmounted, bulk submitter removed. `wayback_submitted_at` **kept** — a future SPN2 pass needs it to know which entries to re-check. SPN2 itself stays parked | `IDEAS.md` § External archival |
 | 19b | Video capture: transcript + metadata + thumbnail | feature | One fetch at capture time. Transcripts are plain HTTP (~50 KB, no worker) and are *the information* for a talk; stored thumbnails survive deletion, which hotlinked ones cannot. ~$1.30 to backfill 185 YouTube entries | `preservation-v2-spec.md` §3 |
@@ -655,10 +655,55 @@ Everything set aside during the Manager scoping pass, so none of it is lost:
 - **Four status enums / seven progress mechanisms** — recorded so the count stops
   growing, not scheduled. `tech-debt.md`.
 
-**Next session's intent: the Manager (§6 row 15).** Scope is settled in
-`docs/manager-scope.md` — read §2's UI boundary first: a project is a topic in
-the *data*, and `TopicView` does not change. Additive only; one new table,
-no `ALTER`, no existing row touched.
+## Session synthesis — 2026-08-07 (the Manager, finished)
+
+All seven steps of `docs/manager-scope.md` §10 landed. Read that document first;
+this is only what is not recoverable from it or the diffs.
+
+- **`goals.js` died the first time because nothing could tick a checkbox.**
+  `toggleStep` had been exported, tested and called by *nothing* since July, so
+  every progress bar in the app could only ever read 0/N. The library was not
+  abandoned for being wrong — it was abandoned for being unreachable by one
+  missing input control. That is now the Manager's plan panel, and it is also
+  what gives the contribution grid something to record. **Before writing another
+  derivation library, check that a human can produce its input.**
+- **The data disagreed with the doc, and the data won.** §4 stated flatly that
+  deep topics must be absorbed because `cursor_section_id` was "the only 'where
+  was I' mechanism in the app". Querying it: 0 sections, 0 cursors, 0 takeaways.
+  The mechanism existed in code and never in practice. §4's warning was written
+  by reading files, which is exactly the failure mode §2 of this document already
+  names. **Query production before honouring a doc's warning about production.**
+- **Three half-built deadline mechanisms, zero behaviour.**
+  `DeadlineAlertBanner.jsx` was imported by nothing, `programs.window_open` was a
+  settings toggle whose only reader was that dead banner, and every program row
+  had `deadline: null`. Each piece looked finished in isolation. This is the same
+  shape as `renderReadme` (§0a) and now `toggleStep` — **the third instance, so
+  it is a pattern, not a coincidence: this codebase reliably builds mechanisms
+  and forgets the one wire that makes them live.**
+- **"No due dates" needed an exception, and drawing it was the useful work.**
+  §8's rule is about *learning* — a shaming number on a date nobody set. It does
+  not transfer to a window that closes. The test now written down: someone else
+  set it and it closes → a deadline, `career` may show it; you set it to pace
+  yourself → a target, quiet chip, nothing else.
+- **The AI step was built last and stayed small on purpose.** One button, only on
+  cards with no next action, drafting into an *unsaved* field. It never writes,
+  never ranks, never runs unprompted. `cleanDraft` rejects rather than repairs —
+  a truncated half-sentence reads worse than nothing.
+
+**Numbers:** 731 → 880 tests. Migrations `0072`–`0076`. ~600 lines deleted with
+the reading UI; nothing dropped from the schema.
+
+**Migrations `0075` and `0076` are written but NOT applied** — this project has
+no `DATABASE_URL` or Supabase CLI config, so they are applied by hand in the
+dashboard SQL editor. The grid is inert until `0076` runs.
+
+**Still deferred, unchanged:** query consolidation (row 20b), Digest + Progress
+merge, TidyView tests.
+
+---
+
+~~**Next session's intent: the Manager (§6 row 15).**~~ ✅ Done 2026-08-07 —
+see the synthesis above. The §2 UI boundary held: `TopicView` was not touched.
 
 **Seeded 2026-08-07 (`manager-scope.md` §10 step 5).**
 `scripts/seed-quant-plan.js` turns `Documents/quantdevplan.xlsx` into real data:
