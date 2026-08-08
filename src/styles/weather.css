@@ -1,0 +1,77 @@
+/* ── Weather Widget ──────────────────────────────────────────────────────────── */
+.kw-weather {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 10px 18px 18px;
+  text-align: center;
+}
+.kw-weather-main { display: flex; align-items: center; gap: 8px; }
+.kw-weather-icon { color: var(--muted); flex-shrink: 0; }
+.kw-weather-temps { display: flex; align-items: baseline; gap: 6px; }
+.kw-weather-temp {
+  font-size: 22px;
+  font-weight: 200;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+.kw-weather-feels { font-size: var(--text-xs); color: var(--muted); }
+.kw-weather-meta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+.kw-weather-condition { color: var(--text); }
+.kw-weather-wind { display: flex; align-items: center; gap: 3px; }
+.kw-weather-loc {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  padding: 2px 0 0;
+  font-size: var(--text-xs);
+  color: var(--muted);
+  cursor: pointer;
+  transition: color 0.1s;
+}
+.kw-weather-loc:hover { color: var(--accent); }
+.kw-weather-form { display: flex; align-items: center; gap: 5px; width: 100%; }
+.kw-weather-form-pin { color: var(--muted); flex-shrink: 0; }
+.kw-weather-input {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--text-xs);
+  padding: 4px 8px;
+  border-radius: 2px;
+  height: 26px;
+}
+.kw-weather-set {
+  font-size: var(--text-xs);
+  padding: 0 10px;
+  height: 26px;
+  background: var(--accent);
+  color: var(--on-accent);
+  border: none;
+  border-radius: 2px;
+  font-weight: 500;
+}
+.kw-weather-set:hover { background: var(--accent-hover); }
+.kw-weather-cancel {
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 16px;
+  padding: 0 2px;
+  line-height: 1;
+}
+.kw-weather-cancel:hover { color: var(--danger); }
+.kw-weather-err { font-size: var(--text-xs); color: var(--danger); width: 100%; }
+

@@ -1,0 +1,81 @@
+/* MediaLog — warm off-white, editorial, minimal. Mobile-first. */
+
+:root {
+  --bg:          #F8F5EE;
+  --surface:     #FFFFFF;
+  --surface-2:   #F2EDE3;
+  --surface-3:   #EAE4D8;
+  --border:      #DDD7CB;
+  --text:        #1C1A15;
+  --muted:       #7A7264;
+  --accent:      #3D5A4A;
+  --accent-weak: rgba(61, 90, 74, 0.09);
+  --done:        #2E7A52;
+  --active:      #B85C1A;
+  --backlog:     #7A7264;
+  --danger:      #C03A2B;
+  --sidebar-bg:  #EDE8DC;
+  --radius:      10px;
+  --gap:         14px;
+  --font-ui:     'DM Sans', system-ui, sans-serif;
+  --font-serif:  'Lora', Georgia, serif;
+
+  /* Typography scale */
+  --text-xs:   11px;
+  --text-sm:   12.5px;
+  --text-base: 14px;
+  --text-md:   15px;
+  --text-lg:   17px;
+  --text-xl:   22px;
+  --text-2xl:  28px;
+
+  /* Z-index scale */
+  --z-return:   900;
+  --z-modal:   1000;
+  --z-popover: 1100;
+  --z-confirm: 1200;
+  --z-toast:   1300;
+
+  /* Shadow scale */
+  --shadow-card:       0 2px 6px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-card-hover: 0 4px 14px rgba(0,0,0,0.10), 0 1px 3px rgba(0,0,0,0.06);
+  --shadow-modal:      0 8px 40px rgba(0,0,0,0.18);
+  --shadow-popover:    0 6px 24px rgba(0,0,0,0.16);
+
+  /* Text/icon colour that sits on top of an --accent-filled surface. */
+  --on-accent:    #FFFFFF;
+  --accent-hover: #2D4338;
+
+  /* Status tints — a paired background/foreground per hue, used by chips,
+     badges, and pills. Light palettes get pastel fills; the dark palettes
+     override these below with translucent fills instead. */
+  --tint-green-bg:  #DCFCE7;
+  --tint-green-fg:  #15803D;
+  --tint-amber-bg:  #FEF3C7;
+  --tint-amber-fg:  #B45309;
+  --tint-red-bg:    #FEE2E2;
+  --tint-red-fg:    #B91C1C;
+  --tint-blue-bg:   #DBEAFE;
+  --tint-blue-fg:   #1D4ED8;
+  --tint-purple-bg: #EDE9FE;
+  --tint-purple-fg: #7C3AED;
+
+  /* Semantic aliases — these were referenced throughout the sheet long before
+     they were defined, so every call site was silently rendering its fallback. */
+  --success: var(--tint-green-fg);
+  --warning: var(--tint-amber-fg);
+  --error:   var(--danger);
+
+  /* Highlight ink. These are user-chosen data, not theming — a highlight saved
+     as "yellow" must read as the same yellow in every palette, so they are
+     fixed. The --bright set is used where the swatch sits on a dark backdrop. */
+  --hl-yellow: #F59E0B;
+  --hl-green:  #10B981;
+  --hl-blue:   #3B82F6;
+  --hl-pink:   #EC4899;
+  --hl-yellow-bright: #FBBF24;
+  --hl-green-bright:  #4ADE80;
+  --hl-blue-bright:   #60A5FA;
+  --hl-pink-bright:   #F9A8D4;
+}
+

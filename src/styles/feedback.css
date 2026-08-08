@@ -1,0 +1,195 @@
+/* ── Version history ─────────────────────────────────────────────────────────── */
+.versions { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; }
+.versions li { display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--border); padding: 6px 0; }
+.versions li:last-child { border-bottom: none; }
+.version-date { color: var(--muted); font-size: 12px; white-space: nowrap; }
+.version-preview { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+
+/* ── Autosave indicator ─────────────────────────────────────────────────────── */
+.save-status {
+  font-size: var(--text-xs);
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* ── Load more ─────────────────────────────────────────────────────────────── */
+.load-more-btn {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 9px;
+  background: var(--surface-2);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  color: var(--muted);
+  font-size: var(--text-sm);
+  text-align: center;
+}
+.load-more-btn:hover { background: var(--surface-3); color: var(--text); border-style: solid; }
+
+/* ── Empty state ────────────────────────────────────────────────────────────────── */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 32px 16px;
+  color: var(--muted);
+  text-align: center;
+}
+.empty-state-msg { margin: 0; font-size: var(--text-base); font-style: italic; }
+.empty-state-action { font-size: var(--text-sm); }
+
+/* ── Toast notifications ────────────────────────────────────────────────────── */
+.toast-container {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: var(--z-toast);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  pointer-events: none;
+}
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: var(--text);
+  color: var(--surface);
+  font-size: var(--text-sm);
+  box-shadow: var(--shadow-modal);
+  pointer-events: all;
+  min-width: 220px;
+  max-width: 420px;
+}
+.toast-success { background: var(--done); }
+.toast-error   { background: var(--danger); }
+.toast-info    { background: var(--text); }
+.toast .icon-btn { color: rgba(255,255,255,0.7); width: 22px; height: 22px; }
+.toast .icon-btn:hover { color: var(--on-accent); background: rgba(255,255,255,0.15); }
+.toast-msg { flex: 1; }
+.toast { position: relative; overflow: hidden; padding-bottom: 6px; }
+
+.toast-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  width: 100%;
+  background: rgba(255,255,255,0.5);
+  transform-origin: left;
+  animation: toast-countdown linear forwards;
+}
+@keyframes toast-countdown {
+  from { transform: scaleX(1); }
+  to   { transform: scaleX(0); }
+}
+
+.toast-action-btn {
+  background: rgba(255,255,255,0.2);
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 4px;
+  color: var(--on-accent);
+  font-size: 12px;
+  padding: 2px 8px;
+  cursor: pointer;
+  margin-right: 4px;
+  white-space: nowrap;
+}
+.toast-action-btn:hover { background: rgba(255,255,255,0.35); }
+
+/* ── Backup note ────────────────────────────────────────────────────────────── */
+.backup-note {
+  font-size: var(--text-sm);
+  color: var(--muted);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 10px 12px;
+  margin-top: 8px;
+  line-height: 1.5;
+}
+.backup-note strong { color: var(--text); }
+
+/* ── Revisit ──────────────────────────────────────────────────────────────── */
+.revisit-view { display: flex; flex-direction: column; gap: 28px; max-width: 680px; }
+.revisit-section { display: flex; flex-direction: column; gap: 10px; }
+
+.revisit-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.revisit-note { font-size: 13.5px; color: var(--text); line-height: 1.6; margin: 0; }
+
+.revisit-srs-row { display: flex; align-items: center; gap: 10px; }
+.revisit-srs-label { font-size: 11px; color: var(--muted); }
+
+.revisit-rating-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.revisit-rating-btns { display: flex; gap: 6px; }
+.revisit-rate-btn {
+  font-size: 12px;
+  padding: 5px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.revisit-rate-btn--hard { background: var(--tint-red-bg); color: var(--tint-red-fg); border-color: rgba(239,68,68,.3); }
+.revisit-rate-btn--good { background: var(--tint-blue-bg); color: var(--tint-blue-fg); border-color: rgba(59,130,246,.3); }
+.revisit-rate-btn--easy { background: var(--tint-green-bg); color: var(--tint-green-fg); border-color: rgba(34,197,94,.3); }
+.revisit-rate-btn:hover { opacity: 0.8; }
+.revisit-rate-interval { font-size: 10px; opacity: 0.7; font-weight: 400; }
+.revisit-skip-btn { margin-left: auto; }
+
+/* Activity feed */
+.activity-feed { display: flex; flex-direction: column; gap: 2px; }
+.activity-item {
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  transition: background 0.1s;
+}
+.activity-item:hover { background: var(--surface); border-color: var(--border); }
+.activity-item-header { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.activity-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+  text-decoration: none;
+  flex: 1;
+  min-width: 0;
+}
+a.activity-title:hover { color: var(--accent); }
+.activity-meta { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.activity-topic {
+  font-size: 11px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 6px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.activity-age { font-size: 11px; color: var(--muted); white-space: nowrap; }
+.activity-note-preview { font-size: 12.5px; color: var(--muted); margin: 3px 0 0; line-height: 1.5; }
+.activity-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.activity-tag { font-size: 11px; color: var(--muted); }
+

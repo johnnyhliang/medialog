@@ -1,0 +1,220 @@
+/* ── Palette: Warm (explicit reset — mirrors :root defaults) ────────────────── */
+[data-theme="warm"] {
+  --bg:          #F8F5EE;
+  --surface:     #FFFFFF;
+  --surface-2:   #F2EDE3;
+  --surface-3:   #EAE4D8;
+  --border:      #DDD7CB;
+  --text:        #1C1A15;
+  --muted:       #7A7264;
+  --accent:      #3D5A4A;
+  --accent-weak: rgba(61, 90, 74, 0.09);
+  --done:        #2E7A52;
+  --active:      #B85C1A;
+  --backlog:     #7A7264;
+  --danger:      #C03A2B;
+  --sidebar-bg:  #EDE8DC;
+}
+
+/* ── Palette: Catppuccin Mocha ──────────────────────────────────────────────── */
+[data-theme="catppuccin-mocha"] {
+  --bg:          #1e1e2e;
+  --surface:     #313244;
+  --surface-2:   #292a3d;
+  --surface-3:   #45475a;
+  --border:      #45475a;
+  --text:        #cdd6f4;
+  --muted:       #a6adc8;
+  --accent:      #cba6f7;
+  --accent-weak: rgba(203,166,247,0.12);
+  --done:        #a6e3a1;
+  --active:      #fab387;
+  --backlog:     #a6adc8;
+  --danger:      #f38ba8;
+  --sidebar-bg:  #181825;
+}
+
+/* ── Palette: Tokyo Night ───────────────────────────────────────────────────── */
+[data-theme="tokyo-night"] {
+  --bg:          #1a1b26;
+  --surface:     #24283b;
+  --surface-2:   #1f2335;
+  --surface-3:   #292e42;
+  --border:      #292e42;
+  --text:        #c0caf5;
+  --muted:       #565f89;
+  --accent:      #7aa2f7;
+  --accent-weak: rgba(122,162,247,0.12);
+  --done:        #9ece6a;
+  --active:      #ff9e64;
+  --backlog:     #565f89;
+  --danger:      #f7768e;
+  --sidebar-bg:  #16161e;
+}
+
+/* ── Palette: Nord ──────────────────────────────────────────────────────────── */
+[data-theme="nord"] {
+  --bg:          #2e3440;
+  --surface:     #3b4252;
+  --surface-2:   #343a49;
+  --surface-3:   #434c5e;
+  --border:      #434c5e;
+  --text:        #eceff4;
+  --muted:       #7b88a1;
+  --accent:      #88c0d0;
+  --accent-weak: rgba(136,192,208,0.12);
+  --done:        #a3be8c;
+  --active:      #d08770;
+  --backlog:     #7b88a1;
+  --danger:      #bf616a;
+  --sidebar-bg:  #292d3a;
+}
+
+/* ── Palette: Rosé Pine ─────────────────────────────────────────────────────── */
+[data-theme="rose-pine"] {
+  --bg:          #191724;
+  --surface:     #1f1d2e;
+  --surface-2:   #1c1a2a;
+  --surface-3:   #26233a;
+  --border:      #403d52;
+  --text:        #e0def4;
+  --muted:       #908caa;
+  --accent:      #eb6f92;
+  --accent-weak: rgba(235,111,146,0.12);
+  --done:        #31748f;
+  --active:      #f6c177;
+  --backlog:     #908caa;
+  --danger:      #eb6f92;
+  --sidebar-bg:  #120f1d;
+}
+
+/* ── Dark palettes: shared overrides ────────────────────────────────────────── */
+/* Placed after the palette blocks so it wins on equal specificity. The pastel
+   status fills from :root are unreadable on a dark ground, so the dark palettes
+   swap them for translucent fills with a light foreground. */
+[data-theme="catppuccin-mocha"],
+[data-theme="tokyo-night"],
+[data-theme="nord"],
+[data-theme="rose-pine"] {
+  --on-accent:      #11111B;
+  --accent-hover:   color-mix(in srgb, var(--accent) 82%, white);
+
+  --tint-green-bg:  rgba(74, 222, 128, 0.14);
+  --tint-green-fg:  #7EE2A8;
+  --tint-amber-bg:  rgba(251, 191, 36, 0.14);
+  --tint-amber-fg:  #F3C168;
+  --tint-red-bg:    rgba(248, 113, 113, 0.14);
+  --tint-red-fg:    #F58C8C;
+  --tint-blue-bg:   rgba(96, 165, 250, 0.14);
+  --tint-blue-fg:   #86B4F5;
+  --tint-purple-bg: rgba(167, 139, 250, 0.14);
+  --tint-purple-fg: #B99DF7;
+}
+
+/* ── Style: Neobrutalism ────────────────────────────────────────────────────── */
+[data-style="brutalist"] {
+  --radius:           0px;
+  --shadow-card:      4px 4px 0 var(--text);
+  --shadow-card-hover:6px 6px 0 var(--text);
+  --shadow-modal:     8px 8px 0 var(--text);
+  --shadow-popover:   5px 5px 0 var(--text);
+}
+[data-style="brutalist"] .card,
+[data-style="brutalist"] .entry-card {
+  border-width: 3px;
+  border-color: var(--text);
+  border-radius: 0;
+  box-shadow: var(--shadow-card);
+  transition: box-shadow 0.12s ease, transform 0.12s ease;
+}
+[data-style="brutalist"] .entry-card:hover {
+  box-shadow: var(--shadow-card-hover);
+  transform: translate(-1px, -1px);
+}
+[data-style="brutalist"] input,
+[data-style="brutalist"] textarea,
+[data-style="brutalist"] select,
+[data-style="brutalist"] button {
+  border-radius: 0;
+  border-width: 2px;
+  border-color: var(--text);
+}
+/* Primary buttons get the signature press-down interaction */
+[data-style="brutalist"] .btn-primary,
+[data-style="brutalist"] .nav-btn,
+[data-style="brutalist"] .quick-add-btn,
+[data-style="brutalist"] button.primary {
+  box-shadow: 3px 3px 0 var(--text);
+  font-weight: 700;
+}
+[data-style="brutalist"] .btn-primary:hover,
+[data-style="brutalist"] .quick-add-btn:hover,
+[data-style="brutalist"] button.primary:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0 var(--text);
+}
+[data-style="brutalist"] .btn-primary:active,
+[data-style="brutalist"] .quick-add-btn:active,
+[data-style="brutalist"] button.primary:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 var(--text);
+}
+[data-style="brutalist"] h1,
+[data-style="brutalist"] h2,
+[data-style="brutalist"] h3          { font-weight: 900; letter-spacing: -0.5px; }
+
+/* ── Style: radius reset when switching away from brutalist ─────────────────── */
+[data-style="default"],
+[data-style="glass"] {
+  --radius: 10px;
+}
+
+/* ── Style: Glassmorphism (effective on dark palettes only) ─────────────────── */
+[data-style="glass"] .card,
+[data-style="glass"] .entry-card {
+  background: rgba(255,255,255,0.06);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08);
+  border-color: transparent;
+}
+[data-style="glass"] .sidebar {
+  background: rgba(0,0,0,0.25);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-right-color: rgba(255,255,255,0.06);
+}
+[data-style="glass"] input,
+[data-style="glass"] textarea,
+[data-style="glass"] select {
+  background: rgba(255,255,255,0.05);
+  border-color: rgba(255,255,255,0.10);
+}
+[data-style="glass"] button {
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(255,255,255,0.12);
+}
+[data-style="glass"] button:hover {
+  background: rgba(255,255,255,0.14);
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root { height: 100%; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: 'kern' 1, 'liga' 1;
+}
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+

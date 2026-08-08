@@ -1,0 +1,27 @@
+/* ── Form controls ──────────────────────────────────────────────────────────── */
+input, textarea, select, button {
+  font: inherit;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 7px 10px;
+}
+input::placeholder, textarea::placeholder { color: var(--muted); }
+input:focus, textarea:focus, select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-weak);
+}
+textarea { width: 100%; resize: vertical; min-height: 72px; }
+
+button {
+  background: var(--surface-2);
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, transform 0.08s, opacity 0.08s;
+  font-weight: 500;
+}
+button:hover { background: var(--surface-3); }
+button:active:not(:disabled) { transform: scale(0.97); opacity: 0.88; }
+button:disabled { opacity: 0.45; cursor: not-allowed; }
+

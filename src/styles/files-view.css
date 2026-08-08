@@ -1,0 +1,94 @@
+/* ── Files Tab ─────────────────────────────────── */
+.storage-bar-wrap { margin-bottom: 20px; }
+.storage-bar-track {
+  height: 6px;
+  background: var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+.storage-bar-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 3px;
+  transition: width 0.3s;
+}
+.storage-bar-fill.storage-bar-warn { background: var(--warning); }
+.storage-bar-label { font-size: var(--text-xs); color: var(--muted); margin: 0; }
+.storage-bar-warning { font-size: var(--text-xs); color: var(--warning); margin: 4px 0 0; }
+
+/* ── FileRow ────────────────────────────────────── */
+.file-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+.file-row:last-child { border-bottom: none; }
+.file-row-thumb {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.file-thumb { width: 48px; height: 48px; object-fit: cover; }
+.file-icon { color: var(--muted); }
+.file-row-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.file-name {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.file-meta { font-size: var(--text-xs); }
+.file-refs { font-size: var(--text-xs); }
+
+/* ── FilesView ────────────────────────────────────── */
+.files-view { max-width: 720px; padding: 24px; }
+.files-heading { font-family: var(--font-serif); font-size: 1.4rem; margin: 0 0 16px; }
+.files-sort-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.files-sort-label { font-size: var(--text-xs); }
+.files-sort-btn {
+  font-size: var(--text-xs);
+  padding: 3px 10px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+}
+.files-sort-btn.active {
+  background: var(--accent);
+  color: var(--on-accent);
+  border-color: var(--accent);
+}
+.files-count { margin-left: auto; font-size: var(--text-xs); }
+.files-list { border-top: 1px solid var(--border); }
+.files-empty { padding: 24px 0; }
+.files-load-more {
+  margin-top: 16px;
+  width: 100%;
+  padding: 10px;
+  font-size: 13px;
+}
+

@@ -1,0 +1,434 @@
+/* ── Settings → Modules ─────────────────────────── */
+.modules-list { list-style: none; margin: 16px 0 0; padding: 0; }
+.modules-row { border-bottom: 1px solid var(--border); }
+.modules-row:last-child { border-bottom: none; }
+.modules-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 2px;
+  cursor: pointer;
+}
+.modules-label:has(input:disabled) { cursor: default; opacity: 0.65; }
+.modules-label input { margin-top: 3px; flex-shrink: 0; }
+.modules-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--text);
+}
+.modules-desc { display: block; font-size: 12px; color: var(--muted); margin-top: 2px; line-height: 1.45; }
+.modules-badge {
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  padding: 1px 5px;
+}
+.modules-badge--locked { color: var(--accent); border-color: var(--accent); }
+.modules-badge--exp { color: var(--tint-amber-fg); border-color: var(--tint-amber-fg); }
+.modules-badge--beta { color: var(--tint-blue-fg); border-color: var(--tint-blue-fg); }
+.modules-stage-note { margin-top: 8px; font-size: 12px; line-height: 1.5; }
+
+/* A button that reads as a link — used for in-page navigation between Settings
+   tabs, where an <a href> would be wrong (no destination URL). */
+/* Native PDF viewer — the browser renders inside this frame. */
+.pdf-frame { width: 100%; height: 100%; min-height: 60vh; border: none; background: var(--bg); }
+.pdf-fallback {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 10px; padding: 40px 20px; text-align: center;
+}
+.pdf-fallback-link {
+  color: var(--accent); text-decoration: underline; font-size: 13px;
+}
+
+.linklike {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: var(--accent);
+  text-decoration: underline;
+  cursor: pointer;
+}
+.linklike:hover { opacity: 0.8; }
+
+/* Emergency controls — visually distinct so they are never clicked by accident. */
+.metrics-emergency {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 12px 14px; margin-bottom: 16px; background: var(--surface);
+}
+.metrics-emergency--off { border-color: var(--danger); }
+.metrics-emergency--off strong { color: var(--danger); }
+.metrics-danger {
+  color: var(--danger) !important;
+  border-color: var(--danger) !important;
+}
+
+/* Assistant: which knowledge source answered. Distinguishes "your notes" from
+   "the app guide" so a confident app answer is never mistaken for a note. */
+.asst-mode { font-size: 10.5px; color: var(--muted); margin: 2px 0 0 2px; font-style: italic; }
+.asst-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.asst-tabs button {
+  font-size: 11px; padding: 2px 8px; border: 1px solid var(--border);
+  border-radius: 2px; background: none; color: var(--accent); cursor: pointer;
+}
+.asst-tabs button:hover { border-color: var(--accent); }
+
+/* ── Index status ────────────────────────────────── */
+/* Colour never carries the meaning alone — every state has a title/aria-label. */
+.index-status { font-size: 11px; line-height: 1; flex-shrink: 0; cursor: help; }
+.index-status.is-ok { color: var(--accent); }
+.index-status.is-pending { color: var(--muted); }
+.index-status.is-failed { color: var(--danger); }
+.index-status.is-muted { color: var(--border); }
+
+.index-banner {
+  display: flex; align-items: center; justify-content: space-between; gap: 14px;
+  border: 1px solid var(--danger); border-radius: var(--radius);
+  padding: 10px 14px; margin-bottom: 14px; background: var(--surface);
+}
+.index-banner strong { display: block; font-size: 13px; color: var(--text); }
+.index-banner-sub { display: block; font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+.index-banner button { flex-shrink: 0; }
+
+/* ── Usage meter (rolling window) ────────────────── */
+.usage-meter { display: flex; flex-direction: column; gap: 4px; padding: 10px 0; }
+.usage-meter--compact { padding: 6px 0; }
+.usage-meter-top, .usage-meter-bottom {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 10px;
+}
+.usage-meter-label { font-size: 12.5px; color: var(--text); }
+.usage-meter-count { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.usage-meter-track {
+  height: 6px; border-radius: 3px; background: var(--border); overflow: hidden;
+}
+.usage-meter-fill {
+  height: 100%; background: var(--accent); border-radius: 3px;
+  transition: width .3s ease;
+}
+.usage-meter-bottom { font-size: 11px; color: var(--muted); }
+.usage-meter-pct { font-variant-numeric: tabular-nums; flex-shrink: 0; }
+
+/* Colour only carries emphasis, never meaning on its own — the text already says
+   "limit reached" / "N left", so this reads the same without colour vision. */
+.usage-meter--warn .usage-meter-fill { background: var(--warning); }
+.usage-meter--warn .usage-meter-bottom { color: var(--warning); }
+.usage-meter--exceeded .usage-meter-fill { background: var(--danger); }
+.usage-meter--exceeded .usage-meter-bottom { color: var(--danger); font-weight: 500; }
+
+/* ── Settings usage readout ─────────────────────── */
+.usage-card { display: flex; flex-direction: column; gap: 2px; }
+.usage-row {
+  display: flex; justify-content: space-between; align-items: baseline;
+  padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px;
+}
+.usage-row:last-of-type { border-bottom: none; }
+.usage-limit { color: var(--muted); font-size: 12px; }
+.usage-note { font-size: 12px; margin: 10px 0 0; line-height: 1.5; }
+
+/* ── Metrics (founder operator view) ─────────────── */
+.metrics-view { padding: 24px 28px 48px; max-width: 1100px; }
+.metrics-header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 18px; }
+.metrics-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+.metrics-tile {
+  display: flex; flex-direction: column; gap: 2px;
+  border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px;
+  background: var(--surface); min-width: 0;
+}
+.metrics-tile-label { font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.metrics-tile-value { font-size: 22px; font-weight: 600; color: var(--text); }
+.metrics-tile-sub { font-size: 11px; color: var(--muted); }
+.metrics-note { font-size: 12px; color: var(--muted); margin: 14px 0 8px; line-height: 1.5; }
+
+/* Wide table scrolls inside its own container so the page never scrolls sideways. */
+.metrics-table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); }
+.metrics-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.metrics-table th, .metrics-table td {
+  text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); white-space: nowrap;
+}
+.metrics-table th {
+  font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--muted); font-weight: 600;
+}
+.metrics-table tr:last-child td { border-bottom: none; }
+.metrics-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+.metrics-email { display: block; color: var(--text); }
+.metrics-sub { display: block; font-size: 10.5px; color: var(--muted); }
+.metrics-table select { font-size: 12px; padding: 2px 4px; }
+
+/* Per-account probe + operator log. Inset rather than boxed, so an expanded row
+   reads as detail belonging to the row above it and not a separate panel. */
+.metrics-probe {
+  padding: 12px 4px 4px;
+  border-left: 2px solid var(--accent);
+  padding-left: 12px;
+  margin: 4px 0;
+}
+.metrics-probe-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 10px 16px;
+  margin-bottom: 12px;
+}
+.metrics-fact { display: flex; flex-direction: column; gap: 2px; font-size: 12.5px; }
+.metrics-probe-block { margin: 10px 0; font-size: 12.5px; }
+.metrics-probe-block > strong { display: block; margin-bottom: 4px; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.metrics-statusrow { display: flex; flex-wrap: wrap; gap: 6px 14px; font-variant-numeric: tabular-nums; }
+.metrics-danger-text { color: var(--danger); font-weight: 600; }
+.metrics-warn {
+  margin: 8px 0;
+  padding: 8px 10px;
+  font-size: 12.5px;
+  border: 1px solid var(--danger);
+  border-radius: var(--radius);
+}
+.metrics-table--compact { font-size: 11.5px; margin-top: 4px; }
+.metrics-audit { list-style: none; margin: 0; padding: 0; font-size: 12px; line-height: 1.7; }
+.metrics-audit li { padding: 4px 0; border-bottom: 1px solid var(--border); }
+.metrics-audit li:last-child { border-bottom: none; }
+.metrics-audit .metrics-sub { display: inline; margin-right: 6px; }
+.metrics-audit code { font-size: 11px; color: var(--muted); }
+.metrics-audit em { color: var(--muted); }
+
+/* ── Settings search ────────────────────────────── */
+.settings-search-wrap { margin-bottom: 14px; }
+.settings-search {
+  width: 100%;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-family: inherit;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+}
+.settings-search:focus { outline: none; border-color: var(--accent); }
+
+.settings-results ul { list-style: none; margin: 0 0 8px; padding: 0; }
+.settings-results li { border-bottom: 1px solid var(--border); }
+.settings-results li:last-child { border-bottom: none; }
+.settings-results button {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  background: none;
+  border: none;
+  text-align: left;
+  padding: 10px 4px;
+  cursor: pointer;
+  font: inherit;
+}
+.settings-results button:hover { background: var(--surface); }
+.settings-result-label { font-size: 13.5px; color: var(--text); }
+/* The section name is the answer to "where was that setting?", so it stays
+   visible rather than being a hover affordance. */
+.settings-result-tab {
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: lowercase;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ── Settings → Capture tokens ──────────────────── */
+.ct-fresh {
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 14px;
+  margin: 16px 0;
+}
+.ct-fresh-warn { font-size: 12.5px; font-weight: 600; color: var(--accent); margin: 0 0 8px; }
+.ct-token {
+  display: block;
+  word-break: break-all;
+  font-size: 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  padding: 8px;
+  margin-bottom: 10px;
+}
+.ct-fresh-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.ct-hint { font-size: 11.5px; margin: 10px 0 0; padding-left: 18px; line-height: 1.65; }
+.ct-hint li { margin-bottom: 3px; }
+
+.ct-create { display: flex; gap: 6px; margin: 16px 0; }
+.ct-create input { flex: 1; min-width: 0; }
+
+.ct-list { list-style: none; margin: 0; padding: 0; }
+.ct-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.ct-row:last-child { border-bottom: none; }
+.ct-label { display: block; font-size: 13px; font-weight: 500; color: var(--text); }
+.ct-meta { display: block; font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+.ct-revoke {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  color: var(--muted);
+  font-size: 11.5px;
+  padding: 3px 9px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.ct-revoke:hover { color: var(--accent); border-color: var(--accent); }
+
+.ct-legacy {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  border-top: 1px solid var(--border);
+  margin: 16px 0 0;
+  padding-top: 12px;
+}
+
+/* Feed category re-file picker — hidden until the row is hovered/focused so the
+   sidebar stays a list of names rather than a bank of dropdowns. */
+.feed-cat-select {
+  max-width: 92px;
+  font-size: 10.5px;
+  font-family: inherit;
+  background: var(--bg);
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  padding: 1px 2px;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+.feed-nav-item-wrap:hover .feed-cat-select,
+.feed-nav-item-wrap.managing .feed-cat-select,
+.feed-cat-select:focus { opacity: 1; }
+/* Manage mode pins the row actions open — hover alone is unreachable on touch. */
+.feed-nav-item-wrap.managing .feed-nav-actions { opacity: 1; }
+.feed-add-btn.active { color: var(--accent); border-color: var(--accent); }
+.feed-cat-select:focus { outline: none; border-color: var(--accent); color: var(--text); }
+
+/* Market rows */
+.kw-market { display: flex; flex-direction: column; }
+
+.kw-market-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+}
+.kw-market-row:last-child { border-bottom: none; }
+
+.kw-ticker {
+  font-weight: 600;
+  color: var(--text);
+  min-width: 40px;
+  font-size: 11px;
+}
+
+.kw-price {
+  color: var(--muted);
+  font-size: 11px;
+  flex: 1;
+  text-align: right;
+}
+
+.kw-pct {
+  font-size: 11px;
+  font-weight: 500;
+  min-width: 52px;
+  text-align: right;
+}
+.kw-pct.up   { color: var(--done); }
+.kw-pct.down { color: var(--danger); }
+
+/* Movers rows */
+.kw-mover-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+}
+.kw-mover-row:last-child { border-bottom: none; }
+.kw-mover-arrow { font-size: 11px; min-width: 12px; }
+.kw-mover-arrow.up   { color: var(--done); }
+.kw-mover-arrow.down { color: var(--danger); }
+
+/* Trending rows */
+.kw-trend-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 11px;
+}
+.kw-trend-row:last-child { border-bottom: none; }
+
+.kw-trend-rank {
+  color: var(--muted);
+  min-width: 14px;
+  font-size: 10px;
+  opacity: 0.6;
+}
+
+.kw-mentions {
+  color: var(--muted);
+  font-size: 10px;
+  flex: 1;
+  text-align: right;
+}
+
+/* Headline rows */
+.kw-headline-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--border);
+  text-decoration: none;
+  transition: color 0.12s;
+}
+.kw-headline-row:last-child { border-bottom: none; }
+.kw-headline-row:hover .kw-headline-text { color: var(--accent); }
+
+.kw-headline-text {
+  font-size: 11px;
+  color: var(--text);
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.kw-updated {
+  font-size: 10px;
+  color: var(--muted);
+  opacity: 0.6;
+  padding: 0 18px 14px;
+  margin: 0;
+}
+
+.kw-empty {
+  font-size: 12px;
+  color: var(--muted);
+  padding: 14px 18px;
+  margin: 0;
+}
+

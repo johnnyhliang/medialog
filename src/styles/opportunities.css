@@ -1,0 +1,431 @@
+/* ── Deadline Alert Banner ───────────────────────────────────────────────────── */
+/* Theme tokens, not the hardcoded amber this carried while it was unmounted —
+   a fixed #FEF3C7 panel is unreadable in the two dark palettes. Urgency is
+   carried by a left border rather than a fill: the row must be noticeable
+   without shouting, since the only thing louder than this banner should be
+   nothing at all. */
+.deadline-banner {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 6px 4px 6px 0;
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 12px;
+}
+.deadline-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--text-sm);
+  padding: 4px 8px 4px 10px;
+  border-left: 3px solid transparent;
+}
+.deadline-row--today  { border-left-color: var(--active); }
+.deadline-row--soon   { border-left-color: var(--accent); }
+.deadline-row--later  { border-left-color: var(--border); }
+.deadline-row--open   { border-left-color: var(--border); }
+.deadline-when {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  min-width: 62px;
+  flex-shrink: 0;
+}
+.deadline-row--today .deadline-when { color: var(--active); font-weight: 600; }
+.deadline-name {
+  color: var(--text);
+  font-weight: 500;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+  font-size: inherit;
+  font-family: inherit;
+}
+.deadline-name:hover { color: var(--accent); text-decoration: underline; }
+.deadline-detail {
+  color: var(--muted);
+  font-size: 11px;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.deadline-dismiss {
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  opacity: 0.55;
+  flex-shrink: 0;
+}
+.deadline-dismiss:hover { opacity: 1; color: var(--text); }
+.deadline-foot { margin: 4px 0 0 10px; font-size: 11px; }
+
+/* ── Opportunities Widget ────────────────────────────────────────────────────── */
+.opp-widget { display: flex; flex-direction: column; }
+.opp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.opp-badge {
+  display: inline-block;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 10px;
+  padding: 1px 6px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+.opp-add-btn {
+  font-size: var(--text-xs);
+  padding: 3px 8px;
+  background: transparent;
+  border-color: var(--border);
+  color: var(--muted);
+}
+.opp-add-btn:hover { background: var(--surface-2); color: var(--text); }
+
+.opp-manual-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px;
+  margin-bottom: 8px;
+}
+.opp-manual-form input,
+.opp-manual-form select { font-size: var(--text-sm); }
+.opp-manual-form button[type="submit"] {
+  align-self: flex-end;
+  font-size: var(--text-sm);
+  padding: 4px 12px;
+  background: var(--accent);
+  color: var(--on-accent);
+  border: none;
+  border-radius: 6px;
+}
+
+.opp-filter-pills {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+  min-width: 0;
+}
+@media (max-width: 640px) {
+  /* One scrollable strip beats a wrapped block that eats vertical space on a
+     phone. Pills keep their size; the row scrolls. */
+  .opp-filter-pills {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+  }
+  .opp-filter-pills::-webkit-scrollbar { display: none; }
+  .opp-pill { flex-shrink: 0; }
+  .opp-view-header { padding: 16px 16px 0; }
+  .opp-view-body { padding: 12px 12px 24px 16px; }
+  /* The secondary location line is the first thing to sacrifice when narrow. */
+  .opp-location { display: none; }
+}
+.opp-pill {
+  font-size: 11px;
+  padding: 3px 9px;
+  border-radius: 20px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  cursor: pointer;
+}
+.opp-pill:hover { background: var(--surface-3); color: var(--text); }
+.opp-pill.active { background: var(--accent-weak); color: var(--accent); border-color: var(--accent); font-weight: 600; }
+
+.opp-rows { display: flex; flex-direction: column; min-width: 0; }
+.opp-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  /* A flex item defaults to min-width:auto, which refuses to shrink below its
+     content — so a long title pushed the row (and the star button) past the
+     container's right edge instead of ellipsising. Both the row and the growing
+     child need min-width:0 for the ellipsis on .opp-title to take effect. */
+  min-width: 0;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: var(--text-sm);
+  opacity: 1;
+  transition: opacity 0.1s;
+}
+.opp-row:last-child { border-bottom: none; }
+.opp-row.read { opacity: 0.55; }
+.opp-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex-shrink: 0;
+}
+.opp-title {
+  flex: 1;
+  min-width: 0;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: var(--text-sm);
+}
+.opp-title:hover { color: var(--accent); }
+.opp-age { color: var(--muted); font-size: 11px; white-space: nowrap; }
+.opp-save-btn {
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0 2px;
+  font-size: 13px;
+}
+.opp-save-btn.saved { color: var(--hl-yellow); }
+.opp-track-btn {
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0 2px;
+  font-size: 13px;
+}
+.opp-track-btn:hover { color: var(--accent); }
+.opp-load-more {
+  font-size: var(--text-xs);
+  color: var(--muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px 0 0;
+  text-align: left;
+}
+.opp-load-more:hover { color: var(--text); }
+
+/* Source chips */
+.opp-chip {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 4px;
+  text-transform: lowercase;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+/* --orange and --amber were two near-identical ambers that differed only in the
+   depth of the text colour; they share one tint now. */
+.opp-chip-sky     { background: var(--tint-blue-bg);   color: var(--tint-blue-fg); }
+.opp-chip-green   { background: var(--tint-green-bg);  color: var(--tint-green-fg); }
+.opp-chip-orange  { background: var(--tint-amber-bg);  color: var(--tint-amber-fg); }
+.opp-chip-purple  { background: var(--tint-purple-bg); color: var(--tint-purple-fg); }
+.opp-chip-slate   { background: var(--surface-2);      color: var(--muted); }
+.opp-chip-amber   { background: var(--tint-amber-bg);  color: var(--tint-amber-fg); }
+
+/* ── Opportunity View (full page) ────────────────────────────────────────────── */
+.opp-view {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+.opp-view-header {
+  padding: 20px 28px 0;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.opp-view-title-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.opp-view-title {
+  font-size: var(--text-xl);
+  font-weight: 700;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.opp-view-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.opp-last-checked { font-size: 11px; color: var(--muted); }
+.opp-mark-all-btn, .opp-refresh-btn {
+  font-size: var(--text-sm);
+  padding: 4px 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--text);
+}
+.opp-mark-all-btn:hover, .opp-refresh-btn:hover { background: var(--surface-3); }
+.opp-refresh-btn:disabled { opacity: 0.5; cursor: default; }
+.opp-view-body {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  /* Extra right padding so the overlay scrollbar doesn't sit on top of the star
+     and track buttons at the end of each row. */
+  padding: 12px 20px 24px 28px;
+  scrollbar-gutter: stable;
+}
+.opp-empty { color: var(--muted); font-size: var(--text-sm); padding: 16px 0; }
+.opp-location {
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 180px;
+}
+.opp-read-section { margin-top: 16px; }
+.opp-read-toggle {
+  font-size: var(--text-sm);
+  color: var(--muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 0;
+}
+.opp-read-toggle:hover { color: var(--text); }
+.opp-rows-read { opacity: 0.65; }
+
+/* ── Applications View ───────────────────────────────────────────────────────── */
+.apps-view {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  padding: 24px 28px;
+}
+.apps-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.apps-title { font-size: var(--text-xl); font-weight: 700; margin: 0; }
+.apps-add-btn {
+  font-size: var(--text-sm);
+  padding: 5px 12px;
+  background: var(--accent);
+  color: var(--on-accent);
+  border: none;
+  border-radius: 7px;
+}
+.apps-add-btn:hover { background: var(--accent-hover); }
+
+.apps-form {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.apps-form-row { display: flex; gap: 8px; }
+.apps-form-row > * { flex: 1; }
+.apps-form textarea { min-height: 60px; }
+.apps-form button[type="submit"] {
+  align-self: flex-end;
+  padding: 6px 16px;
+  background: var(--accent);
+  color: var(--on-accent);
+  border: none;
+  border-radius: 7px;
+  font-weight: 600;
+}
+
+.apps-tabs {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 8px;
+}
+.apps-tab {
+  font-size: var(--text-sm);
+  padding: 5px 12px;
+  border-radius: 7px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--muted);
+}
+.apps-tab:hover { background: var(--surface-2); color: var(--text); }
+.apps-tab.active { background: var(--accent-weak); color: var(--accent); border-color: var(--accent); font-weight: 600; }
+
+.apps-list { display: flex; flex-direction: column; gap: 8px; }
+.apps-empty { color: var(--muted); font-size: var(--text-sm); padding: 20px 0; }
+
+.apps-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-shadow: var(--shadow-card);
+}
+.apps-card-top { display: flex; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+.apps-card-info { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 200px; }
+.apps-company { font-weight: 700; font-size: var(--text-base); }
+.apps-role { color: var(--muted); font-size: var(--text-sm); }
+.apps-link { color: var(--muted); font-size: 13px; }
+.apps-link:hover { color: var(--accent); }
+.apps-card-meta { display: flex; gap: 6px; align-items: center; color: var(--muted); font-size: var(--text-xs); }
+.apps-deadline { color: var(--danger); }
+.apps-card-actions { display: flex; align-items: center; gap: 6px; margin-left: auto; }
+.apps-status-badge {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 20px;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+.apps-status-saved     { background: var(--surface-2); color: var(--muted); border-color: var(--border); }
+.apps-status-applied   { background: var(--tint-blue-bg);   color: var(--tint-blue-fg); }
+.apps-status-screen    { background: var(--tint-amber-bg);  color: var(--tint-amber-fg); }
+.apps-status-interview { background: var(--tint-purple-bg); color: var(--tint-purple-fg); }
+.apps-status-offer     { background: var(--tint-green-bg);  color: var(--tint-green-fg); }
+.apps-status-rejected  { background: var(--tint-red-bg);    color: var(--tint-red-fg); }
+.apps-status-ghosted   { background: var(--surface-2); color: var(--muted); }
+.apps-notes-toggle, .apps-delete {
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: var(--text-xs);
+  padding: 2px 4px;
+}
+.apps-delete:hover { color: var(--danger); }
+.apps-notes { width: 100%; min-height: 60px; font-size: var(--text-sm); }
+.apps-confirm {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--text-sm);
+  color: var(--danger);
+  padding-top: 4px;
+}
+.apps-confirm button { font-size: var(--text-xs); padding: 3px 8px; }
+

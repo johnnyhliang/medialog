@@ -1,0 +1,192 @@
+/* ── Feed view ─────────────────────────────────────── */
+.feed-view {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* sidebar */
+.feed-sidebar {
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  padding: 20px 0;
+  background: var(--sidebar-bg);
+}
+.feed-sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px 12px;
+}
+.feed-add-btn {
+  font-size: 18px;
+  line-height: 1;
+  color: var(--muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0 4px;
+}
+.feed-add-btn:hover { color: var(--text); }
+
+.feed-add-form {
+  padding: 0 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+}
+.feed-add-form input {
+  font-size: 12px;
+  padding: 5px 8px;
+}
+
+.feed-nav { display: flex; flex-direction: column; }
+.feed-category-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 12px 16px 4px;
+}
+.feed-nav-item-wrap {
+  display: flex;
+  align-items: center;
+}
+.feed-nav-item-wrap:hover .feed-nav-actions { opacity: 1; }
+.feed-nav-actions {
+  display: flex;
+  gap: 2px;
+  padding-right: 6px;
+  opacity: 0;
+  transition: opacity .12s;
+}
+.feed-action-btn {
+  font-size: 13px;
+  color: var(--muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 3px;
+}
+.feed-action-btn:hover { background: var(--border); color: var(--text); }
+
+.feed-nav-item {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 16px;
+  font-size: 13px;
+  color: var(--muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  border-radius: 0;
+  gap: 8px;
+}
+.feed-nav-item:hover { background: rgba(0,0,0,.04); color: var(--text); }
+.feed-nav-item.active { background: var(--accent-weak); color: var(--text); font-weight: 500; }
+.feed-nav-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.feed-count {
+  font-size: 11px;
+  font-weight: 500;
+  background: var(--accent);
+  color: var(--on-accent);
+  border-radius: 10px;
+  padding: 1px 6px;
+  flex-shrink: 0;
+}
+.feed-spinner {
+  width: 10px; height: 10px;
+  border: 1.5px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+  display: inline-block;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* items panel */
+.feed-items {
+  overflow-y: auto;
+  padding: 0;
+}
+.feed-empty {
+  padding: 48px 32px;
+}
+.feed-item {
+  padding: 18px 28px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.feed-item:hover { background: var(--surface-2); }
+
+.feed-item-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.feed-item-source { font-weight: 500; color: var(--accent); }
+.feed-item-sep { color: var(--border); }
+.feed-item-age { color: var(--muted); }
+
+.feed-item-title {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--text);
+  line-height: 1.4;
+  text-decoration: none;
+}
+.feed-item-title:hover { text-decoration: underline; text-decoration-color: var(--border); }
+
+.feed-item-summary {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.feed-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+.feed-btn-save {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--accent);
+  background: var(--accent-weak);
+  border: 1px solid transparent;
+  padding: 4px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.feed-btn-save:hover { border-color: var(--accent); }
+.feed-btn-dismiss {
+  font-size: 12px;
+  color: var(--muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 6px;
+}
+.feed-btn-dismiss:hover { color: var(--text); }
+
+.feed-save-picker {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.feed-save-picker select { font-size: 12px; }
+.feed-save-picker button { font-size: 12px; padding: 4px 10px; }
+
