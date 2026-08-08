@@ -12,7 +12,10 @@ const STATUS_LABELS = {
 
 export default function ApplicationsView({ supabase, prefill, onClearPrefill, addToast }) {
   const [apps, setApps] = useState([])
-  const [statusFilter, setStatusFilter] = useState('applied')
+  // Landing tab is decided after load, not hardcoded: defaulting to 'applied'
+  // showed "Nothing here yet" to anyone whose pipeline is entirely saved-but-
+  // not-yet-sent, which is what a tracker looks like before a cycle opens.
+  const [statusFilter, setStatusFilter] = useState(null)
   const [showAdd, setShowAdd] = useState(!!prefill)
   const [form, setForm] = useState({
     company: prefill?.company ?? '',
@@ -99,7 +102,11 @@ export default function ApplicationsView({ supabase, prefill, onClearPrefill, ad
   }
 
   const counts = STATUSES.reduce((acc, s) => ({ ...acc, [s]: apps.filter((a) => a.status === s).length }), {})
-  const visible = apps.filter((a) => a.status === statusFilter)
+  // 'applied' when there is anything applied — that is the live pipeline — else
+  // the first tab that actually holds something, else 'applied' as before.
+  const activeFilter = statusFilter
+    ?? (counts.applied > 0 ? 'applied' : STATUSES.find((s) => counts[s] > 0) ?? 'applied')
+  const visible = apps.filter((a) => a.status === activeFilter)
 
   return (
     <div className="apps-view">
@@ -133,7 +140,7 @@ export default function ApplicationsView({ supabase, prefill, onClearPrefill, ad
         {STATUSES.map((s) => (
           <button
             key={s}
-            className={`apps-tab ${statusFilter === s ? 'active' : ''}`}
+            className={`apps-tab ${activeFilter === s ? 'active' : ''}`}
             onClick={() => setStatusFilter(s)}
           >
             {STATUS_LABELS[s]}{counts[s] > 0 ? ` (${counts[s]})` : ''}

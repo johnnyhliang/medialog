@@ -1199,6 +1199,8 @@ function Workspace() {
               onOpenEntry={handleSelectEntry}
               timezone={timezone}
               onGoToDigest={() => navigateTo('digest')}
+              onGoToCareer={() => navigateTo('career')}
+              showDeadlines={isModuleVisible('career')}
             />
           )}
           {view === 'explore' && (

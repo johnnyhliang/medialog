@@ -313,6 +313,35 @@ nothing.
 - **No per-task due dates.** A task with its own deadline is how a plan becomes a
   nag list.
 
+### The exception, drawn 2026-08-07: learning vs. the calendar
+
+Everything above is about **learning**. "Behind on C++ item 12" is a shaming
+number attached to something with no real date, which is why `gains-system.md`
+refuses it. That reasoning does not transfer to a window that genuinely closes:
+miss an application deadline and the next chance is a year away. Nothing about
+that is a vibe.
+
+**So there is exactly one urgent surface, and it is `career`** — already carved
+out as its own module in §9. The test for whether a date belongs there:
+
+| | |
+|---|---|
+| Someone else set it and it closes | a deadline. `career` may show it, loudly. |
+| You set it to pace yourself | a `target:`. Quiet chip, nothing else, ever. |
+
+By that test the 14 seeded firms have **no** deadline: "opens ~Aug 2027" is a
+season, not a date, and a countdown to it would be theatre.
+
+**What was found when this was drawn.** Nothing in the app managed deadlines at
+all. `DeadlineAlertBanner.jsx` existed and was imported by nothing;
+`programs.window_open` was a Settings toggle whose only reader was that dead
+banner; all 14 programs had `deadline: null`; and `applications.deadline`
+rendered as inert text with no sort, filter or surfacing. Three half-mechanisms,
+zero behaviour. The banner is now live on Home, reads both tables through one
+query, shows only real dates within 28 days, and renders nothing the rest of the
+time — the `IndexHealthBanner` pattern, where the healthy path costs no
+attention.
+
 ---
 
 ## 9. Explicitly OUT of scope
