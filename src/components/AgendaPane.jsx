@@ -1,4 +1,4 @@
-import { CalendarClock, Circle } from 'lucide-react'
+import { CalendarClock, Circle, Check } from 'lucide-react'
 import { buildAgenda, phraseForRow, urgencyForRow, pressingCount } from '../lib/orgAgenda.js'
 
 // The agenda, as org-mode has it: ONE dated view over everything, sitting beside
@@ -18,7 +18,7 @@ const GROUPS = [
   { id: 'scheduled', label: 'scheduled', hint: 'your own pacing' },
 ]
 
-export default function AgendaPane({ projects = [], deadlines = [], timezone, onOpen }) {
+export default function AgendaPane({ projects = [], deadlines = [], timezone, onOpen, onCloseWindow }) {
   const rows = buildAgenda({ projects, deadlines, tz: timezone })
   const pressing = pressingCount(rows)
 
@@ -65,6 +65,18 @@ export default function AgendaPane({ projects = [], deadlines = [], timezone, on
                       <span className="agenda-row-project muted">
                         <Circle size={4} fill="currentColor" /> {row.project}
                       </span>
+                    )}
+                    {/* Only undated open windows get this. A dated deadline
+                        ends on its own; an open window is a claim that has to
+                        be retired by hand, so the hand has to be right here. */}
+                    {row.kind === 'deadline' && row.daysLeft == null && onCloseWindow && (
+                      <button
+                        className="agenda-close"
+                        title="Closed / not applying — stop showing this"
+                        onClick={() => onCloseWindow(row.key)}
+                      >
+                        <Check size={11} /> closed
+                      </button>
                     )}
                   </li>
                 ))}

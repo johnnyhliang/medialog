@@ -112,6 +112,49 @@ home of a project's data.
 
 ---
 
+## 2b. The measure: cognitive load, not fidelity to org-mode
+
+**Recorded 2026-08-10, after the agenda was folded in, because the next person
+to touch this will be tempted to keep porting org features.**
+
+Org-mode is a *source of good ideas*, not a spec. The one genuinely worth
+stealing has already been stolen: `SCHEDULED` vs `DEADLINE` — the difference
+between a date you set to pace yourself and a date someone else will close —
+which is the same line §8 draws and the reason the two halves could merge at
+all.
+
+**Everything else about org is opt-in complexity that this app exists to avoid.**
+Do not add: TODO-state machines, priorities `[#A]`, tags with inheritance,
+effort estimates, clocking in and out, capture templates, refile hierarchies,
+column view. Each is defensible on its own and each costs the user a decision
+per item. The original spec's whole complaint about TickTick was *"it just
+restructures everything"* and *"I can't make everything manually prioritised"*.
+A faithful org port is that complaint with better keybindings.
+
+**The test for anything added here, in order:**
+
+1. **Does it remove a decision, or add one?** Derived momentum removes one; a
+   priority field adds one to every item forever. Prefer the derivation even
+   when it is less precise — an approximate answer you never maintain beats an
+   exact one you must.
+2. **Does it still work if you ignore it for a month?** This is the actual
+   failure mode. `[park]` passes. A streak fails. An "open now" flag with no
+   expiry fails — and did: two programs read *open now* for 51 days with no way
+   to stop them, which is worse than never having shown them.
+3. **Can you act on it where you see it?** The same two programs could only be
+   turned off in Settings › Programs, two screens from where they appeared. A
+   dismissal you cannot find is not a dismissal.
+4. **Does it stay quiet when there is nothing to say?** Empty states render
+   nothing — `IndexHealthBanner`, the deadline banner, `progressFor` returning
+   null. A surface that always shows something is a surface you stop reading.
+
+**The unit of success is a decision not taken**, not a feature present. If the
+Manager makes you spend thirty seconds classifying something so it can tell you
+something you already knew, it has cost more than it saved — even if the
+classification is elegant and the display is beautiful.
+
+---
+
 ## 3. The Manager
 
 Specified in `2026-07-04-north-star-experience-design.md` Part 2 and unchanged by

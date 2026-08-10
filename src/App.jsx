@@ -5,7 +5,7 @@ import { supabase } from './lib/supabaseClient.js'
 import { loadManagerData, setNextAction, parkTopic, unparkTopic } from './lib/db/managerState.js'
 import { listTopics, createTopic, getTopicByName, listDeletedTopics, archiveTopic, unarchiveTopic, softDeleteTopic, restoreDeletedTopic, togglePinTopic, updateTopicDoc, listProjects } from './lib/db/topics.js'
 import { listContributions, recordContribution, unrecordContribution } from './lib/db/contributions.js'
-import { listDeadlines } from './lib/db/deadlines.js'
+import { listDeadlines, closeProgramWindow } from './lib/db/deadlines.js'
 import { todayKey } from './lib/contributions.js'
 import { toggleStep, parseFrontmatter, parseSteps } from './lib/goals.js'
 import { callAI } from './lib/ai.js'
@@ -1025,6 +1025,28 @@ function Workspace() {
   }
 
   /**
+   * Retire an "open now" program window from the agenda row itself.
+   *
+   * Optimistic: the row disappears immediately and is restored if the write
+   * fails. Dismissing something is a gesture that must feel instant, or you
+   * press it twice.
+   */
+  async function handleCloseWindow(rowKey) {
+    const id = String(rowKey).replace(/^program:/, '')
+    const before = managerData.deadlines
+    setManagerData((prev) => ({
+      ...prev,
+      deadlines: prev.deadlines.filter((d) => d.key !== rowKey),
+    }))
+    try {
+      await closeProgramWindow(supabase, id)
+    } catch (e) {
+      setManagerData((prev) => ({ ...prev, deadlines: before }))
+      addToast(e.message || 'Could not close that window', 'error')
+    }
+  }
+
+  /**
    * Draft a `next_action` for one topic. Returns the line; the Manager puts it
    * in the input as an UNSAVED draft (manager-scope.md §9 — suggest, never
    * decide). Nothing here writes to the database.
@@ -1346,6 +1368,7 @@ function Workspace() {
               contributions={managerData.contributions}
               projects={managerData.projects}
               deadlines={managerData.deadlines}
+              onCloseWindow={handleCloseWindow}
               timezone={timezone}
               loading={managerLoading}
               onResume={navigateToTopic}

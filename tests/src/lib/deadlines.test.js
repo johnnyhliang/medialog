@@ -1,14 +1,15 @@
 import { describe, test, expect } from 'vitest'
 import {
   daysUntil, urgencyOf, phraseFor, buildDeadlines, todayIn,
-  HORIZON_DAYS, CLOSED_STATUSES,
+  HORIZON_DAYS, CLOSED_STATUSES, OPEN_WINDOW_STALE_DAYS,
 } from '../../../src/lib/deadlines.js'
 
 const NOW = new Date('2026-08-07T15:00:00Z')
 const NY = 'America/New_York'
 const TOKYO = 'Asia/Tokyo'
 
-const program = (over = {}) => ({ id: 'p1', name: 'Neo Scholars', url: 'https://neo.com', deadline: null, category: 'program', window_open: false, ...over })
+const FRESH = '2026-08-01' // within OPEN_WINDOW_STALE_DAYS of NOW
+const program = (over = {}) => ({ id: 'p1', name: 'Neo Scholars', url: 'https://neo.com', deadline: null, category: 'program', window_open: false, last_checked: FRESH, ...over })
 const application = (over = {}) => ({ id: 'a1', company: 'Optiver', role: 'Quant Dev Intern', url: null, deadline: null, status: 'saved', ...over })
 
 describe('todayIn', () => {
@@ -160,5 +161,45 @@ describe('buildDeadlines', () => {
   test('today is included, not treated as already gone', () => {
     const rows = buildDeadlines({ programs: [program({ deadline: '2026-08-07' })], now: NOW, tz: NY })
     expect(rows[0].when).toBe('today')
+  })
+})
+
+
+describe('stale open windows — the "open now, forever" bug', () => {
+  test('a fresh open window shows', () => {
+    const rows = buildDeadlines({ programs: [program({ window_open: true, last_checked: '2026-08-01' })], now: NOW, tz: NY })
+    expect(rows).toHaveLength(1)
+    expect(rows[0].when).toBe('open now')
+  })
+
+  test('an open window nobody has confirmed in a month drops out on its own', () => {
+    // The real case: 8VC and Neo Scholars were flagged open on 2026-06-20 and
+    // still read "open now" 51 days later, with nothing able to make them stop.
+    const rows = buildDeadlines({
+      programs: [program({ window_open: true, last_checked: '2026-06-20T23:27:41Z' })],
+      now: NOW, tz: NY,
+    })
+    expect(rows).toEqual([])
+  })
+
+  test('the boundary is inclusive', () => {
+    const onEdge = new Date(NOW.getTime() - OPEN_WINDOW_STALE_DAYS * 86400000).toISOString().slice(0, 10)
+    const dayOver = new Date(NOW.getTime() - (OPEN_WINDOW_STALE_DAYS + 1) * 86400000).toISOString().slice(0, 10)
+    expect(buildDeadlines({ programs: [program({ window_open: true, last_checked: onEdge })], now: NOW, tz: NY })).toHaveLength(1)
+    expect(buildDeadlines({ programs: [program({ window_open: true, last_checked: dayOver })], now: NOW, tz: NY })).toEqual([])
+  })
+
+  test('a window with no last_checked at all is treated as stale, not as fresh', () => {
+    // Fail closed. An unverifiable claim that shows forever is the bug.
+    expect(buildDeadlines({ programs: [program({ window_open: true, last_checked: null })], now: NOW, tz: NY })).toEqual([])
+  })
+
+  test('a DATED program is unaffected by staleness — it has a real end', () => {
+    const rows = buildDeadlines({
+      programs: [program({ deadline: '2026-08-20', window_open: true, last_checked: '2020-01-01' })],
+      now: NOW, tz: NY,
+    })
+    expect(rows).toHaveLength(1)
+    expect(rows[0].when).toBe('in 13 days')
   })
 })

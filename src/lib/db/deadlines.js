@@ -18,7 +18,7 @@ export async function listDeadlines(supabase, { now = new Date(), tz = browserTi
   const [programsRes, applicationsRes] = await Promise.all([
     supabase
       .from('programs')
-      .select('id, name, url, deadline, category, window_open')
+      .select('id, name, url, deadline, category, window_open, last_checked')
       // Either it has a date in range, or its window is flagged open. Anything
       // else is a catalogue row and does not belong on Home.
       .or(`and(deadline.gte.${today},deadline.lte.${until}),window_open.is.true`),
@@ -40,4 +40,22 @@ export async function listDeadlines(supabase, { now = new Date(), tz = browserTi
     now,
     tz,
   })
+}
+
+/**
+ * Mark a program's window closed.
+ *
+ * Exposed on the agenda row itself, not only in Settings > Programs. The whole
+ * complaint that produced this was "I don't know how to change it or stop the
+ * notification" — a dismissal that lives two screens away from the thing being
+ * dismissed is a dismissal nobody finds. Acting where you see it is the point.
+ *
+ * `last_checked` moves to now as well: you just checked it, by closing it.
+ */
+export async function closeProgramWindow(supabase, id) {
+  const { error } = await supabase
+    .from('programs')
+    .update({ window_open: false, last_checked: new Date().toISOString() })
+    .eq('id', id)
+  if (error) throw new Error(error.message)
 }

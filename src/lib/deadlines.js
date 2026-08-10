@@ -13,6 +13,17 @@ import { zonedParts, browserTimezone } from './timezone.js'
 // it can live on Home without being tuned out.
 export const HORIZON_DAYS = 28
 
+// A `window_open` flag with no date is an UNBOUNDED claim: nothing about it
+// ever becomes false, so it sits on Home forever. Two programs were flagged
+// open on 2026-06-20 and still read "open now" 51 days later, with no way to
+// make them stop — the exact opposite of saving anyone attention.
+//
+// So an undated open window expires on its own. `last_checked` is when the
+// scraper (or you) last confirmed it, and a claim nobody has confirmed in a
+// month is not information any more. Dated windows are unaffected: they have a
+// real end and do not need one invented.
+export const OPEN_WINDOW_STALE_DAYS = 30
+
 // Applications in these states are decided. A deadline on one is history, and
 // counting it down would be nagging someone about a job they did not get.
 export const CLOSED_STATUSES = ['offer', 'rejected', 'ghosted']
@@ -75,10 +86,12 @@ export function buildDeadlines({ programs = [], applications = [], now = new Dat
   for (const p of programs) {
     if (!p?.id) continue
     const daysLeft = daysUntil(p.deadline, now, tz)
-    // A program with no date shows ONLY while its window is flagged open —
-    // otherwise the catalogue itself would sit on Home forever.
+    // A program with no date shows ONLY while its window is flagged open, and
+    // only while that flag is still fresh — see OPEN_WINDOW_STALE_DAYS.
     if (daysLeft == null) {
       if (!p.window_open) continue
+      const checked = daysUntil(p.last_checked, now, tz)
+      if (checked == null || -checked > OPEN_WINDOW_STALE_DAYS) continue
     } else if (daysLeft < 0 || daysLeft > HORIZON_DAYS) continue
 
     rows.push({
