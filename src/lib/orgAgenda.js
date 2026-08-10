@@ -29,6 +29,18 @@ import { browserTimezone } from './timezone.js'
 // or a handle mid-sentence cannot be mistaken for a date.
 const STEP_DATE = /@(\d{4}-\d{2}-\d{2})\s*$/
 
+// How long a passed SCHEDULED item keeps its place on the agenda.
+//
+// Org keeps overdue scheduled items in the agenda forever, and that is the one
+// org behaviour this app must not copy: an unbounded list of dates you slipped
+// is a nag list, which §2b rule 2 rules out. After the grace period the row
+// leaves the AGENDA only — the step is still there, unticked, on the plan. The
+// agenda answers "what is coming", not "what you failed to do".
+//
+// A week: long enough to notice a slip, short enough that a month of not
+// looking does not produce a wall of reproach.
+export const SCHEDULED_GRACE_DAYS = 7
+
 /** Strip the trailing `@date` so the step renders as prose. */
 export function stepText(text) {
   return String(text ?? '').replace(STEP_DATE, '').trim()
@@ -109,7 +121,9 @@ export function deadlineRows(deadlines = []) {
  */
 export function buildAgenda({ projects = [], deadlines = [], horizonDays = 60, now = new Date(), tz = browserTimezone() } = {}) {
   const scheduled = scheduledFrom(projects, { now, tz })
-    .filter((r) => r.daysLeft != null && r.daysLeft <= horizonDays)
+    .filter((r) => r.daysLeft != null
+      && r.daysLeft <= horizonDays
+      && r.daysLeft >= -SCHEDULED_GRACE_DAYS)
   const rows = [...scheduled, ...deadlineRows(deadlines)]
 
   return rows.sort((a, b) => {

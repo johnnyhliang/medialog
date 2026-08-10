@@ -131,22 +131,38 @@ per item. The original spec's whole complaint about TickTick was *"it just
 restructures everything"* and *"I can't make everything manually prioritised"*.
 A faithful org port is that complaint with better keybindings.
 
+**Two of these are enforced by machine, two need a person.**
+`tests/src/designRules.test.jsx` runs every dated and derived surface forward
+30 / 90 / 365 / 1000 days and renders each one with empty data. Rules 2 and 4
+below are that file; do not restate them in review, add your surface to it.
+Rules 1 and 3 cannot be automated — they are the ones to actually think about.
+
 **The test for anything added here, in order:**
 
 1. **Does it remove a decision, or add one?** Derived momentum removes one; a
    priority field adds one to every item forever. Prefer the derivation even
    when it is less precise — an approximate answer you never maintain beats an
    exact one you must.
-2. **Does it still work if you ignore it for a month?** This is the actual
-   failure mode. `[park]` passes. A streak fails. An "open now" flag with no
-   expiry fails — and did: two programs read *open now* for 51 days with no way
-   to stop them, which is worse than never having shown them.
+2. **Does it still work if you ignore it for a month?** *(automated)* This is
+   the actual failure mode. `[park]` passes. A streak fails. An "open now" flag
+   with no expiry fails — and did: two programs read *open now* for 51 days with
+   no way to stop them, which is worse than never having shown them. **Writing
+   the test found a second instance immediately**: the agenda bounded only the
+   future, so a step dated 2026-08-20 was still listed at `daysLeft: -1000`.
+   Slipped SCHEDULED items now age off the agenda after a week
+   (`SCHEDULED_GRACE_DAYS`) while staying unticked on the plan — the agenda
+   answers "what is coming", not "what you failed to do".
 3. **Can you act on it where you see it?** The same two programs could only be
    turned off in Settings › Programs, two screens from where they appeared. A
-   dismissal you cannot find is not a dismissal.
-4. **Does it stay quiet when there is nothing to say?** Empty states render
-   nothing — `IndexHealthBanner`, the deadline banner, `progressFor` returning
-   null. A surface that always shows something is a surface you stop reading.
+   dismissal you cannot find is not a dismissal. Every agenda row that has to be
+   retired by hand now carries its own `closed` action.
+4. **Does it stay quiet when there is nothing to say?** *(automated)* Empty
+   states render nothing — `IndexHealthBanner`, the deadline banner,
+   `progressFor` returning null. A surface that always shows something is a
+   surface you stop reading. One stated exemption, in the test file: the
+   practice card always offers three problems, because it *suggests* rather than
+   *reports* and "nothing to say" is not a state it has. What it must be instead
+   is bounded.
 
 **The unit of success is a decision not taken**, not a feature present. If the
 Manager makes you spend thirty seconds classifying something so it can tell you
