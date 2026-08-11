@@ -424,6 +424,36 @@ Recorded so this conversation does not recur.
   to accept or edit** — what the north-star spec calls the agent's *"safe-mutation
   tier"*. Suggest, never decide. Last thing built, not first.
 
+### 9b. "What about books? What about all the other types?" — decided 2026-08-10
+
+Asked twice, answered once, generalized zero times — that gap is the point of
+this entry.
+
+`scripts/make-library.js` gave books an answer, but its own comment admits it
+is a shrug: *"a book is not a subject, so it does not get to be a topic — it
+gets read, noted... name the books inline where it matters."* Books became
+entries under one `Library` container topic. That works because a book is
+already entry-shaped. It does not obviously generalize — a paper is
+entry-shaped too, but a course has internal steps like a project, and neither
+is a "subject" either.
+
+Three ways to close the gap were on the table:
+
+1. **Stop at what exists.** Projects keep the real mechanism (`topics.kind =
+   'project'`) because they carry state a container can't — steps, a target
+   date. Everything else non-subject becomes an entry under its own container
+   topic, one at a time, by hand, same as `Library`.
+2. **Generalize the container** into a `topics.container` flag now, so
+   `Library` is the first instance of a pattern instead of a one-off script.
+3. **Wait for a second real case** before deciding the shape at all.
+
+**Decided: 3.** Building the general form for a sample size of one (`Library`)
+is exactly the speculative structure this document exists to cut — see §2's
+whole argument against a separate Goals/Projects view, now applied to
+containers instead of projects. If a second grouping need shows up (a second
+type of "not a subject"), reopen this and default to option 2. Until then,
+`Library` stays a one-off, not a pattern.
+
 ---
 
 ## 10. Build order
