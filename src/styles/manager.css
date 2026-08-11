@@ -151,7 +151,12 @@
 
 /* ── The Manager — resume cards (docs/manager-scope.md §3) ────────────────── */
 .manager-view {
-  max-width: 680px;
+  /* Was 680px, a leftover from before the two-pane desktop layout
+     (.manager-body's 900px breakpoint below) existed — that cap meant the
+     grid never had room to actually go two-column, so the Manager stayed
+     phone-width no matter the viewport. 1100px matches the app's other
+     desktop-expanded surfaces (.metrics-view, .doc-width-wide). */
+  max-width: 1100px;
   display: flex;
   flex-direction: column;
   gap: 20px;
