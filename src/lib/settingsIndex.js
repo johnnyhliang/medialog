@@ -29,6 +29,7 @@ export const SETTINGS_TABS = [
   { id: 'companies',   label: 'Companies',     module: 'career' },
   { id: 'keywords',    label: 'Keywords',      module: 'career' },
   { id: 'programs',    label: 'Programs',      module: 'career' },
+  { id: 'feed-help',   label: 'Feed Sources',  module: 'feed' },
   { id: 'bookmarklet', label: 'Bookmarklet' },
   { id: 'mobile',      label: 'iOS Shortcut' },
   { id: 'instagram',   label: 'Instagram',     module: 'reels' },
@@ -84,6 +85,8 @@ export const SETTINGS_INDEX = [
   { tab: 'companies',  label: 'Companies watchlist', module: 'career', keywords: 'company watchlist career job employer track' },
   { tab: 'keywords',   label: 'Opportunity keywords', module: 'career', keywords: 'keyword radar filter job opportunity match alert' },
   { tab: 'programs',   label: 'Programs & fellowships', module: 'career', keywords: 'fellowship program internship scholarship deadline cohort apply' },
+
+  { tab: 'feed-help',  label: 'Adding feed sources', module: 'feed', keywords: 'feed rss atom reddit subreddit youtube channel add source how to url' },
 
   { tab: 'bookmarklet',label: 'Bookmarklet', keywords: 'bookmarklet browser bookmark save page capture quick add desktop' },
   { tab: 'mobile',     label: 'iOS Shortcut', keywords: 'ios iphone shortcut share sheet mobile capture save' },

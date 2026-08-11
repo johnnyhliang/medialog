@@ -5,6 +5,7 @@ import CompaniesTab from './settings/CompaniesTab.jsx'
 import KeybindsTab from './settings/KeybindsTab.jsx'
 import KeywordsTab from './settings/KeywordsTab.jsx'
 import ProgramsTab from './settings/ProgramsTab.jsx'
+import TagColorRow from './settings/TagColorRow.jsx'
 import DataBackupTab from './settings/DataBackupTab.jsx'
 import ModulesTab from './ModulesTab.jsx'
 import CaptureTokensTab from './settings/CaptureTokensTab.jsx'
@@ -21,7 +22,6 @@ const SETTINGS_TAB_KEY = 'medialog_settings_tab'
 export default function SettingsView({ topics, onRefreshData, addToast, allTags = [], onUpdateTagColor, archiveToast, onToggleArchiveToast, trashToast, onToggleTrashToast, themePalette, themeStyle, onSetPalette, onSetStyle, assistantEnabled, onToggleAssistant, isModuleVisible = () => true, onImportEntries, onExportAll, exportBusy, tzPreference, timezone, onSetTimezone }) {
   const [config, setConfig] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [pendingColors, setPendingColors] = useState({})
   // SettingsView unmounts when you navigate away, so a plain useState sent you
   // back to Appearance every time — which reads as "my changes are gone" when the
   // tab you were actually editing is a different one.
@@ -405,19 +405,9 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
         <section>
           <h3 className="section-label">Tag Colors</h3>
           {allTags.length === 0 && <p className="muted" style={{ fontSize: 13 }}>No tags yet.</p>}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
             {allTags.map(tag => (
-              <div key={tag.id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={{ flex: 1, fontSize: 13, padding: '2px 8px', borderRadius: 5, background: tag.color || 'var(--surface-3)' }}>#{tag.name}</span>
-                <input
-                  type="color"
-                  value={pendingColors[tag.name] ?? tag.color ?? '#e8e3d8'}
-                  onChange={(e) => setPendingColors(prev => ({ ...prev, [tag.name]: e.target.value }))}
-                  onBlur={(e) => { const c = e.target.value; if (c !== (tag.color || '#e8e3d8')) onUpdateTagColor(tag.name, c) }}
-                  style={{ width: 32, height: 28, border: 'none', cursor: 'pointer', borderRadius: 4 }}
-                />
-                <button style={{ fontSize: 11, padding: '3px 8px' }} onClick={() => onUpdateTagColor(tag.name, null)}>✕</button>
-              </div>
+              <TagColorRow key={tag.id} tag={tag} onUpdateTagColor={onUpdateTagColor} />
             ))}
           </div>
         </section>
@@ -426,6 +416,63 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
       {activeTab === 'companies' && <CompaniesTab supabase={supabase} addToast={addToast} />}
       {activeTab === 'keywords' && <KeywordsTab supabase={supabase} addToast={addToast} />}
       {activeTab === 'programs' && <ProgramsTab supabase={supabase} addToast={addToast} />}
+
+      {activeTab === 'feed-help' && (
+        <section>
+          <h2>Feed Sources</h2>
+          <div className="card">
+            <p className="muted" style={{ fontSize: 13, marginBottom: 16 }}>
+              Every source in Feed is added the same way — <strong>Feed → Add feed → paste a URL,
+              give it a name</strong>. What differs is which URL to paste.
+            </p>
+
+            <h3 className="section-label">RSS / Atom (blogs, most sites)</h3>
+            <p className="muted" style={{ fontSize: 13, marginBottom: 8 }}>
+              Paste the site's feed URL directly — usually <code>/feed</code>, <code>/rss</code>,
+              or <code>/atom.xml</code>. This is the default and needs nothing special.
+            </p>
+
+            <h3 className="section-label" style={{ marginTop: 20 }}>Subreddits</h3>
+            <p className="muted" style={{ fontSize: 13, marginBottom: 8 }}>
+              Paste the subreddit's normal URL — it's detected automatically, no extra step:
+            </p>
+            <div className="form-group">
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input readOnly value="https://www.reddit.com/r/ExperiencedDevs" style={{ fontFamily: 'monospace', fontSize: 12 }} />
+                <button onClick={() => { navigator.clipboard.writeText('https://www.reddit.com/r/ExperiencedDevs'); addToast('Copied', 'success') }} style={{ flexShrink: 0 }}>Copy</button>
+              </div>
+            </div>
+            <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>
+              Any URL matching <code>reddit.com/r/&lt;name&gt;</code> is filed as Reddit, not RSS —
+              only posts scoring above a threshold come through (default 100 upvotes, since
+              subreddits are noisier than a blog). Lower- or higher-traffic subs may want a
+              different threshold; that's the <code>min_score</code> on the feed row.
+            </p>
+
+            <h3 className="section-label" style={{ marginTop: 20 }}>YouTube channels</h3>
+            <p className="muted" style={{ fontSize: 13, marginBottom: 8 }}>
+              YouTube publishes a real Atom feed per channel — there's no separate "video" mode,
+              it's added exactly like any RSS source once you have the channel ID:
+            </p>
+            <ol style={{ fontSize: 13, lineHeight: 1.8, paddingLeft: 20, marginBottom: 12 }}>
+              <li>Open the channel's page, right-click → <strong>View Page Source</strong></li>
+              <li>Search (Ctrl/Cmd+F) for <code>channelId</code> and copy the value after it (starts with <code>UC…</code>)</li>
+              <li>Build the feed URL by dropping that ID into the template below</li>
+            </ol>
+            <div className="form-group">
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input readOnly value="https://www.youtube.com/feeds/videos.xml?channel_id=UC..." style={{ fontFamily: 'monospace', fontSize: 12 }} />
+                <button onClick={() => { navigator.clipboard.writeText('https://www.youtube.com/feeds/videos.xml?channel_id='); addToast('Copied — paste the channel ID after channel_id=', 'success') }} style={{ flexShrink: 0 }}>Copy</button>
+              </div>
+            </div>
+            <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>
+              Paste the finished URL into Add feed like any other source. A few channels
+              (Karpathy, ThePrimeagen, George Hotz, and others) are already in the starter pack —
+              check there before building a URL by hand.
+            </p>
+          </div>
+        </section>
+      )}
 
       {activeTab === 'bookmarklet' && (
         <section>

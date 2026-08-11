@@ -1444,6 +1444,7 @@ function Workspace() {
               addToast={addToast}
               onOpenTopic={(id) => { setSelectedId(id); setView('browse') }}
               onOpenPatternTopic={(id) => { setSelectedId(id); setView('browse') }}
+              onOpenSettings={(tab) => { setView('settings'); if (tab) try { localStorage.setItem('medialog_settings_tab', tab) } catch {} }}
             />
           )}
           {view === 'archive' && (

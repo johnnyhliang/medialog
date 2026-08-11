@@ -28,7 +28,7 @@ function domain(url) {
   try { return new URL(url).hostname.replace(/^www\./, '') } catch { return url }
 }
 
-export default function FeedView({ supabase, topics, allTags = [], onSaveItem, addToast, onOpenTopic, onOpenPatternTopic }) {
+export default function FeedView({ supabase, topics, allTags = [], onSaveItem, addToast, onOpenTopic, onOpenPatternTopic, onOpenSettings }) {
   const [feeds, setFeeds] = useState([])
   const [recentTitles, setRecentTitles] = useState([])
   const [counts, setCounts] = useState({})
@@ -334,11 +334,24 @@ export default function FeedView({ supabase, topics, allTags = [], onSaveItem, a
               />
             )}
             {addError && <p className="muted" style={{ fontSize: '0.75rem', color: 'var(--danger)' }}>{addError}</p>}
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
               <button onClick={handleAddFeed} disabled={addBusy || !newUrl || !newName}>
                 {addBusy ? 'adding…' : 'add'}
               </button>
               <button onClick={() => { setShowAddFeed(false); setAddError(null) }}>cancel</button>
+              {/* Subreddits and YouTube channels aren't obvious from "paste a
+                  feed url" alone — points at the one place that explains both
+                  instead of duplicating the instructions here. */}
+              {onOpenSettings && (
+                <button
+                  type="button"
+                  className="linklike"
+                  style={{ marginLeft: 'auto', fontSize: '0.75rem' }}
+                  onClick={() => onOpenSettings('feed-help')}
+                >
+                  adding subreddits / YouTube?
+                </button>
+              )}
             </div>
           </div>
         )}
