@@ -56,6 +56,35 @@ now reports INCONCLUSIVE for that case instead of FALLING BACK (`a7430b7`), but 
 underlying lesson stands: **one sample of a non-article can never be evidence
 either way.** Capture 2–3 blog posts or news pieces, then run the script.
 
+### Opportunities only ever fetches GitHub — Twitter/HN/careers are dead code
+
+Found 2026-08-11, while explaining "does the Twitter feed actually work" to a
+direct question. It does not, and never has since it was written.
+
+`supabase/functions/fetch-opportunities/index.ts` calls exactly one source:
+
+```ts
+const github = await fetchGithub().catch(() => [] as Opportunity[])
+const filtered: Opportunity[] = github
+```
+
+`twitter.ts` (a real scraper with quality filters — emoji count, account age,
+follower threshold), `hn.ts`, and `careers.ts` all exist, are never imported
+by `index.ts`, and are never called. Settings still has a full "Twitter / X
+Auth Token" tab that saves a cookie to `user_configs` — the save works, but
+nothing ever reads that token to make a request. Every row in Opportunities
+today is `source: 'github'`; the `SOURCE_COLORS`/`FILTERS` UI treating
+`twitter`/`hn` as live options is describing a feature that was built and
+never finished being wired in.
+
+**Same root-cause class as `goals.js` / `DeadlineAlertBanner` / `window_open`
+/ the `programs` RLS gap** — the fifth instance of this codebase building a
+mechanism and stopping one wire short of it doing anything. Not fixed here;
+recorded so the next person (or session) doesn't assume Twitter/HN coverage
+exists because the Settings tab and UI chips imply it does. Wiring it in is
+small if it's ever wanted — add `fetchTwitter`/others to the
+`Promise.allSettled` merge in `index.ts` and redeploy the function.
+
 ---
 
 ## Reported UX problems — untriaged
@@ -419,6 +448,14 @@ index and `githubSync.js:169` renders a `## Takeaway` section into backups.
 against a column nothing can fill — the inverse of the dead-wire pattern in
 `PROJECT-STATE.md`'s 2026-08-07 synthesis. Either give it a writer or remove
 both readers; leaving it is the option that quietly rots.
+
+**Effort, if triggered today (estimated 2026-08-11, not yet spent):** the drop
+migration itself is trivial — six `DROP COLUMN`/`DROP TABLE` statements,
+~15 min, no data-migration logic needed since every object is pre-verified at
+0 rows / 0 references. `entries.takeaway` is the only real decision: delete
+its two read sites and drop it with the rest (~30 min), or give it a writer
+(~1 hr, e.g. TidyView captures one line on "done reading"). **Under 2 hours
+total**, entirely mechanical except that one decision.
 
 ### Migration count is not the problem, and cannot be fixed anyway
 74 files / 2005 lines, and periodically someone will want to tidy them. They
