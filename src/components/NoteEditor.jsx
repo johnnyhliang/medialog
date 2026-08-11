@@ -5,7 +5,7 @@ import { uploadAttachment, markdownForAttachment, isAllowedAttachment } from '..
 import { useModuleAccess } from '../hooks/useModuleAccess.js'
 import { markdown, markdownLanguage, insertNewlineContinueMarkup, deleteMarkupBackward } from '@codemirror/lang-markdown'
 import { languages } from '@codemirror/language-data'
-import { keymap } from '@codemirror/view'
+import { keymap, EditorView } from '@codemirror/view'
 import { indentWithTab } from '@codemirror/commands'
 import { Prec, EditorSelection } from '@codemirror/state'
 import MarkdownView from './MarkdownView.jsx'
@@ -138,7 +138,7 @@ function prefixLines(view, prefix, { numbered = false } = {}) {
 
 export default function NoteEditor({ value, onChange, supabase, extraExtensions = NO_EXTENSIONS }) {
   const extensions = useMemo(
-    () => [mdLang, mdKeymap, pairKeymap, ...extraExtensions],
+    () => [mdLang, EditorView.lineWrapping, mdKeymap, pairKeymap, ...extraExtensions],
     [extraExtensions],
   )
   const viewRef = useRef(null)

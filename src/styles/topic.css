@@ -86,13 +86,34 @@
   border-radius: var(--radius);
   padding: 18px 22px;
   box-shadow: var(--shadow-card);
-  margin-bottom: 20px;
+  margin-bottom: 28px;
 }
 
-.doc-width-narrow   { max-width: 640px;  margin: 0 auto; }
-.doc-width-readable { max-width: 820px;  margin: 0 auto; }
-.doc-width-wide     { max-width: 1100px; margin: 0 auto; }
-.doc-width-full     { max-width: none; }
+.topic-doc-editor-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+/* margin-left/right only (not the `margin: 0 auto` shorthand) — that shorthand
+   also sets margin-top/bottom to 0, which was quietly cancelling the
+   margin-bottom on .master-doc above and collapsing the gap before the search bar. */
+.doc-width-narrow   { max-width: 640px;  margin-left: auto; margin-right: auto; }
+.doc-width-readable { max-width: 820px;  margin-left: auto; margin-right: auto; }
+.doc-width-wide     { max-width: 1100px; margin-left: auto; margin-right: auto; }
+/* "full" fills whatever width the main content column has (the app shell
+   already reserves space for the sidebar, so 100vw would run under it). */
+.doc-width-full { max-width: none; width: 100%; }
+
+@media (max-width: 720px) {
+  /* Notion/Coda/Docs all struggle with wide docs on phones — the fix isn't a
+     wider doc, it's forcing the narrow column so long lines stay readable. */
+  .doc-width-wide, .doc-width-full { max-width: 100%; width: 100%; margin-left: 0; margin-right: 0; }
+}
 
 .doc-width-btns {
   display: flex;

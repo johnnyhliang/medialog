@@ -60,7 +60,7 @@ export default function TopicView({
     } catch {}
     return topic.master_doc ? 'doc' : 'list'
   })
-  const [docEditing, setDocEditing] = useState(false)
+  const [docEditing, setDocEditing] = useState(() => !((topic.master_doc || '').trim()))
   const [liveDoc, setLiveDoc] = useState(topic.master_doc || '')
   const [inputVal, setInputVal] = useState('')
   const [query, setQuery] = useState('')
@@ -276,7 +276,7 @@ export default function TopicView({
 
       {mode === 'doc' && (
         <div className={`master-doc doc-width-${docWidth}`}>
-          {(docEditing || !liveDoc.trim()) ? (
+          {docEditing ? (
             <Suspense fallback={<p className="muted">Loading editor…</p>}>
               <TopicDocEditor
                 topicId={topic.id}
@@ -284,14 +284,17 @@ export default function TopicView({
                 candidates={allCandidates}
                 scopeCtxRef={scopeCtxRef}
                 onChange={handleDocChange}
+                onDone={() => setDocEditing(false)}
               />
             </Suspense>
-          ) : (
+          ) : liveDoc.trim() ? (
             <div onClick={() => setDocEditing(true)} style={{ cursor: 'text' }}>
               <MarkdownView getEntry={getEntry} onJump={handleJump} onPreview={onPreview}>
                 {liveDoc}
               </MarkdownView>
             </div>
+          ) : (
+            <p className="master-doc-empty" onClick={() => setDocEditing(true)}>Click to add a doc for this topic…</p>
           )}
         </div>
       )}

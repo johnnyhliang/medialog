@@ -389,7 +389,7 @@
   box-shadow: 0 0 0 3px var(--accent-weak);
 }
 .note-editor .cm-scroller { font-family: var(--font-ui); line-height: 1.6; overflow: visible !important; }
-.note-editor .cm-content { padding: 10px 12px; caret-color: var(--accent); }
+.note-editor .cm-content { padding: 10px 12px; caret-color: var(--accent); word-break: break-word; overflow-wrap: anywhere; }
 .note-editor .cm-gutters { background: var(--surface); border: none; color: var(--muted); }
 .note-editor .cm-cursor { border-left-color: var(--accent); }
 .note-editor .cm-selectionBackground,
