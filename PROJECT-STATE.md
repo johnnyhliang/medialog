@@ -704,16 +704,29 @@ dashboard SQL editor. The grid is inert until `0076` runs.
 **Still deferred, unchanged:** query consolidation (row 20b), Digest + Progress
 merge, TidyView tests.
 
-**Deferred with a named trigger: orphaned schema → `0077`, before production.**
+**Deferred with a named trigger: orphaned schema → a future migration, before production.**
+(Previously earmarked `0077` — that number went to the `programs` RLS fix
+below instead, 2026-08-11. The next one takes this.)
 The reading-UI deletion stranded `resource_sections` plus seven columns
 (`topics.kind` / `.cursor_section_id` / `.source_kind` / `.source_url`,
 `entries.section_id` / `.parent_id`, `user_configs.twitter_token`) — all
 verified as 0 rows and 0 code references against the live database. Deliberately
 **not** dropped: `DROP COLUMN` is one-way and they cost nothing for one user. The
-cost appears when other people are on the schema, so `0077` drops them in one
-pass before it ships, and not before. `entries.takeaway` is the exception that
-needs a decision rather than a drop — it is still *read* by `chunkEntry.js` and
-`githubSync.js` with no writer left. Full detail in `docs/tech-debt.md`.
+cost appears when other people are on the schema, so a migration drops them in
+one pass before it ships, and not before. `entries.takeaway` is the exception
+that needs a decision rather than a drop — it is still *read* by `chunkEntry.js`
+and `githubSync.js` with no writer left. Full detail in `docs/tech-debt.md`.
+
+**`0077_programs_writable.sql` (2026-08-11).** `0044`'s multitenant RLS audit
+replaced `programs`' old ALL-policy with a SELECT-only one and never restored
+write access. Settings > Programs' window-toggle, deadline edit, and add-program
+form have been silently no-oping since — a Postgres UPDATE blocked by RLS with
+no matching policy affects 0 rows and raises no error, so the optimistic UI
+looked saved until the next reload reverted it. Same root cause class as the
+`goals.js`/`DeadlineAlertBanner`/`window_open` pattern already logged
+2026-08-07, new instance: **a control that writes to nothing, silently.**
+Fixed with `for update`/`for insert using (auth.uid() is not null)`, matching
+`opportunities`' shared-reference-data shape.
 
 **And the perennial one, answered so it stops being re-asked:** the 74 migration
 files cannot be reduced. They are an applied ledger in

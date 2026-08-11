@@ -409,7 +409,7 @@ that can only be undone by remembering the exact types and constraints.
 
 **The trigger to revisit is production.** A schema shipped to other people is one
 where every column is a support question, a backup column and a thing the RLS
-audit has to reason about. Before that point, `0077` should drop the list above
+audit has to reason about. Before that point, a migration should drop the list above
 in one pass. Not before — there is no cost to carrying it for one user.
 
 **One item needs a decision, not just a drop: `entries.takeaway`.** It is the
