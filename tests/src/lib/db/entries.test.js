@@ -105,12 +105,14 @@ describe('entry title persistence', () => {
     expect(insert).toHaveBeenCalledWith(expect.objectContaining({ title: 'Fetched Title' }))
   })
 
-  test('updateEntry recomputes title when note updated', async () => {
-    const single = vi.fn().mockResolvedValue({ data: { id: 'e1' }, error: null })
-    const select = vi.fn(() => ({ single }))
-    const eq = vi.fn(() => ({ select }))
-    const update = vi.fn(() => ({ eq }))
-    const supabase = { from: vi.fn(() => ({ update })) }
+  test('updateEntry recomputes title when note updated and title was never edited', async () => {
+    const fetchSingle = vi.fn().mockResolvedValue({ data: { title_edited: false }, error: null })
+    const fetchEq = vi.fn(() => ({ single: fetchSingle }))
+    const select = vi.fn(() => ({ eq: fetchEq }))
+    const updateSingle = vi.fn().mockResolvedValue({ data: { id: 'e1' }, error: null })
+    const updateEq = vi.fn(() => ({ select: vi.fn(() => ({ single: updateSingle })) }))
+    const update = vi.fn(() => ({ eq: updateEq }))
+    const supabase = { from: vi.fn(() => ({ select, update })) }
 
     await updateEntry(supabase, 'e1', { note: '# New Title\nx' })
 
@@ -127,5 +129,30 @@ describe('entry title persistence', () => {
     await updateEntry(supabase, 'e1', { status: 'done' })
 
     expect(update).toHaveBeenCalledWith({ status: 'done' })
+  })
+
+  test('updateEntry does not mirror note into title once the title was edited', async () => {
+    const fetchSingle = vi.fn().mockResolvedValue({ data: { title_edited: true }, error: null })
+    const fetchEq = vi.fn(() => ({ single: fetchSingle }))
+    const select = vi.fn(() => ({ eq: fetchEq }))
+    const updateSingle = vi.fn().mockResolvedValue({ data: { id: 'e1' }, error: null })
+    const updateEq = vi.fn(() => ({ select: vi.fn(() => ({ single: updateSingle })) }))
+    const update = vi.fn(() => ({ eq: updateEq }))
+    const supabase = { from: vi.fn(() => ({ select, update })) }
+
+    await updateEntry(supabase, 'e1', { note: 'a totally different first line' })
+
+    expect(update).toHaveBeenCalledWith({ note: 'a totally different first line' })
+  })
+
+  test('updateEntry marks title_edited when the title is set directly', async () => {
+    const updateSingle = vi.fn().mockResolvedValue({ data: { id: 'e1' }, error: null })
+    const updateEq = vi.fn(() => ({ select: vi.fn(() => ({ single: updateSingle })) }))
+    const update = vi.fn(() => ({ eq: updateEq }))
+    const supabase = { from: vi.fn(() => ({ update })) }
+
+    await updateEntry(supabase, 'e1', { title: 'My Custom Title' })
+
+    expect(update).toHaveBeenCalledWith({ title: 'My Custom Title', title_edited: true })
   })
 })

@@ -44,9 +44,24 @@ export async function createEntry(supabase, { topicId, url = null, title = null,
 
 export async function updateEntry(supabase, id, patch) {
   const next = { ...patch }
+  if (typeof next.title === 'string') {
+    // Editing the title directly means "stop mirroring the note" — like
+    // Obsidian, the auto-title only applies until the user overrides it.
+    next.title_edited = true
+  }
   if (typeof next.note === 'string') {
     next.note = clampNote(next.note)
-    next.title = computeTitle(next.note, next.url ?? null)
+    if (typeof next.title !== 'string') {
+      const { data: existing, error: fetchError } = await supabase
+        .from('entries')
+        .select('title_edited')
+        .eq('id', id)
+        .single()
+      if (fetchError) throw new Error(fetchError.message)
+      if (!existing?.title_edited) {
+        next.title = computeTitle(next.note, next.url ?? null)
+      }
+    }
   }
   const { data, error } = await supabase
     .from('entries')
