@@ -30,7 +30,9 @@ export async function listEntriesByTopic(supabase, topicId) {
 
 export async function createEntry(supabase, { topicId, url = null, title = null, note = '', titleEdited = false }) {
   const noteText = clampNote(note)
-  const mirrored = noteText.trim() || !title
+  // A note to mirror wins over a passed-in title; with neither, computeTitle
+  // falls back to the url. Only a title we actually *kept* counts as curated.
+  const mirrored = Boolean(noteText.trim()) || !title
   const finalTitle = mirrored ? computeTitle(noteText, url) : title
   const { data, error } = await supabase
     .from('entries')

@@ -138,7 +138,7 @@ memoized prop bundle at `App.jsx:168-184` to keep re-renders down.
 
 ```js
 const [view, setView] = useState('home')      // App.jsx:108
-// …and a 23-branch ladder at App.jsx:1251-1473
+// …and a 24-branch ladder at App.jsx:1258-1479
 {view === 'home' && <HomeView … />}
 {view === 'explore' && <ExploreView … />}
 ```
@@ -396,7 +396,7 @@ Three overlapping populations:
   eight files with 4 each.
 - **~43 sites** destructure only `data` and then do `data ?? []`, so a failure
   renders as an empty list. Includes `lib/db/retrieval.js:42,85,114,133`,
-  `lib/db/entries.js:99`, `App.jsx:255`, and most widgets.
+  `lib/db/entries.js:148,298,314`, `App.jsx:256`, and most widgets.
 - **~25 unguarded `auth.getUser()` destructures** that drop `error` *and* don't
   handle a null user. Worst is `src/lib/entitlements.js:49`, an inline triple
   dereference.
@@ -599,12 +599,12 @@ doesn't have bugs in it.
 
 ### 8.1 Add a router
 
-**The problem:** `const [view, setView] = useState('home')` plus 23 branches of
-`view === '…'` at `App.jsx:1251-1473`. Back button doesn't navigate. No view is
+**The problem:** `const [view, setView] = useState('home')` plus 24 branches of
+`view === '…'` at `App.jsx:1258-1479`. Back button doesn't navigate. No view is
 linkable, shareable, or bookmarkable. Deep links don't exist.
 
 **Why it's this way:** an app with three views doesn't need a router. This one
-has 23. It crossed the line somewhere around view eight and nobody noticed,
+has 24. It crossed the line somewhere around view eight and nobody noticed,
 because each new `&&` branch cost nothing at the time.
 
 **What to do:** the existing `React.lazy` split is already per-view, so it maps
