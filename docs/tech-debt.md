@@ -344,7 +344,9 @@ that caused the failures — but the import path doesn't use it.
 It will break without warning and can't be defended if challenged. Already listed
 under *Cuts / quiet retirements* in `IDEAS.md` — park unless used weekly.
 
-### `App.jsx` is a god object — 1320 lines, 55 handlers, 26 `view ===` branches
+### `App.jsx` is a god object — 1564 lines, 68 handlers, 20 `useState`
+*(counts re-measured 2026-08-15; it was 1320/55 when this was written, so it is
+growing at roughly the rate features are added — the split below has not started)*
 The hook extraction (`useTopics`, `useEntries`, `useInbox`, …) moved *state* out
 but left *orchestration* in. Share-target handling, imports, OAuth callback,
 revisit, trash, export, entitlement loading and now event tracking all live in one
@@ -458,7 +460,9 @@ its two read sites and drop it with the rest (~30 min), or give it a writer
 total**, entirely mechanical except that one decision.
 
 ### Migration count is not the problem, and cannot be fixed anyway
-74 files / 2005 lines, and periodically someone will want to tidy them. They
+78 files / ~2090 lines *(re-counted 2026-08-15)*, and periodically someone will
+want to tidy them — the question came up again on 2026-08-15 and the answer
+below did not change. They
 **cannot** be reduced: every one is recorded in
 `supabase_migrations.schema_migrations` remotely, so deleting a local file does
 not remove anything from the database — it makes local and remote disagree and
@@ -470,11 +474,11 @@ cosmetic file count and puts the one artifact that cannot be reconstructed —
 the schema's history — through a rewrite. The clutter worth removing is in the
 schema, not the folder; see the entry above.
 
-### `styles.css` monolith — 5784 lines / 153 KB
-The entire design system in one file, and every feature keeps appending to it
-(this session added three separate blocks). Split by surface — tokens, layout,
-then per-view — before it becomes unnavigable. No framework needed; the CSS
-itself is fine, it's the packaging that isn't.
+### ~~`styles.css` monolith — 5784 lines / 153 KB~~ — DONE (verified 2026-08-15)
+Split by surface as prescribed. `src/styles.css` is now 42 lines of imports over
+30 files in `src/styles/` (6489 lines total — it grew ~12% while being split,
+which is the normal cost of per-file headers, not a regression). The packaging
+problem is solved; see §10 of `REFACTOR.md` for the loose ends left behind.
 
 ### Feature sprawl — many near-products in one shell
 Reels, career/opportunities, interview bank, deep topics, digest, boards. The
@@ -508,6 +512,22 @@ same lines as the props it takes.
 
 Moved out of the live list 2026-07-31. Each is closed; what earns it a place here is
 the thing that was learned doing it. Nothing below needs action.
+
+**Title ownership was inferred, not stated** *(2026-08-15, `6f39765` + `0079`)* —
+`title_edited` was set whenever a patch happened to carry a title string, but
+link-preview enrichment writes titles through the same call as a user typing one.
+Every URL capture claimed ownership seconds after creation, so the note-mirroring
+feature was inert for the primary capture flow. **The lesson is about scope, not
+the bug:** a code review of the diff found the three call sites *in the diff* and
+stopped. Four more instances of the same class sat just outside it —
+`bulkCreateEntries`, `interview.addProblem`, a blank note mirroring to
+`"Untitled"`, and a late link preview overwriting a fresh manual retitle. Reviewing
+a diff finds what the diff touched; a bug *class* needs a sweep of every write
+path, which is what turned those up. Second lesson: the two most consequential
+findings came from replaying logic against production data read-only, not from
+reading code or from 991 passing tests — the backfill's first draft would have
+frozen 182 null-title entries permanently titleless, and nothing but real rows
+would have shown it.
 
 **Migrations written but never applied** *(2026-07-29)* — all applied via
 `supabase db push`. `0059` is permanently unused: parallel worktrees claimed numbers
