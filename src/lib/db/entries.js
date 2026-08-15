@@ -28,7 +28,7 @@ export async function listEntriesByTopic(supabase, topicId) {
   return data.map(flattenTags)
 }
 
-export async function createEntry(supabase, { topicId, url = null, title = null, note = '', titleEdited = false }) {
+export async function createEntry(supabase, { topicId, url = null, title = null, note = '' }) {
   const noteText = clampNote(note)
   // A note to mirror wins over a passed-in title; with neither, computeTitle
   // falls back to the url. Only a title we actually *kept* counts as curated.
@@ -43,7 +43,7 @@ export async function createEntry(supabase, { topicId, url = null, title = null,
       note: noteText,
       // A title handed to us that we actually kept is a curated title, not a
       // mirror of the note — protect it from the first note edit onward.
-      title_edited: titleEdited || !mirrored,
+      title_edited: !mirrored,
     })
     .select()
     .single()
