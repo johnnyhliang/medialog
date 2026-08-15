@@ -28,41 +28,76 @@ export async function listEntriesByTopic(supabase, topicId) {
   return data.map(flattenTags)
 }
 
-export async function createEntry(supabase, { topicId, url = null, title = null, note = '' }) {
+export async function createEntry(supabase, { topicId, url = null, title = null, note = '', titleEdited = false }) {
   const noteText = clampNote(note)
-  const finalTitle = noteText.trim()
-    ? computeTitle(noteText, url)
-    : (title || computeTitle('', url))
+  const mirrored = noteText.trim() || !title
+  const finalTitle = mirrored ? computeTitle(noteText, url) : title
   const { data, error } = await supabase
     .from('entries')
-    .insert({ topic_id: topicId, url: clampUrl(url), title: finalTitle, note: noteText })
+    .insert({
+      topic_id: topicId,
+      url: clampUrl(url),
+      title: finalTitle,
+      note: noteText,
+      // A title handed to us that we actually kept is a curated title, not a
+      // mirror of the note — protect it from the first note edit onward.
+      title_edited: titleEdited || !mirrored,
+    })
     .select()
     .single()
   if (error) throw new Error(error.message)
   return data
 }
 
-export async function updateEntry(supabase, id, patch) {
+// `title_edited` means "this title was set on purpose, stop mirroring". It is
+// never inferred from the shape of the patch: a `title` key alone says nothing
+// about intent, because link-preview enrichment writes titles through exactly
+// the same path as a user typing one. There are only two kinds of title write:
+//
+//   - a USER title, which claims ownership. The caller passes
+//     `title_edited: true` and it always lands.
+//   - an AUTOMATIC title — mirrored from the note, or fetched from the page
+//     (`autoTitle`). It lands only while the title is still unowned.
+//
+// Automatic titles are applied with a `title_edited = false` filter rather than
+// a read-then-write, so a user title edit racing against them simply stops
+// matching the row instead of being silently overwritten.
+export async function updateEntry(supabase, id, patch, { autoTitle = false } = {}) {
   const next = { ...patch }
-  if (typeof next.title === 'string') {
-    // Editing the title directly means "stop mirroring the note" — like
-    // Obsidian, the auto-title only applies until the user overrides it.
-    next.title_edited = true
+  if (typeof next.note === 'string') next.note = clampNote(next.note)
+
+  let tentativeTitle = null
+  if (autoTitle && typeof next.title === 'string') {
+    tentativeTitle = next.title
+  } else if (typeof next.note === 'string' && typeof next.title !== 'string' && next.note.trim()) {
+    // A blank note has nothing to mirror. `computeTitle` would fall back to the
+    // url — which callers like handleNoteSave don't send — and land on
+    // 'Untitled', so clearing a note would silently wipe the title.
+    tentativeTitle = computeTitle(next.note, next.url ?? null)
   }
-  if (typeof next.note === 'string') {
-    next.note = clampNote(next.note)
-    if (typeof next.title !== 'string') {
-      const { data: existing, error: fetchError } = await supabase
+
+  if (tentativeTitle !== null) {
+    const { data: rows, error: autoError } = await supabase
+      .from('entries')
+      .update({ ...next, title: tentativeTitle })
+      .eq('id', id)
+      .eq('title_edited', false)
+      .select()
+    if (autoError) throw new Error(autoError.message)
+    if (rows?.length) return rows[0]
+    // No match: the user owns this title. Save everything else and leave it.
+    delete next.title
+    if (Object.keys(next).length === 0) {
+      const { data: current, error: readError } = await supabase
         .from('entries')
-        .select('title_edited')
+        .select('*')
         .eq('id', id)
         .single()
-      if (fetchError) throw new Error(fetchError.message)
-      if (!existing?.title_edited) {
-        next.title = computeTitle(next.note, next.url ?? null)
-      }
+      if (readError) throw new Error(readError.message)
+      return current
     }
   }
+
   const { data, error } = await supabase
     .from('entries')
     .update(next)
@@ -79,6 +114,9 @@ export async function bulkCreateEntries(supabase, topicId, items) {
     url: clampUrl(it.url),
     title: it.title ? String(it.title).slice(0, 300) : null,
     note: clampNote(it.note),
+    // Same rule as createEntry: a title that came in with the import is
+    // curated, so the first note edit must not overwrite it.
+    title_edited: Boolean(it.title),
   }))
   const { data, error } = await supabase.from('entries').insert(rows).select()
   if (error) throw new Error(error.message)

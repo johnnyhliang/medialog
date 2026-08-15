@@ -512,7 +512,7 @@ function Workspace() {
           if (meta?.description) patch.og_description = meta.description
           Object.assign(patch, preservationPatch(meta))
           if (Object.keys(patch).length > 0) {
-            const updated = await updateEntry(supabase, e.id, patch)
+            const updated = await updateEntry(supabase, e.id, patch, { autoTitle: true })
             applyUpdateEntry(e.id, updated)
             finalEntry = updated
           }
@@ -557,7 +557,7 @@ function Workspace() {
           if (meta?.description) patch.og_description = meta.description
           Object.assign(patch, preservationPatch(meta))
           if (Object.keys(patch).length > 0) {
-            const updated = await updateEntry(supabase, e.id, patch)
+            const updated = await updateEntry(supabase, e.id, patch, { autoTitle: true })
             finalEntry = updated
           }
           onTitleStatus?.('done')
@@ -710,8 +710,11 @@ function Workspace() {
     }
   }
 
-  async function handleTitleChange(entryId, title, url) {
+  // `titleEdited` is false when the user only corrected the URL — the title
+  // rides along in the patch unchanged and must not be marked as user-owned.
+  async function handleTitleChange(entryId, title, url, titleEdited = true) {
     const patch = url !== undefined ? { title, url } : { title }
+    if (titleEdited) patch.title_edited = true
     try {
       const updated = await updateEntry(supabase, entryId, patch)
       applyUpdateEntry(entryId, updated)
@@ -740,9 +743,13 @@ function Workspace() {
   }
 
   async function handleRestoreVersion(note) {
-    const updated = await updateEntry(supabase, historyFor, { note })
-    await createVersion(supabase, historyFor, note)
-    applyUpdateEntry(historyFor, updated)
+    try {
+      const updated = await updateEntry(supabase, historyFor, { note })
+      await createVersion(supabase, historyFor, note)
+      applyUpdateEntry(historyFor, updated)
+    } catch {
+      addToast('Failed to restore version', 'error')
+    }
     closeHistory()
   }
 
@@ -790,7 +797,7 @@ function Workspace() {
       if (!e.og_description && meta?.description) patch.og_description = meta.description
       if (!e.full_text) Object.assign(patch, preservationPatch(meta))
       if (Object.keys(patch).length === 0) continue
-      const updated = await updateEntry(supabase, e.id, patch)
+      const updated = await updateEntry(supabase, e.id, patch, { autoTitle: true })
       applyUpdateEntry(e.id, updated)
       // Newly preserved text is a retrieval source, so index it. The caller's
       // own chunk pass ran against the pre-enrichment entry and saw no full_text.

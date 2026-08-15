@@ -137,9 +137,9 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
     const urlChanged = u !== (entry.url || '')
     if (titleChanged || urlChanged) {
       if (urlChanged) {
-        onTitleChange?.(entry.id, t || entry.title || '', u)
+        onTitleChange?.(entry.id, t || entry.title || '', u, titleChanged)
       } else {
-        onTitleChange?.(entry.id, t || entry.title || '')
+        onTitleChange?.(entry.id, t || entry.title || '', undefined, true)
       }
     }
     setEditingTitle(false)

@@ -28,7 +28,7 @@ describe('entries db', () => {
     const client = mockClient({ data: row, error: null })
     const result = await createEntry(client, { topicId: 't', url: 'http://x', note: 'n' })
     expect(client._chain.insert).toHaveBeenCalledWith({
-      topic_id: 't', url: 'http://x', title: 'n', note: 'n',
+      topic_id: 't', url: 'http://x', title: 'n', note: 'n', title_edited: false,
     })
     expect(result).toEqual(row)
   })
@@ -57,8 +57,8 @@ describe('entries db', () => {
     const items = [{ url: 'http://a', note: '' }, { url: null, note: 'idea' }]
     const result = await bulkCreateEntries(client, 'inbox-id', items)
     expect(client._chain.insert).toHaveBeenCalledWith([
-      { topic_id: 'inbox-id', url: 'http://a', title: null, note: '' },
-      { topic_id: 'inbox-id', url: null, title: null, note: 'idea' },
+      { topic_id: 'inbox-id', url: 'http://a', title: null, note: '', title_edited: false },
+      { topic_id: 'inbox-id', url: null, title: null, note: 'idea', title_edited: false },
     ])
     expect(result).toEqual(rows)
   })
@@ -106,53 +106,121 @@ describe('entry title persistence', () => {
   })
 
   test('updateEntry recomputes title when note updated and title was never edited', async () => {
-    const fetchSingle = vi.fn().mockResolvedValue({ data: { title_edited: false }, error: null })
-    const fetchEq = vi.fn(() => ({ single: fetchSingle }))
-    const select = vi.fn(() => ({ eq: fetchEq }))
-    const updateSingle = vi.fn().mockResolvedValue({ data: { id: 'e1' }, error: null })
-    const updateEq = vi.fn(() => ({ select: vi.fn(() => ({ single: updateSingle })) }))
-    const update = vi.fn(() => ({ eq: updateEq }))
-    const supabase = { from: vi.fn(() => ({ select, update })) }
+    // The conditional update matches, so the mirrored title is what lands.
+    const supabase = mockClient({ data: [{ id: 'e1' }], error: null })
 
     await updateEntry(supabase, 'e1', { note: '# New Title\nx' })
 
-    expect(update).toHaveBeenCalledWith(expect.objectContaining({ title: 'New Title' }))
+    expect(supabase._chain.update).toHaveBeenCalledWith(expect.objectContaining({ title: 'New Title' }))
+    expect(supabase._chain.eq).toHaveBeenCalledWith('title_edited', false)
   })
 
   test('updateEntry leaves title alone when note not in patch', async () => {
-    const single = vi.fn().mockResolvedValue({ data: { id: 'e1' }, error: null })
-    const select = vi.fn(() => ({ single }))
-    const eq = vi.fn(() => ({ select }))
-    const update = vi.fn(() => ({ eq }))
-    const supabase = { from: vi.fn(() => ({ update })) }
+    const supabase = mockClient({ data: { id: 'e1' }, error: null })
 
     await updateEntry(supabase, 'e1', { status: 'done' })
 
-    expect(update).toHaveBeenCalledWith({ status: 'done' })
+    expect(supabase._chain.update).toHaveBeenCalledWith({ status: 'done' })
+    expect(supabase._chain.update).toHaveBeenCalledTimes(1)
   })
 
   test('updateEntry does not mirror note into title once the title was edited', async () => {
-    const fetchSingle = vi.fn().mockResolvedValue({ data: { title_edited: true }, error: null })
-    const fetchEq = vi.fn(() => ({ single: fetchSingle }))
-    const select = vi.fn(() => ({ eq: fetchEq }))
-    const updateSingle = vi.fn().mockResolvedValue({ data: { id: 'e1' }, error: null })
-    const updateEq = vi.fn(() => ({ select: vi.fn(() => ({ single: updateSingle })) }))
-    const update = vi.fn(() => ({ eq: updateEq }))
-    const supabase = { from: vi.fn(() => ({ select, update })) }
+    // No row matches `title_edited = false`, so the note saves on its own.
+    const supabase = mockClient({ data: [], error: null })
 
     await updateEntry(supabase, 'e1', { note: 'a totally different first line' })
 
-    expect(update).toHaveBeenCalledWith({ note: 'a totally different first line' })
+    expect(supabase._chain.update).toHaveBeenLastCalledWith({ note: 'a totally different first line' })
   })
 
-  test('updateEntry marks title_edited when the title is set directly', async () => {
-    const updateSingle = vi.fn().mockResolvedValue({ data: { id: 'e1' }, error: null })
-    const updateEq = vi.fn(() => ({ select: vi.fn(() => ({ single: updateSingle })) }))
-    const update = vi.fn(() => ({ eq: updateEq }))
-    const supabase = { from: vi.fn(() => ({ update })) }
+  test('updateEntry never infers title_edited from an automatic title fetch', async () => {
+    // Link-preview enrichment writes a title through the same path as a user
+    // typing one — only an explicit flag may mark the title as user-owned.
+    const supabase = mockClient({ data: { id: 'e1' }, error: null })
 
-    await updateEntry(supabase, 'e1', { title: 'My Custom Title' })
+    await updateEntry(supabase, 'e1', { title: 'Fetched Page Title', og_image: 'i.png' })
 
-    expect(update).toHaveBeenCalledWith({ title: 'My Custom Title', title_edited: true })
+    expect(supabase._chain.update).toHaveBeenCalledWith({ title: 'Fetched Page Title', og_image: 'i.png' })
+  })
+
+  test('updateEntry passes through an explicit title_edited from a real title edit', async () => {
+    const supabase = mockClient({ data: { id: 'e1' }, error: null })
+
+    await updateEntry(supabase, 'e1', { title: 'My Custom Title', title_edited: true })
+
+    expect(supabase._chain.update).toHaveBeenCalledWith({ title: 'My Custom Title', title_edited: true })
+  })
+
+  test('createEntry marks a kept explicit title as edited', async () => {
+    const supabase = mockClient({ data: { id: 'e1' }, error: null })
+
+    await createEntry(supabase, { topicId: 't1', note: '', title: 'Curated', url: 'https://x.com' })
+
+    expect(supabase._chain.insert).toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'Curated', title_edited: true }),
+    )
+  })
+
+  test('a fetched title lands while the title is still unowned', async () => {
+    const supabase = mockClient({ data: [{ id: 'e1' }], error: null })
+
+    await updateEntry(supabase, 'e1', { title: 'Fetched', og_image: 'i.png' }, { autoTitle: true })
+
+    expect(supabase._chain.update).toHaveBeenCalledWith({ title: 'Fetched', og_image: 'i.png' })
+    expect(supabase._chain.eq).toHaveBeenCalledWith('title_edited', false)
+  })
+
+  test('a fetched title never overwrites a title the user already claimed', async () => {
+    // Retitle a fresh capture before the link preview resolves: the conditional
+    // update matches nothing, so only the non-title fields are saved.
+    const supabase = mockClient({ data: [], error: null })
+
+    await updateEntry(supabase, 'e1', { title: 'Fetched', og_image: 'i.png' }, { autoTitle: true })
+
+    expect(supabase._chain.update).toHaveBeenLastCalledWith({ og_image: 'i.png' })
+  })
+
+  test('a title-only fetch against an owned title writes nothing at all', async () => {
+    const supabase = mockClient({ data: [], error: null })
+
+    await updateEntry(supabase, 'e1', { title: 'Fetched' }, { autoTitle: true })
+
+    // One conditional update that matched nothing, then a read — never a
+    // second update with an empty patch.
+    expect(supabase._chain.update).toHaveBeenCalledTimes(1)
+    expect(supabase._chain.select).toHaveBeenCalledWith('*')
+  })
+
+  test('updateEntry does not retitle to Untitled when the note is cleared', async () => {
+    const supabase = mockClient({ data: { id: 'e1' }, error: null })
+
+    await updateEntry(supabase, 'e1', { note: '   ' })
+
+    expect(supabase._chain.update).toHaveBeenCalledTimes(1)
+    expect(supabase._chain.update).toHaveBeenCalledWith({ note: '   ' })
+  })
+
+  test('bulkCreateEntries protects titles that arrived with the import', async () => {
+    const supabase = mockClient({ data: [], error: null })
+
+    await bulkCreateEntries(supabase, 'inbox', [
+      { url: 'https://a.com', title: 'Curated', note: '' },
+      { url: 'https://b.com', note: '' },
+    ])
+
+    expect(supabase._chain.insert).toHaveBeenCalledWith([
+      expect.objectContaining({ title: 'Curated', title_edited: true }),
+      expect.objectContaining({ title: null, title_edited: false }),
+    ])
+  })
+
+  test('createEntry leaves a note-mirrored title unprotected', async () => {
+    const supabase = mockClient({ data: { id: 'e1' }, error: null })
+
+    await createEntry(supabase, { topicId: 't1', note: '# From note', title: 'Ignored' })
+
+    expect(supabase._chain.insert).toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'From note', title_edited: false }),
+    )
   })
 })

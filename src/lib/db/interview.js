@@ -164,7 +164,10 @@ export async function addProblem(supabase, topicId, { title, url = null, difficu
   const { data: { user } } = await supabase.auth.getUser()
   const { data, error } = await supabase
     .from('entries')
-    .insert({ user_id: user.id, topic_id: topicId, title, url, note: '', status: 'backlog', difficulty })
+    // The problem name is the whole point of the row, so it is a deliberate
+    // title — writing notes on the problem must not rename it to the note's
+    // first line.
+    .insert({ user_id: user.id, topic_id: topicId, title, url, note: '', status: 'backlog', difficulty, title_edited: true })
     .select()
     .single()
   if (error) throw new Error(error.message)

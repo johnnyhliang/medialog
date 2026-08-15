@@ -103,7 +103,7 @@ test('saves title on Enter', async () => {
   const input = screen.getByRole('textbox', { name: /edit title/i })
   await userEvent.clear(input)
   await userEvent.type(input, 'New Title{Enter}')
-  expect(onTitleChange).toHaveBeenCalledWith('x', 'New Title')
+  expect(onTitleChange).toHaveBeenCalledWith('x', 'New Title', undefined, true)
 })
 
 test('cancels title edit on Escape', async () => {
