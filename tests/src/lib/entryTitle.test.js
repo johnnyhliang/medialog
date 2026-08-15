@@ -21,6 +21,15 @@ describe('computeTitle', () => {
   test('falls back to url when note whitespace only', () => {
     expect(computeTitle('   \n  ', 'https://example.com')).toBe('https://example.com')
   })
+  test('truncates a long url so it cannot breach entry_title_length', () => {
+    // Urls may be 2048 chars; titles are capped at 500 by migration 0020, so an
+    // untruncated fallback made createEntry throw on long tracking links.
+    const longUrl = 'https://x.com/' + 'a'.repeat(900)
+    const title = computeTitle('', longUrl)
+    expect(title.length).toBe(120)
+    expect(longUrl.startsWith(title)).toBe(true)
+  })
+
   test('falls back to Untitled when nothing', () => {
     expect(computeTitle('', null)).toBe('Untitled')
     expect(computeTitle('', '')).toBe('Untitled')

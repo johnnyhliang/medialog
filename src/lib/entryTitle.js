@@ -17,6 +17,9 @@ export function computeTitle(note, url) {
   }
 
   // 3. URL  4. Untitled
-  const u = String(url ?? '').trim()
+  // Sliced like the branches above: urls may be up to 2048 chars but the
+  // entry_title_length constraint (migration 0020) caps titles at 500, so an
+  // untruncated url here made createEntry throw on long tracking links.
+  const u = String(url ?? '').trim().slice(0, MAX_TITLE)
   return u || 'Untitled'
 }
