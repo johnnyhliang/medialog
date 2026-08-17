@@ -1,7 +1,7 @@
 /* ── Gains card ── */
 .gains-card {
   margin: 0 0 16px; padding: 14px 16px; border: 1px solid var(--border);
-  border-radius: 12px; background: var(--surface-2);
+  border-radius: var(--radius-lg); background: var(--surface-2);
 }
 .gains-card-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
 .gains-card-eyebrow {
@@ -14,7 +14,7 @@
 .gains-floor { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
 .gains-floor-text { font-size: 14px; color: var(--text); margin: 0; }
 .gains-seed-btn {
-  margin-top: 4px; padding: 6px 12px; border: 1px solid var(--border); border-radius: 8px;
+  margin-top: 4px; padding: 6px 12px; border: 1px solid var(--border); border-radius: var(--radius);
   background: var(--surface); color: var(--text); font-size: 13px; cursor: pointer;
 }
 .gains-seed-btn:hover { border-color: var(--accent); }
@@ -31,7 +31,7 @@
 .gains-pick-actions { display: flex; gap: 8px; align-items: center; }
 .gains-pick-actions button {
   display: flex; align-items: center; gap: 4px; padding: 6px 12px;
-  border: 1px solid var(--border); border-radius: 8px; background: var(--surface);
+  border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface);
   color: var(--text); font-size: 13px; cursor: pointer;
 }
 .gains-pick-actions button:hover { border-color: var(--accent); }
@@ -59,7 +59,7 @@
 .agenda-count {
   margin-left: 8px;
   padding: 1px 6px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--accent-weak);
   color: var(--muted);
   font-size: 10px;
@@ -71,7 +71,7 @@
   align-items: flex-start;
   gap: 10px;
   padding: 9px 12px;
-  border-radius: 8px;
+  border-radius: var(--radius);
   border: 1px solid transparent;
   transition: background 0.1s;
 }
@@ -124,7 +124,7 @@
   opacity: 0;
   background: none;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--radius);
   padding: 2px 8px;
   font-size: 11px;
   color: var(--muted);
@@ -170,7 +170,7 @@
   background: var(--surface);
   border: 1px solid var(--border);
   border-left: 2px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius);
   padding: 12px 14px;
   display: flex;
   flex-direction: column;
@@ -199,7 +199,7 @@
   text-transform: lowercase;
   color: var(--muted);
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   padding: 1px 7px;
 }
 .manager-chip--cold { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 45%, var(--border)); }
@@ -219,7 +219,7 @@
   display: inline-block;
   width: 56px;
   height: 4px;
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   background: var(--border);
   overflow: hidden;
 }
@@ -317,7 +317,7 @@
   gap: 10px;
   background: var(--surface);
   border: 1px dashed var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius);
   padding: 8px 12px;
 }
 .manager-parked-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
@@ -378,7 +378,7 @@
 .cgrid-month { width: 11px; flex-shrink: 0; white-space: nowrap; }
 .cgrid-weeks { display: flex; gap: 3px; }
 .cgrid-week { display: grid; grid-template-rows: repeat(7, 11px); gap: 3px; }
-.cgrid-day { width: 11px; height: 11px; border-radius: 2px; background: var(--surface-3); }
+.cgrid-day { width: 11px; height: 11px; border-radius: var(--radius-sm); background: var(--surface-3); }
 .cgrid-day--l1 { background: color-mix(in srgb, var(--accent) 28%, var(--surface-3)); }
 .cgrid-day--l2 { background: color-mix(in srgb, var(--accent) 50%, var(--surface-3)); }
 .cgrid-day--l3 { background: color-mix(in srgb, var(--accent) 74%, var(--surface-3)); }
@@ -443,7 +443,7 @@
 .agenda-empty { font-size: 12px; line-height: 1.5; margin: 0; }
 .agenda-empty code {
   font-size: 11px; background: var(--surface-3);
-  padding: 1px 4px; border-radius: 3px;
+  padding: 1px 4px; border-radius: var(--radius-sm);
 }
 
 .agenda-group + .agenda-group { margin-top: 14px; }

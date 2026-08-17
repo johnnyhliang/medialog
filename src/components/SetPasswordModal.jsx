@@ -46,7 +46,7 @@ export default function SetPasswordModal({ onDone }) {
     }}>
       <div style={{
         background: 'var(--surface)', border: '1px solid var(--border)',
-        borderRadius: '10px', padding: '28px 24px', width: '100%', maxWidth: '360px',
+        borderRadius: 'var(--radius-lg)', padding: '28px 24px', width: '100%', maxWidth: '360px',
         boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
       }}>
         <p style={{ fontSize: '18px', fontWeight: 700, margin: '0 0 6px', letterSpacing: '-.02em' }}>
@@ -70,7 +70,7 @@ export default function SetPasswordModal({ onDone }) {
                 onChange={(e) => setPassword(e.target.value)}
                 autoFocus
                 style={{
-                  width: '100%', padding: '9px 12px', borderRadius: '6px',
+                  width: '100%', padding: '9px 12px', borderRadius: 'var(--radius)',
                   border: '1px solid var(--border)', background: 'var(--bg)',
                   color: 'var(--text)', fontSize: '14px', boxSizing: 'border-box',
                 }}
@@ -100,7 +100,7 @@ export default function SetPasswordModal({ onDone }) {
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}
               style={{
-                width: '100%', padding: '9px 12px', borderRadius: '6px',
+                width: '100%', padding: '9px 12px', borderRadius: 'var(--radius)',
                 border: `1px solid ${mismatch ? 'var(--danger)' : 'var(--border)'}`,
                 background: 'var(--bg)', color: 'var(--text)', fontSize: '14px',
                 boxSizing: 'border-box',
@@ -111,7 +111,7 @@ export default function SetPasswordModal({ onDone }) {
               type="submit"
               disabled={loading || !password || !confirm}
               style={{
-                padding: '10px', borderRadius: '6px', border: 'none',
+                padding: '10px', borderRadius: 'var(--radius)', border: 'none',
                 background: 'var(--accent)', color: 'var(--on-accent)', fontSize: '14px',
                 fontWeight: 600, cursor: 'pointer', marginTop: '4px',
                 opacity: (loading || !password || !confirm) ? 0.6 : 1,

@@ -3,19 +3,19 @@
 .iv-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
 .iv-title { display: flex; align-items: center; gap: 8px; font-size: 1.2rem; margin: 0; }
 .iv-import-btn, .iv-clear {
-  background: none; border: 1px solid var(--border); border-radius: 6px;
+  background: none; border: 1px solid var(--border); border-radius: var(--radius);
   padding: 5px 10px; font-size: var(--text-sm); color: var(--muted); cursor: pointer;
 }
 .iv-import-btn:hover, .iv-clear:hover { color: var(--text); border-color: var(--accent); }
 
 .iv-import { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; margin-bottom: 20px; }
-.iv-import-ta { width: 100%; box-sizing: border-box; font-family: monospace; font-size: 12px; padding: 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); resize: vertical; margin-bottom: 8px; }
-.iv-import code { font-size: 11px; background: var(--surface-2); padding: 1px 4px; border-radius: 3px; }
+.iv-import-ta { width: 100%; box-sizing: border-box; font-family: monospace; font-size: 12px; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg); color: var(--text); resize: vertical; margin-bottom: 8px; }
+.iv-import code { font-size: 11px; background: var(--surface-2); padding: 1px 4px; border-radius: var(--radius-sm); }
 
 .iv-empty { text-align: center; padding: 48px 0; display: flex; flex-direction: column; align-items: center; gap: 16px; }
 .iv-empty .muted { max-width: 460px; }
 .iv-seed-btn, .iv-import button {
-  background: var(--accent); color: var(--on-accent); border: none; border-radius: 7px;
+  background: var(--accent); color: var(--on-accent); border: none; border-radius: var(--radius);
   padding: 9px 16px; font-size: var(--text-sm); cursor: pointer; font-weight: 500;
 }
 .iv-seed-btn:disabled, .iv-import button:disabled { opacity: 0.6; cursor: default; }
@@ -30,8 +30,8 @@
 .iv-track-card.active { border-color: var(--accent); background: var(--accent-weak); }
 .iv-track-label { font-size: var(--text-xs); color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
 .iv-track-pct { font-size: 1.4rem; font-weight: 600; color: var(--text); line-height: 1; }
-.iv-track-bar { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
-.iv-track-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.3s ease; }
+.iv-track-bar { height: 4px; background: var(--border); border-radius: var(--radius-sm); overflow: hidden; }
+.iv-track-fill { height: 100%; background: var(--accent); border-radius: var(--radius-sm); transition: width 0.3s ease; }
 
 .iv-filter-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
 .iv-patterns { display: flex; flex-direction: column; gap: 6px; }
@@ -41,10 +41,10 @@
 .iv-pattern-head:hover { background: var(--surface-2); }
 .iv-pattern-name { font-weight: 500; font-size: var(--text-base); flex-shrink: 0; }
 .iv-pattern-tracks { display: flex; gap: 4px; flex: 1; overflow: hidden; }
-.iv-track-chip { font-size: 10px; color: var(--muted); background: var(--surface-2); border-radius: 8px; padding: 1px 7px; white-space: nowrap; }
+.iv-track-chip { font-size: 10px; color: var(--muted); background: var(--surface-2); border-radius: var(--radius); padding: 1px 7px; white-space: nowrap; }
 .iv-pattern-count { font-size: var(--text-xs); color: var(--muted); flex-shrink: 0; font-variant-numeric: tabular-nums; }
-.iv-pattern-bar { width: 90px; height: 5px; background: var(--border); border-radius: 3px; overflow: hidden; flex-shrink: 0; }
-.iv-pattern-fill { height: 100%; background: var(--accent); border-radius: 3px; transition: width 0.3s ease; }
+.iv-pattern-bar { width: 90px; height: 5px; background: var(--border); border-radius: var(--radius-sm); overflow: hidden; flex-shrink: 0; }
+.iv-pattern-fill { height: 100%; background: var(--accent); border-radius: var(--radius-sm); transition: width 0.3s ease; }
 
 .iv-pattern-body { padding: 4px 14px 14px; border-top: 1px solid var(--border); }
 .iv-primer { font-size: var(--text-sm); line-height: 1.6; color: var(--text-secondary, var(--muted)); margin: 12px 0 14px; }
@@ -58,27 +58,27 @@
 .iv-problem-title { flex: 1; font-size: var(--text-sm); color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .iv-problem-title--prompt { cursor: default; }
 a.iv-problem-title:hover { color: var(--accent); }
-.iv-diff { font-size: 10px; padding: 1px 7px; border-radius: 8px; flex-shrink: 0; }
+.iv-diff { font-size: 10px; padding: 1px 7px; border-radius: var(--radius); flex-shrink: 0; }
 .diff-easy { background: var(--tint-green-bg); color: var(--tint-green-fg); }
 .diff-medium { background: var(--tint-amber-bg); color: var(--tint-amber-fg); }
 .diff-hard { background: var(--tint-red-bg); color: var(--tint-red-fg); }
-.iv-conf { font-size: var(--text-xs); padding: 2px 4px; border-radius: 5px; border: 1px solid var(--border); background: var(--bg); color: var(--text); flex-shrink: 0; }
+.iv-conf { font-size: var(--text-xs); padding: 2px 4px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--bg); color: var(--text); flex-shrink: 0; }
 .iv-row-action {
   flex-shrink: 0; background: none; border: none; color: var(--muted); cursor: pointer;
-  font-size: 13px; padding: 2px 5px; border-radius: 4px; opacity: 0.5;
+  font-size: 13px; padding: 2px 5px; border-radius: var(--radius-sm); opacity: 0.5;
 }
 .iv-problem:hover .iv-row-action { opacity: 1; }
 .iv-row-action:hover { color: var(--text); background: var(--surface-2, var(--accent-weak)); }
 .iv-problem--editing { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; padding: 8px 0; }
 .iv-edit-input {
   flex: 1; min-width: 120px; font-size: var(--text-sm); padding: 4px 8px;
-  border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text);
+  border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg); color: var(--text);
 }
-.iv-mini-btn { font-size: var(--text-xs); padding: 4px 10px; border-radius: 6px; border: 1px solid var(--accent); background: var(--accent); color: var(--bg); cursor: pointer; }
+.iv-mini-btn { font-size: var(--text-xs); padding: 4px 10px; border-radius: var(--radius); border: 1px solid var(--accent); background: var(--accent); color: var(--bg); cursor: pointer; }
 .iv-mini-btn--ghost { background: transparent; color: var(--muted); border-color: var(--border); }
 .iv-add-problem {
   margin-top: 6px; font-size: var(--text-xs); color: var(--muted); background: none;
-  border: 1px dashed var(--border); border-radius: 6px; padding: 5px 10px; cursor: pointer; width: 100%;
+  border: 1px dashed var(--border); border-radius: var(--radius); padding: 5px 10px; cursor: pointer; width: 100%;
 }
 .iv-add-problem:hover { color: var(--accent); border-color: var(--accent); }
 
@@ -135,7 +135,7 @@ a.iv-problem-title:hover { color: var(--accent); }
   padding: 6px 8px;
   border: none;
   background: none;
-  border-radius: 6px;
+  border-radius: var(--radius);
   font-size: 13px;
   color: var(--text-secondary);
   cursor: pointer;
@@ -164,7 +164,7 @@ a.iv-problem-title:hover { color: var(--accent); }
   cursor: pointer;
   border-bottom: 2px solid transparent;
   margin-bottom: -1px;
-  border-radius: 4px 4px 0 0;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
   transition: color 0.15s;
 }
 .career-tab:hover { color: var(--text); }
@@ -177,7 +177,7 @@ a.iv-problem-title:hover { color: var(--accent); }
   height: 16px;
   padding: 0 4px;
   margin-left: 5px;
-  border-radius: 8px;
+  border-radius: var(--radius);
   background: var(--accent);
   color: white;
   font-size: 10px;
@@ -190,7 +190,7 @@ a.iv-problem-title:hover { color: var(--accent); }
 .shares-list { display: flex; flex-direction: column; gap: 8px; }
 .share-row {
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  padding: 12px 14px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface);
+  padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface);
 }
 .share-row-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .share-row-title { font-weight: 600; font-size: var(--text-sm); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -207,11 +207,11 @@ a.iv-problem-title:hover { color: var(--accent); }
 }
 .feed-item-search {
   flex: 1; padding: 6px 10px; border: 1px solid var(--border);
-  border-radius: 7px; background: var(--surface); color: var(--text);
+  border-radius: var(--radius); background: var(--surface); color: var(--text);
   font-size: var(--text-sm);
 }
 .feed-item-search:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-weak); outline: none; }
-.feed-sort-toggle { display: inline-flex; border: 1px solid var(--border); border-radius: 7px; overflow: hidden; }
+.feed-sort-toggle { display: inline-flex; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
 .feed-sort-btn {
   padding: 6px 12px; background: var(--surface); border: none; cursor: pointer;
   font-size: var(--text-xs); color: var(--muted);
@@ -236,7 +236,7 @@ a.iv-problem-title:hover { color: var(--accent); }
 .boards-links { display: flex; flex-direction: column; gap: 6px; }
 .boards-link {
   display: flex; align-items: center; gap: 10px;
-  padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px;
+  padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius);
   background: var(--surface); color: var(--text); text-decoration: none;
   transition: border-color 0.12s, background 0.12s;
 }
@@ -252,7 +252,7 @@ a.iv-problem-title:hover { color: var(--accent); }
   flex: 1;
   padding: 6px 10px;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--radius);
   font-size: 13px;
   background: var(--bg);
   color: var(--text);
@@ -265,14 +265,14 @@ a.iv-problem-title:hover { color: var(--accent); }
   margin-bottom: 16px;
   padding: 12px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius);
   background: var(--surface);
 }
 .watchlist-add-form input,
 .watchlist-add-form textarea {
   padding: 6px 10px;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--radius);
   font-size: 13px;
   background: var(--bg);
   color: var(--text);
@@ -285,7 +285,7 @@ a.iv-problem-title:hover { color: var(--accent); }
   position: relative;
   padding: 10px 32px 10px 12px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius);
   background: var(--surface);
 }
 .watchlist-row-main { display: flex; align-items: center; gap: 8px; margin-bottom: 2px; }
@@ -297,7 +297,7 @@ a.iv-problem-title:hover { color: var(--accent); }
 .watchlist-badge {
   font-size: 11px;
   padding: 2px 7px;
-  border-radius: 10px;
+  border-radius: var(--radius);
   font-weight: 500;
   flex-shrink: 0;
 }

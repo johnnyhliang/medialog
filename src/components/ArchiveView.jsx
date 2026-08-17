@@ -114,7 +114,7 @@ export default function ArchiveView({ topics, archivedTopics = [], onSelectTopic
             const isExpanded = expandedTopics.has(topicName)
             const topic = topics.find((t) => t.name === topicName)
             return (
-              <div key={topicName} style={{ marginBottom: 10, border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
+              <div key={topicName} style={{ marginBottom: 10, border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
                 <button
                   onClick={() => toggleTopic(topicName)}
                   style={{
@@ -162,7 +162,7 @@ export default function ArchiveView({ topics, archivedTopics = [], onSelectTopic
                     {entry.tags?.length > 0 && (
                       <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 4 }}>
                         {entry.tags.map((t) => (
-                          <span key={t} style={{ fontSize: 11, padding: '1px 6px', borderRadius: 4, background: 'var(--surface-3)' }}>#{t}</span>
+                          <span key={t} style={{ fontSize: 11, padding: '1px 6px', borderRadius: 'var(--radius-sm)', background: 'var(--surface-3)' }}>#{t}</span>
                         ))}
                       </div>
                     )}

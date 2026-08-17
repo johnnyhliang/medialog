@@ -65,7 +65,7 @@ export default function TrashView({ entries, deletedTopics = [], topics = [], on
           {groupedEntries.map(([topicName, topicEntries]) => {
             const isOpen = expandedTopics.has(topicName)
             return (
-              <div key={topicName} style={{ marginBottom: 10, border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
+              <div key={topicName} style={{ marginBottom: 10, border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
                 <button
                   onClick={() => toggle(topicName)}
                   style={{

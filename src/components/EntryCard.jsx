@@ -544,7 +544,7 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
             opacity: 0.85,
             background: tagColors?.[t] || 'transparent',
             padding: tagColors?.[t] ? '1px 5px' : undefined,
-            borderRadius: tagColors?.[t] ? '4px' : undefined,
+            borderRadius: tagColors?.[t] ? 'var(--radius-sm)' : undefined,
           }}
         >#{t}</span>
       ))}

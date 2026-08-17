@@ -39,7 +39,7 @@
   padding: 10px 14px;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius);
 }
 
 .hrs-badges {
@@ -53,7 +53,7 @@
   align-items: center;
   gap: 4px;
   padding: 3px 8px;
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   border: 1px solid var(--border);
   background: var(--bg);
   cursor: pointer;
@@ -108,7 +108,7 @@
   color: var(--on-accent);
   font-size: var(--text-xs);
   font-weight: 600;
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   padding: 2px 7px;
 }
 
@@ -205,7 +205,7 @@
   background: none;
   border: none;
   padding: 3px;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
   color: var(--muted);
   opacity: 0;
@@ -243,7 +243,7 @@
 .icon-picker-item {
   background: none;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   padding: 5px;
   cursor: pointer;
   color: var(--text);

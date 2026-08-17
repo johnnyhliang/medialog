@@ -262,7 +262,7 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
               onClick={() => onSetStyle(id)}
               style={{
                 display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
-                padding: '8px 10px', borderRadius: 8, cursor: 'pointer',
+                padding: '8px 10px', borderRadius: 'var(--radius)', cursor: 'pointer',
                 border: themeStyle === id ? '2px solid var(--accent)' : '1px solid var(--border)',
                 background: themeStyle === id ? 'var(--accent-weak)' : 'var(--surface)',
                 fontSize: 11, color: 'var(--text)', fontWeight: themeStyle === id ? 600 : 400,

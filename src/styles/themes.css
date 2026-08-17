@@ -114,6 +114,9 @@
 /* ── Style: Neobrutalism ────────────────────────────────────────────────────── */
 [data-style="brutalist"] {
   --radius:           0px;
+  --radius-sm:        0px;
+  --radius-lg:        0px;
+  --radius-pill:      0px;
   --shadow-card:      4px 4px 0 var(--text);
   --shadow-card-hover:6px 6px 0 var(--text);
   --shadow-modal:     8px 8px 0 var(--text);
@@ -166,7 +169,10 @@
 /* ── Style: radius reset when switching away from brutalist ─────────────────── */
 [data-style="default"],
 [data-style="glass"] {
-  --radius: 10px;
+  --radius-sm:   4px;
+  --radius:      8px;
+  --radius-lg:   12px;
+  --radius-pill: 999px;
 }
 
 /* ── Style: Glassmorphism (effective on dark palettes only) ─────────────────── */

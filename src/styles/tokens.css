@@ -15,7 +15,17 @@
   --backlog:     #7A7264;
   --danger:      #C03A2B;
   --sidebar-bg:  #EDE8DC;
-  --radius:      10px;
+  /* Corner radius — three steps and a pill, nothing else. The sheet used to
+     carry 19 distinct values (2,3,4,5,6,7,8,9,10,12,20…), which is what an
+     app looks like when nobody chose. Map: small controls and chips to -sm,
+     cards/buttons/inputs to --radius, modals and large surfaces to -lg.
+     `50%` stays literal at call sites — a circle is a shape, not a scale step.
+     [data-style] overrides all four in themes.css, so brutalist can square
+     the whole app off from one place. */
+  --radius-sm:   4px;
+  --radius:      8px;
+  --radius-lg:   12px;
+  --radius-pill: 999px;
   --gap:         14px;
   --font-ui:     'DM Sans', system-ui, sans-serif;
   --font-serif:  'Lora', Georgia, serif;

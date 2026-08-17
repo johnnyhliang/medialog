@@ -11,7 +11,7 @@
 }
 .quickadd-row { display: flex; gap: 8px; }
 .quickadd-row > * { flex: 1; }
-.toggle-btn { background: var(--surface-alt); color: var(--text); border: 1px solid var(--border); padding: 8px 12px; border-radius: 4px; cursor: pointer; font-size: 13px; transition: all 0.2s; }
+.toggle-btn { background: var(--surface-alt); color: var(--text); border: 1px solid var(--border); padding: 8px 12px; border-radius: var(--radius-sm); cursor: pointer; font-size: 13px; transition: all 0.2s; }
 .toggle-btn:hover { background: var(--surface); }
 .toggle-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
 .quickadd textarea { min-height: 48px; font-size: 13.5px; }
@@ -20,7 +20,7 @@
   color: var(--muted);
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--radius);
   padding: 6px 10px;
   margin: 0;
   display: flex;
@@ -66,7 +66,7 @@
   color: var(--muted);
   padding: 4px 12px;
   font-size: 12px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
 }
 .status-filter button:hover { background: var(--surface-2); color: var(--text); }
 .status-filter button.active { background: var(--accent-weak); color: var(--accent); border-color: var(--accent); }
@@ -137,7 +137,7 @@
   width: 60px;
   height: 60px;
   object-fit: cover;
-  border-radius: 6px;
+  border-radius: var(--radius);
   flex-shrink: 0;
   background: var(--border);
 }
@@ -200,7 +200,7 @@
   display: flex;
   align-items: stretch;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius);
   overflow: hidden;
   text-decoration: none;
   min-height: 88px;
@@ -299,7 +299,7 @@
 .search-hit {
   background: color-mix(in srgb, var(--accent) 22%, transparent);
   color: inherit;
-  border-radius: 3px;
+  border-radius: var(--radius-sm);
   padding: 0 2px;
 }
 
@@ -348,7 +348,7 @@
   color: var(--text);
   background: var(--surface);
   border: 1px solid var(--accent);
-  border-radius: 5px;
+  border-radius: var(--radius-sm);
   padding: 1px 6px;
   line-height: 1.35;
   width: 100%;
@@ -362,7 +362,7 @@
   max-width: 280px;
   aspect-ratio: 16/9;
   object-fit: cover;
-  border-radius: 6px;
+  border-radius: var(--radius);
   background: var(--surface-2);
   border: 1px solid var(--border);
 }
@@ -371,7 +371,7 @@
 .card .note p { margin: 0.2em 0; }
 .card .note ul { margin: 0.2em 0; padding-left: 1.3em; }
 .card .note h1,.card .note h2,.card .note h3 { font-family: var(--font-serif); }
-.card .cm-editor { border: 1px solid var(--border); border-radius: 7px; }
+.card .cm-editor { border: 1px solid var(--border); border-radius: var(--radius); }
 
 /* CodeMirror — match the off-white UI (no dark theme) */
 .note-editor .cm-editor,
@@ -379,7 +379,7 @@
   background: var(--surface);
   color: var(--text);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius);
   font-family: var(--font-ui);
   font-size: 13.5px;
   outline: none;
@@ -414,7 +414,7 @@
   color: var(--muted);
   padding: 3px 10px;
   font-size: 12px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   text-transform: capitalize;
 }
 .note-editor-modes button.active {
@@ -448,7 +448,7 @@
   color: var(--muted);
   width: 34px;
   height: 34px;
-  border-radius: 7px;
+  border-radius: var(--radius);
   cursor: pointer;
 }
 .note-editor-format button:hover {
@@ -475,7 +475,7 @@
 .note-preview {
   background: var(--surface-2);
   border: 1px solid var(--border);
-  border-radius: 7px;
+  border-radius: var(--radius);
   padding: 10px 12px;
   min-height: 72px;
 }
@@ -485,7 +485,7 @@
   display: block;
   max-width: 100%;
   height: auto;
-  border-radius: 6px;
+  border-radius: var(--radius);
   border: 1px solid var(--border);
   margin: 6px 0;
 }
@@ -497,7 +497,7 @@
   margin: 8px 0;
   padding: 10px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius);
   background: var(--surface-2);
   text-decoration: none;
   color: inherit;
@@ -508,7 +508,7 @@
   width: 96px;
   height: 72px;
   object-fit: cover;
-  border-radius: 5px;
+  border-radius: var(--radius-sm);
   flex-shrink: 0;
   background: var(--surface-3);
 }
@@ -535,7 +535,7 @@
 }
 .link-embed-site { font-size: 11px; color: var(--accent); margin-top: 2px; }
 
-.embed { margin: 8px 0; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); }
+.embed { margin: 8px 0; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border); }
 .embed-youtube { position: relative; aspect-ratio: 16/9; background: #000; }
 .embed-youtube iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
 .embed-pdf { height: 420px; background: var(--surface-2); }
@@ -562,7 +562,7 @@
   color: var(--muted);
   background: var(--surface-2);
   border: 1px dashed var(--border);
-  border-radius: 6px;
+  border-radius: var(--radius);
   padding: 6px 12px;
   cursor: pointer;
   width: 100%;
@@ -593,7 +593,7 @@
   color: var(--muted);
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   padding: 1px 5px;
   display: inline-block;
   margin-top: 4px;
@@ -632,7 +632,7 @@
 .takeaway-prompt {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius);
   padding: 10px 12px;
   margin-bottom: 8px;
   display: flex;
@@ -649,7 +649,7 @@
   font-size: 13px;
   padding: 6px 8px;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--radius);
   background: var(--bg);
   color: var(--text);
   resize: vertical;
@@ -675,7 +675,7 @@
   color: var(--muted);
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 5px;
+  border-radius: var(--radius-sm);
   padding: 3px 8px;
   width: 100%;
 }
@@ -684,7 +684,7 @@
 .btn-small {
   font-size: 12px;
   padding: 3px 10px;
-  border-radius: 5px;
+  border-radius: var(--radius-sm);
   border: 1px solid var(--accent);
   background: var(--accent);
   color: var(--on-accent);
@@ -701,7 +701,7 @@
   border: none;
   padding: 0;
   color: var(--muted);
-  border-radius: 6px;
+  border-radius: var(--radius);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -715,8 +715,8 @@
 .icon-btn.icon-btn-danger:hover { color: var(--danger); background: rgba(192,58,43,0.08); }
 
 /* Status select */
-.status-select { padding: 3px 7px; font-size: 12px; border-radius: 6px; }
-.move-select { padding: 3px 7px; font-size: 12px; border-radius: 6px; }
+.status-select { padding: 3px 7px; font-size: 12px; border-radius: var(--radius); }
+.move-select { padding: 3px 7px; font-size: 12px; border-radius: var(--radius); }
 .status-done { color: var(--done); border-color: var(--done); background: rgba(46,122,82,0.07); }
 .status-active { color: var(--active); border-color: var(--active); background: rgba(184,92,26,0.07); }
 .status-backlog { color: var(--backlog); }
@@ -726,21 +726,21 @@
 .tag-chip {
   font-size: 11.5px;
   padding: 2px 8px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--accent-weak);
   color: var(--accent);
   border: none;
   font-weight: 500;
 }
 .tag-chip:hover { background: rgba(192,58,43,0.1); color: var(--danger); }
-.tag-chip[style*="background"] { padding: 2px 7px; border-radius: 4px; }
+.tag-chip[style*="background"] { padding: 2px 7px; border-radius: var(--radius-sm); }
 .tag-add { width: 110px; padding: 3px 8px; font-size: 12px; }
 
 /* ── Misc ────────────────────────────────────────────────────────────────────── */
 .muted { color: var(--muted); }
 .progress-stats { font-size: 16px; }
 .pill {
-  display: inline-block; padding: 3px 10px; border-radius: 999px;
+  display: inline-block; padding: 3px 10px; border-radius: var(--radius-pill);
   background: var(--surface-2); margin-right: 6px; font-variant-numeric: tabular-nums;
 }
 .progress-header { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
@@ -748,7 +748,7 @@
 .progress-insights { display: flex; gap: 12px; flex-wrap: wrap; margin: 20px 0; }
 .progress-insight-card {
   display: flex; flex-direction: column; gap: 2px;
-  padding: 12px 18px; border-radius: 8px;
+  padding: 12px 18px; border-radius: var(--radius);
   background: var(--surface-2); border: 1px solid var(--border);
   min-width: 120px;
 }

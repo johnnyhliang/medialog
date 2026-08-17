@@ -26,7 +26,7 @@
   flex: 1;
   background: var(--surface-raised);
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--radius);
   padding: 6px 10px;
   font-size: var(--text-sm);
   color: var(--text);
@@ -48,7 +48,7 @@
   flex-direction: column;
   gap: 4px;
   padding: 12px 14px;
-  border-radius: 8px;
+  border-radius: var(--radius);
   border: none;
   text-align: left;
   cursor: pointer;
@@ -94,7 +94,7 @@
 .reader-modal {
   background: var(--surface-1);
   border: 1px solid var(--border);
-  border-radius: calc(var(--radius) * 2);
+  border-radius: var(--radius-lg);
   width: 100%;
   max-width: 720px;
   box-shadow: 0 24px 64px rgba(0,0,0,0.35);
@@ -154,7 +154,7 @@
   margin: 0 0 1em;
 }
 
-.reader-highlight { border-radius: 2px; cursor: pointer; }
+.reader-highlight { border-radius: var(--radius-sm); cursor: pointer; }
 .reader-highlight--yellow { background: rgba(250,204,21,0.35); }
 .reader-highlight--green  { background: rgba(74,222,128,0.3); }
 .reader-highlight--blue   { background: rgba(96,165,250,0.3); }
@@ -180,7 +180,7 @@
   align-items: flex-start;
   gap: 8px;
   padding: 6px 10px;
-  border-radius: 6px;
+  border-radius: var(--radius);
   font-size: 13px;
   border-left: 3px solid transparent;
 }
@@ -198,7 +198,7 @@
   z-index: 1000;
   background: var(--surface-2);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius);
   padding: 12px;
   width: 260px;
   box-shadow: 0 8px 32px rgba(0,0,0,0.3);
@@ -228,7 +228,7 @@
   padding: 6px 8px;
   font-size: 13px;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--radius);
   background: var(--surface-1);
   color: var(--text);
 }
@@ -236,7 +236,7 @@
 .reader-picker-save {
   font-size: 12px;
   padding: 4px 12px;
-  border-radius: 6px;
+  border-radius: var(--radius);
   background: var(--accent);
   color: var(--on-accent);
   border: none;
@@ -245,7 +245,7 @@
 .reader-picker-cancel {
   font-size: 12px;
   padding: 4px 12px;
-  border-radius: 6px;
+  border-radius: var(--radius);
   background: var(--surface-3);
   color: var(--text-2);
   border: 1px solid var(--border);
@@ -256,7 +256,7 @@
 .md-outline { margin: 0 0 8px; }
 .md-outline-toggle {
   display: inline-flex; align-items: center; gap: 5px;
-  background: none; border: 1px solid var(--border); border-radius: 6px;
+  background: none; border: 1px solid var(--border); border-radius: var(--radius);
   padding: 3px 9px; font-size: var(--text-xs); color: var(--muted); cursor: pointer;
 }
 .md-outline-toggle:hover { color: var(--text); border-color: var(--accent); }
@@ -264,7 +264,7 @@
 .md-outline-list li { padding: 2px 0; }
 .md-outline-list a {
   font-size: var(--text-sm); color: var(--muted); cursor: pointer; text-decoration: none;
-  display: block; padding: 1px 10px; border-radius: 4px;
+  display: block; padding: 1px 10px; border-radius: var(--radius-sm);
 }
 .md-outline-list a:hover { color: var(--accent); background: var(--surface-2); }
 
@@ -287,7 +287,7 @@
 .rel-wrap { margin-top: 10px; }
 .rel-btn {
   display: inline-flex; align-items: center; gap: 5px;
-  background: none; border: 1px solid var(--border); border-radius: 6px;
+  background: none; border: 1px solid var(--border); border-radius: var(--radius);
   padding: 3px 9px; font-size: var(--text-xs); color: var(--muted); cursor: pointer;
 }
 .rel-btn:hover { color: var(--accent); border-color: var(--accent); }

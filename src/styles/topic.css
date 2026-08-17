@@ -8,7 +8,7 @@
   line-height: 1;
   padding: 4px 8px;
   color: var(--text-muted);
-  border-radius: 6px;
+  border-radius: var(--radius);
   letter-spacing: 2px;
 }
 .topic-more-trigger:hover { background: var(--surface-2); color: var(--text); }
@@ -18,7 +18,7 @@
   right: 0;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius);
   box-shadow: 0 4px 16px rgba(0,0,0,0.12);
   min-width: 160px;
   z-index: 200;
@@ -44,7 +44,7 @@
 .topic-action-btn {
   font-size: 12px;
   padding: 3px 10px;
-  border-radius: 5px;
+  border-radius: var(--radius-sm);
   border: 1px solid var(--border);
   background: transparent;
   color: var(--muted);
@@ -73,7 +73,7 @@
 .view-toggle button {
   font-size: 12px;
   padding: 4px 12px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: transparent;
   border: 1px solid var(--border);
   color: var(--muted);
@@ -122,7 +122,7 @@
 .doc-width-btns button {
   padding: 2px 8px;
   font-size: 11px;
-  border-radius: 5px;
+  border-radius: var(--radius-sm);
   border: 1px solid var(--border);
   background: var(--surface);
   cursor: pointer;
@@ -155,7 +155,7 @@
   font-size: var(--text-xs);
   color: var(--muted);
   background: var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius);
   padding: 1px 7px;
 }
 
@@ -190,7 +190,7 @@
   gap: 0;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius);
   transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
   overflow: hidden;
 }
@@ -221,7 +221,7 @@
   letter-spacing: 0.3px;
   background: var(--accent);
   color: var(--on-accent);
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   padding: 2px 6px;
   margin-left: 8px;
   white-space: nowrap;
@@ -252,7 +252,7 @@
   right: 0;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius);
   box-shadow: var(--shadow-card-hover);
   z-index: 500;
   max-height: 240px;
@@ -269,12 +269,12 @@
 .tag-search-item:hover { background: var(--surface-3); }
 .tag-search-trigger { color: var(--muted); font-style: italic; }
 .tag-search-trigger:hover { color: var(--text); background: var(--surface-2); }
-.tag-color-swatch { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+.tag-color-swatch { width: 10px; height: 10px; border-radius: var(--radius-sm); flex-shrink: 0; }
 
 .search-scope select {
   font-size: 12px;
   padding: 4px 8px;
-  border-radius: 6px;
+  border-radius: var(--radius);
 }
 
 /* ── Entry embed chip ─────────────────────────────────────────────────────────── */
@@ -283,7 +283,7 @@
   align-items: center;
   gap: 4px;
   padding: 1px 7px;
-  border-radius: 5px;
+  border-radius: var(--radius-sm);
   background: var(--accent-weak);
   color: var(--accent);
   border: none;
@@ -301,7 +301,7 @@
   max-width: 320px;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius);
   box-shadow: var(--shadow-popover);
   padding: 10px 12px;
   font-size: 12.5px;
@@ -310,7 +310,7 @@
   pointer-events: none;
 }
 .embed-popover .pop-title { font-weight: 600; font-family: var(--font-serif); margin-bottom: 4px; }
-.embed-popover img { max-width: 100%; border-radius: 4px; margin-bottom: 6px; display: block; }
+.embed-popover img { max-width: 100%; border-radius: var(--radius-sm); margin-bottom: 6px; display: block; }
 .embed-popover .pop-text { color: var(--muted); white-space: pre-wrap; }
 
 /* ── Return-to-position button ────────────────────────────────────────────────── */
@@ -322,7 +322,7 @@
   background: var(--accent);
   color: var(--on-accent);
   border: none;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   padding: 9px 16px;
   font-size: 13px;
   font-weight: 500;

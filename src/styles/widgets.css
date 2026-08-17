@@ -5,7 +5,7 @@
   gap: 0;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   padding: 0;
   overflow: hidden;
 }
@@ -61,7 +61,7 @@
   width: 100%;
   padding: 7px 10px;
   border: 1px solid var(--border);
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   background: var(--surface-2);
   font-size: 12px;
   color: var(--text);
@@ -76,7 +76,7 @@
   margin: 6px 0;
   padding: 8px 10px;
   background: var(--surface-2);
-  border-radius: 5px;
+  border-radius: var(--radius-sm);
   border: 1px solid var(--border);
 }
 .kw-answer-text { font-size: 12px; color: var(--text); line-height: 1.5; }
@@ -94,7 +94,7 @@
   flex: 1;
   padding: 4px 6px;
   border: 1px solid var(--border);
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   font-size: 10px;
   font-weight: 500;
   background: transparent;
@@ -165,7 +165,7 @@
   font-family: inherit;
   background: var(--bg);
   border: 1px solid var(--border);
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   color: var(--text);
 }
 .kw-links-search:focus { outline: none; border-color: var(--accent); }
@@ -191,7 +191,7 @@
   font-family: inherit;
   background: var(--bg);
   border: 1px solid var(--border);
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   color: var(--text);
 }
 .kw-links-editor input:focus { outline: none; border-color: var(--accent); }
@@ -200,7 +200,7 @@
   align-self: flex-end;
   background: none;
   border: 1px solid var(--border);
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   color: var(--muted);
   font-size: 11px;
   padding: 2px 8px;

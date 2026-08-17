@@ -115,7 +115,7 @@ export default function ArchiveCrawl({ topics, onImport }) {
 
           <div style={{
             maxHeight: '320px', overflowY: 'auto',
-            border: '1px solid var(--border)', borderRadius: '3px',
+            border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)',
             fontSize: '0.8rem',
           }}>
             {result.items.map((item, i) => (
