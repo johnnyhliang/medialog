@@ -29,7 +29,7 @@ export default function SharedManager() {
   return (
     <section>
       <h2>Public sharing</h2>
-      <p className="muted" style={{ margin: '0 0 16px', fontSize: 13 }}>
+      <p className="muted" style={{ margin: '0 0 16px', fontSize: 'var(--text-sm)' }}>
         Everything you’ve made public. Shared pages are fully rendered and read-only.
         Nothing is public until you share it, and “Make private” takes it off this list immediately.
       </p>

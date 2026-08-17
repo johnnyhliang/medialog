@@ -206,7 +206,7 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
     <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
 
       <div>
-        <p style={{ margin: '0 0 12px', fontWeight: 600, fontSize: 13 }}>Color Palette</p>
+        <p style={{ margin: '0 0 12px', fontWeight: 600, fontSize: 'var(--text-sm)' }}>Color Palette</p>
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
           {[
             { id: 'warm',            name: 'Warm Parchment', bg: '#F8F5EE', accent: '#3D5A4A' },
@@ -230,7 +230,7 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
             />
           ))}
         </div>
-        <p style={{ margin: '8px 0 0', fontSize: 12, color: 'var(--muted)' }}>
+        <p style={{ margin: '8px 0 0', fontSize: 'var(--text-sm)', color: 'var(--muted)' }}>
           {[
             { id: 'warm', name: 'Warm Parchment' },
             { id: 'catppuccin-mocha', name: 'Catppuccin Mocha' },
@@ -242,7 +242,7 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
       </div>
 
       <div>
-        <p style={{ margin: '0 0 12px', fontWeight: 600, fontSize: 13 }}>Style</p>
+        <p style={{ margin: '0 0 12px', fontWeight: 600, fontSize: 'var(--text-sm)' }}>Style</p>
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
           {[
             {
@@ -280,7 +280,7 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
                 padding: '8px 10px', borderRadius: 'var(--radius)', cursor: 'pointer',
                 border: themeStyle === id ? '2px solid var(--accent)' : '1px solid var(--border)',
                 background: themeStyle === id ? 'var(--accent-weak)' : 'var(--surface)',
-                fontSize: 11, color: 'var(--text)', fontWeight: themeStyle === id ? 600 : 400,
+                fontSize: 'var(--text-xs)', color: 'var(--text)', fontWeight: themeStyle === id ? 600 : 400,
               }}
             >
               {preview}
@@ -289,7 +289,7 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
           ))}
         </div>
         {themeStyle === 'glass' && themePalette === 'warm' && (
-          <p style={{ margin: '8px 0 0', fontSize: 11, color: 'var(--muted)' }}>
+          <p style={{ margin: '8px 0 0', fontSize: 'var(--text-xs)', color: 'var(--muted)' }}>
             Glassmorphism is most visible on dark palettes.
           </p>
         )}
@@ -316,7 +316,7 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
         <section>
           <h2>Twitter / X Auth Token</h2>
           <div className="card">
-            <p className="muted" style={{ fontSize: 13, marginBottom: 16 }}>
+            <p className="muted" style={{ fontSize: 'var(--text-sm)', marginBottom: 16 }}>
               Paste your <code>auth_token</code> cookie from twitter.com DevTools (Application → Cookies).
               This is used by the opportunity radar to fetch tweets. Token is stored in your account only.
             </p>
@@ -327,7 +327,7 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
                 value={twitterToken}
                 onChange={(e) => setTwitterToken(e.target.value)}
                 placeholder="Paste auth_token value here"
-                style={{ fontFamily: 'monospace', fontSize: 12 }}
+                style={{ fontFamily: 'monospace', fontSize: 'var(--text-sm)' }}
               />
             </div>
             <div className="actions">
@@ -387,7 +387,7 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
       {activeTab === 'behavior' && (
         <section>
           <h3 className="section-label">Behavior</h3>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13 }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 'var(--text-sm)' }}>
             <input
               type="checkbox"
               checked={archiveToast ?? true}
@@ -395,7 +395,7 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
             />
             Show undo notification when archiving done entries (3 seconds)
           </label>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, marginTop: 10 }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 'var(--text-sm)', marginTop: 10 }}>
             <input
               type="checkbox"
               checked={trashToast ?? true}
@@ -404,7 +404,7 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
             Show undo notification when moving entries to trash (5 seconds)
           </label>
           {onToggleAssistant && (
-            <label style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, marginTop: 10 }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 'var(--text-sm)', marginTop: 10 }}>
               <input
                 type="checkbox"
                 checked={assistantEnabled ?? true}
@@ -419,7 +419,7 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
       {activeTab === 'tags' && (
         <section>
           <h3 className="section-label">Tag Colors</h3>
-          {allTags.length === 0 && <p className="muted" style={{ fontSize: 13 }}>No tags yet.</p>}
+          {allTags.length === 0 && <p className="muted" style={{ fontSize: 'var(--text-sm)' }}>No tags yet.</p>}
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             {allTags.map(tag => (
               <TagColorRow key={tag.id} tag={tag} onUpdateTagColor={onUpdateTagColor} />
@@ -436,28 +436,28 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
         <section>
           <h2>Feed Sources</h2>
           <div className="card">
-            <p className="muted" style={{ fontSize: 13, marginBottom: 16 }}>
+            <p className="muted" style={{ fontSize: 'var(--text-sm)', marginBottom: 16 }}>
               Every source in Feed is added the same way — <strong>Feed → Add feed → paste a URL,
               give it a name</strong>. What differs is which URL to paste.
             </p>
 
             <h3 className="section-label">RSS / Atom (blogs, most sites)</h3>
-            <p className="muted" style={{ fontSize: 13, marginBottom: 8 }}>
+            <p className="muted" style={{ fontSize: 'var(--text-sm)', marginBottom: 8 }}>
               Paste the site's feed URL directly — usually <code>/feed</code>, <code>/rss</code>,
               or <code>/atom.xml</code>. This is the default and needs nothing special.
             </p>
 
             <h3 className="section-label" style={{ marginTop: 20 }}>Subreddits</h3>
-            <p className="muted" style={{ fontSize: 13, marginBottom: 8 }}>
+            <p className="muted" style={{ fontSize: 'var(--text-sm)', marginBottom: 8 }}>
               Paste the subreddit's normal URL — it's detected automatically, no extra step:
             </p>
             <div className="form-group">
               <div style={{ display: 'flex', gap: 8 }}>
-                <input readOnly value="https://www.reddit.com/r/ExperiencedDevs" style={{ fontFamily: 'monospace', fontSize: 12 }} />
+                <input readOnly value="https://www.reddit.com/r/ExperiencedDevs" style={{ fontFamily: 'monospace', fontSize: 'var(--text-sm)' }} />
                 <button onClick={() => { navigator.clipboard.writeText('https://www.reddit.com/r/ExperiencedDevs'); addToast('Copied', 'success') }} style={{ flexShrink: 0 }}>Copy</button>
               </div>
             </div>
-            <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>
+            <p className="muted" style={{ fontSize: 'var(--text-sm)', marginTop: 8 }}>
               Any URL matching <code>reddit.com/r/&lt;name&gt;</code> is filed as Reddit, not RSS —
               only posts scoring above a threshold come through (default 100 upvotes, since
               subreddits are noisier than a blog). Lower- or higher-traffic subs may want a
@@ -465,22 +465,22 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
             </p>
 
             <h3 className="section-label" style={{ marginTop: 20 }}>YouTube channels</h3>
-            <p className="muted" style={{ fontSize: 13, marginBottom: 8 }}>
+            <p className="muted" style={{ fontSize: 'var(--text-sm)', marginBottom: 8 }}>
               YouTube publishes a real Atom feed per channel — there's no separate "video" mode,
               it's added exactly like any RSS source once you have the channel ID:
             </p>
-            <ol style={{ fontSize: 13, lineHeight: 1.8, paddingLeft: 20, marginBottom: 12 }}>
+            <ol style={{ fontSize: 'var(--text-sm)', lineHeight: 1.8, paddingLeft: 20, marginBottom: 12 }}>
               <li>Open the channel's page, right-click → <strong>View Page Source</strong></li>
               <li>Search (Ctrl/Cmd+F) for <code>channelId</code> and copy the value after it (starts with <code>UC…</code>)</li>
               <li>Build the feed URL by dropping that ID into the template below</li>
             </ol>
             <div className="form-group">
               <div style={{ display: 'flex', gap: 8 }}>
-                <input readOnly value="https://www.youtube.com/feeds/videos.xml?channel_id=UC..." style={{ fontFamily: 'monospace', fontSize: 12 }} />
+                <input readOnly value="https://www.youtube.com/feeds/videos.xml?channel_id=UC..." style={{ fontFamily: 'monospace', fontSize: 'var(--text-sm)' }} />
                 <button onClick={() => { navigator.clipboard.writeText('https://www.youtube.com/feeds/videos.xml?channel_id='); addToast('Copied — paste the channel ID after channel_id=', 'success') }} style={{ flexShrink: 0 }}>Copy</button>
               </div>
             </div>
-            <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>
+            <p className="muted" style={{ fontSize: 'var(--text-sm)', marginTop: 8 }}>
               Paste the finished URL into Add feed like any other source. A few channels
               (Karpathy, ThePrimeagen, George Hotz, and others) are already in the starter pack —
               check there before building a URL by hand.
@@ -499,7 +499,7 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
             </p>
 
             <h3 className="section-label" style={{ marginTop: 20 }}>Install</h3>
-            <ol style={{ fontSize: 13, lineHeight: 1.8, paddingLeft: 20 }}>
+            <ol style={{ fontSize: 'var(--text-sm)', lineHeight: 1.8, paddingLeft: 20 }}>
               <li>Go to <button className="linklike" onClick={() => setTab('tokens')}>Capture tokens</button> and create a token.</li>
               <li>Press <strong>copy bookmarklet</strong> on the token that appears.</li>
               <li>Make a new bookmark in your browser (right-click the bookmarks bar → Add page).</li>
@@ -509,12 +509,12 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
 
             {/* The code can only be produced when a token is minted: only the SHA-256
                 hash is stored, so there is nothing here to regenerate it from. */}
-            <p className="muted" style={{ fontSize: 12, marginTop: 16 }}>
+            <p className="muted" style={{ fontSize: 'var(--text-sm)', marginTop: 16 }}>
               The code embeds your capture token, so it can only be generated at the moment a
               token is created — only a hash is kept afterwards. Lost it? Revoke that token and
               make a new one; it takes a few seconds.
             </p>
-            <p className="muted" style={{ fontSize: 12 }}>
+            <p className="muted" style={{ fontSize: 'var(--text-sm)' }}>
               Treat the code like a password: anything holding it can save entries to your Inbox.
               A bookmarklet runs inside whatever page you click it on, so if you ever click it
               somewhere sketchy, revoke the token.
@@ -527,11 +527,11 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
         <section>
           <h2>iOS Shortcut</h2>
           <div className="card">
-            <p className="muted" style={{ fontSize: 13, marginBottom: 16 }}>
+            <p className="muted" style={{ fontSize: 'var(--text-sm)', marginBottom: 16 }}>
               Create an iOS Shortcut to share any Safari page directly to your MediaLog inbox.
               In the Shortcuts app, create a new shortcut with these actions:
             </p>
-            <ol style={{ fontSize: 13, lineHeight: 1.8, paddingLeft: 20, marginBottom: 16 }}>
+            <ol style={{ fontSize: 'var(--text-sm)', lineHeight: 1.8, paddingLeft: 20, marginBottom: 16 }}>
               <li>Receive input from <strong>Share Sheet</strong> (input type: URLs)</li>
               <li>Get URLs from <em>Shortcut Input</em></li>
               <li>Get Name of <em>Shortcut Input</em></li>
@@ -541,7 +541,7 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
             <div className="form-group">
               <label>Capture Endpoint</label>
               <div style={{ display: 'flex', gap: 8 }}>
-                <input readOnly value="https://bhxqgpgyxqnqvnqjvrrj.supabase.co/functions/v1/capture" style={{ fontFamily: 'monospace', fontSize: 12 }} />
+                <input readOnly value="https://bhxqgpgyxqnqvnqjvrrj.supabase.co/functions/v1/capture" style={{ fontFamily: 'monospace', fontSize: 'var(--text-sm)' }} />
                 <button onClick={() => { navigator.clipboard.writeText('https://bhxqgpgyxqnqvnqjvrrj.supabase.co/functions/v1/capture'); addToast('Copied', 'success') }} style={{ flexShrink: 0 }}>Copy</button>
               </div>
             </div>
@@ -550,10 +550,10 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
               <textarea
                 readOnly
                 rows={3}
-                style={{ fontFamily: 'monospace', fontSize: 11, resize: 'none' }}
+                style={{ fontFamily: 'monospace', fontSize: 'var(--text-xs)', resize: 'none' }}
                 value={'{"token":"YOUR_TOKEN","url":"[URLs]","note":"[Name]"}'}
               />
-              <p className="muted" style={{ fontSize: 11, marginTop: 4 }}>
+              <p className="muted" style={{ fontSize: 'var(--text-xs)', marginTop: 4 }}>
                 Get the filled-in version from{' '}
                 <button className="linklike" onClick={() => setTab('tokens')}>Capture tokens</button>
                 {' '}— press <strong>copy shortcut JSON</strong> when you create a token. Replace{' '}
@@ -566,9 +566,9 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
             <div style={{ marginTop: 24 }}>
               <h3 className="section-label">Recent Captures</h3>
               {captureLog.length === 0 ? (
-                <p className="muted" style={{ fontSize: 13 }}>No captures yet.</p>
+                <p className="muted" style={{ fontSize: 'var(--text-sm)' }}>No captures yet.</p>
               ) : (
-                <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse' }}>
+                <table style={{ width: '100%', fontSize: 'var(--text-sm)', borderCollapse: 'collapse' }}>
                   <tbody>
                     {captureLog.map((row) => {
                       const d = new Date(row.created_at)
@@ -578,7 +578,7 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
                       return (
                         <tr key={row.id} style={{ borderBottom: '1px solid var(--border)' }}>
                           <td style={{ padding: '6px 0', width: 16 }}>
-                            <span style={{ color: row.ok ? 'var(--success)' : 'var(--error)', fontSize: 10 }}>
+                            <span style={{ color: row.ok ? 'var(--success)' : 'var(--error)', fontSize: 'var(--text-xs)' }}>
                               {row.ok ? '●' : '✕'}
                             </span>
                           </td>
@@ -604,23 +604,23 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
         <section>
           <h2>Instagram Reels</h2>
           <div className="card">
-            <p className="muted" style={{ fontSize: 13, marginBottom: 16 }}>
+            <p className="muted" style={{ fontSize: 'var(--text-sm)', marginBottom: 16 }}>
               Reels sent to your Instagram DMs are automatically fetched every 15 minutes and saved to your MediaLog inbox.
               No configuration is needed here — setup is done once via Supabase secrets.
             </p>
-            <h3 style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>Setup (one-time)</h3>
-            <ol style={{ fontSize: 13, lineHeight: 1.9, paddingLeft: 20, marginBottom: 0 }}>
+            <h3 style={{ fontSize: 'var(--text-sm)', fontWeight: 600, marginBottom: 8 }}>Setup (one-time)</h3>
+            <ol style={{ fontSize: 'var(--text-sm)', lineHeight: 1.9, paddingLeft: 20, marginBottom: 0 }}>
               <li>Set <code>CRON_SECRET</code> in Supabase Secrets dashboard (same value as your existing cron secret) — the fetch-reels function will reject calls without it</li>
-              <li>Deploy the edge function:<br /><code style={{ fontSize: 11 }}>npx supabase functions deploy fetch-reels --no-verify-jwt</code></li>
-              <li>Apply the cron migration:<br /><code style={{ fontSize: 11 }}>npx supabase db push</code></li>
+              <li>Deploy the edge function:<br /><code style={{ fontSize: 'var(--text-xs)' }}>npx supabase functions deploy fetch-reels --no-verify-jwt</code></li>
+              <li>Apply the cron migration:<br /><code style={{ fontSize: 'var(--text-xs)' }}>npx supabase db push</code></li>
               <li>
                 Set your Instagram session cookie (from instagram.com DevTools → Application → Cookies → <code>sessionid</code>):<br />
-                <code style={{ fontSize: 11 }}>npx supabase secrets set INSTAGRAM_SESSION_ID=&lt;value&gt;</code>
+                <code style={{ fontSize: 'var(--text-xs)' }}>npx supabase secrets set INSTAGRAM_SESSION_ID=&lt;value&gt;</code>
               </li>
               <li>Your existing <code>GEMINI_API_KEY</code> secret is reused for caption summarization — no additional API key needed</li>
-              <li>Set your Supabase user ID (from Auth dashboard):<br /><code style={{ fontSize: 11 }}>npx supabase secrets set CAPTURE_USER_ID=&lt;uuid&gt;</code></li>
+              <li>Set your Supabase user ID (from Auth dashboard):<br /><code style={{ fontSize: 'var(--text-xs)' }}>npx supabase secrets set CAPTURE_USER_ID=&lt;uuid&gt;</code></li>
             </ol>
-            <p className="muted" style={{ fontSize: 12, marginTop: 16, marginBottom: 0 }}>
+            <p className="muted" style={{ fontSize: 'var(--text-sm)', marginTop: 16, marginBottom: 0 }}>
               <strong>Note:</strong> The <code>sessionid</code> cookie expires periodically. If reels stop appearing, re-run the <code>secrets set</code> command with a fresh value from DevTools.
             </p>
           </div>

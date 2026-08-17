@@ -2,8 +2,8 @@
 .versions { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; }
 .versions li { display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--border); padding: 6px 0; }
 .versions li:last-child { border-bottom: none; }
-.version-date { color: var(--muted); font-size: 12px; white-space: nowrap; }
-.version-preview { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+.version-date { color: var(--muted); font-size: var(--text-sm); white-space: nowrap; }
+.version-preview { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--text-sm); }
 
 /* ── Autosave indicator ─────────────────────────────────────────────────────── */
 .save-status {
@@ -95,7 +95,7 @@
   border: 1px solid rgba(255,255,255,0.3);
   border-radius: var(--radius-sm);
   color: var(--on-accent);
-  font-size: 12px;
+  font-size: var(--text-sm);
   padding: 2px 8px;
   cursor: pointer;
   margin-right: 4px;
@@ -129,10 +129,10 @@
   flex-direction: column;
   gap: 8px;
 }
-.revisit-note { font-size: 13.5px; color: var(--text); line-height: 1.6; margin: 0; }
+.revisit-note { font-size: var(--text-sm); color: var(--text); line-height: 1.6; margin: 0; }
 
 .revisit-srs-row { display: flex; align-items: center; gap: 10px; }
-.revisit-srs-label { font-size: 11px; color: var(--muted); }
+.revisit-srs-label { font-size: var(--text-xs); color: var(--muted); }
 
 .revisit-rating-row {
   display: flex;
@@ -142,7 +142,7 @@
 }
 .revisit-rating-btns { display: flex; gap: 6px; }
 .revisit-rate-btn {
-  font-size: 12px;
+  font-size: var(--text-sm);
   padding: 5px 12px;
   border-radius: var(--radius);
   border: 1px solid var(--border);
@@ -156,7 +156,7 @@
 .revisit-rate-btn--good { background: var(--tint-blue-bg); color: var(--tint-blue-fg); border-color: rgba(59,130,246,.3); }
 .revisit-rate-btn--easy { background: var(--tint-green-bg); color: var(--tint-green-fg); border-color: rgba(34,197,94,.3); }
 .revisit-rate-btn:hover { opacity: 0.8; }
-.revisit-rate-interval { font-size: 10px; opacity: 0.7; font-weight: 400; }
+.revisit-rate-interval { font-size: var(--text-xs); opacity: 0.7; font-weight: 400; }
 .revisit-end-btns { display: flex; gap: 6px; margin-left: auto; }
 /* Quieter than the grade buttons on purpose — ending the loop should be
    available, not encouraged over actually reviewing the thing. */
@@ -174,7 +174,7 @@
 .activity-item:hover { background: var(--surface); border-color: var(--border); }
 .activity-item-header { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
 .activity-title {
-  font-size: 14px;
+  font-size: var(--text-base);
   font-weight: 500;
   color: var(--text);
   text-decoration: none;
@@ -184,7 +184,7 @@
 a.activity-title:hover { color: var(--accent); }
 .activity-meta { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 .activity-topic {
-  font-size: 11px;
+  font-size: var(--text-xs);
   background: var(--surface-2);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
@@ -192,8 +192,8 @@ a.activity-title:hover { color: var(--accent); }
   color: var(--muted);
   white-space: nowrap;
 }
-.activity-age { font-size: 11px; color: var(--muted); white-space: nowrap; }
-.activity-note-preview { font-size: 12.5px; color: var(--muted); margin: 3px 0 0; line-height: 1.5; }
+.activity-age { font-size: var(--text-xs); color: var(--muted); white-space: nowrap; }
+.activity-note-preview { font-size: var(--text-sm); color: var(--muted); margin: 3px 0 0; line-height: 1.5; }
 .activity-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
-.activity-tag { font-size: 11px; color: var(--muted); }
+.activity-tag { font-size: var(--text-xs); color: var(--muted); }
 

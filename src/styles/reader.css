@@ -113,7 +113,7 @@
 }
 .reader-title {
   flex: 1;
-  font-size: 15px;
+  font-size: var(--text-md);
   font-weight: 600;
   color: var(--text);
   line-height: 1.4;
@@ -126,7 +126,7 @@
   flex-shrink: 0;
 }
 .reader-orig-link {
-  font-size: 12px;
+  font-size: var(--text-sm);
   color: var(--accent);
   text-decoration: none;
   white-space: nowrap;
@@ -137,14 +137,14 @@
   border: none;
   color: var(--muted);
   cursor: pointer;
-  font-size: 14px;
+  font-size: var(--text-base);
   padding: 2px 4px;
   line-height: 1;
 }
 .reader-close:hover { color: var(--text); }
 .reader-body {
   padding: 24px;
-  font-size: 15px;
+  font-size: var(--text-md);
   line-height: 1.75;
   color: var(--text);
   max-height: 70vh;
@@ -168,7 +168,7 @@
   gap: 8px;
 }
 .reader-highlights-label {
-  font-size: 11px;
+  font-size: var(--text-xs);
   font-weight: 600;
   letter-spacing: .06em;
   text-transform: uppercase;
@@ -181,7 +181,7 @@
   gap: 8px;
   padding: 6px 10px;
   border-radius: var(--radius);
-  font-size: 13px;
+  font-size: var(--text-sm);
   border-left: 3px solid transparent;
 }
 .reader-hl-row--yellow { border-left-color: var(--hl-yellow-bright); background: rgba(250,204,21,.12); }
@@ -189,8 +189,8 @@
 .reader-hl-row--blue   { border-left-color: var(--hl-blue-bright); background: rgba(96,165,250,.1); }
 .reader-hl-row--pink   { border-left-color: var(--hl-pink-bright); background: rgba(249,168,212,.12); }
 .reader-hl-text { flex: 1; color: var(--text); line-height: 1.5; min-width: 0; }
-.reader-hl-note { font-size: 11px; color: var(--muted); flex-shrink: 0; font-style: italic; }
-.reader-hl-del { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 11px; padding: 0 2px; flex-shrink: 0; }
+.reader-hl-note { font-size: var(--text-xs); color: var(--muted); flex-shrink: 0; font-style: italic; }
+.reader-hl-del { background: none; border: none; color: var(--muted); cursor: pointer; font-size: var(--text-xs); padding: 0 2px; flex-shrink: 0; }
 .reader-hl-del:hover { color: var(--error); }
 
 .reader-picker {
@@ -226,7 +226,7 @@
   width: 100%;
   box-sizing: border-box;
   padding: 6px 8px;
-  font-size: 13px;
+  font-size: var(--text-sm);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--surface-1);
@@ -234,7 +234,7 @@
 }
 .reader-picker-actions { display: flex; gap: 6px; justify-content: flex-end; }
 .reader-picker-save {
-  font-size: 12px;
+  font-size: var(--text-sm);
   padding: 4px 12px;
   border-radius: var(--radius);
   background: var(--accent);
@@ -243,7 +243,7 @@
   cursor: pointer;
 }
 .reader-picker-cancel {
-  font-size: 12px;
+  font-size: var(--text-sm);
   padding: 4px 12px;
   border-radius: var(--radius);
   background: var(--surface-3);

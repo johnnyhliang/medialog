@@ -47,7 +47,7 @@
   gap: 2px;
 }
 .file-name {
-  font-size: 13.5px;
+  font-size: var(--text-sm);
   font-weight: 500;
   color: var(--text);
   white-space: nowrap;
@@ -59,7 +59,7 @@
 
 /* ── FilesView ────────────────────────────────────── */
 .files-view { max-width: 720px; padding: 24px; }
-.files-heading { font-family: var(--font-serif); font-size: 1.4rem; margin: 0 0 16px; }
+.files-heading { font-family: var(--font-serif); font-size: var(--text-xl); margin: 0 0 16px; }
 .files-sort-row {
   display: flex;
   align-items: center;
@@ -89,6 +89,6 @@
   margin-top: 16px;
   width: 100%;
   padding: 10px;
-  font-size: 13px;
+  font-size: var(--text-sm);
 }
 

@@ -5,25 +5,25 @@
 }
 .gains-card-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
 .gains-card-eyebrow {
-  font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-dim);
+  font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-dim);
 }
 .gains-floor-toggle, .gains-back {
-  background: none; border: none; color: var(--text-dim); font-size: 12px;
+  background: none; border: none; color: var(--text-dim); font-size: var(--text-sm);
   cursor: pointer; padding: 0; text-decoration: underline;
 }
 .gains-floor { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
-.gains-floor-text { font-size: 14px; color: var(--text); margin: 0; }
+.gains-floor-text { font-size: var(--text-base); color: var(--text); margin: 0; }
 .gains-seed-btn {
   margin-top: 4px; padding: 6px 12px; border: 1px solid var(--border); border-radius: var(--radius);
-  background: var(--surface); color: var(--text); font-size: 13px; cursor: pointer;
+  background: var(--surface); color: var(--text); font-size: var(--text-sm); cursor: pointer;
 }
 .gains-seed-btn:hover { border-color: var(--accent); }
 .gains-seed-btn:disabled { opacity: 0.6; cursor: default; }
 .gains-track-tag {
-  font-size: 11px; font-weight: 600; color: var(--accent); text-transform: uppercase;
+  font-size: var(--text-xs); font-weight: 600; color: var(--accent); text-transform: uppercase;
 }
-.gains-pick-title { font-size: 15px; margin: 4px 0 4px; color: var(--text); }
-.gains-progress { font-size: 12px; color: var(--text-dim); margin: 0 0 10px; }
+.gains-pick-title { font-size: var(--text-md); margin: 4px 0 4px; color: var(--text); }
+.gains-progress { font-size: var(--text-sm); color: var(--text-dim); margin: 0 0 10px; }
 .gains-inline-link {
   background: none; border: none; padding: 0; color: var(--accent);
   text-decoration: underline; cursor: pointer; font-size: inherit;
@@ -32,7 +32,7 @@
 .gains-pick-actions button {
   display: flex; align-items: center; gap: 4px; padding: 6px 12px;
   border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface);
-  color: var(--text); font-size: 13px; cursor: pointer;
+  color: var(--text); font-size: var(--text-sm); cursor: pointer;
 }
 .gains-pick-actions button:hover { border-color: var(--accent); }
 .gains-pull-another { color: var(--text-dim); }
@@ -41,7 +41,7 @@
   display: flex; flex-direction: column; gap: 4px;
 }
 .gains-rec-item {
-  font-size: 13px; color: var(--text-dim); text-decoration: none;
+  font-size: var(--text-sm); color: var(--text-dim); text-decoration: none;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .gains-rec-item:hover { color: var(--accent); }
@@ -62,7 +62,7 @@
   border-radius: var(--radius-pill);
   background: var(--accent-weak);
   color: var(--muted);
-  font-size: 10px;
+  font-size: var(--text-xs);
   font-weight: 600;
 }
 
@@ -89,7 +89,7 @@
   border: none;
   background: transparent;
   color: var(--muted);
-  font-size: 15px;
+  font-size: var(--text-md);
   line-height: 1;
   cursor: pointer;
   transition: color 0.1s;
@@ -102,7 +102,7 @@
   background: none;
   border: none;
   padding: 0;
-  font-size: 14px;
+  font-size: var(--text-base);
   font-weight: 500;
   color: var(--text);
   cursor: pointer;
@@ -112,7 +112,7 @@
 }
 .agenda-title:hover { color: var(--accent); }
 
-.agenda-meta { display: flex; align-items: baseline; gap: 8px; font-size: 11.5px; color: var(--muted); }
+.agenda-meta { display: flex; align-items: baseline; gap: 8px; font-size: var(--text-xs); color: var(--muted); }
 .agenda-topic { color: var(--text-dim); }
 .agenda-when { color: var(--muted); }
 
@@ -126,7 +126,7 @@
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 2px 8px;
-  font-size: 11px;
+  font-size: var(--text-xs);
   color: var(--muted);
   cursor: pointer;
   transition: opacity 0.1s, color 0.1s;
@@ -147,7 +147,7 @@
   flex-direction: column;
   gap: 6px;
 }
-.agenda-empty-title { font-size: 16px; font-weight: 500; color: var(--text); margin: 0; }
+.agenda-empty-title { font-size: var(--text-md); font-weight: 500; color: var(--text); margin: 0; }
 
 /* ── The Manager — resume cards (docs/manager-scope.md §3) ────────────────── */
 .manager-view {
@@ -161,8 +161,8 @@
   flex-direction: column;
   gap: 20px;
 }
-.manager-header h2 { margin: 0 0 2px; font-size: 1.15rem; color: var(--text); }
-.manager-header p { margin: 0; font-size: 12.5px; }
+.manager-header h2 { margin: 0 0 2px; font-size: var(--text-lg); color: var(--text); }
+.manager-header p { margin: 0; font-size: var(--text-sm); }
 
 .manager-cards { display: flex; flex-direction: column; gap: 10px; }
 
@@ -186,7 +186,7 @@
   padding: 0;
   cursor: pointer;
   font: inherit;
-  font-size: 14.5px;
+  font-size: var(--text-base);
   font-weight: 500;
   color: var(--text);
   text-align: left;
@@ -194,7 +194,7 @@
 .manager-card-name:hover { color: var(--accent); }
 
 .manager-chip {
-  font-size: 10.5px;
+  font-size: var(--text-xs);
   letter-spacing: 0.04em;
   text-transform: lowercase;
   color: var(--muted);
@@ -210,7 +210,7 @@
   align-items: center;
   gap: 6px;
   flex-wrap: wrap;
-  font-size: 12px;
+  font-size: var(--text-sm);
   color: var(--muted);
 }
 
@@ -224,7 +224,7 @@
   overflow: hidden;
 }
 .manager-progress-fill { display: block; height: 100%; background: var(--accent); }
-.manager-progress-count { font-size: 11.5px; color: var(--muted); }
+.manager-progress-count { font-size: var(--text-xs); color: var(--muted); }
 
 .manager-card-foot {
   display: flex;
@@ -243,7 +243,7 @@
   padding: 1px 0;
   cursor: text;
   font: inherit;
-  font-size: 13px;
+  font-size: var(--text-sm);
   color: var(--text);
   text-align: left;
   flex: 1 1 auto;
@@ -256,7 +256,7 @@
   flex: 1 1 auto;
   min-width: 0;
   font: inherit;
-  font-size: 13px;
+  font-size: var(--text-sm);
   color: var(--text);
   background: transparent;
   border: none;
@@ -272,13 +272,13 @@
 .manager-suggest {
   display: inline-flex; align-items: center; gap: 3px;
   background: none; border: 0; padding: 0;
-  font-size: 11px; color: var(--muted); cursor: pointer;
+  font-size: var(--text-xs); color: var(--muted); cursor: pointer;
   flex-shrink: 0; opacity: 0.7;
 }
 .manager-suggest:hover:not(:disabled) { color: var(--accent); opacity: 1; }
 .manager-suggest:disabled { cursor: wait; }
 /* Says out loud that what is in the box is not saved yet. */
-.manager-next-draft { font-size: 10px; color: var(--muted); flex-shrink: 0; }
+.manager-next-draft { font-size: var(--text-xs); color: var(--muted); flex-shrink: 0; }
 
 .manager-empty {
   text-align: center;
@@ -289,7 +289,7 @@
   align-items: center;
   gap: 8px;
 }
-.manager-empty h2 { margin: 0; font-size: 1.2rem; color: var(--text); }
+.manager-empty h2 { margin: 0; font-size: var(--text-lg); color: var(--text); }
 
 .manager-shelf { display: flex; flex-direction: column; gap: 8px; }
 .manager-shelf-toggle {
@@ -301,7 +301,7 @@
   padding: 0;
   cursor: pointer;
   font: inherit;
-  font-size: 11.5px;
+  font-size: var(--text-xs);
   letter-spacing: 0.04em;
   color: var(--muted);
 }
@@ -327,12 +327,12 @@
   padding: 0;
   cursor: pointer;
   font: inherit;
-  font-size: 13px;
+  font-size: var(--text-sm);
   color: var(--text);
   text-align: left;
 }
 .manager-parked-name:hover { color: var(--accent); }
-.manager-parked-note { margin: 0; font-size: 12px; color: var(--muted); }
+.manager-parked-note { margin: 0; font-size: var(--text-sm); color: var(--muted); }
 
 /* ── Manager: plan steps ─────────────────────────────────────────────────── */
 /* The only checkbox in the app that writes to a master_doc. Collapsed by
@@ -342,7 +342,7 @@
 .manager-plan-toggle {
   display: flex; align-items: center; gap: 5px;
   background: none; border: 0; padding: 0; cursor: pointer;
-  font-size: 12px; color: var(--muted);
+  font-size: var(--text-sm); color: var(--muted);
 }
 .manager-plan-toggle:hover { color: var(--text); }
 .manager-plan-chevron { transition: transform 0.15s ease; }
@@ -350,7 +350,7 @@
 .manager-plan-steps { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 4px; }
 .manager-step label {
   display: flex; align-items: baseline; gap: 8px;
-  font-size: 13px; line-height: 1.45; cursor: pointer;
+  font-size: var(--text-sm); line-height: 1.45; cursor: pointer;
 }
 .manager-step input { margin: 0; flex-shrink: 0; accent-color: var(--accent); cursor: pointer; }
 .manager-step input:disabled { cursor: wait; }
@@ -362,18 +362,18 @@
    like a day before you started — a day you did not work is not a failure. */
 .cgrid { margin-top: 28px; border-top: 1px solid var(--border); padding-top: 14px; }
 .cgrid-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px; }
-.cgrid-title { font-size: 12px; color: var(--muted); }
-.cgrid-streak { font-size: 12px; color: var(--muted); opacity: 0.75; }
+.cgrid-title { font-size: var(--text-sm); color: var(--muted); }
+.cgrid-streak { font-size: var(--text-sm); color: var(--muted); opacity: 0.75; }
 .cgrid-body { display: flex; gap: 6px; }
 .cgrid-dow {
   display: grid; grid-template-rows: repeat(7, 11px); gap: 3px;
   padding-top: 16px; flex-shrink: 0;
 }
-.cgrid-dow-label { font-size: 9px; color: var(--muted); line-height: 11px; }
+.cgrid-dow-label { font-size: var(--text-xs); color: var(--muted); line-height: 11px; }
 .cgrid-scroll { overflow-x: auto; padding-bottom: 4px; }
 .cgrid-months {
   display: flex; gap: 3px; height: 13px;
-  font-size: 9px; color: var(--muted);
+  font-size: var(--text-xs); color: var(--muted);
 }
 .cgrid-month { width: 11px; flex-shrink: 0; white-space: nowrap; }
 .cgrid-weeks { display: flex; gap: 3px; }
@@ -385,7 +385,7 @@
 .cgrid-day--l4 { background: var(--accent); }
 /* Not yet lived, so not drawn at all. */
 .cgrid-day--future { background: transparent; }
-.cgrid-foot { margin: 10px 0 0; font-size: 11px; }
+.cgrid-foot { margin: 10px 0 0; font-size: var(--text-xs); }
 
 /* ── Manager: outline + agenda, two panes ────────────────────────────────────
    Desktop gets the org-mode shape — the outline you work in, the dated view
@@ -434,15 +434,15 @@
   color: var(--muted); margin-bottom: 12px;
 }
 .agenda-pane-title {
-  font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase;
+  font-size: var(--text-xs); letter-spacing: 0.06em; text-transform: uppercase;
 }
 .agenda-pressing {
-  margin-left: auto; font-size: 11px;
+  margin-left: auto; font-size: var(--text-xs);
   color: var(--active); font-weight: 600;
 }
-.agenda-empty { font-size: 12px; line-height: 1.5; margin: 0; }
+.agenda-empty { font-size: var(--text-sm); line-height: 1.5; margin: 0; }
 .agenda-empty code {
-  font-size: 11px; background: var(--surface-3);
+  font-size: var(--text-xs); background: var(--surface-3);
   padding: 1px 4px; border-radius: var(--radius-sm);
 }
 
@@ -450,14 +450,14 @@
 .agenda-group-label {
   display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap;
   margin: 0 0 6px;
-  font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase;
+  font-size: var(--text-xs); letter-spacing: 0.08em; text-transform: uppercase;
 }
 /* The two halves are told apart by colour before you read a word — that
    separation is the whole model (manager-scope §8). */
 .agenda-group-label--deadline  { color: var(--active); }
 .agenda-group-label--scheduled { color: var(--muted); }
 .agenda-group-hint {
-  font-size: 10px; letter-spacing: 0; text-transform: none;
+  font-size: var(--text-xs); letter-spacing: 0; text-transform: none;
   font-weight: 400;
 }
 
@@ -466,7 +466,7 @@
   display: grid;
   grid-template-columns: 64px minmax(0, 1fr);
   gap: 2px 8px;
-  font-size: 12px;
+  font-size: var(--text-sm);
   line-height: 1.35;
   padding-left: 7px;
   border-left: 2px solid transparent;
@@ -480,7 +480,7 @@
 .agenda-row--scheduled { border-left-color: transparent; }
 
 .agenda-when {
-  font-size: 10px; color: var(--muted);
+  font-size: var(--text-xs); color: var(--muted);
   font-variant-numeric: tabular-nums;
   padding-top: 1px;
 }
@@ -497,14 +497,14 @@
 .agenda-row-project {
   grid-column: 2;
   display: inline-flex; align-items: center; gap: 4px;
-  font-size: 10px;
+  font-size: var(--text-xs);
 }
 
 /* A step's own date, shown inline in the outline so the agenda is not the only
    place the schedule exists. */
 .manager-step-date {
   margin-left: 6px;
-  font-size: 10px;
+  font-size: var(--text-xs);
   color: var(--muted);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -514,7 +514,7 @@
 .manager-group + .manager-group { margin-top: 20px; }
 .manager-group-label {
   margin: 0 0 8px;
-  font-size: 10px;
+  font-size: var(--text-xs);
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--muted);
@@ -527,7 +527,7 @@
   justify-self: start;
   display: inline-flex; align-items: center; gap: 3px;
   background: none; border: 0; padding: 0;
-  font-size: 10px; color: var(--muted); cursor: pointer;
+  font-size: var(--text-xs); color: var(--muted); cursor: pointer;
   opacity: 0.65;
 }
 .agenda-close:hover { opacity: 1; color: var(--accent); }

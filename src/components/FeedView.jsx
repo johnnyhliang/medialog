@@ -333,7 +333,7 @@ export default function FeedView({ supabase, topics, allTags = [], onSaveItem, a
                 aria-label="new category name"
               />
             )}
-            {addError && <p className="muted" style={{ fontSize: '0.75rem', color: 'var(--danger)' }}>{addError}</p>}
+            {addError && <p className="muted" style={{ fontSize: 'var(--text-sm)', color: 'var(--danger)' }}>{addError}</p>}
             <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
               <button onClick={handleAddFeed} disabled={addBusy || !newUrl || !newName}>
                 {addBusy ? 'adding…' : 'add'}
@@ -346,7 +346,7 @@ export default function FeedView({ supabase, topics, allTags = [], onSaveItem, a
                 <button
                   type="button"
                   className="linklike"
-                  style={{ marginLeft: 'auto', fontSize: '0.75rem' }}
+                  style={{ marginLeft: 'auto', fontSize: 'var(--text-sm)' }}
                   onClick={() => onOpenSettings('feed-help')}
                 >
                   adding subreddits / YouTube?
@@ -444,10 +444,10 @@ export default function FeedView({ supabase, topics, allTags = [], onSaveItem, a
           </div>
         )}
 
-        {error && <p className="muted" style={{ padding: '24px 32px', fontSize: '0.8rem' }}>{error}</p>}
+        {error && <p className="muted" style={{ padding: '24px 32px', fontSize: 'var(--text-sm)' }}>{error}</p>}
 
         {refreshing && items.length === 0 && (
-          <p className="muted" style={{ padding: '24px 32px', fontSize: '0.8rem' }}>fetching latest…</p>
+          <p className="muted" style={{ padding: '24px 32px', fontSize: 'var(--text-sm)' }}>fetching latest…</p>
         )}
 
         {!error && !loadingItems && !refreshing && items.length === 0 && (
@@ -466,7 +466,7 @@ export default function FeedView({ supabase, topics, allTags = [], onSaveItem, a
         )}
 
         {!refreshing && items.length > 0 && displayItems.length === 0 && (
-          <p className="muted" style={{ padding: '24px 32px', fontSize: '0.8rem' }}>
+          <p className="muted" style={{ padding: '24px 32px', fontSize: 'var(--text-sm)' }}>
             {itemSearch
               ? `no items match “${itemSearch}”.`
               : 'nothing matches your interests right now — untick “only matches” to see everything.'}

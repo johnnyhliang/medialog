@@ -71,7 +71,7 @@ export default function ArchiveView({ topics, archivedTopics = [], onSelectTopic
 
       {archivedTopics.length > 0 && (
         <div style={{ marginBottom: 28 }}>
-          <p className="section-label" style={{ fontSize: '0.75rem', marginBottom: 8 }}>Archived Topics</p>
+          <p className="section-label" style={{ fontSize: 'var(--text-sm)', marginBottom: 8 }}>Archived Topics</p>
           {[...archivedTopics].sort((a, b) => a.name.localeCompare(b.name)).map((t) => (
             <div key={t.id} className="trash-topic-card">
               <div>
@@ -94,7 +94,7 @@ export default function ArchiveView({ topics, archivedTopics = [], onSelectTopic
         <p style={{ padding: '1rem 0' }}>Loading…</p>
       ) : (
         <>
-          <p className="section-label" style={{ fontSize: '0.75rem', marginBottom: 8 }}>
+          <p className="section-label" style={{ fontSize: 'var(--text-sm)', marginBottom: 8 }}>
             Archived Entries — {entries.length}{hasMore ? '+' : ''} loaded across {grouped?.length ?? 0} topics
           </p>
 
@@ -107,7 +107,7 @@ export default function ArchiveView({ topics, archivedTopics = [], onSelectTopic
           />
 
           {grouped?.length === 0 && (
-            <p className="muted" style={{ fontSize: 13 }}>No archived entries{search ? ' matching that search' : ''}.</p>
+            <p className="muted" style={{ fontSize: 'var(--text-sm)' }}>No archived entries{search ? ' matching that search' : ''}.</p>
           )}
 
           {grouped?.map(([topicName, topicEntries]) => {
@@ -121,25 +121,25 @@ export default function ArchiveView({ topics, archivedTopics = [], onSelectTopic
                     width: '100%', textAlign: 'left', padding: '9px 14px',
                     display: 'flex', alignItems: 'center', gap: 10,
                     background: 'var(--surface-2)', border: 'none', cursor: 'pointer',
-                    fontSize: 13, fontWeight: 600,
+                    fontSize: 'var(--text-sm)', fontWeight: 600,
                   }}
                 >
                   <span style={{ flex: 1 }}>{topicName}</span>
-                  <span className="muted" style={{ fontSize: 12, fontWeight: 400 }}>{topicEntries.length}</span>
+                  <span className="muted" style={{ fontSize: 'var(--text-sm)', fontWeight: 400 }}>{topicEntries.length}</span>
                   {topic && (
                     <span
                       className="muted"
-                      style={{ fontSize: 11, fontWeight: 400, textDecoration: 'underline', cursor: 'pointer' }}
+                      style={{ fontSize: 'var(--text-xs)', fontWeight: 400, textDecoration: 'underline', cursor: 'pointer' }}
                       onClick={(e) => { e.stopPropagation(); onSelectTopic(topic.id) }}
                     >
                       open topic
                     </span>
                   )}
-                  <span style={{ fontSize: 11 }}>{isExpanded ? '▲' : '▼'}</span>
+                  <span style={{ fontSize: 'var(--text-xs)' }}>{isExpanded ? '▲' : '▼'}</span>
                 </button>
 
                 {isExpanded && topicEntries.map((entry) => (
-                  <div key={entry.id} style={{ padding: '8px 14px', borderTop: '1px solid var(--border)', fontSize: 13 }}>
+                  <div key={entry.id} style={{ padding: '8px 14px', borderTop: '1px solid var(--border)', fontSize: 'var(--text-sm)' }}>
                     <div style={{ display: 'flex', gap: 8, alignItems: 'baseline' }}>
                       <span style={{ fontWeight: 500, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {entry.url ? (
@@ -150,19 +150,19 @@ export default function ArchiveView({ topics, archivedTopics = [], onSelectTopic
                           entry.title || <span className="muted">Untitled</span>
                         )}
                       </span>
-                      <span className="muted" style={{ fontSize: 11, flexShrink: 0 }}>
+                      <span className="muted" style={{ fontSize: 'var(--text-xs)', flexShrink: 0 }}>
                         {new Date(entry.created_at).toLocaleDateString()}
                       </span>
                     </div>
                     {entry.note && (
-                      <p className="muted" style={{ fontSize: 12, margin: '3px 0 0', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                      <p className="muted" style={{ fontSize: 'var(--text-sm)', margin: '3px 0 0', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
                         {entry.note}
                       </p>
                     )}
                     {entry.tags?.length > 0 && (
                       <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 4 }}>
                         {entry.tags.map((t) => (
-                          <span key={t} style={{ fontSize: 11, padding: '1px 6px', borderRadius: 'var(--radius-sm)', background: 'var(--surface-3)' }}>#{t}</span>
+                          <span key={t} style={{ fontSize: 'var(--text-xs)', padding: '1px 6px', borderRadius: 'var(--radius-sm)', background: 'var(--surface-3)' }}>#{t}</span>
                         ))}
                       </div>
                     )}
@@ -183,7 +183,7 @@ export default function ArchiveView({ topics, archivedTopics = [], onSelectTopic
             </button>
           )}
           {hasMore && search && (
-            <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>
+            <p className="muted" style={{ fontSize: 'var(--text-sm)', marginTop: 8 }}>
               Search covers the {entries.length} loaded entries — load more to widen it.
             </p>
           )}

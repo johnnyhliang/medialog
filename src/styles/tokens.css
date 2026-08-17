@@ -30,7 +30,15 @@
   --font-ui:     'DM Sans', system-ui, sans-serif;
   --font-serif:  'Lora', Georgia, serif;
 
-  /* Typography scale */
+  /* Typography scale — eight steps, and nothing outside them.
+     The sheet used to carry 33 distinct font-size values (9, 9.5, 10, 10.5,
+     11, 11.5, 12, 12.5, 13, 13.5 …), 70% of them hardcoded, and clustered so
+     tightly at 10–13px that nothing on screen had any hierarchy. These are the
+     only sizes now, so changing the app's typography is editing this block.
+
+     Deliberately kept close to the old values on this pass: the point was to
+     move ownership of the numbers, not the numbers themselves. Raising the
+     scale is a separate change, made here in one place. */
   --text-xs:   11px;
   --text-sm:   12.5px;
   --text-base: 14px;
@@ -38,6 +46,7 @@
   --text-lg:   17px;
   --text-xl:   22px;
   --text-2xl:  28px;
+  --text-3xl:  40px;
 
   /* Z-index scale */
   --z-return:   900;

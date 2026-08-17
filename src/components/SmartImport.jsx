@@ -79,7 +79,7 @@ export default function SmartImport({ topics, onImport }) {
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', margin: '0.75rem 0 0.5rem' }}>
             <p className="section-label" style={{ margin: 0 }}>Topics</p>
-            <button style={{ fontSize: '0.75rem', padding: '0.15rem 0.5rem' }} onClick={toggleAll}>
+            <button style={{ fontSize: 'var(--text-sm)', padding: '0.15rem 0.5rem' }} onClick={toggleAll}>
               {selected.size === data.suggested_topics.length ? 'Deselect all' : 'Select all'}
             </button>
           </div>
@@ -100,11 +100,11 @@ export default function SmartImport({ topics, onImport }) {
                       onChange={() => toggleTopic(t)}
                     />
                     <span style={{ fontWeight: 500 }}>{t}</span>
-                    <span className="muted" style={{ fontSize: '0.8rem' }}>
+                    <span className="muted" style={{ fontSize: 'var(--text-sm)' }}>
                       {count} entries{isNew ? ' · new topic' : ''}
                     </span>
                     <button
-                      style={{ fontSize: '0.7rem', padding: '0.1rem 0.4rem', marginLeft: 'auto' }}
+                      style={{ fontSize: 'var(--text-xs)', padding: '0.1rem 0.4rem', marginLeft: 'auto' }}
                       onClick={(e) => { e.preventDefault(); setExpandedTopic(isExpanded ? null : t) }}
                     >
                       {isExpanded ? 'hide' : 'preview'}
@@ -114,7 +114,7 @@ export default function SmartImport({ topics, onImport }) {
                   {isExpanded && (
                     <div style={{ paddingLeft: '1.5rem', paddingBottom: '0.5rem' }}>
                       {topicEntries.slice(0, 15).map((e, i) => (
-                        <div key={i} className="muted" style={{ fontSize: '0.78rem', padding: '0.15rem 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <div key={i} className="muted" style={{ fontSize: 'var(--text-sm)', padding: '0.15rem 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {e.url
                             ? <a href={e.url} target="_blank" rel="noreferrer" style={{ color: 'inherit' }}>{e.title || e.url}</a>
                             : <span>📄 {e.title}</span>
@@ -122,7 +122,7 @@ export default function SmartImport({ topics, onImport }) {
                         </div>
                       ))}
                       {topicEntries.length > 15 && (
-                        <p className="muted" style={{ fontSize: '0.75rem' }}>…and {topicEntries.length - 15} more</p>
+                        <p className="muted" style={{ fontSize: 'var(--text-sm)' }}>…and {topicEntries.length - 15} more</p>
                       )}
                     </div>
                   )}

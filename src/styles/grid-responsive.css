@@ -28,7 +28,7 @@
   }
   .mobile-topbar h1 {
     font-family: var(--font-serif);
-    font-size: 18px;
+    font-size: var(--text-lg);
     font-weight: 600;
     color: var(--accent);
     margin: 0;
@@ -71,7 +71,7 @@
     display: block;
     width: 100%;
     padding: 8px 10px;
-    font-size: 14px;
+    font-size: var(--text-base);
     border-radius: var(--radius);
     background: var(--surface-2);
     color: var(--text);

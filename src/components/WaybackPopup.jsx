@@ -58,7 +58,7 @@ export default function WaybackPopup({ entry, supabase, onClose, onEntryUpdate }
   return (
     <Modal onClose={onClose} label="Wayback Machine" maxWidth="400px">
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '4px 0' }}>
-        <p style={{ fontSize: 13, color: 'var(--muted)', margin: 0, wordBreak: 'break-all' }}>{entry.url}</p>
+        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--muted)', margin: 0, wordBreak: 'break-all' }}>{entry.url}</p>
 
         {status === 'loading' && <p className="muted">Checking archive…</p>}
 
@@ -69,24 +69,24 @@ export default function WaybackPopup({ entry, supabase, onClose, onEntryUpdate }
         {status === 'done' && archiveInfo && (
           <>
             {archiveInfo.archived ? (
-              <p style={{ margin: 0, fontSize: 13 }}>
+              <p style={{ margin: 0, fontSize: 'var(--text-sm)' }}>
                 Last archived {formatDate(archiveInfo.timestamp)} —{' '}
                 <a href={archiveInfo.snapshotUrl} target="_blank" rel="noopener noreferrer">
                   view snapshot ↗
                 </a>
               </p>
             ) : (
-              <p className="muted" style={{ margin: 0, fontSize: 13 }}>Never archived on the Wayback Machine.</p>
+              <p className="muted" style={{ margin: 0, fontSize: 'var(--text-sm)' }}>Never archived on the Wayback Machine.</p>
             )}
 
             {entry.wayback_submitted_at && !submitted && (
-              <p className="muted" style={{ margin: 0, fontSize: 12 }}>
+              <p className="muted" style={{ margin: 0, fontSize: 'var(--text-sm)' }}>
                 You submitted this on {formatDate(entry.wayback_submitted_at)}.
               </p>
             )}
 
             {submitted ? (
-              <p style={{ margin: 0, fontSize: 13, color: 'var(--accent)' }}>
+              <p style={{ margin: 0, fontSize: 'var(--text-sm)', color: 'var(--accent)' }}>
                 Submitted — archive.org will crawl this soon.
               </p>
             ) : (
@@ -100,7 +100,7 @@ export default function WaybackPopup({ entry, supabase, onClose, onEntryUpdate }
               </button>
             )}
 
-            {submitError && <p className="muted" style={{ margin: 0, fontSize: 12 }}>{submitError}</p>}
+            {submitError && <p className="muted" style={{ margin: 0, fontSize: 'var(--text-sm)' }}>{submitError}</p>}
           </>
         )}
       </div>

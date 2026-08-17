@@ -75,7 +75,7 @@ export default function ProgressView({ supabase, topics, initialTopicId }) {
           ))}
         </select>
       </div>
-      <p className="muted" style={{ fontSize: 12, margin: '4px 0 16px' }}>
+      <p className="muted" style={{ fontSize: 'var(--text-sm)', margin: '4px 0 16px' }}>
         Shows whichever topic you pick here — it remembers your last choice, separate from the
         topic you have open in Browse.
       </p>

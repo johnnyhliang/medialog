@@ -42,7 +42,7 @@ export default function TrashView({ entries, deletedTopics = [], topics = [], on
 
       {deletedTopics.length > 0 && (
         <div className="trash-topics-section">
-          <p className="section-label" style={{ fontSize: '0.75rem', marginBottom: '0.5rem' }}>Deleted Topics</p>
+          <p className="section-label" style={{ fontSize: 'var(--text-sm)', marginBottom: '0.5rem' }}>Deleted Topics</p>
           {deletedTopics.map((topic) => (
             <div key={topic.id} className="trash-topic-card">
               <div>
@@ -60,7 +60,7 @@ export default function TrashView({ entries, deletedTopics = [], topics = [], on
       {groupedEntries.length > 0 && (
         <div>
           {deletedTopics.length > 0 && (
-            <p className="section-label" style={{ fontSize: '0.75rem', marginBottom: '0.75rem' }}>Deleted Entries</p>
+            <p className="section-label" style={{ fontSize: 'var(--text-sm)', marginBottom: '0.75rem' }}>Deleted Entries</p>
           )}
           {groupedEntries.map(([topicName, topicEntries]) => {
             const isOpen = expandedTopics.has(topicName)
@@ -72,16 +72,16 @@ export default function TrashView({ entries, deletedTopics = [], topics = [], on
                     width: '100%', textAlign: 'left', padding: '9px 14px',
                     display: 'flex', alignItems: 'center', gap: 10,
                     background: 'var(--surface-2)', border: 'none', cursor: 'pointer',
-                    fontSize: 13, fontWeight: 600,
+                    fontSize: 'var(--text-sm)', fontWeight: 600,
                   }}
                 >
                   <span style={{ flex: 1 }}>{topicName}</span>
-                  <span className="muted" style={{ fontSize: 12, fontWeight: 400 }}>{topicEntries.length}</span>
-                  <span style={{ fontSize: 11 }}>{isOpen ? '▲' : '▼'}</span>
+                  <span className="muted" style={{ fontSize: 'var(--text-sm)', fontWeight: 400 }}>{topicEntries.length}</span>
+                  <span style={{ fontSize: 'var(--text-xs)' }}>{isOpen ? '▲' : '▼'}</span>
                 </button>
 
                 {isOpen && topicEntries.map((entry) => (
-                  <div key={entry.id} style={{ padding: '8px 14px', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'baseline', gap: 8, fontSize: 13 }}>
+                  <div key={entry.id} style={{ padding: '8px 14px', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'baseline', gap: 8, fontSize: 'var(--text-sm)' }}>
                     <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {entry.url ? (
                         <a href={entry.url} target="_blank" rel="noreferrer" style={{ color: 'inherit' }}>{entry.title || entry.url}</a>
@@ -89,10 +89,10 @@ export default function TrashView({ entries, deletedTopics = [], topics = [], on
                         entry.title || <span className="muted">Untitled</span>
                       )}
                     </span>
-                    <span className="muted" style={{ fontSize: 11, flexShrink: 0 }}>
+                    <span className="muted" style={{ fontSize: 'var(--text-xs)', flexShrink: 0 }}>
                       {new Date(entry.deleted_at).toLocaleDateString()}
                     </span>
-                    <button style={{ fontSize: 11, padding: '2px 8px', flexShrink: 0 }} onClick={() => onRestore(entry.id)}>Restore</button>
+                    <button style={{ fontSize: 'var(--text-xs)', padding: '2px 8px', flexShrink: 0 }} onClick={() => onRestore(entry.id)}>Restore</button>
                   </div>
                 ))}
               </div>

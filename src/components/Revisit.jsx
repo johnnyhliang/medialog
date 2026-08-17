@@ -149,14 +149,14 @@ export default function Revisit({ entries, onSeen, onRate, onRetire, recentActiv
             </div>
           </div>
         ) : (
-          <p className="muted" style={{ fontSize: 13 }}>Nothing to resurface right now.</p>
+          <p className="muted" style={{ fontSize: 'var(--text-sm)' }}>Nothing to resurface right now.</p>
         )}
       </section>
 
       <section className="revisit-section">
         <h3 className="section-label">Recently edited</h3>
         {recentActivity.length === 0
-          ? <p className="muted" style={{ fontSize: 13 }}>No recent activity yet.</p>
+          ? <p className="muted" style={{ fontSize: 'var(--text-sm)' }}>No recent activity yet.</p>
           : (
             <div className="activity-feed">
               {recentActivity.map(e => <ActivityItem key={e.id} entry={e} />)}

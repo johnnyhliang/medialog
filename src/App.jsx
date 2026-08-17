@@ -1527,14 +1527,14 @@ function Workspace() {
       {snoozeTarget && (
         <div className="palette-overlay" onClick={() => setSnoozeTarget(null)}>
           <div className="palette-box" style={{ padding: 20 }} onClick={(e) => e.stopPropagation()}>
-            <p style={{ margin: '0 0 12px', fontSize: 14 }}>
+            <p style={{ margin: '0 0 12px', fontSize: 'var(--text-base)' }}>
               Snooze <strong>{snoozeTarget.title || 'entry'}</strong> until:
             </p>
             <input
               type="date"
               min={new Date().toISOString().split('T')[0]}
               autoFocus
-              style={{ fontSize: 14, padding: '4px 8px' }}
+              style={{ fontSize: 'var(--text-base)', padding: '4px 8px' }}
               onChange={(e) => {
                 if (e.target.value) handleSnoozeFromPalette(snoozeTarget, e.target.value + 'T00:00:00Z')
               }}

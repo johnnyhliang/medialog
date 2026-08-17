@@ -81,7 +81,7 @@ export default function AgendaView({
       <div className="agenda-view">
         <div className="agenda-empty">
           <p className="agenda-empty-title">You're caught up.</p>
-          <p className="muted" style={{ fontSize: 13 }}>
+          <p className="muted" style={{ fontSize: 'var(--text-sm)' }}>
             Nothing is due. Add a due date to any entry to see it here.
           </p>
         </div>

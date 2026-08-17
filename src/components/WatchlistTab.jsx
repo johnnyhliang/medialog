@@ -124,10 +124,10 @@ export default function WatchlistTab({ supabase }) {
         </form>
       )}
 
-      {loading && <p className="muted" style={{ fontSize: 13 }}>Loading…</p>}
+      {loading && <p className="muted" style={{ fontSize: 'var(--text-sm)' }}>Loading…</p>}
 
       {!loading && sorted.length === 0 && (
-        <p className="muted" style={{ fontSize: 13 }}>
+        <p className="muted" style={{ fontSize: 'var(--text-sm)' }}>
           {search ? 'No programs match that search.' : 'No programs yet. Add one to track when it opens.'}
         </p>
       )}

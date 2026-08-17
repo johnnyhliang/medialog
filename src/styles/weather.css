@@ -11,7 +11,7 @@
 .kw-weather-icon { color: var(--muted); flex-shrink: 0; }
 .kw-weather-temps { display: flex; align-items: baseline; gap: 6px; }
 .kw-weather-temp {
-  font-size: 22px;
+  font-size: var(--text-xl);
   font-weight: 200;
   line-height: 1;
   letter-spacing: -0.02em;
@@ -68,7 +68,7 @@
   border: none;
   color: var(--muted);
   cursor: pointer;
-  font-size: 16px;
+  font-size: var(--text-md);
   padding: 0 2px;
   line-height: 1;
 }

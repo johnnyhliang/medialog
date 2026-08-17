@@ -18,12 +18,12 @@
   margin-bottom: 8px;
 }
 .practice-title {
-  font-size: 11px;
+  font-size: var(--text-xs);
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--muted);
 }
-.practice-sub { font-size: 11px; }
+.practice-sub { font-size: var(--text-xs); }
 
 .practice-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
 
@@ -31,7 +31,7 @@
   display: flex;
   align-items: baseline;
   gap: 8px;
-  font-size: 13px;
+  font-size: var(--text-sm);
   min-width: 0;
 }
 
@@ -40,7 +40,7 @@
 .practice-source {
   flex-shrink: 0;
   width: 76px;
-  font-size: 10px;
+  font-size: var(--text-xs);
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--muted);
@@ -62,7 +62,7 @@
 .practice-link svg { flex-shrink: 0; opacity: 0.5; }
 
 .practice-meta {
-  font-size: 11px;
+  font-size: var(--text-xs);
   margin-left: auto;
   flex-shrink: 0;
   font-variant-numeric: tabular-nums;

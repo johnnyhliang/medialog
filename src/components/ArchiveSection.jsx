@@ -36,16 +36,16 @@ export default function ArchiveSection({ topicId, supabase, onStatusChange, onDe
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
         <p className="section-label" style={{ margin: 0 }}>Archived ({entries.length})</p>
         <button
-          style={{ fontSize: 11, padding: '2px 8px' }}
+          style={{ fontSize: 'var(--text-xs)', padding: '2px 8px' }}
           onClick={() => setOpen(false)}
         >Hide</button>
       </div>
-      {entries.length === 0 && <p className="muted" style={{ fontSize: 13 }}>No archived entries.</p>}
+      {entries.length === 0 && <p className="muted" style={{ fontSize: 'var(--text-sm)' }}>No archived entries.</p>}
       {entries.map(e => (
-        <div key={e.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', borderBottom: '1px solid var(--border)', fontSize: 13 }}>
+        <div key={e.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', borderBottom: '1px solid var(--border)', fontSize: 'var(--text-sm)' }}>
           <span style={{ flex: 1 }}>{e.title || e.url || 'Untitled'}</span>
-          <button style={{ fontSize: 11, padding: '2px 8px' }} onClick={() => { onStatusChange(e.id, 'backlog'); setEntries(prev => prev.filter(x => x.id !== e.id)) }}>Unarchive</button>
-          <button style={{ fontSize: 11, padding: '2px 8px', color: 'var(--danger)' }} onClick={() => { onDelete(e.id); setEntries(prev => prev.filter(x => x.id !== e.id)) }}>Delete</button>
+          <button style={{ fontSize: 'var(--text-xs)', padding: '2px 8px' }} onClick={() => { onStatusChange(e.id, 'backlog'); setEntries(prev => prev.filter(x => x.id !== e.id)) }}>Unarchive</button>
+          <button style={{ fontSize: 'var(--text-xs)', padding: '2px 8px', color: 'var(--danger)' }} onClick={() => { onDelete(e.id); setEntries(prev => prev.filter(x => x.id !== e.id)) }}>Delete</button>
         </div>
       ))}
     </div>

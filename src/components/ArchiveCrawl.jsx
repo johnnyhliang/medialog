@@ -74,7 +74,7 @@ export default function ArchiveCrawl({ topics, onImport }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
       <div>
         <p className="section-label" style={{ marginBottom: '0.4rem' }}>Blog archive import</p>
-        <p className="muted" style={{ fontSize: '0.8rem', marginBottom: '0.75rem' }}>
+        <p className="muted" style={{ fontSize: 'var(--text-sm)', marginBottom: '0.75rem' }}>
           Paste a blog URL — we'll pull its full article history from the sitemap or RSS feed and import everything as backlog entries.
         </p>
       </div>
@@ -97,7 +97,7 @@ export default function ArchiveCrawl({ topics, onImport }) {
       ) : null}
 
       {error && (
-        <p className="muted" style={{ fontSize: '0.8rem', color: 'var(--danger)' }}>
+        <p className="muted" style={{ fontSize: 'var(--text-sm)', color: 'var(--danger)' }}>
           {error}
         </p>
       )}
@@ -105,10 +105,10 @@ export default function ArchiveCrawl({ topics, onImport }) {
       {phase === 'preview' && result && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <p className="muted" style={{ fontSize: '0.8rem' }}>
+            <p className="muted" style={{ fontSize: 'var(--text-sm)' }}>
               found {result.items.length} articles via {result.via}
             </p>
-            <button style={{ fontSize: '0.75rem', padding: '0.15rem 0.5rem' }} onClick={toggleAll}>
+            <button style={{ fontSize: 'var(--text-sm)', padding: '0.15rem 0.5rem' }} onClick={toggleAll}>
               {selected.size === result.items.length ? 'deselect all' : 'select all'}
             </button>
           </div>
@@ -116,7 +116,7 @@ export default function ArchiveCrawl({ topics, onImport }) {
           <div style={{
             maxHeight: '320px', overflowY: 'auto',
             border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)',
-            fontSize: '0.8rem',
+            fontSize: 'var(--text-sm)',
           }}>
             {result.items.map((item, i) => (
               <label
@@ -139,7 +139,7 @@ export default function ArchiveCrawl({ topics, onImport }) {
                   <div style={{ fontWeight: 400, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {item.title}
                   </div>
-                  <div className="muted" style={{ fontSize: '0.72rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <div className="muted" style={{ fontSize: 'var(--text-sm)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {item.url}
                   </div>
                 </div>
@@ -165,7 +165,7 @@ export default function ArchiveCrawl({ topics, onImport }) {
               import {selectedCount} entries
             </button>
             <button
-              style={{ fontSize: '0.75rem', padding: '0.35rem 0.6rem' }}
+              style={{ fontSize: 'var(--text-sm)', padding: '0.35rem 0.6rem' }}
               onClick={reset}
             >
               cancel
@@ -175,16 +175,16 @@ export default function ArchiveCrawl({ topics, onImport }) {
       )}
 
       {phase === 'importing' && (
-        <p className="muted" style={{ fontSize: '0.8rem' }}>importing {selectedCount} entries…</p>
+        <p className="muted" style={{ fontSize: 'var(--text-sm)' }}>importing {selectedCount} entries…</p>
       )}
 
       {phase === 'done' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-          <p className="muted" style={{ fontSize: '0.8rem' }}>
+          <p className="muted" style={{ fontSize: 'var(--text-sm)' }}>
             ✓ imported {importedCount} entries into{' '}
             {topics.find((t) => t.id === topicId)?.name ?? 'topic'}
           </p>
-          <button style={{ alignSelf: 'flex-start', fontSize: '0.75rem' }} onClick={reset}>
+          <button style={{ alignSelf: 'flex-start', fontSize: 'var(--text-sm)' }} onClick={reset}>
             import another
           </button>
         </div>

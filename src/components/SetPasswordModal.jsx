@@ -49,15 +49,15 @@ export default function SetPasswordModal({ onDone }) {
         borderRadius: 'var(--radius-lg)', padding: '28px 24px', width: '100%', maxWidth: '360px',
         boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
       }}>
-        <p style={{ fontSize: '18px', fontWeight: 700, margin: '0 0 6px', letterSpacing: '-.02em' }}>
+        <p style={{ fontSize: 'var(--text-lg)', fontWeight: 700, margin: '0 0 6px', letterSpacing: '-.02em' }}>
           set your password
         </p>
-        <p style={{ fontSize: '13px', color: 'var(--muted)', margin: '0 0 20px' }}>
+        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--muted)', margin: '0 0 20px' }}>
           you signed in via a reset link — set a password to use next time.
         </p>
 
         {done ? (
-          <p style={{ color: 'var(--done)', fontSize: '14px', textAlign: 'center' }}>
+          <p style={{ color: 'var(--done)', fontSize: 'var(--text-base)', textAlign: 'center' }}>
             password set ✓
           </p>
         ) : (
@@ -72,7 +72,7 @@ export default function SetPasswordModal({ onDone }) {
                 style={{
                   width: '100%', padding: '9px 12px', borderRadius: 'var(--radius)',
                   border: '1px solid var(--border)', background: 'var(--bg)',
-                  color: 'var(--text)', fontSize: '14px', boxSizing: 'border-box',
+                  color: 'var(--text)', fontSize: 'var(--text-base)', boxSizing: 'border-box',
                 }}
               />
               {password && (
@@ -88,7 +88,7 @@ export default function SetPasswordModal({ onDone }) {
                       transition: 'width 0.2s, background 0.2s',
                     }} />
                   </div>
-                  <span style={{ fontSize: '11px', color: strength.color, minWidth: '40px' }}>
+                  <span style={{ fontSize: 'var(--text-xs)', color: strength.color, minWidth: '40px' }}>
                     {strength.label}
                   </span>
                 </div>
@@ -102,17 +102,17 @@ export default function SetPasswordModal({ onDone }) {
               style={{
                 width: '100%', padding: '9px 12px', borderRadius: 'var(--radius)',
                 border: `1px solid ${mismatch ? 'var(--danger)' : 'var(--border)'}`,
-                background: 'var(--bg)', color: 'var(--text)', fontSize: '14px',
+                background: 'var(--bg)', color: 'var(--text)', fontSize: 'var(--text-base)',
                 boxSizing: 'border-box',
               }}
             />
-            {error && <p style={{ color: 'var(--danger)', fontSize: '12px', margin: 0 }}>{error}</p>}
+            {error && <p style={{ color: 'var(--danger)', fontSize: 'var(--text-sm)', margin: 0 }}>{error}</p>}
             <button
               type="submit"
               disabled={loading || !password || !confirm}
               style={{
                 padding: '10px', borderRadius: 'var(--radius)', border: 'none',
-                background: 'var(--accent)', color: 'var(--on-accent)', fontSize: '14px',
+                background: 'var(--accent)', color: 'var(--on-accent)', fontSize: 'var(--text-base)',
                 fontWeight: 600, cursor: 'pointer', marginTop: '4px',
                 opacity: (loading || !password || !confirm) ? 0.6 : 1,
               }}

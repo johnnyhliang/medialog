@@ -162,7 +162,7 @@ Return ONLY the JSON array, no explanation.`
   return (
     <div style={{ maxWidth: 720, padding: '1.5rem' }}>
       <h2 style={{ marginTop: 0, marginBottom: 4 }}>Import</h2>
-      <p className="muted" style={{ fontSize: 13, marginBottom: 24 }}>
+      <p className="muted" style={{ fontSize: 'var(--text-sm)', marginBottom: 24 }}>
         Bring in content from Chrome tabs, Apple Notes, Google Keep, or Obsidian. All entries land in your inbox for triage.
       </p>
 
@@ -178,7 +178,7 @@ Return ONLY the JSON array, no explanation.`
         ))}
       </div>
 
-      <p className="muted" style={{ fontSize: 12, marginBottom: 16 }}>{fmt.hint}</p>
+      <p className="muted" style={{ fontSize: 'var(--text-sm)', marginBottom: 16 }}>{fmt.hint}</p>
 
       {!parsed && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -191,7 +191,7 @@ Return ONLY the JSON array, no explanation.`
                 format === 'notes' ? 'Paste exported HTML here, or upload the file below…' :
                 'Paste JSON content here, or upload the file below…'
               }
-              style={{ width: '100%', minHeight: 180, fontFamily: 'monospace', fontSize: 12, resize: 'vertical', boxSizing: 'border-box' }}
+              style={{ width: '100%', minHeight: 180, fontFamily: 'monospace', fontSize: 'var(--text-sm)', resize: 'vertical', boxSizing: 'border-box' }}
             />
           )}
 
@@ -215,23 +215,23 @@ Return ONLY the JSON array, no explanation.`
       {parsed && (
         <div>
           <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 16, flexWrap: 'wrap' }}>
-            <span className="muted" style={{ fontSize: 13 }}>{parsed.length} entries found · {selectedCount} selected</span>
-            <button onClick={handleAiTriage} disabled={triaging} style={{ fontSize: 12, padding: '4px 10px' }}>
+            <span className="muted" style={{ fontSize: 'var(--text-sm)' }}>{parsed.length} entries found · {selectedCount} selected</span>
+            <button onClick={handleAiTriage} disabled={triaging} style={{ fontSize: 'var(--text-sm)', padding: '4px 10px' }}>
               {triaging ? 'Triaging…' : '✦ AI Triage'}
             </button>
-            <button onClick={() => setSelected(new Set(parsed.map((_, i) => i)))} style={{ fontSize: 12, padding: '4px 10px' }}>
+            <button onClick={() => setSelected(new Set(parsed.map((_, i) => i)))} style={{ fontSize: 'var(--text-sm)', padding: '4px 10px' }}>
               Select all
             </button>
-            <button onClick={() => setSelected(new Set())} style={{ fontSize: 12, padding: '4px 10px' }}>
+            <button onClick={() => setSelected(new Set())} style={{ fontSize: 'var(--text-sm)', padding: '4px 10px' }}>
               Deselect all
             </button>
-            <button onClick={() => { setParsed(null); setText(''); if (fileRef.current) fileRef.current.value = '' }} style={{ fontSize: 12, padding: '4px 10px' }}>
+            <button onClick={() => { setParsed(null); setText(''); if (fileRef.current) fileRef.current.value = '' }} style={{ fontSize: 'var(--text-sm)', padding: '4px 10px' }}>
               ← Back
             </button>
           </div>
 
           <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden', marginBottom: 16 }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--text-sm)' }}>
               <thead>
                 <tr style={{ background: 'var(--surface-2)', textAlign: 'left' }}>
                   <th style={{ padding: '6px 8px', width: 32 }}></th>
@@ -256,7 +256,7 @@ Return ONLY the JSON array, no explanation.`
                         {entry.title || entry.note?.slice(0, 60) || <span className="muted">Untitled</span>}
                       </div>
                       {entry.url && (
-                        <div className="muted" style={{ fontSize: 11, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <div className="muted" style={{ fontSize: 'var(--text-xs)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {entry.url}
                         </div>
                       )}
@@ -267,7 +267,7 @@ Return ONLY the JSON array, no explanation.`
                         value={topicOverrides[i] ?? entry.suggestedTopic ?? ''}
                         onChange={(e) => setTopicOverrides((prev) => ({ ...prev, [i]: e.target.value }))}
                         placeholder="Inbox"
-                        style={{ width: '100%', fontSize: 12, padding: '2px 6px' }}
+                        style={{ width: '100%', fontSize: 'var(--text-sm)', padding: '2px 6px' }}
                       />
                     </td>
                   </tr>

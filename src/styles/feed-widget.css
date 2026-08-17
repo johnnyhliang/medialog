@@ -11,7 +11,7 @@
   border: none;
   color: var(--muted);
   cursor: pointer;
-  font-size: 13px;
+  font-size: var(--text-sm);
   padding: 0 2px;
   line-height: 1;
 }
@@ -31,7 +31,7 @@
 }
 .fw-row:last-child { border-bottom: none; }
 .fw-source-chip {
-  font-size: 10px;
+  font-size: var(--text-xs);
   font-weight: 600;
   padding: 1px 5px;
   border-radius: var(--radius-sm);
@@ -54,13 +54,13 @@
   text-decoration: none;
 }
 .fw-title:hover { color: var(--accent); }
-.fw-age { color: var(--muted); font-size: 11px; white-space: nowrap; }
+.fw-age { color: var(--muted); font-size: var(--text-xs); white-space: nowrap; }
 .fw-save-btn, .fw-dismiss-btn {
   background: none;
   border: none;
   cursor: pointer;
   padding: 0 2px;
-  font-size: 13px;
+  font-size: var(--text-sm);
   color: var(--muted);
 }
 .fw-save-btn:hover { color: var(--hl-yellow); }

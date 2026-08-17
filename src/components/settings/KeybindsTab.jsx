@@ -65,13 +65,13 @@ export default function KeybindsTab() {
   return (
     <section>
       <h2>Keybinds</h2>
-      <p style={{ color: 'var(--text-muted)', fontSize: 13, marginBottom: 20 }}>
+      <p style={{ color: 'var(--text-muted)', fontSize: 'var(--text-sm)', marginBottom: 20 }}>
         Click a keybind to rebind it. Chords are space-separated (e.g. <kbd>g i</kbd>).
       </p>
 
       {Object.entries(grouped).map(([cat, cmds]) => (
         <div key={cat} style={{ marginBottom: 28 }}>
-          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 8 }}>
+          <div style={{ fontSize: 'var(--text-xs)', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 8 }}>
             {cat}
           </div>
           <div className="keybinds-list">
@@ -124,7 +124,7 @@ export default function KeybindsTab() {
       )}
 
       <div style={{ marginTop: 32, borderTop: '1px solid var(--border)', paddingTop: 16 }}>
-        <button onClick={handleResetAll} style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+        <button onClick={handleResetAll} style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)' }}>
           Reset all keybinds to defaults
         </button>
       </div>
