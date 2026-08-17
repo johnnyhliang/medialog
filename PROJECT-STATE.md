@@ -548,6 +548,7 @@ detail; that file, not this table, is authoritative on *how*.
 | Looking for | Read | Owns |
 |---|---|---|
 | **What to do next** | **this table** | the ranking |
+| UI polish + branding | `docs/ui-polish.md` | the 4-phase design-system pass, naming shortlist, landing considerations |
 | What to click through by hand | `docs/qa-checklist.md` | manual verification |
 | Bugs & things already wrong | `docs/tech-debt.md` | severity-ranked defects, incl. § *Reported UX problems* |
 | Feature proposals | `IDEAS.md` | roadmap ①–④, Big swings, cuts |
