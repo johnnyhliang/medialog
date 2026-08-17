@@ -140,7 +140,7 @@ export default function ProgramsTab({ supabase, addToast = () => {} }) {
       ) : (
         <button
           onClick={() => setShowAdd(true)}
-          style={{ marginTop: 12, fontSize: 'var(--text-sm)', color: 'var(--muted)', background: 'none', border: '1px dashed var(--border)', borderRadius: 7, padding: '6px 14px', cursor: 'pointer', width: '100%' }}
+          style={{ marginTop: 12, fontSize: 'var(--text-sm)', color: 'var(--muted)', background: 'none', border: '1px dashed var(--border)', borderRadius: 'var(--radius)', padding: '6px 14px', cursor: 'pointer', width: '100%' }}
         >
           + add program
         </button>

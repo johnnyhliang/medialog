@@ -306,7 +306,6 @@ a.iv-problem-title:hover { color: var(--accent); }
 .watchlist-badge--unknown { background: var(--border); color: var(--text-secondary); }
 
 .topic-row-btn--pinned { color: var(--accent); }
-.topic-pin-indicator { display: inline; margin-right: 4px; opacity: 0.6; vertical-align: middle; }
 
 /* Mobile: stack columns */
 @media (max-width: 640px) {

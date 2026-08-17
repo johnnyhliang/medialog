@@ -47,7 +47,6 @@ export default function TopicList({
             onClick={() => onSelect(t.id)}
             title={t.name}
           >
-            {t.pinned && !sidebarCollapsed && <Pin size={9} className="topic-pin-indicator" />}
             {sidebarCollapsed ? t.name.slice(0, 2).toUpperCase() : t.name}
           </button>
           {!sidebarCollapsed && onPinToggle && (
