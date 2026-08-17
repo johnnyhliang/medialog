@@ -39,14 +39,20 @@
      Deliberately kept close to the old values on this pass: the point was to
      move ownership of the numbers, not the numbers themselves. Raising the
      scale is a separate change, made here in one place. */
-  --text-xs:   11px;
-  --text-sm:   12.5px;
-  --text-base: 14px;
-  --text-md:   15px;
-  --text-lg:   17px;
-  --text-xl:   22px;
-  --text-2xl:  28px;
-  --text-3xl:  40px;
+  /* Each step moves in proportion to its size and inversely to how often it is
+     used: --text-sm and --text-xs carry 95% of the app (306 and 222 sites), so
+     they move least and safely; the display steps are rare and move most. The
+     effect is a wider gap between the workhorse sizes and the headings, which
+     is what "no hierarchy" actually meant — not that everything was small, but
+     that everything was the *same*. */
+  --text-xs:   12px;    /* was 11    — meta, chips, timestamps */
+  --text-sm:   13.5px;  /* was 12.5  — the workhorse: labels, secondary UI */
+  --text-base: 15px;    /* was 14    — body copy and notes */
+  --text-md:   17px;    /* was 15    — card titles */
+  --text-lg:   20px;    /* was 17    — section headings */
+  --text-xl:   26px;    /* was 22    — view titles */
+  --text-2xl:  32px;    /* was 28 */
+  --text-3xl:  44px;    /* was 40    — display */
 
   /* Z-index scale */
   --z-return:   900;
