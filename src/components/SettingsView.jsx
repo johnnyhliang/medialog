@@ -10,7 +10,7 @@ import DataBackupTab from './settings/DataBackupTab.jsx'
 import ModulesTab from './ModulesTab.jsx'
 import CaptureTokensTab from './settings/CaptureTokensTab.jsx'
 import TimezoneTab from './settings/TimezoneTab.jsx'
-import { searchSettings, SETTINGS_TABS } from '../lib/settingsIndex.js'
+import { searchSettings, SETTINGS_TABS, SETTINGS_GROUPS } from '../lib/settingsIndex.js'
 import { getMyUsage, getMyStorage, getMyWindowUsage } from '../lib/db/adminMetrics.js'
 import { formatBytes, describeLimit, AI_WINDOW_HOURS } from '../lib/limits.js'
 import UsageMeter from './UsageMeter.jsx'
@@ -171,17 +171,32 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
         </div>
       )}
 
-      <div className="settings-tabs" hidden={searching}>
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            className={`settings-tab ${activeTab === t.id ? 'active' : ''}`}
-            onClick={() => setTab(t.id)}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
+      <div className="settings-body" hidden={searching}>
+        <nav className="settings-rail" aria-label="Settings sections">
+          {SETTINGS_GROUPS.map((g) => {
+            // A whole group can empty out when its modules are switched off —
+            // render nothing rather than a heading with no items under it.
+            const groupTabs = TABS.filter((t) => t.group === g.id)
+            if (!groupTabs.length) return null
+            return (
+              <div className="settings-rail-group" key={g.id}>
+                <p className="settings-rail-heading">{g.label}</p>
+                {groupTabs.map((t) => (
+                  <button
+                    key={t.id}
+                    className={`settings-tab ${activeTab === t.id ? 'active' : ''}`}
+                    onClick={() => setTab(t.id)}
+                    aria-current={activeTab === t.id ? 'page' : undefined}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+            )
+          })}
+        </nav>
+
+        <div className="settings-panel">
 
       {activeTab === 'shared' && <SharedManager />}
 
@@ -619,8 +634,8 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
       {activeTab === 'keybinds' && <KeybindsTab />}
       {activeTab === 'modules' && <ModulesTab supabase={supabase} addToast={addToast} />}
       {activeTab === 'tokens' && <CaptureTokensTab supabase={supabase} addToast={addToast} />}
-
-
+        </div>
+      </div>
     </div>
   )
 }

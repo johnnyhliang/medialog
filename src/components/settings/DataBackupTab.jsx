@@ -94,17 +94,20 @@ function LocalBackupSection({ addToast, onRefreshData }) {
 
   return (
     <div className="card">
-      <h3 className="gh-card-title">Local backup</h3>
+      <h3 className="gh-card-title">Manual backup &amp; restore</h3>
       <p className="muted gh-hint">
-        Download a zip of everything below, or restore from one you downloaded before —
-        after deleting your account, moving to a new one, or just as a copy outside GitHub.
+        Works with no setup and no network. Download a zip of everything below, or restore
+        from one — after deleting your account, moving to a new one, or just as a copy
+        that lives outside GitHub.
       </p>
+      {/* Restore carries the same weight as export on purpose: it is the one
+          you reach for under pressure, and it used to read as the lesser button. */}
       <div className="actions">
         <button className="primary" onClick={handleDownload} disabled={busy}>
           <Download size={13} /> {busy === 'export' ? 'zipping…' : 'Download zip'}
         </button>
-        <button onClick={handlePickFile} disabled={busy}>
-          <FileArchive size={13} /> {busy === 'import' ? 'reading…' : 'Import from zip'}
+        <button className="primary" onClick={handlePickFile} disabled={busy}>
+          <FileArchive size={13} /> {busy === 'import' ? 'reading…' : 'Restore from zip'}
         </button>
         <input
           ref={fileInputRef}
@@ -459,6 +462,11 @@ export default function DataBackupTab({
         </div>
       )}
 
+      {/* Above the explainer, not below it. Once GitHub is connected this
+          section used to sit last on a long page, which is how the zip restore
+          — the one path that needs no network and no setup — went unnoticed. */}
+      <LocalBackupSection addToast={addToast} onRefreshData={onRefreshData} />
+
       <div className="card">
         <h3 className="gh-card-title">What a GitHub backup contains</h3>
         <p className="muted gh-hint">
@@ -472,7 +480,6 @@ export default function DataBackupTab({
         </ul>
       </div>
 
-      <LocalBackupSection addToast={addToast} onRefreshData={onRefreshData} />
       <MarkdownExportSection onExportAll={onExportAll} exportBusy={exportBusy} />
       <ImportFromOtherAppsSection topics={topics} onImportEntries={onImportEntries} addToast={addToast} />
     </section>

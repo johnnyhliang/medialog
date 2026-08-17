@@ -18,24 +18,39 @@ import { FORMATS as MIGRATION_FORMATS } from '../components/MigrationView.jsx'
 // by isModuleVisible; settingsIndex.test.js asserts every tab has at least one
 // searchable entry, which turns "forgot to index a new setting" from a silent
 // gap into a failing test.
+// Seventeen tabs is well past what a horizontal row can carry: wrapped into
+// three ragged rows of pills they read as a word cloud, the active one changes
+// row on resize, and module-gated tabs appearing and disappearing means no tab
+// ever sits at a stable position long enough to learn. So the rail is vertical
+// and grouped. Order here is the render order, within the group order below.
+export const SETTINGS_GROUPS = [
+  { id: 'general',  label: 'General' },
+  { id: 'data',     label: 'Data' },
+  { id: 'capture',  label: 'Capture' },
+  { id: 'career',   label: 'Career' },
+]
+
 export const SETTINGS_TABS = [
-  { id: 'appearance',  label: 'Appearance' },
-  { id: 'data',        label: 'Data & Backup' },
-  { id: 'twitter',     label: 'Twitter',       module: 'twitter' },
-  { id: 'shared',      label: 'Shared' },
-  { id: 'behavior',    label: 'Behavior' },
-  { id: 'timezone',    label: 'Timezone' },
-  { id: 'tags',        label: 'Tag Colors' },
-  { id: 'companies',   label: 'Companies',     module: 'career' },
-  { id: 'keywords',    label: 'Keywords',      module: 'career' },
-  { id: 'programs',    label: 'Programs',      module: 'career' },
-  { id: 'feed-help',   label: 'Feed Sources',  module: 'feed' },
-  { id: 'bookmarklet', label: 'Bookmarklet' },
-  { id: 'mobile',      label: 'iOS Shortcut' },
-  { id: 'instagram',   label: 'Instagram',     module: 'reels' },
-  { id: 'keybinds',    label: 'Keybinds' },
-  { id: 'modules',     label: 'Modules' },
-  { id: 'tokens',      label: 'Capture tokens' },
+  { id: 'appearance',  label: 'Appearance',    group: 'general' },
+  { id: 'behavior',    label: 'Behavior',      group: 'general' },
+  { id: 'timezone',    label: 'Timezone',      group: 'general' },
+  { id: 'keybinds',    label: 'Keybinds',      group: 'general' },
+  { id: 'modules',     label: 'Modules',       group: 'general' },
+
+  { id: 'data',        label: 'Data & Backup', group: 'data' },
+  { id: 'shared',      label: 'Shared',        group: 'data' },
+  { id: 'tags',        label: 'Tag Colors',    group: 'data' },
+  { id: 'tokens',      label: 'Capture tokens', group: 'data' },
+
+  { id: 'bookmarklet', label: 'Bookmarklet',   group: 'capture' },
+  { id: 'mobile',      label: 'iOS Shortcut',  group: 'capture' },
+  { id: 'feed-help',   label: 'Feed Sources',  group: 'capture', module: 'feed' },
+  { id: 'twitter',     label: 'Twitter',       group: 'capture', module: 'twitter' },
+  { id: 'instagram',   label: 'Instagram',     group: 'capture', module: 'reels' },
+
+  { id: 'companies',   label: 'Companies',     group: 'career',  module: 'career' },
+  { id: 'keywords',    label: 'Keywords',      group: 'career',  module: 'career' },
+  { id: 'programs',    label: 'Programs',      group: 'career',  module: 'career' },
 ]
 
 // One index entry per actual keybind, not one opaque entry for the whole tab —

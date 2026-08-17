@@ -10,18 +10,40 @@
 .settings-view .section-label { font-size: 1rem; font-weight: 600; margin-bottom: 1rem; }
 
 /* ── Settings tabs ───────────────────────────────────────────────────────────── */
-.settings-tabs {
-  display: flex;
-  gap: 4px;
-  flex-wrap: wrap;
-  border-bottom: 1px solid var(--border);
-  margin-bottom: 24px;
-  padding-bottom: 8px;
+/* Vertical rail beside the panel. See the note on SETTINGS_GROUPS for why this
+   is not a row of tabs: at seventeen items a wrapped row stops being navigation. */
+.settings-body {
+  display: grid;
+  grid-template-columns: 172px minmax(0, 1fr);
+  gap: 32px;
+  align-items: start;
 }
+.settings-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  position: sticky;
+  top: 0;
+}
+.settings-rail-group + .settings-rail-group { margin-top: 18px; }
+.settings-rail-heading {
+  margin: 0 0 6px;
+  padding: 0 10px;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.settings-panel { min-width: 0; }
+
 .settings-tab {
+  display: block;
+  width: 100%;
+  text-align: left;
   font-size: var(--text-sm);
-  padding: 6px 14px;
-  border-radius: var(--radius);
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
   background: transparent;
   border: 1px solid transparent;
   color: var(--muted);
@@ -29,6 +51,24 @@
 }
 .settings-tab:hover { background: var(--surface-2); color: var(--text); }
 .settings-tab.active { background: var(--accent-weak); color: var(--accent); border-color: var(--accent); font-weight: 600; }
+
+/* Narrow: the rail becomes a scrolling strip above the panel rather than
+   wrapping, so the active item never changes row under you. */
+@media (max-width: 760px) {
+  .settings-body { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+  .settings-rail {
+    position: static;
+    flex-direction: row;
+    overflow-x: auto;
+    gap: 14px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .settings-rail-group { display: flex; align-items: center; gap: 2px; }
+  .settings-rail-group + .settings-rail-group { margin-top: 0; }
+  .settings-rail-heading { margin: 0 4px 0 0; white-space: nowrap; }
+  .settings-tab { width: auto; white-space: nowrap; }
+}
 
 /* ── Settings companies table ────────────────────────────────────────────────── */
 .settings-companies-table {
