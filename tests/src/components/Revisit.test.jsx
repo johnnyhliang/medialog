@@ -22,3 +22,16 @@ test('shows empty message when nothing to revisit', () => {
   render(<Revisit entries={[]} onSeen={() => {}} />)
   expect(screen.getByText(/nothing to resurface/i)).toBeInTheDocument()
 })
+
+test('retiring ends the loop for that entry and advances', async () => {
+  const onRetire = vi.fn(() => Promise.resolve())
+  render(<Revisit entries={entries} onSeen={() => {}} onRate={vi.fn()} onRetire={onRetire} />)
+  await userEvent.click(screen.getByRole('button', { name: /done with it/i }))
+  expect(onRetire).toHaveBeenCalledWith(entries[0])
+  expect(screen.getByText('note b')).toBeInTheDocument()
+})
+
+test('the retire button is absent when no handler is wired', () => {
+  render(<Revisit entries={entries} onSeen={() => {}} onRate={vi.fn()} />)
+  expect(screen.queryByRole('button', { name: /done with it/i })).not.toBeInTheDocument()
+})

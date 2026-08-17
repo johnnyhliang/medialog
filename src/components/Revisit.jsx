@@ -61,13 +61,20 @@ function ActivityItem({ entry }) {
   )
 }
 
-export default function Revisit({ entries, onSeen, onRate, recentActivity = [] }) {
+export default function Revisit({ entries, onSeen, onRate, onRetire, recentActivity = [] }) {
   const [index, setIndex] = useState(0)
   const current = entries[index]
 
   async function handleRate(grade) {
     if (onRate) await onRate(current, grade)
     else await onSeen(current.id)
+    setIndex((i) => i + 1)
+  }
+
+  // The only action here that ends the loop. Hard/Good/Easy all reschedule and
+  // Skip defers, so without this the queue has no way to shrink.
+  async function handleRetire() {
+    if (onRetire) await onRetire(current)
     setIndex((i) => i + 1)
   }
 
@@ -121,13 +128,24 @@ export default function Revisit({ entries, onSeen, onRate, recentActivity = [] }
                   Easy <span className="revisit-rate-interval">{nextIntervalLabel(current, 5)}</span>
                 </button>
               </div>
-              <button
-                className="btn-small revisit-skip-btn"
-                onClick={() => setIndex((i) => i + 1)}
-                title="Skip without rating"
-              >
-                Skip
-              </button>
+              <div className="revisit-end-btns">
+                <button
+                  className="btn-small revisit-skip-btn"
+                  onClick={() => setIndex((i) => i + 1)}
+                  title="Skip without rating"
+                >
+                  Skip
+                </button>
+                {onRetire && (
+                  <button
+                    className="btn-small revisit-retire-btn"
+                    onClick={handleRetire}
+                    title="Done with this — keep it, stop resurfacing it"
+                  >
+                    Done with it
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         ) : (

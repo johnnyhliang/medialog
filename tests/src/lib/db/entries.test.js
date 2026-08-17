@@ -7,6 +7,8 @@ import {
   bulkCreateEntries,
   listForRevisit,
   markSurfaced,
+  retireEntry,
+  unretireEntry,
 } from '../../../../src/lib/db/entries.js'
 import { mockSupabase as mockClient } from '../../../helpers/mockSupabase.js'
 
@@ -78,6 +80,31 @@ describe('entries db', () => {
     const client = mockClient({ data: null, error: null })
     await markSurfaced(client, 'e1')
     expect(client._chain.update).toHaveBeenCalled()
+    expect(client._chain.eq).toHaveBeenCalledWith('id', 'e1')
+  })
+
+  test('listForRevisit excludes retired entries', async () => {
+    const client = mockClient({ data: [], error: null })
+    await listForRevisit(client, 5)
+    // Without this the queue has no terminal state: Hard/Good/Easy all
+    // reschedule, so a retired entry would keep coming back forever.
+    expect(client._chain.is).toHaveBeenCalledWith('retired_at', null)
+    expect(client._chain.is).toHaveBeenCalledWith('deleted_at', null)
+  })
+
+  test('retireEntry stamps retired_at and clears the schedule', async () => {
+    const client = mockClient({ data: null, error: null })
+    await retireEntry(client, 'e1')
+    const patch = client._chain.update.mock.calls[0][0]
+    expect(patch.retired_at).toEqual(expect.any(String))
+    expect(patch.surface_after).toBeNull()
+    expect(client._chain.eq).toHaveBeenCalledWith('id', 'e1')
+  })
+
+  test('unretireEntry clears retired_at so it returns to the queue', async () => {
+    const client = mockClient({ data: null, error: null })
+    await unretireEntry(client, 'e1')
+    expect(client._chain.update).toHaveBeenCalledWith({ retired_at: null, surface_after: null })
     expect(client._chain.eq).toHaveBeenCalledWith('id', 'e1')
   })
 })

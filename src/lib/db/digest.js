@@ -21,9 +21,13 @@ export async function computeDigest(supabase, since, inboxTopicId) {
     sinceStr
       ? supabase.from('entries').select('id, title, url, updated_at, topic_id').gte('updated_at', sinceStr).eq('status', 'done').is('deleted_at', null)
       : supabase.from('entries').select('id, title, url, updated_at, topic_id').eq('status', 'done').is('deleted_at', null),
-    supabase.from('entries').select('id, title, url, created_at, topic_id').eq('status', 'backlog').lt('created_at', sixtyDaysAgo).is('deleted_at', null).limit(40),
+    // The two nagging sections skip retired entries: retiring is the user
+    // saying they have decided, and a decision that does not silence the nag
+    // is not a decision. Captured/completed/reading-queue are reports rather
+    // than prompts, so they still count everything.
+    supabase.from('entries').select('id, title, url, created_at, topic_id').eq('status', 'backlog').lt('created_at', sixtyDaysAgo).is('deleted_at', null).is('retired_at', null).limit(40),
     inboxTopicId
-      ? supabase.from('entries').select('id, title, url, created_at, topic_id').eq('topic_id', inboxTopicId).lt('created_at', fourteenDaysAgo).neq('status', 'done').is('deleted_at', null).limit(20)
+      ? supabase.from('entries').select('id, title, url, created_at, topic_id').eq('topic_id', inboxTopicId).lt('created_at', fourteenDaysAgo).neq('status', 'done').is('deleted_at', null).is('retired_at', null).limit(20)
       : Promise.resolve({ data: [] }),
     supabase.from('entries').select('id, title, url, created_at, topic_id').eq('status', 'active').is('deleted_at', null).order('created_at', { ascending: true }).limit(20),
     supabase.from('entries').select('topic_id').gte('updated_at', thirtyDaysAgo).is('deleted_at', null),

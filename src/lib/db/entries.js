@@ -175,11 +175,38 @@ export async function listForRevisit(supabase, limit) {
     .from('entries')
     .select(`${TAG_SELECT}, srs_interval, srs_reps, srs_ef`)
     .is('deleted_at', null)
+    // Retired entries stay searchable but stop being scheduled. Without this
+    // the queue has no terminal state and can only grow — see migration 0081.
+    .is('retired_at', null)
     .or('surface_after.is.null,surface_after.lte.now()')
     .order('last_surfaced_at', { ascending: true, nullsFirst: true })
     .limit(limit)
   if (error) throw new Error(error.message)
   return data.map(flattenTags)
+}
+
+/**
+ * "I've decided about this" — keep it, stop resurfacing it. Deliberately not
+ * deletion: the entry stays searchable and can be brought back.
+ */
+export async function retireEntry(supabase, id) {
+  const { error } = await supabase
+    .from('entries')
+    .update({ retired_at: new Date().toISOString(), surface_after: null })
+    .eq('id', id)
+  if (error) throw new Error(error.message)
+}
+
+export async function unretireEntry(supabase, id) {
+  const { error } = await supabase
+    .from('entries')
+    // Cleared rather than restored to its old schedule: the SM-2 state
+    // (srs_reps/ef/interval) is untouched by retiring, so leaving surface_after
+    // null puts it back in the queue immediately, which is what asking for it
+    // back means.
+    .update({ retired_at: null, surface_after: null })
+    .eq('id', id)
+  if (error) throw new Error(error.message)
 }
 
 export async function listRecentActivity(supabase, limit = 30) {

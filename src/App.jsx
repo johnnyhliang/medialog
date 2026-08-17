@@ -13,7 +13,7 @@ import { buildDraftPrompt, cleanDraft, hasDraftContext } from './lib/nextActionD
 import {
   listEntriesByTopic, createEntry, updateEntry, searchEntries,
   bulkCreateEntries, listForRevisit, markSurfaced, listRecentActivity,
-  softDeleteEntry, listTrashedEntries, restoreEntry, emptyTrash, snoozeEntry, rateRevisit,
+  softDeleteEntry, listTrashedEntries, restoreEntry, emptyTrash, snoozeEntry, rateRevisit, retireEntry,
   listAgenda,
 } from './lib/db/entries.js'
 import { setEntryTags, listTags, updateTagColor } from './lib/db/tags.js'
@@ -1163,6 +1163,12 @@ function Workspace() {
     applySeen(entry.id)
   }
 
+  async function handleRetireRevisit(entry) {
+    await retireEntry(supabase, entry.id)
+    applySeen(entry.id)
+    addToast('Kept, but no longer resurfacing', 'success')
+  }
+
   // Export downloads directly. It used to open a confirm modal showing a size
   // estimate, which cost a full extra `entries` scan purely to render a number the
   // user could not act on — the only real choice was Export or Cancel, and they had
@@ -1362,7 +1368,7 @@ function Workspace() {
             />
           )}
           {view === 'revisit' && (
-            <Revisit entries={revisitEntries} onSeen={handleSeen} onRate={handleRateRevisit} recentActivity={recentActivity} />
+            <Revisit entries={revisitEntries} onSeen={handleSeen} onRate={handleRateRevisit} onRetire={handleRetireRevisit} recentActivity={recentActivity} />
           )}
           {view === 'manager' && isModuleVisible('manager') && (
             <ManagerView

@@ -93,7 +93,9 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
   const fileType = classifyUrl(entry.url)
   const age = relativeAge(entry.created_at)
   const days = daysOld(entry.created_at)
-  const noNoteAged = !entry.note && days >= 14
+  // Retiring is the user saying "I've decided about this", which includes
+  // deciding it never needed a note. Nagging past that point is just noise.
+  const noNoteAged = !entry.note && days >= 14 && !entry.retired_at
   const searchPreview = searchQuery ? buildSearchPreview(entry, searchQuery) : null
 
   function highlighted(text) {

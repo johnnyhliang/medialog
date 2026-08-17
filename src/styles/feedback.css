@@ -157,7 +157,11 @@
 .revisit-rate-btn--easy { background: var(--tint-green-bg); color: var(--tint-green-fg); border-color: rgba(34,197,94,.3); }
 .revisit-rate-btn:hover { opacity: 0.8; }
 .revisit-rate-interval { font-size: 10px; opacity: 0.7; font-weight: 400; }
-.revisit-skip-btn { margin-left: auto; }
+.revisit-end-btns { display: flex; gap: 6px; margin-left: auto; }
+/* Quieter than the grade buttons on purpose — ending the loop should be
+   available, not encouraged over actually reviewing the thing. */
+.revisit-retire-btn { color: var(--muted); }
+.revisit-retire-btn:hover { color: var(--text); border-color: var(--text); }
 
 /* Activity feed */
 .activity-feed { display: flex; flex-direction: column; gap: 2px; }
