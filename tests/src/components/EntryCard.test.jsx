@@ -69,6 +69,20 @@ test('delete asks for confirmation, then fires onDelete', async () => {
   expect(onDelete).toHaveBeenCalledWith('x')
 })
 
+test('a link-only entry can still reach delete', async () => {
+  // Regression: entries with a URL and no note render as a bookmark card whose
+  // face is one big <a> that stops propagation, so click-to-expand never fires.
+  // Without the explicit actions button the entry was undeletable.
+  const onDelete = vi.fn()
+  const linkOnly = { ...base, note: '', og_description: 'a description' }
+  render(<EntryCard entry={linkOnly} {...handlers} onDelete={onDelete} />)
+
+  await userEvent.click(screen.getByRole('button', { name: /show actions/i }))
+  await userEvent.click(screen.getByRole('button', { name: /delete/i }))
+  await userEvent.click(screen.getByRole('button', { name: /move to trash/i }))
+  expect(onDelete).toHaveBeenCalledWith('x')
+})
+
 test('edits tags through TagInput', async () => {
   const onTagsChange = vi.fn()
   const { container } = render(<EntryCard entry={{ ...base, tags: [] }} {...handlers} onTagsChange={onTagsChange} />)

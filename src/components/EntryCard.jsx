@@ -605,7 +605,20 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
       {noNoteAged && (
         <span className="card-no-note-chip">no notes · {days}d</span>
       )}
-      {metaRow}
+      {/* The bookmark face is one big <a>, so the card's own click-to-expand
+          never fires on it. Without an explicit way in, a link-only entry has
+          no reachable edit/move/archive/delete controls at all. */}
+      <div className="card-bookmark-foot">
+        {metaRow}
+        <button
+          className="card-bookmark-actions"
+          onClick={() => setExpanded(true)}
+          aria-label="Show actions"
+          title="Show actions"
+        >
+          <MoreVertical size={15} />
+        </button>
+      </div>
     </div>
   )
 

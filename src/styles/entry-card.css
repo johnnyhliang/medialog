@@ -211,6 +211,30 @@
   border-color: var(--accent);
   box-shadow: var(--shadow-card);
 }
+/* Footer strip under the bookmark face: the meta row plus the only affordance
+   that reaches this entry's actions. See the note in EntryCard's bookmarkBody. */
+.card-bookmark-foot {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.card-bookmark-foot .card-compact-meta {
+  flex: 1;
+  min-width: 0;
+}
+.card-bookmark-actions {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  background: transparent;
+  border: none;
+  padding: 2px;
+  line-height: 1;
+  color: var(--muted);
+  cursor: pointer;
+}
+.card-bookmark-actions:hover { color: var(--text); }
+
 .card-bookmark-text {
   flex: 1;
   min-width: 0;
