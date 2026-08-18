@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import IndexStatus from './IndexStatus.jsx'
-import { ChevronUp, Clock, History, MoreVertical, Pencil, Pin, PinOff, Plus, Trash2, Archive, BookOpen, Share2, Check } from 'lucide-react'
+import { ChevronUp, Clock, History, MoreVertical, Pencil, Pin, PinOff, Plus, Trash2, Archive, BookOpen, Share2, Check, CheckCheck } from 'lucide-react'
 import ReaderModal from './ReaderModal.jsx'
 import TagInput from './TagInput.jsx'
 import MarkdownView from './MarkdownView.jsx'
@@ -53,7 +53,7 @@ function daysOld(dateStr) {
   return Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000)
 }
 
-export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChange, onTogglePin, onNoteSave, onPreview, onOpenRelated, onNoteVersion, onShowHistory, onTitleChange, moveTargets, onMove, tagColors, onEntryUpdate, supabase: supabaseClient, focused, forceExpand, onForceExpandDone, searchQuery = '' }) {
+export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChange, onTogglePin, onNoteSave, onPreview, onOpenRelated, onNoteVersion, onShowHistory, onTitleChange, moveTargets, onMove, tagColors, onEntryUpdate, onRetire, supabase: supabaseClient, focused, forceExpand, onForceExpandDone, searchQuery = '' }) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(entry.note || '')
   const [editingTitle, setEditingTitle] = useState(false)
@@ -511,6 +511,18 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
           ) : (
             <button className="icon-btn" aria-label="edit note" onClick={startEditing}>
               <Pencil size={15} />
+            </button>
+          )}
+
+          {onRetire && (
+            <button
+              className="icon-btn"
+              onClick={() => onRetire(entry.id, !entry.retired_at)}
+              aria-label={entry.retired_at ? 'Resume resurfacing this entry' : 'Done with this entry — stop resurfacing it'}
+              title={entry.retired_at ? 'Resume resurfacing' : 'Done with it — keep, stop resurfacing'}
+              style={{ color: entry.retired_at ? 'var(--accent)' : undefined }}
+            >
+              <CheckCheck size={15} />
             </button>
           )}
 

@@ -35,3 +35,25 @@ test('the retire button is absent when no handler is wired', () => {
   render(<Revisit entries={entries} onSeen={() => {}} onRate={vi.fn()} />)
   expect(screen.queryByRole('button', { name: /done with it/i })).not.toBeInTheDocument()
 })
+
+test('skip stamps the entry so it goes to the back of the queue', async () => {
+  // Was a bare index bump: nothing was written, so listForRevisit (ordered by
+  // last_surfaced_at, nulls first) put the same entry back at the front.
+  const onSeen = vi.fn(() => Promise.resolve())
+  render(<Revisit entries={entries} onSeen={onSeen} onRate={vi.fn()} />)
+  await userEvent.click(screen.getByRole('button', { name: /^skip$/i }))
+  expect(onSeen).toHaveBeenCalledWith('a')
+  expect(screen.getByText('note b')).toBeInTheDocument()
+})
+
+test('archive and trash are reachable from the card and advance', async () => {
+  const onArchive = vi.fn(() => Promise.resolve())
+  const onDelete = vi.fn(() => Promise.resolve())
+  render(
+    <Revisit entries={entries} onSeen={vi.fn()} onRate={vi.fn()} onArchive={onArchive} onDelete={onDelete} />
+  )
+  await userEvent.click(screen.getByRole('button', { name: /archive this entry/i }))
+  expect(onArchive).toHaveBeenCalledWith(entries[0])
+  await userEvent.click(screen.getByRole('button', { name: /move this entry to trash/i }))
+  expect(onDelete).toHaveBeenCalledWith(entries[1])
+})

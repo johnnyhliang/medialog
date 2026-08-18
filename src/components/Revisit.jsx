@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Archive, Trash2 } from 'lucide-react'
 
 function timeAgo(dateStr) {
   if (!dateStr) return null
@@ -61,7 +62,7 @@ function ActivityItem({ entry }) {
   )
 }
 
-export default function Revisit({ entries, onSeen, onRate, onRetire, recentActivity = [] }) {
+export default function Revisit({ entries, onSeen, onRate, onRetire, onArchive, onDelete, recentActivity = [] }) {
   const [index, setIndex] = useState(0)
   const current = entries[index]
 
@@ -75,6 +76,24 @@ export default function Revisit({ entries, onSeen, onRate, onRetire, recentActiv
   // Skip defers, so without this the queue has no way to shrink.
   async function handleRetire() {
     if (onRetire) await onRetire(current)
+    setIndex((i) => i + 1)
+  }
+
+  // Skip used to be a bare index bump — nothing was written, so the entry was
+  // still first in the queue on the next load (listForRevisit orders by
+  // last_surfaced_at, nulls first). Stamping it sends it to the back instead.
+  async function handleSkip() {
+    if (onSeen) await onSeen(current.id)
+    setIndex((i) => i + 1)
+  }
+
+  async function handleArchive() {
+    if (onArchive) await onArchive(current)
+    setIndex((i) => i + 1)
+  }
+
+  async function handleDelete() {
+    if (onDelete) await onDelete(current)
     setIndex((i) => i + 1)
   }
 
@@ -131,8 +150,8 @@ export default function Revisit({ entries, onSeen, onRate, onRetire, recentActiv
               <div className="revisit-end-btns">
                 <button
                   className="btn-small revisit-skip-btn"
-                  onClick={() => setIndex((i) => i + 1)}
-                  title="Skip without rating"
+                  onClick={handleSkip}
+                  title="Skip — send to the back of the queue"
                 >
                   Skip
                 </button>
@@ -143,6 +162,29 @@ export default function Revisit({ entries, onSeen, onRate, onRetire, recentActiv
                     title="Done with this — keep it, stop resurfacing it"
                   >
                     Done with it
+                  </button>
+                )}
+                {(onArchive || onDelete) && (
+                  <span className="revisit-btn-divider" aria-hidden="true" />
+                )}
+                {onArchive && (
+                  <button
+                    className="icon-btn revisit-archive-btn"
+                    onClick={handleArchive}
+                    aria-label="Archive this entry"
+                    title="Archive"
+                  >
+                    <Archive size={15} />
+                  </button>
+                )}
+                {onDelete && (
+                  <button
+                    className="icon-btn icon-btn-danger"
+                    onClick={handleDelete}
+                    aria-label="Move this entry to trash"
+                    title="Move to trash"
+                  >
+                    <Trash2 size={15} />
                   </button>
                 )}
               </div>

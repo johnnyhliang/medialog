@@ -37,7 +37,7 @@ export default function TopicView({
   focusedEntryId,
   editTargetId,
   onClearEditTarget,
-  onOrderedIds,
+  onOrderedIds, onRetire,
 }) {
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -158,6 +158,12 @@ export default function TopicView({
 
   const docEmbedIds = useMemo(() => new Set(extractEmbedIds(liveDoc)), [liveDoc])
 
+  // Retired entries stay in the main list on purpose — many are quick-access
+  // links that are read often and edited rarely, so hiding them would be the
+  // wrong trade. This narrows *to* them, for reviewing or undoing a decision.
+  const [retiredOnly, setRetiredOnly] = useState(false)
+  const retiredCount = useMemo(() => entries.filter(e => e.retired_at).length, [entries])
+
   const filtered = useMemo(() => {
     let result
     if (filteredByTag !== null) {
@@ -172,8 +178,9 @@ export default function TopicView({
     // But an active search reaches them too — like `is:archived` on GitHub, you
     // only see archived items when you actually ask for something.
     const isSearching = inputVal.trim().length > 0
-    return result.filter(e => isSearching || e.status !== 'done' || pendingArchiveIds.has(e.id))
-  }, [entries, query, inputVal, scope, docEmbedIds, globalSearchResults, filteredByTag, pendingArchiveIds])
+    result = result.filter(e => isSearching || e.status !== 'done' || pendingArchiveIds.has(e.id))
+    return retiredOnly ? result.filter(e => e.retired_at) : result
+  }, [entries, query, inputVal, scope, docEmbedIds, globalSearchResults, filteredByTag, pendingArchiveIds, retiredOnly])
 
   useEffect(() => {
     onOrderedIds?.(filtered.map((e) => e.id))
@@ -363,6 +370,16 @@ export default function TopicView({
       <div className="entries-section-header">
         <span className="entries-section-label">Entries</span>
         {filtered.length > 0 && <span className="entries-section-count">{filtered.length}</span>}
+        {retiredCount > 0 && (
+          <button
+            className={`retired-filter-btn${retiredOnly ? ' active' : ''}`}
+            onClick={() => setRetiredOnly(v => !v)}
+            aria-pressed={retiredOnly}
+            title={retiredOnly ? 'Show all entries' : 'Show only entries you are done with'}
+          >
+            done with · {retiredCount}
+          </button>
+        )}
       </div>
 
       <div ref={gridRef} style={{ '--card-min-width': `${cardMinWidth}px` }}>
@@ -382,6 +399,7 @@ export default function TopicView({
           onMove={onMove}
           tagColors={tagColors}
           onEntryUpdate={onEntryUpdate}
+          onRetire={onRetire}
           focusedEntryId={focusedEntryId}
           editTargetId={editTargetId}
           onClearEditTarget={onClearEditTarget}

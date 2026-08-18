@@ -803,3 +803,22 @@
 }
 .auth p { text-align: center; color: var(--muted); margin: 0; }
 
+
+/* Narrows to entries you've marked "done with" — they stay in the main list by
+   default, since many are quick-access links read often and edited rarely. */
+.retired-filter-btn {
+  margin-left: auto;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  padding: 2px 10px;
+  font-size: var(--text-xs);
+  color: var(--muted);
+  cursor: pointer;
+}
+.retired-filter-btn:hover { color: var(--text); border-color: var(--text); }
+.retired-filter-btn.active {
+  background: var(--accent-weak);
+  border-color: var(--accent);
+  color: var(--accent);
+}

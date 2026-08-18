@@ -167,7 +167,15 @@
 .revisit-rate-btn--easy { background: var(--tint-green-bg); color: var(--tint-green-fg); border-color: rgba(34,197,94,.3); }
 .revisit-rate-btn:hover { opacity: 0.8; }
 .revisit-rate-interval { font-size: var(--text-xs); opacity: 0.7; font-weight: 400; }
-.revisit-end-btns { display: flex; gap: 6px; margin-left: auto; }
+.revisit-end-btns { display: flex; align-items: center; gap: 6px; margin-left: auto; }
+/* Separates deciding-about-the-review (skip, retire) from deciding-about-the
+   entry (archive, trash) — they read as one undifferentiated row otherwise. */
+.revisit-btn-divider {
+  width: 1px;
+  align-self: stretch;
+  margin: 2px 2px;
+  background: var(--border);
+}
 /* Quieter than the grade buttons on purpose — ending the loop should be
    available, not encouraged over actually reviewing the thing. */
 .revisit-retire-btn { color: var(--muted); }

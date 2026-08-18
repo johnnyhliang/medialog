@@ -13,7 +13,7 @@ import { buildDraftPrompt, cleanDraft, hasDraftContext } from './lib/nextActionD
 import {
   listEntriesByTopic, createEntry, updateEntry, searchEntries,
   bulkCreateEntries, listForRevisit, markSurfaced, listRecentActivity,
-  softDeleteEntry, listTrashedEntries, restoreEntry, emptyTrash, snoozeEntry, rateRevisit, retireEntry,
+  softDeleteEntry, listTrashedEntries, restoreEntry, emptyTrash, snoozeEntry, rateRevisit, retireEntry, unretireEntry,
   listAgenda,
 } from './lib/db/entries.js'
 import { setEntryTags, listTags, updateTagColor } from './lib/db/tags.js'
@@ -1169,6 +1169,34 @@ function Workspace() {
     addToast('Kept, but no longer resurfacing', 'success')
   }
 
+  // Archive and trash are the two decisions you may want to make *about the
+  // entry* while reviewing it. Both reuse the handlers the entry cards use, so
+  // reviewing and browsing can never drift into different behaviour.
+  async function handleArchiveRevisit(entry) {
+    await handleStatusChange(entry.id, 'done')
+    applySeen(entry.id)
+  }
+
+  async function handleDeleteRevisit(entry) {
+    await handleDelete(entry.id)
+    applySeen(entry.id)
+  }
+
+  // Toggle, so the same control undoes the decision it made. Retiring from a
+  // card does not remove the entry from the list — only from the resurfacing
+  // queue and the digest nags.
+  async function handleToggleRetire(entryId, retire) {
+    try {
+      if (retire) await retireEntry(supabase, entryId)
+      else await unretireEntry(supabase, entryId)
+    } catch {
+      addToast(retire ? 'Could not update this entry' : 'Could not resume resurfacing', 'error')
+      return
+    }
+    applyUpdateEntry({ id: entryId, retired_at: retire ? new Date().toISOString() : null })
+    addToast(retire ? 'Done with it — no longer resurfacing' : 'Resurfacing resumed', 'success')
+  }
+
   // Export downloads directly. It used to open a confirm modal showing a size
   // estimate, which cost a full extra `entries` scan purely to render a number the
   // user could not act on — the only real choice was Export or Cancel, and they had
@@ -1323,6 +1351,7 @@ function Workspace() {
               pendingArchiveIds={pendingArchiveIds}
               supabase={supabase}
               onCheckDuplicate={handleCheckDuplicate}
+              onRetire={handleToggleRetire}
               onEntryUpdate={(updated) => {
                 setEntries((prev) => prev.map((e) => e.id === updated.id ? { ...e, ...updated } : e))
               }}
@@ -1368,7 +1397,15 @@ function Workspace() {
             />
           )}
           {view === 'revisit' && (
-            <Revisit entries={revisitEntries} onSeen={handleSeen} onRate={handleRateRevisit} onRetire={handleRetireRevisit} recentActivity={recentActivity} />
+            <Revisit
+              entries={revisitEntries}
+              onSeen={handleSeen}
+              onRate={handleRateRevisit}
+              onRetire={handleRetireRevisit}
+              onArchive={handleArchiveRevisit}
+              onDelete={handleDeleteRevisit}
+              recentActivity={recentActivity}
+            />
           )}
           {view === 'manager' && isModuleVisible('manager') && (
             <ManagerView
