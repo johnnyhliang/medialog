@@ -162,9 +162,12 @@
   align-items: center;
   gap: 4px;
 }
-.revisit-rate-btn--hard { background: var(--tint-red-bg); color: var(--tint-red-fg); border-color: rgba(239,68,68,.3); }
-.revisit-rate-btn--good { background: var(--tint-blue-bg); color: var(--tint-blue-fg); border-color: rgba(59,130,246,.3); }
-.revisit-rate-btn--easy { background: var(--tint-green-bg); color: var(--tint-green-fg); border-color: rgba(34,197,94,.3); }
+/* Borders were three raw Tailwind rgbas, so they stayed cold after the tints
+   were rederived and stayed fixed across every palette. Deriving them from the
+   tint's own foreground keeps all three in step with the theme. */
+.revisit-rate-btn--hard { background: var(--tint-red-bg); color: var(--tint-red-fg); border-color: color-mix(in srgb, var(--tint-red-fg) 30%, transparent); }
+.revisit-rate-btn--good { background: var(--tint-blue-bg); color: var(--tint-blue-fg); border-color: color-mix(in srgb, var(--tint-blue-fg) 30%, transparent); }
+.revisit-rate-btn--easy { background: var(--tint-green-bg); color: var(--tint-green-fg); border-color: color-mix(in srgb, var(--tint-green-fg) 30%, transparent); }
 .revisit-rate-btn:hover { opacity: 0.8; }
 .revisit-rate-interval { font-size: var(--text-xs); opacity: 0.7; font-weight: 400; }
 .revisit-end-btns { display: flex; align-items: center; gap: 6px; margin-left: auto; }

@@ -74,16 +74,25 @@
   /* Status tints — a paired background/foreground per hue, used by chips,
      badges, and pills. Light palettes get pastel fills; the dark palettes
      override these below with translucent fills instead. */
-  --tint-green-bg:  #DCFCE7;
-  --tint-green-fg:  #15803D;
-  --tint-amber-bg:  #FEF3C7;
-  --tint-amber-fg:  #B45309;
-  --tint-red-bg:    #FEE2E2;
-  --tint-red-fg:    #B91C1C;
-  --tint-blue-bg:   #DBEAFE;
-  --tint-blue-fg:   #1D4ED8;
-  --tint-purple-bg: #EDE9FE;
-  --tint-purple-fg: #7C3AED;
+  /* These were stock Tailwind (#DCFCE7, #DBEAFE, #EDE9FE, …): cold, saturated,
+     screen-native hues sitting on a warm paper background, which BRAND.md
+     forbids in as many words — "do not add colors casually". Rederived so the
+     fills read as paper with a wash of ink over it, and so the foregrounds
+     reuse semantics the app already owns rather than inventing three more
+     colours. Green/amber/red are literally --done/--active/--danger, so a
+     "done" chip and a "done" card can no longer disagree about what green is. */
+  --tint-green-bg:  #E6EDE7;
+  --tint-green-fg:  var(--done);
+  --tint-amber-bg:  #F5EBDC;
+  --tint-amber-fg:  var(--active);
+  --tint-red-bg:    #F6E5E1;
+  --tint-red-fg:    var(--danger);
+  /* Blue and purple have no existing semantic to borrow, so they are mixed
+     toward pine and pencil rather than pulled off a generic ramp. */
+  --tint-blue-bg:   #E4EAED;
+  --tint-blue-fg:   #3F6373;
+  --tint-purple-bg: #EBE6EC;
+  --tint-purple-fg: #6A5674;
 
   /* Semantic aliases — these were referenced throughout the sheet long before
      they were defined, so every call site was silently rendering its fallback. */
