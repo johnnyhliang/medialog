@@ -36,7 +36,13 @@ The codemod lives in scratch, not the repo; it was a one-shot.
 
 ---
 
-## Phase 2 — colour cleanup (NEXT, small)
+## Phase 2 — colour cleanup ✅ DONE (`bf4e679`, 2026-08-17)
+
+Green/amber/red now resolve to `var(--done)`/`var(--active)`/`var(--danger)`, so
+the palette shrank rather than grew; blue and purple mixed toward pine and
+pencil. Also caught three raw Tailwind rgbas on the revisit grade-button borders
+that had survived the token indirection. Original scoping below.
+
 
 Kill the five stock-Tailwind tint pairs at `tokens.css:53-61` (`#DCFCE7`,
 `#3B82F6`, `#EC4899`, `#8B5CF6`, `#FEF3C7` …). They are cold, saturated,
@@ -54,7 +60,20 @@ highlight saved as "yellow" must be the same yellow in every palette; the file's
 own comment explains this) and `TagColorRow.jsx` (17 hex values that are
 user-chosen tag colours).
 
-## Phase 3 — the type scale (BIG, the real win, has regression risk)
+## Phase 3 — the type scale ✅ DONE (`77e2a74` + `7723d8c`, 2026-08-17)
+
+Split deliberately: `77e2a74` tokenized 435 sites with no size change (33 values
+→ 8, tokenization 30% → 98%), then `7723d8c` raised the eight token values alone,
+so the risky half is one revertable commit. Each step moves in proportion to its
+size and inversely to how often it is used. **Still unverified in a browser.**
+
+One semantic loss: ~31 `rem` sites became fixed px and no longer scale with a
+raised browser default. `landing.css` was converted to px to match (`8a26499`),
+so the app is at least consistent — honouring browser font scaling is now one
+decision, currently "no". Reversing it means defining the eight tokens in `rem`:
+one block, no call-site churn, but the dense surfaces have never been tested at a
+20px root. Original scoping below.
+
 
 33 distinct font-size values, mostly hardcoded px: `12px ×68`, `11px ×62`,
 `13px ×49`, `10px ×38`, plus `11.5`, `12.5`, `13.5`, `10.5`, `9.5`. Two
@@ -82,7 +101,8 @@ execute, but it restyles every screen at once, so land it *after* Phase 3.
 
 ## Phase 5 — landing page
 
-Blocked on the naming decision. See § *Branding* below.
+Blocked on the naming decision — see `BRAND.md` § *Naming & positioning*.
+Sequencing notes in § *Branding* below.
 
 ---
 
@@ -90,12 +110,12 @@ Blocked on the naming decision. See § *Branding* below.
 
 Ranked roughly by "can this lose data or block a user".
 
-**GitHub backup — no disconnect exists.** Grepped for it: capture tokens have a
+**~~GitHub backup — no disconnect exists.~~** ✅ FIXED `ba77b50`. Grepped for it: capture tokens have a
 proper revoke flow, GitHub backup has none. There is no way to unlink the backup
 account from the UI. Add a disconnect that nulls `github_token`, `github_user`
 and `repo_name` *together*, plus a link to GitHub's revocation page.
 
-**`repo_name` survives an account switch.** Re-linking upserts `github_token` and
+**~~`repo_name` survives an account switch.~~** ✅ FIXED `ba77b50`, hardened to fail closed in `c0e33cb`. Re-linking upserts `github_token` and
 `github_user` (`github-token/index.ts:66-68`) but leaves `repo_name`. Because the
 repo is created automatically if absent, switching to account B silently creates
 a new repo of the same name under B — backup history splits across two accounts
@@ -106,7 +126,7 @@ with no indication. Fix: clear it alongside, or store `owner/name`.
 as A and back up to B. Legitimate, but the UI only says "Connected as {user}".
 Name them separately and say so when they differ.
 
-**Backup failures are invisible.** `App.jsx:320` swallows errors into
+**~~Backup failures are invisible.~~** ✅ FIXED `ba77b50` — `last_backup_at` is now written and `last_error` surfaces in a banner. `App.jsx:320` swallows errors into
 `user_configs.last_error` by design. Surface it, plus a "last backup: N days
 ago" from `last_backup_sha` / `last_backup_summary`. Turns a silent failure into
 a loud one.
@@ -125,7 +145,7 @@ Add a per-entry "plain" toggle (preferred over a global setting — embeds are
 good on a two-link entry and awful on a twenty-link one). `buildMarkdownComponents`
 is already parameterised.
 
-**The aged-entry fade is undismissible, and arguably backwards.**
+**The aged-entry fade — partially addressed.** `retired_at` (2026-08-17) gives it an exit: a retired entry stops being dimmed. The deeper point stands —
 `noNoteAged = !entry.note && days >= 14` (`EntryCard.jsx:96`) →
 `opacity: 0.65`. `days` counts from `created_at`, so the age half can never
 become false; the only exit is writing a note. An entry that genuinely needs no
@@ -134,7 +154,7 @@ processed this" is to make it *harder to read*, pushing exactly the entries that
 need a decision toward invisibility. Consider an explicit "no note needed" state,
 or inverting the treatment so the pile gets louder rather than quieter.
 
-**`SettingsView.jsx` has 2 pre-existing lint errors** — `loadConfig` accessed
+**~~`SettingsView.jsx` has 2 pre-existing lint errors~~** ✅ FIXED `8a26499`. — `loadConfig` accessed
 before declaration (line 43) and an empty catch block. Predate this session's
 changes; verified by linting the file before and after.
 
@@ -143,7 +163,45 @@ changes; verified by linting the file before and after.
 
 ---
 
+## How Revisit actually selects entries (recorded 2026-08-18)
+
+Surprising enough in conversation to be worth writing down.
+
+`listForRevisit` (`src/lib/db/entries.js:173`) selects entries where
+`deleted_at IS NULL` and `retired_at IS NULL` and
+**`surface_after IS NULL` OR `surface_after <= now()`**, ordered by
+`last_surfaced_at` **ascending, nulls first**, limit 10 (set at `App.jsx:969`).
+
+So it is *"anything due or never scheduled, least-recently-shown first"* — not
+random, but also **not curated**. Because `surface_after IS NULL` qualifies,
+every entry you have never graded is eligible, so until you start grading the
+pool is effectively your entire library in oldest-shown-first order. A
+reasonable cold start; it is a FIFO, not "the 10 most worth reviewing".
+
+Once graded, `rateRevisit` (`entries.js:231`) runs SM-2 over
+`srs_reps`/`srs_ef`/`srs_interval` (grades 3/4/5 = Hard/Good/Easy) and sets
+`surface_after` to now + interval days. From then on it is genuine spaced
+repetition.
+
+Two traps found while working here, both now fixed but worth remembering:
+- **Skip wrote nothing**, so a skipped entry stayed *first* next time. It now
+  calls `markSurfaced`.
+- **The component advanced twice per action.** Every parent handler ends in
+  `applySeen`, which removes the entry from the queue — the list shrinking IS
+  the advance. An index on top of that skipped every other entry. `current` is
+  now `entries[0]`, never a cursor. Any future consumer of `<Revisit>` must
+  remove on success or the card will never move.
+
+A real ranking design (recency, topic weight, unfinished-ness) is drafted in
+`IDEAS.md` § *Draft: the Resurface algorithm (beyond FIFO Revisit)*.
+
+---
+
 ## Branding
+
+> **Superseded 2026-08-18.** The naming research, the ruled-out candidates and
+> the positioning decisions now live in `BRAND.md` § *Naming & positioning*.
+> What stays here is the landing-page sequencing, below.
 
 **One-liner, current draft:**
 `Keep your best finds and ideas — and actually find them again.`

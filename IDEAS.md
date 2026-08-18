@@ -459,6 +459,45 @@ its natural backpressure hook.
 
 ---
 
+## The Today queue — ★ the one surface, unbuilt (scoped 2026-08-18)
+
+The pieces all exist and none of them is pushed anywhere. This is the payoff the
+`retired_at` work unblocked, and it is the thing NotebookLM and mymind both
+structurally lack: **it brings things back to you.**
+
+**What already exists, unwired:**
+- `HomeReviewSummary.recommendedAction({inbox, oldInbox, staleBacklog, active})`
+  is literally a next-action recommender, sitting on the Home view.
+- `agenda.js` buckets into overdue / today / week / later.
+- The SM-2 due queue (`listForRevisit`) is a "what should I see today" list by
+  definition.
+- **`send-email` is a deployed edge function referenced by nothing** in `src/`
+  or `supabase/`.
+- pg_cron and pg_net are installed, with nine `cron.schedule` calls already in
+  the migrations, and a per-user timezone in settings.
+
+So the work is connecting what is there, not new logic.
+
+**Design:**
+1. **One queue, not five surfaces.** Merge agenda-due-today + SRS-due +
+   inbox-needing-triage into a single **Today** list. Those currently live in
+   Home, Digest, Revisit, Manager and Agenda separately — the "thirteen
+   surfaces, none trusted" problem. One list you can finish beats five you
+   cannot.
+2. **Cap it hard, five to ten items.** More important than the selection
+   algorithm. An unbounded list is a guilt pile you learn to ignore; a finite
+   one gets completed, and completion is what brings people back tomorrow. The
+   SRS scheduler already produces a bounded set.
+3. **Push it by email**, via `send-email` + pg_cron at the user's local time. A
+   web app you must remember to open cannot be the answer to "so I don't have to
+   manually check".
+4. **Every item needs a terminal action**, including retire — otherwise the
+   queue grows monotonically. `retired_at` shipped 2026-08-17 for exactly this.
+
+Also a strong landing-page section, for the same reason.
+
+---
+
 ## Draft: the Resurface algorithm (beyond FIFO Revisit)
 
 **Goal:** every day, surface a handful of things from your own corpus that feel *chosen*, not
