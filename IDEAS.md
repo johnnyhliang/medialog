@@ -60,6 +60,58 @@ until ② lands; mostly a visualization over data ② already produces.
 - **Entry permalinks** — URL-addressable entries (`?entry=<id>` opens the topic + scrolls) so an
   entry can be hotlinked/shared; today navigation is in-app state only, not routed.
 
+### Authoring parity — deliberately deferred (decided 2026-08-18)
+Add-ons, not core. The product is capture → retrieval → resurfacing; competing with
+Obsidian on authoring depth would lose and would distort what this is. Revisit if
+users actually ask, not to close a feature-comparison gap.
+- **LaTeX / math rendering** — genuinely absent. `MarkdownView.jsx:117` runs only
+  `remark-gfm` + `rehype-slug`. Fix is small: `remark-math` + `rehype-katex` + KaTeX css
+  into a pipeline that is already parameterised. ~1h whenever it's wanted.
+- **Image paste is blocked by packaging, not capability.** `uploadAttachment`,
+  a storage bucket with thumbnailing (`storage.js:48,65`), an `onPaste` handler and
+  `accept="image/*"` all exist; the module-gated path answers "MediaLog doesn't host
+  files" (`NoteEditor.jsx:198`). Unblocking is a decision, not a build.
+- **Plain-text toggle for link-heavy entries** — `MarkdownView.jsx:11-27` swaps any
+  paragraph that is *only* a link for a rich `LinkEmbed`, so twenty links become twenty
+  cards with no way off. Per-entry toggle preferred over a global setting. Much less
+  urgent once link previews are batched (see below).
+- **Local-first** — not matchable and not worth chasing; the GitHub backup's markdown
+  mirror already gives "your notes are plain files you own", which is most of the
+  emotional benefit. Worth *saying* on the landing page; nothing to build.
+
+### Link previews are refetched per render — ★ the real performance debt
+`LinkEmbed.jsx:40-43` calls `fetchLinkPreview` inside a `useEffect`, per component, per
+mount. Twenty links in a note is twenty edge-function invocations every time the entry
+opens, with no cache, no batching and no dedupe across entries. Entry-level previews are
+already cached (`og_image`/`og_description` are columns, migration `0031`) — links
+*inside* a note simply have no row to cache on.
+
+Shape: a shared `link_previews` table keyed by a hash of the normalised url — not per
+user, not per entry — holding title/description/image_url/site_name/favicon/status/
+fetched_at. `MarkdownView` already parses the whole tree so it knows every url up front:
+one batched lookup replaces N fetches. Misses enqueue rather than fetch inline, which is
+the same shape as the `jobs` table already ranked in `PROJECT-STATE.md` §6 — build it
+once, use it for both.
+
+**Store the image url, never the bytes.** Hotlink with `loading="lazy"`; Discord stores
+bytes because it is a CDN and link rot breaks its product, whereas here a dead thumbnail
+is a shrug and stored bytes would scale cost with every link anyone saves. The exception
+is the preservation module: if a user explicitly preserves an entry, pull the bytes then
+— opt-in and bounded.
+
+**Exclude `link_previews` from backup**, per the precedent already in `EXCLUDED_TABLES`
+(`githubSync.js:76`): it is derived and regenerable, like `content_chunks` and
+`feed_items`. The durable half already survives — the og_* columns ride on `entries`, and
+the markdown mirror keeps the note with its links intact.
+
+### Big entries are cramped — ★ a fundamental UX problem, unsolved
+Reported 2026-08-18. Cards are tuned to be light and scannable, which is right for a
+saved link and wrong for a journal entry, a document with many links, or a project doc.
+Even with the column slider at 1 it reads cramped and awkward. This is not a spacing
+tweak: the card is one component asked to serve two genuinely different content shapes.
+Worth designing properly — a reading/writing mode, a distinct long-form entry type, or a
+full-width detail view — rather than tuning padding.
+
 ---
 
 ## Big swings

@@ -318,6 +318,10 @@
   text-decoration: none;
   letter-spacing: -0.15px;
   font-feature-settings: 'kern' 1, 'liga' 1;
+  /* A title is often a bare url, which is one unbreakable word — without this
+     it pushes straight through the card's border instead of wrapping. */
+  overflow-wrap: anywhere;
+  min-width: 0;
 }
 .card-title:hover { color: var(--accent); text-decoration: none; }
 .search-hit {

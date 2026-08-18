@@ -128,8 +128,18 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+  /* Flex children default to min-width:auto, so one long unbreakable word can
+     stretch the card past its own boundary. */
+  min-width: 0;
 }
-.revisit-note { font-size: var(--text-sm); color: var(--text); line-height: 1.6; margin: 0; }
+.revisit-card > * { min-width: 0; }
+.revisit-note {
+  font-size: var(--text-sm);
+  color: var(--text);
+  line-height: 1.6;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
 
 .revisit-srs-row { display: flex; align-items: center; gap: 10px; }
 .revisit-srs-label { font-size: var(--text-xs); color: var(--muted); }
