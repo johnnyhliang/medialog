@@ -163,6 +163,11 @@ export default function TopicView({
   // wrong trade. This narrows *to* them, for reviewing or undoing a decision.
   const [retiredOnly, setRetiredOnly] = useState(false)
   const retiredCount = useMemo(() => entries.filter(e => e.retired_at).length, [entries])
+  // Un-retiring the last one from inside the filter would otherwise unmount the
+  // toggle while it is still on, stranding the list empty with no way back.
+  useEffect(() => {
+    if (retiredCount === 0 && retiredOnly) setRetiredOnly(false)
+  }, [retiredCount, retiredOnly])
 
   const filtered = useMemo(() => {
     let result
@@ -370,7 +375,7 @@ export default function TopicView({
       <div className="entries-section-header">
         <span className="entries-section-label">Entries</span>
         {filtered.length > 0 && <span className="entries-section-count">{filtered.length}</span>}
-        {retiredCount > 0 && (
+        {(retiredCount > 0 || retiredOnly) && (
           <button
             className={`retired-filter-btn${retiredOnly ? ' active' : ''}`}
             onClick={() => setRetiredOnly(v => !v)}

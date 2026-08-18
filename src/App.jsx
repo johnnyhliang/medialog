@@ -614,7 +614,7 @@ function Workspace() {
       await softDeleteEntry(supabase, id)
     } catch {
       addToast('Failed to delete entry', 'error')
-      return
+      return false
     }
     applyDeleteEntry(id)
     if (trashToast && entry) {
@@ -623,6 +623,10 @@ function Workspace() {
         actions: [{ label: 'Undo', onClick: () => handleUndoTrash(entry) }],
       })
     }
+    // Reports success so callers that chain further state changes (the revisit
+    // card, which also drops the entry from the queue) can stop on failure
+    // instead of advancing past an entry that was never deleted.
+    return true
   }
 
   async function handleStatusChange(entryId, status) {
@@ -633,7 +637,7 @@ function Workspace() {
       updated = await updateEntry(supabase, entryId, { status })
     } catch {
       addToast('Failed to update status', 'error')
-      return
+      return false
     }
     applyUpdateEntry(entryId, updated)
 
@@ -667,6 +671,7 @@ function Workspace() {
     } else {
       removePending(entryId)
     }
+    return true
   }
 
   async function handleUndoArchive(entryId, prevStatus) {
@@ -1153,9 +1158,17 @@ function Workspace() {
     applyUpdateEntry(entry.id, { ...entry, surface_after: tomorrow })
   }
 
+  // Wrapped because Revisit awaits this before advancing: an unguarded reject
+  // left the button looking dead, with no toast and no movement.
   async function handleSeen(entryId) {
-    await markSurfaced(supabase, entryId)
+    try {
+      await markSurfaced(supabase, entryId)
+    } catch {
+      addToast('Could not skip this entry', 'error')
+      return false
+    }
     applySeen(entryId)
+    return true
   }
 
   async function handleRateRevisit(entry, grade) {
@@ -1164,22 +1177,36 @@ function Workspace() {
   }
 
   async function handleRetireRevisit(entry) {
-    await retireEntry(supabase, entry.id)
+    try {
+      await retireEntry(supabase, entry.id)
+    } catch {
+      addToast('Could not update this entry', 'error')
+      return false
+    }
     applySeen(entry.id)
     addToast('Kept, but no longer resurfacing', 'success')
+    return true
   }
 
   // Archive and trash are the two decisions you may want to make *about the
   // entry* while reviewing it. Both reuse the handlers the entry cards use, so
   // reviewing and browsing can never drift into different behaviour.
+  // Both underlying handlers swallow their own errors and report a boolean, so
+  // a failed write must not go on to drop the entry from the queue — that would
+  // hide an entry that is still active, and the card would advance past a
+  // decision that never landed.
   async function handleArchiveRevisit(entry) {
-    await handleStatusChange(entry.id, 'done')
+    const ok = await handleStatusChange(entry.id, 'done')
+    if (!ok) return false
     applySeen(entry.id)
+    return true
   }
 
   async function handleDeleteRevisit(entry) {
-    await handleDelete(entry.id)
+    const ok = await handleDelete(entry.id)
+    if (!ok) return false
     applySeen(entry.id)
+    return true
   }
 
   // Toggle, so the same control undoes the decision it made. Retiring from a
@@ -1193,7 +1220,21 @@ function Workspace() {
       addToast(retire ? 'Could not update this entry' : 'Could not resume resurfacing', 'error')
       return
     }
-    applyUpdateEntry({ id: entryId, retired_at: retire ? new Date().toISOString() : null })
+    // applyUpdateEntry is (id, updated) and `updated` REPLACES the row, so it
+    // needs the whole entry merged in. Passing a patch object put an object
+    // where the id belonged, so `e.id === id` never matched and the toggle
+    // silently did nothing on screen — the write landed but the card never
+    // re-rendered, which also made un-retire unreachable without a reload.
+    // Both retire and unretire clear surface_after, so mirror that too or the
+    // local copy drifts from the row.
+    const entry = entries.find((e) => e.id === entryId)
+    if (entry) {
+      applyUpdateEntry(entryId, {
+        ...entry,
+        retired_at: retire ? new Date().toISOString() : null,
+        surface_after: null,
+      })
+    }
     addToast(retire ? 'Done with it — no longer resurfacing' : 'Resurfacing resumed', 'success')
   }
 

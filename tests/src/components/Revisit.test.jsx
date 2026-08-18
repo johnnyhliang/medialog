@@ -57,3 +57,13 @@ test('archive and trash are reachable from the card and advance', async () => {
   await userEvent.click(screen.getByRole('button', { name: /move this entry to trash/i }))
   expect(onDelete).toHaveBeenCalledWith(entries[1])
 })
+
+test('a failed archive does not advance past the entry', async () => {
+  // The handler reports false rather than throwing; advancing anyway would drop
+  // the card from the session while the entry was never archived.
+  const onArchive = vi.fn(() => Promise.resolve(false))
+  render(<Revisit entries={entries} onSeen={vi.fn()} onRate={vi.fn()} onArchive={onArchive} />)
+  await userEvent.click(screen.getByRole('button', { name: /archive this entry/i }))
+  expect(onArchive).toHaveBeenCalledWith(entries[0])
+  expect(screen.getByText('note a')).toBeInTheDocument()
+})

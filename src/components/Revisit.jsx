@@ -63,37 +63,42 @@ function ActivityItem({ entry }) {
 }
 
 export default function Revisit({ entries, onSeen, onRate, onRetire, onArchive, onDelete, recentActivity = [] }) {
-  const [index, setIndex] = useState(0)
-  const current = entries[index]
+  // Always the head of the queue, never a cursor into it. Every action below
+  // ends in applySeen(), which drops the entry from `entries` — the list
+  // shrinking IS the advance. Incrementing an index on top of that advanced
+  // twice per action, so a review session showed every *other* entry and
+  // silently skipped the rest until the next load.
+  const current = entries[0]
 
   async function handleRate(grade) {
     if (onRate) await onRate(current, grade)
     else await onSeen(current.id)
-    setIndex((i) => i + 1)
   }
 
   // The only action here that ends the loop. Hard/Good/Easy all reschedule and
   // Skip defers, so without this the queue has no way to shrink.
   async function handleRetire() {
     if (onRetire) await onRetire(current)
-    setIndex((i) => i + 1)
   }
 
   // Skip used to be a bare index bump — nothing was written, so the entry was
   // still first in the queue on the next load (listForRevisit orders by
   // last_surfaced_at, nulls first). Stamping it sends it to the back instead.
+  // Handlers report false when the write failed (they toast for themselves).
+  // Advancing regardless would drop the card from the session while the entry
+  // was never changed, so a failure has to leave you on the same card.
   async function handleSkip() {
-    if (onSeen) await onSeen(current.id)
+    if (onSeen && await onSeen(current.id) === false) return
     setIndex((i) => i + 1)
   }
 
   async function handleArchive() {
-    if (onArchive) await onArchive(current)
+    if (onArchive && await onArchive(current) === false) return
     setIndex((i) => i + 1)
   }
 
   async function handleDelete() {
-    if (onDelete) await onDelete(current)
+    if (onDelete && await onDelete(current) === false) return
     setIndex((i) => i + 1)
   }
 
@@ -169,7 +174,7 @@ export default function Revisit({ entries, onSeen, onRate, onRetire, onArchive, 
                 )}
                 {onArchive && (
                   <button
-                    className="icon-btn revisit-archive-btn"
+                    className="icon-btn"
                     onClick={handleArchive}
                     aria-label="Archive this entry"
                     title="Archive"

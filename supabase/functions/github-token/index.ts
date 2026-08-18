@@ -66,12 +66,19 @@ Deno.serve(async (req) => {
     // — silently start a *new* repo of that name under the new account, or
     // commit into an unrelated existing one. Backup history would split across
     // two accounts with nothing in the UI saying so.
-    const { data: existing } = await supabaseClient
+    // Fail CLOSED. This is a silent-corruption guard, so an unreadable previous
+    // config must be treated as "might have been a different account" — the
+    // alternative is exactly the bug this exists to prevent. A genuine
+    // first-time link has no row, which maybeSingle returns as data: null with
+    // no error, so it correctly skips the clear.
+    const { data: existing, error: existingError } = await supabaseClient
       .from('user_configs')
       .select('github_user')
       .eq('user_id', user.id)
       .maybeSingle()
-    const switchedAccount = Boolean(existing?.github_user) && existing.github_user !== githubUser
+    const switchedAccount = existingError
+      ? true
+      : Boolean(existing?.github_user) && existing.github_user !== githubUser
 
     const { error: upsertError } = await supabaseClient
       .from('user_configs')
@@ -79,7 +86,7 @@ Deno.serve(async (req) => {
         user_id: user.id,
         github_token: encryptedToken,
         github_user: githubUser,
-        ...(switchedAccount ? { repo_name: null, last_backup_sha: null, last_backup_summary: null, last_backup_at: null } : {}),
+        ...(switchedAccount ? { repo_name: null, last_backup_sha: null, last_backup_summary: null, last_backup_at: null, last_error: null } : {}),
       })
 
     if (upsertError) throw upsertError
