@@ -1172,8 +1172,14 @@ function Workspace() {
   }
 
   async function handleRateRevisit(entry, grade) {
-    await rateRevisit(supabase, entry, grade)
+    try {
+      await rateRevisit(supabase, entry, grade)
+    } catch {
+      addToast('Could not save that rating', 'error')
+      return false
+    }
     applySeen(entry.id)
+    return true
   }
 
   async function handleRetireRevisit(entry) {

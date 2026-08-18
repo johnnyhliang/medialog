@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { Archive, Trash2 } from 'lucide-react'
 
 function timeAgo(dateStr) {
@@ -84,22 +83,19 @@ export default function Revisit({ entries, onSeen, onRate, onRetire, onArchive, 
   // Skip used to be a bare index bump — nothing was written, so the entry was
   // still first in the queue on the next load (listForRevisit orders by
   // last_surfaced_at, nulls first). Stamping it sends it to the back instead.
-  // Handlers report false when the write failed (they toast for themselves).
-  // Advancing regardless would drop the card from the session while the entry
-  // was never changed, so a failure has to leave you on the same card.
+  // A failed write leaves the entry in the queue (the handlers only call
+  // applySeen on success and toast for themselves), so you stay on the same
+  // card rather than having it vanish while nothing actually changed.
   async function handleSkip() {
-    if (onSeen && await onSeen(current.id) === false) return
-    setIndex((i) => i + 1)
+    if (onSeen) await onSeen(current.id)
   }
 
   async function handleArchive() {
-    if (onArchive && await onArchive(current) === false) return
-    setIndex((i) => i + 1)
+    if (onArchive) await onArchive(current)
   }
 
   async function handleDelete() {
-    if (onDelete && await onDelete(current) === false) return
-    setIndex((i) => i + 1)
+    if (onDelete) await onDelete(current)
   }
 
   const interval = current?.srs_interval ?? 1
