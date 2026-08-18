@@ -233,6 +233,37 @@ export default function DataBackupTab({
     setLoadingRepos(false)
   }
 
+  // The only way out. Without it there was no way to unlink a GitHub account
+  // from the UI at all — capture tokens have had a proper revoke flow all
+  // along, this had nothing. Everything account-scoped clears together;
+  // leaving repo_name behind is what causes the split-brain on the next link.
+  async function handleDisconnect() {
+    setBusy('disconnect')
+    const { error } = await supabase
+      .from('user_configs')
+      .update({
+        github_token: null,
+        github_user: null,
+        repo_name: null,
+        auto_backup: false,
+        last_backup_sha: null,
+        last_backup_summary: null,
+        last_backup_at: null,
+        last_error: null,
+      })
+      .eq('user_id', config.user_id)
+    setBusy(null)
+    if (error) { addToast(`Could not disconnect: ${error.message}`, 'error'); return }
+    setConfig({ ...config, github_token: null, github_user: null, repo_name: null, auto_backup: false, last_backup_sha: null, last_backup_summary: null, last_backup_at: null, last_error: null })
+    setRepos(null)
+    addToast('GitHub disconnected. Revoke the app on GitHub too, to be thorough.', 'success')
+  }
+
+  async function clearLastError() {
+    await supabase.from('user_configs').update({ last_error: null }).eq('user_id', config.user_id)
+    setConfig({ ...config, last_error: null })
+  }
+
   async function saveConfig(patch) {
     const next = { ...config, ...patch }
     setConfig(next)
@@ -343,7 +374,26 @@ export default function DataBackupTab({
         <div className="gh-status">
           <Check size={15} className="gh-ok" />
           <span>Connected as <strong>{config.github_user}</strong></span>
+          <button
+            className="btn-small gh-disconnect"
+            onClick={handleDisconnect}
+            disabled={busy === 'disconnect'}
+            title="Unlink this GitHub account"
+          >
+            {busy === 'disconnect' ? 'disconnecting…' : 'Disconnect'}
+          </button>
         </div>
+
+        {/* Auto-backup swallows its errors by design so it never interrupts you
+            mid-sentence, which also meant a backup could be broken for months
+            with nothing on screen. This is the only place that reaches. */}
+        {config.last_error && (
+          <div className="gh-error-banner">
+            <AlertTriangle size={15} />
+            <span>Last backup failed: {config.last_error}</span>
+            <button className="btn-small" onClick={clearLastError}>Dismiss</button>
+          </div>
+        )}
 
         <div className="form-group">
           <label>Repository</label>

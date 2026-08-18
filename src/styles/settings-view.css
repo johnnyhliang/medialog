@@ -280,3 +280,23 @@
 .tag-color-clear:hover:not(:disabled) { background: var(--surface-2); color: var(--danger); }
 .tag-color-clear:disabled { opacity: 0.35; cursor: default; }
 
+
+/* ── GitHub sync: disconnect + failure banner ───────────────────────────────── */
+.gh-disconnect { margin-left: auto; color: var(--muted); }
+.gh-disconnect:hover { color: var(--danger); border-color: var(--danger); }
+
+/* Auto-backup swallows its errors so it never interrupts typing; this is the
+   one place the failure becomes visible instead of sitting in a column. */
+.gh-error-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 8px 12px;
+  border: 1px solid var(--danger);
+  border-radius: var(--radius);
+  background: var(--tint-red-bg);
+  color: var(--tint-red-fg);
+  font-size: var(--text-sm);
+}
+.gh-error-banner span { flex: 1; min-width: 0; overflow-wrap: anywhere; }

@@ -60,12 +60,26 @@ Deno.serve(async (req) => {
     const { data: { user }, error: userError } = await supabaseClient.auth.getUser()
     if (userError || !user) throw new Error('Unauthorized')
 
+    // repo_name is scoped to the account that owns the repo, so it must not
+    // survive a switch. Left alone, linking a second account would keep the
+    // old bare name and — since the repo is created automatically when absent
+    // — silently start a *new* repo of that name under the new account, or
+    // commit into an unrelated existing one. Backup history would split across
+    // two accounts with nothing in the UI saying so.
+    const { data: existing } = await supabaseClient
+      .from('user_configs')
+      .select('github_user')
+      .eq('user_id', user.id)
+      .maybeSingle()
+    const switchedAccount = Boolean(existing?.github_user) && existing.github_user !== githubUser
+
     const { error: upsertError } = await supabaseClient
       .from('user_configs')
       .upsert({
         user_id: user.id,
         github_token: encryptedToken,
         github_user: githubUser,
+        ...(switchedAccount ? { repo_name: null, last_backup_sha: null, last_backup_summary: null, last_backup_at: null } : {}),
       })
 
     if (upsertError) throw upsertError

@@ -111,7 +111,10 @@ export async function runBackup(supabase, { message, onProgress } = {}) {
   const { data: { user } } = await supabase.auth.getUser()
   await supabase
     .from('user_configs')
-    .update({ last_backup_sha: data.sha, last_backup_summary: counts })
+    // last_backup_at has existed since migration 0003 and was never written,
+    // so "when did this last run?" was unanswerable and silent failure looked
+    // identical to success.
+    .update({ last_backup_sha: data.sha, last_backup_summary: counts, last_backup_at: new Date().toISOString(), last_error: null })
     .eq('user_id', user.id)
 
   return { ...data, counts }
