@@ -170,7 +170,7 @@ export default function Revisit({ entries, onSeen, onRate, onRetire, onArchive, 
                 )}
                 {onArchive && (
                   <button
-                    className="icon-btn"
+                    className="icon-btn revisit-archive-btn"
                     onClick={handleArchive}
                     aria-label="Archive this entry"
                     title="Archive"

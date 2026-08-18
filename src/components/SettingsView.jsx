@@ -40,10 +40,6 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
   const [usage, setUsage] = useState(null)
 
   useEffect(() => {
-    loadConfig()
-  }, [])
-
-  useEffect(() => {
     if (tab !== 'behavior') return
     Promise.all([
       getMyUsage(supabase),
@@ -66,6 +62,9 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
       .then(({ data }) => setCaptureLog(data ?? []))
   }, [tab])
 
+  // Declared before it is used, rather than relying on hoisting: the effect
+  // below closes over this binding, and eslint's immutability rule flags an
+  // access that cannot see later reassignments.
   async function loadConfig() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { setLoading(false); return }
@@ -80,6 +79,10 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
     }
     setLoading(false)
   }
+
+  useEffect(() => {
+    loadConfig()
+  }, [])
 
 
 
@@ -574,7 +577,7 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
                       const d = new Date(row.created_at)
                       const label = d.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
                       let domain = row.url
-                      try { domain = new URL(row.url).hostname } catch {}
+                      try { domain = new URL(row.url).hostname } catch { /* not a url — fall through to the raw value */ }
                       return (
                         <tr key={row.id} style={{ borderBottom: '1px solid var(--border)' }}>
                           <td style={{ padding: '6px 0', width: 16 }}>

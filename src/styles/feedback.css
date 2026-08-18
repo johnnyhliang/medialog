@@ -218,3 +218,7 @@ a.activity-title:hover { color: var(--accent); }
 .activity-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
 .activity-tag { font-size: var(--text-xs); color: var(--muted); }
 
+
+/* The trash sibling gets a red hover from .icon-btn-danger, so without this the
+   archive button is the only control in the row with no hover identity. */
+.revisit-archive-btn:hover { color: var(--accent); }
