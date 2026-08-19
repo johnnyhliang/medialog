@@ -59,6 +59,8 @@ until ② lands; mostly a visualization over data ② already produces.
 - **Daily note / journal surface** — a real daily entry (Inbox is close but not a journal).
 - **Entry permalinks** — URL-addressable entries (`?entry=<id>` opens the topic + scrolls) so an
   entry can be hotlinked/shared; today navigation is in-app state only, not routed.
+  Reported again 2026-08-18 via assistant citations — see § *Citations reach the entry
+  but not much else* below, which is the same gap felt from a different direction.
 
 ### Authoring parity — deliberately deferred (decided 2026-08-18)
 Add-ons, not core. The product is capture → retrieval → resurfacing; competing with
@@ -78,6 +80,50 @@ users actually ask, not to close a feature-comparison gap.
 - **Local-first** — not matchable and not worth chasing; the GitHub backup's markdown
   mirror already gives "your notes are plain files you own", which is most of the
   emotional benefit. Worth *saying* on the landing page; nothing to build.
+
+### Citations reach the entry but not much else — ★ (reported 2026-08-18)
+The assistant's citations *are* wired: `AssistantPanel` renders `[n]` chips and a source
+list, both calling `onOpenEntry` → `handleSelectEntry` (`App.jsx:771`), which sets
+`pendingEntryScroll`, switches topic, and scrolls to `#entry-<id>`. Three things stop
+that being useful.
+
+**1. Archived entries silently fail to open — a real bug, and the smallest fix.**
+`TopicView.jsx:186` filters browsing with
+`result.filter(e => isSearching || e.status !== 'done' || pendingArchiveIds.has(e.id))`.
+Archived means `status === 'done'`, and arriving from a citation is not "searching", so
+the target is never rendered, `document.getElementById` returns null, and the optional
+chain swallows it. You land on the topic and nothing happens — no scroll, no error.
+The filter is deliberate (its comment cites GitHub's `is:archived`), but a *direct jump*
+is an explicit request for one entry and should override browse filtering. Fix: carry the
+pending id into TopicView and always include it, exactly the exemption `pendingArchiveIds`
+already gets.
+
+**2. Nothing is hotlinkable.** Navigation is React state; no entry is ever written to the
+URL, so there is no link to copy or share. Same gap as *Entry permalinks* above — needs
+real routing, and is what would turn citations from clickable into shareable.
+
+**3. No passage-level jump.** Retrieval is chunk-level and sources carry a `heading`, but
+`handleSelectEntry` only knows the entry id, so it scrolls to the *card*, not the quoted
+sentence. On a long note the citation is technically correct and practically useless.
+Needs the citation to carry a chunk anchor and the renderer to highlight it — the largest
+of the three.
+
+### The in-app assistant cannot troubleshoot the app (reported 2026-08-18)
+Better than it looks at first: `appHelp.js` already builds a knowledge block from the
+module registry (every feature, description, stage, tier, and whether it is visible to
+*this* user), the settings index (every setting → its tab), how Modules works, and the
+full guide markdown — and `looksLikeAppQuestion` routes app questions there instead of to
+the library.
+
+The limit is that the knowledge is *generated from the registry*, so it knows "Data &
+Backup exists and lives in Settings" and nothing about how anything can fail. When the
+GitHub connect flow broke, it had nothing to say — no OAuth callback requirements, no
+edge-function secrets, no failure modes. It is a "where is this setting" system, not a
+troubleshooting one.
+
+Worth deciding rather than drifting: either accept that and say so in the empty state, or
+give it a hand-written troubleshooting section covering the flows that actually break
+(GitHub connect, backup failures, indexing). The second is a docs problem, not a code one.
 
 ### Link previews are refetched per render — ★ the real performance debt
 `LinkEmbed.jsx:40-43` calls `fetchLinkPreview` inside a `useEffect`, per component, per

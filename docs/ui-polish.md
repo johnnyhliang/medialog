@@ -163,6 +163,52 @@ changes; verified by linting the file before and after.
 
 ---
 
+## The GitHub connect flow — how it actually works (recorded 2026-08-18)
+
+Written down because getting it working took a long detour, and none of it was
+discoverable from the code alone.
+
+**The chain.** Connect → `https://github.com/login/oauth/authorize` with
+`client_id` (from `VITE_GITHUB_CLIENT_ID`, inlined at build time) and
+`redirect_uri = ${window.location.origin}/settings` → GitHub redirects back →
+`App.jsx:292` sees `?code` *and* a path containing `/settings` → invokes the
+`github-token` edge function → it exchanges the code with `GITHUB_CLIENT_ID` /
+`GITHUB_CLIENT_SECRET` from **Supabase function secrets**, encrypts the token
+with `ENCRYPTION_KEY`, upserts `user_configs` → the client reloads.
+
+**Two separate sets of credentials, and they must match.** The frontend's
+`VITE_GITHUB_CLIENT_ID` lives in Vercel; the exchange's client id and secret live
+in Supabase function secrets. Point them at different OAuth apps and GitHub
+authorizes fine, then the exchange fails with `incorrect_client_credentials`.
+
+**`/settings` is not a page.** `vercel.json` and `public/_redirects` rewrite it to
+`app.html`; the app then shows the settings view. It exists purely as the OAuth
+landing spot, and `_redirects` carries a comment explaining that a naive
+catch-all to `index.html` breaks every auth flow. Do not redirect to `/` — that
+serves the landing page.
+
+**Both callback URLs must be registered on the GitHub app** —
+`https://<prod-host>/settings` and `http://localhost:5173/settings`. Host and
+port must match exactly; only deeper paths are inherited.
+
+**The repo-linking UI already exists** and renders only once `github_user` is
+set: a repository field, a `browse…` button listing your repos, branch, private
+checkbox, and "created automatically if it doesn't exist yet"
+(`DataBackupTab.jsx:409-445`).
+
+**Traps found the hard way, all now fixed:**
+- The callback reloads the page, which discarded `setView('settings')` and
+  dropped you on Home — a *successful* connect looked identical to a failure.
+  `view` now initialises from the pathname.
+- `repo_name` is `not null default 'medialog-backup'` (migration `0003`). The
+  disconnect and account-switch paths wrote `null`, which fails the constraint
+  and takes the whole update with it. Both reset to `DEFAULT_REPO_NAME`.
+- Auth codes are single-use and the handler strips the query immediately, so
+  refreshing after a failure always gives `bad_verification_code`. Start over
+  from Connect.
+
+---
+
 ## How Revisit actually selects entries (recorded 2026-08-18)
 
 Surprising enough in conversation to be worth writing down.
