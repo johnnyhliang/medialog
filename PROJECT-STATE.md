@@ -563,6 +563,7 @@ detail; that file, not this table, is authoritative on *how*.
 
 | # | Action | Kind | Why | Detail |
 |---|---|---|---|---|
+| **1a** | **GitHub connect is broken end to end — nobody can link a backup repo** | bug | **Top of the list as of 2026-08-18.** OAuth completes on GitHub's side and the app never receives the code. Three fixes shipped, none of them the blocker; four hypotheses eliminated. **Do not attempt another fix without the observation named in the doc** — it has already cost a session of guessing | `docs/ui-polish.md` § *GitHub connect is broken* |
 | ~~0~~ | ~~Turn on Supabase automatic backups~~ | ops | ✅ **DONE 2026-08-07.** Enabled in the dashboard. The one item on this list that no code could close, open since the list was written | `README.md` § *Not losing your data* |
 | ~~1~~ | ~~Confirm `0070`/`0071` are applied~~ | ops | ✅ **DONE 2026-08-06.** `supabase migration list --linked` shows every migration in both Local and Remote, no drift | — |
 | 2 | **Fix "everything is slow, incl. Metrics"** | bug | The one hurting daily use. *Measure first* — Metrics being slow too suggests one shared cause, not seven | `tech-debt.md` § UX #4 |

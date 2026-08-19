@@ -163,6 +163,98 @@ changes; verified by linting the file before and after.
 
 ---
 
+## ⛔ GitHub connect is BROKEN — top of §6 (2026-08-18)
+
+**Nobody can link a backup repo.** GitHub authorizes successfully; the app never
+receives the code; Settings keeps showing the Connect button. Three fixes shipped
+during the session, all real bugs, **none of them the blocker.**
+
+### STOP — read this before writing another fix
+
+Four hypotheses were formed, each looked convincing, each was wrong, and each
+cost a deploy cycle. The failure is silent, so "it still doesn't work" carries no
+information about *which* stage failed. **Do not ship a fifth guess.** Get the
+observation below first.
+
+### The one observation needed
+
+With DevTools open, **Network tab, "Preserve log" ticked**, click Connect and go
+through GitHub. Then capture, in order:
+
+1. **The full URL the instant you land back** (before any redirect) — the browser
+   history entry list is the reliable way to see it, since it is replaced fast.
+2. **Whether a `github-token` request appears at all.**
+   - **No request** → the code never reached `handleGitHubCallback`. Still a
+     front-end delivery problem; go to *What is still unexplained*.
+   - **Request, status 400** → open the Response tab. `error` is the real cause
+     and almost certainly a credentials mismatch. Done guessing.
+   - **Request, status 200** → the write succeeded; the bug is on the read side
+     (`loadConfig` / RLS), not in OAuth at all.
+3. **Any `alert()` popup** — the handler alerts on every failure path, so a
+   silent failure means it never ran.
+4. **Console errors during the redirect**, especially from supabase-js.
+
+Also worth one look, because it is cheap and would end this instantly:
+**Supabase → Table Editor → `user_configs`.** A row with `github_user` set means
+OAuth has been working all along and only the UI read is broken.
+
+### Ruled out — do not re-investigate
+
+- **`VITE_GITHUB_CLIENT_ID` missing or wrong.** Verified by fetching the deployed
+  bundle: `Ov23liGH0puGXgUMtVwE` is inlined in `SettingsView-*.js`, and the
+  authorize URL is built correctly. The "is not set" guard is dead-code
+  eliminated, so that toast can never fire.
+- **`/settings` not resolving.** Returns 200 and serves `app.html` (title
+  "MediaLog", `app-*.js`) — not the landing page.
+- **The callback check missing from the build.** Present and correct in the
+  shipped bundle, inside the mount effect.
+- **The edge function swallowing errors.** It returns **400** on every failure
+  path, so `functions.invoke` sets `error` and the handler alerts. Silence means
+  it was never called.
+- **Fixed, and each was a genuine bug, but none unblocked it:**
+  `991b00b` the reload discarding `setView('settings')` (a success looked like a
+  failure) · `b47e15c` supabase-js PKCE treating `?code=` as its own and
+  stripping it · `2473610` capturing the code at module load into sessionStorage
+  so no redirect can lose it.
+
+### What is still unexplained
+
+The last observation was **`?code=` visible briefly, then the app at `/app`.**
+`/app` is reachable from exactly one line — `LandingPage.jsx:111` — so the chain
+must be `AuthGate.jsx:21` (`location.replace('/')` when session is falsy) → the
+landing page → `/app`. `useSession` waits for `INITIAL_SESSION`, so there is a
+real window where session is null.
+
+`2473610` was supposed to survive precisely that, by lifting the code out of the
+URL at module load. **It did not.** So one of these is true, and the next session
+should test them in this order:
+
+1. **A stale service worker is serving old JS.** This is a PWA (`sw.js`,
+   workbox, 146 precached entries). The deployed bundles contain the fixes — that
+   was verified over the network — but the *browser* may not be running them.
+   **Test first: hard-reload, or Application → Service Workers → Unregister, or
+   try a private window.** Cheapest to check and would explain why three correct
+   fixes changed nothing.
+2. **`captureOAuthCode.js` is not running first.** It depends on side-effect
+   import order in `main.jsx`. Verify in the built output that it executes before
+   `supabaseClient`.
+3. **The redirect happens before any JS runs** — a Vercel-level or GitHub-level
+   redirect, not the app's. The URL captured in step 1 above distinguishes this.
+4. **The GitHub entity is an App, not an OAuth App.** Client id starts `Ov23li`,
+   which is believed to be the OAuth App format, but this was never confirmed and
+   the settings page reportedly shows a Homepage URL and multiple callback URLs.
+   Check whether an **"Install App"** tab exists in its sidebar. A GitHub App
+   needs installation, issues expiring tokens, and ignores `scope=repo` — the
+   code assumes an OAuth App throughout.
+
+### Meanwhile
+
+The **local zip backup is unaffected** and needs no GitHub at all: Settings →
+Data & Backup → *Manual backup & restore* → Download zip. Anyone blocked on this
+still has a working, restorable backup path.
+
+---
+
 ## The GitHub connect flow — how it actually works (recorded 2026-08-18)
 
 Written down because getting it working took a long detour, and none of it was
