@@ -243,6 +243,13 @@ export function buildFiles(snapshot) {
       schema_version: SCHEMA_VERSION,
       exported_at: snapshot.exported_at,
       app: 'medialog',
+      // Which account wrote this. A backup commit REPLACES data/*.json wholesale
+      // rather than merging, and applySnapshot re-stamps user_id onto every row —
+      // so without an owner marker two accounts pointing at one repo silently
+      // clobber each other, and a restore absorbs the other library as your own
+      // with no way to tell afterwards. This is the only thing that makes either
+      // collision detectable. An account id, not a credential.
+      account_id: snapshot.account_id ?? null,
       counts,
     }, null, 2)}\n`,
   })
@@ -319,7 +326,15 @@ export function parseFiles(files) {
     }
   }
 
-  return { exported_at: manifest.exported_at, schema_version: manifest.schema_version, tables, user_config }
+  return {
+    exported_at: manifest.exported_at,
+    schema_version: manifest.schema_version,
+    // null for backups written before this existed — callers must treat unknown
+    // as "cannot tell", never as "same account".
+    account_id: manifest.account_id ?? null,
+    tables,
+    user_config,
+  }
 }
 
 /** Row counts per table, for showing "what am I about to restore". */

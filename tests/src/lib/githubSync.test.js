@@ -313,3 +313,28 @@ describe('profile export (user_configs by field allowlist)', () => {
     expect(parseFiles(files).user_config).toBeNull()
   })
 })
+
+describe('backup ownership', () => {
+  test('the manifest records which account wrote the backup', () => {
+    const files = buildFiles({ ...snapshot, account_id: 'user-1' })
+    const manifest = JSON.parse(files.find((f) => f.path === 'data/manifest.json').content)
+    expect(manifest.account_id).toBe('user-1')
+  })
+
+  test('account_id round-trips, so a foreign backup is detectable on restore', () => {
+    const files = buildFiles({ ...snapshot, account_id: 'user-1' })
+    expect(parseFiles(files).account_id).toBe('user-1')
+  })
+
+  test('a backup written before the marker existed reads as unknown, not as mine', () => {
+    // Must be null rather than the current user: treating "cannot tell" as
+    // "same account" would silently re-enable the clobber this guards against.
+    const files = buildFiles(snapshot).map((f) => {
+      if (f.path !== 'data/manifest.json') return f
+      const m = JSON.parse(f.content)
+      delete m.account_id
+      return { ...f, content: JSON.stringify(m) }
+    })
+    expect(parseFiles(files).account_id).toBeNull()
+  })
+})

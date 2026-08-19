@@ -10,6 +10,22 @@ import { SYNC_TABLES, CONFLICT_TARGETS, USER_CONFIG_EXPORT_FIELDS, buildFiles, s
 const readAll = (supabase, table) =>
   fetchAllPages((from, to) => supabase.from(table).select('*').range(from, to), table)
 
+/**
+ * The account_id recorded in the repo's manifest, or null when the repo is
+ * empty, unreadable, or predates the marker. Deliberately swallows failures:
+ * this guards against clobbering, and an unreadable repo must not block a
+ * backup that would otherwise succeed.
+ */
+async function readRepoOwner(supabase) {
+  try {
+    const { data } = await supabase.functions.invoke('github-backup', { body: { action: 'fetch' } })
+    const raw = (data?.files ?? []).find((f) => f.path === 'data/manifest.json')?.content
+    return raw ? (JSON.parse(raw).account_id ?? null) : null
+  } catch {
+    return null
+  }
+}
+
 /** Read every synced table into a snapshot ready for buildFiles(). */
 export async function collectSnapshot(supabase, onProgress) {
   const tables = {}
@@ -29,7 +45,7 @@ export async function collectSnapshot(supabase, onProgress) {
     ? Object.fromEntries(USER_CONFIG_EXPORT_FIELDS.map((f) => [f, configRow[f] ?? null]))
     : null
 
-  return { exported_at: new Date().toISOString(), tables, user_config }
+  return { exported_at: new Date().toISOString(), account_id: user.id, tables, user_config }
 }
 
 /**
@@ -92,8 +108,20 @@ export async function applySnapshot(supabase, snapshot, onProgress, { source } =
  * auto-backup previously called an action that no longer existed and, because
  * it swallows its errors, failed silently.
  */
-export async function runBackup(supabase, { message, onProgress } = {}) {
+export async function runBackup(supabase, { message, onProgress, force = false } = {}) {
   const snapshot = await collectSnapshot(supabase, onProgress)
+
+  // A commit REPLACES data/*.json rather than merging, so backing up into a repo
+  // another account owns destroys their backup silently. Check the manifest
+  // first. `force` is how the UI proceeds once the user has been told.
+  if (!force) {
+    const owner = await readRepoOwner(supabase)
+    if (owner && owner !== snapshot.account_id) {
+      const err = new Error('This repository already holds a backup from a different MediaLog account. Backing up would replace it.')
+      err.code = 'FOREIGN_BACKUP'
+      throw err
+    }
+  }
   const counts = summarize(snapshot)
   const files = buildFiles(snapshot)
 

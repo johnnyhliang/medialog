@@ -200,6 +200,7 @@ export default function DataBackupTab({
   const [progress, setProgress] = useState(null)
   const [lastResult, setLastResult] = useState(null)
   const [pendingRestore, setPendingRestore] = useState(null)
+  const [foreignRepo, setForeignRepo] = useState(false)
 
   const connected = Boolean(config?.github_user)
 
@@ -279,11 +280,12 @@ export default function DataBackupTab({
     if (error) addToast(`Could not save: ${error.message}`, 'error')
   }
 
-  async function handleBackup() {
+  async function handleBackup({ force = false } = {}) {
     setBusy('backup')
     setLastResult(null)
     try {
       const res = await runBackup(supabase, {
+        force,
         onProgress: (step) => setProgress(`${TABLE_LABEL[step] ? 'reading ' + TABLE_LABEL[step] : step}…`),
       })
       setConfig({
@@ -298,6 +300,12 @@ export default function DataBackupTab({
         'success',
       )
     } catch (e) {
+      if (e.code === 'FOREIGN_BACKUP') {
+        setProgress(null)
+        setBusy(null)
+        setForeignRepo(true)
+        return
+      }
       addToast(`Backup failed: ${e.message}`, 'error')
     }
     setProgress(null)
@@ -313,7 +321,11 @@ export default function DataBackupTab({
       setProgress('reading the repository…')
       const { files } = await call('fetch')
       const snapshot = parseFiles(files)
-      setPendingRestore({ snapshot, counts: summarize(snapshot) })
+      // Restore upserts and re-stamps user_id onto every row, so a foreign
+      // backup does not replace your library — it MERGES into it, and nothing
+      // afterwards can tell the two apart. Worth saying out loud before, not after.
+      const foreign = Boolean(snapshot.account_id) && snapshot.account_id !== config.user_id
+      setPendingRestore({ snapshot, counts: summarize(snapshot), foreign })
     } catch (e) {
       addToast(`Could not read backup: ${e.message}`, 'error')
     }
@@ -466,6 +478,28 @@ export default function DataBackupTab({
           <p className="gh-progress"><RefreshCw size={12} className="gh-spin" /> {progress}</p>
         )}
 
+        {/* A commit replaces data/*.json wholesale, so overwriting someone
+            else's backup is destructive and silent. Ask once, explicitly. */}
+        {foreignRepo && (
+          <div className="card gh-restore">
+            <h3 className="gh-card-title">
+              <AlertTriangle size={15} /> This repository belongs to another account
+            </h3>
+            <p className="muted">
+              It already holds a MediaLog backup written by a different account. A backup
+              replaces the whole <code>data/</code> folder rather than merging, so continuing
+              would destroy that backup. Point this account at its own repository instead,
+              unless you know the other one is yours and no longer needed.
+            </p>
+            <div className="actions">
+              <button className="danger" onClick={() => { setForeignRepo(false); handleBackup({ force: true }) }} disabled={busy}>
+                Replace it anyway
+              </button>
+              <button onClick={() => setForeignRepo(false)} disabled={busy}>Cancel</button>
+            </div>
+          </div>
+        )}
+
         {config.last_backup_at && !progress && (
           <p className="muted gh-last">
             Last backup {new Date(config.last_backup_at).toLocaleString()}
@@ -497,6 +531,16 @@ export default function DataBackupTab({
           <h3 className="gh-card-title">
             <AlertTriangle size={15} /> Restore this backup?
           </h3>
+          {pendingRestore.foreign && (
+            <p className="gh-error-banner">
+              <AlertTriangle size={15} />
+              <span>
+                This backup was written by a <strong>different MediaLog account</strong>. Restoring
+                merges its entries into your library rather than replacing yours, and afterwards
+                there is no way to tell which came from where.
+              </span>
+            </p>
+          )}
           <p className="muted">
             Taken {new Date(pendingRestore.snapshot.exported_at).toLocaleString()}. Rows are matched by
             id, so anything already in your library is updated in place rather than duplicated.
