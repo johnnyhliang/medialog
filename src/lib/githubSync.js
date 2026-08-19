@@ -66,6 +66,11 @@ export const CONFLICT_TARGETS = {
   shared_items: 'slug',
 }
 
+// Mirrors the column default in migration 0003, where repo_name is NOT NULL.
+// Clearing a repo binding resets to this rather than writing null, which
+// would fail the constraint and take the whole update with it.
+export const DEFAULT_REPO_NAME = 'medialog-backup'
+
 // Deliberately NOT backed up.
 //
 // The distinction is "can this be rebuilt, and would carrying it do harm" —

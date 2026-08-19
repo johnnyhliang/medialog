@@ -105,7 +105,13 @@ function Workspace() {
   const { previewUrl, openPreview, closePreview } = useFilePreview()
   const { toasts, addToast, dismissToast } = useToast()
 
-  const [view, setView] = useState('home')
+  // Read from the path, because /settings is a real entry point: the GitHub
+  // OAuth callback lands there, and handleGitHubCallback finishes by reloading —
+  // which discarded the setView('settings') it had just done and dropped you on
+  // Home with no sign the connection had worked.
+  const [view, setView] = useState(() =>
+    window.location.pathname.includes('/settings') ? 'settings' : 'home'
+  )
   const [catchOpen, setCatchOpen] = useState(false)
 
   const [paletteOpen, setPaletteOpen] = useState(false)

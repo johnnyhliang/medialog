@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { GitBranch, Check, RefreshCw, Download, Upload, AlertTriangle, ExternalLink, FileArchive, FileDown } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient.js'
-import { parseFiles, summarize, SYNC_TABLES, EXCLUDED_TABLES } from '../../lib/githubSync.js'
+import { parseFiles, summarize, SYNC_TABLES, EXCLUDED_TABLES, DEFAULT_REPO_NAME } from '../../lib/githubSync.js'
 import { applySnapshot, runBackup } from '../../lib/db/githubBackup.js'
 import { downloadBackupZip, readBackupZip, applyBackupZip } from '../../lib/db/zipBackup.js'
 import MigrationView from '../MigrationView.jsx'
@@ -245,7 +245,7 @@ export default function DataBackupTab({
       .update({
         github_token: null,
         github_user: null,
-        repo_name: null,
+        repo_name: DEFAULT_REPO_NAME,
         auto_backup: false,
         last_backup_sha: null,
         last_backup_summary: null,
@@ -255,7 +255,7 @@ export default function DataBackupTab({
       .eq('user_id', config.user_id)
     setBusy(null)
     if (error) { addToast(`Could not disconnect: ${error.message}`, 'error'); return }
-    setConfig({ ...config, github_token: null, github_user: null, repo_name: null, auto_backup: false, last_backup_sha: null, last_backup_summary: null, last_backup_at: null, last_error: null })
+    setConfig({ ...config, github_token: null, github_user: null, repo_name: DEFAULT_REPO_NAME, auto_backup: false, last_backup_sha: null, last_backup_summary: null, last_backup_at: null, last_error: null })
     setRepos(null)
     addToast('GitHub disconnected. Revoke the app on GitHub too, to be thorough.', 'success')
   }

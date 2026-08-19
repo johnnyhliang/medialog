@@ -86,7 +86,7 @@ Deno.serve(async (req) => {
         user_id: user.id,
         github_token: encryptedToken,
         github_user: githubUser,
-        ...(switchedAccount ? { repo_name: null, last_backup_sha: null, last_backup_summary: null, last_backup_at: null, last_error: null } : {}),
+        ...(switchedAccount ? { repo_name: 'medialog-backup', last_backup_sha: null, last_backup_summary: null, last_backup_at: null, last_error: null } : {}),
       })
 
     if (upsertError) throw upsertError
