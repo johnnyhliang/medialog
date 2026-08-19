@@ -1,3 +1,7 @@
+// FIRST import, deliberately: this captures the GitHub OAuth code out of the
+// URL before supabaseClient.js is constructed or AuthGate can redirect. Side-
+// effect imports evaluate in source order, so moving this line breaks it.
+import './lib/captureOAuthCode.js'
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { registerSW } from 'virtual:pwa-register'

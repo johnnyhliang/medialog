@@ -2,6 +2,7 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Search, Upload, Inbox, RotateCcw, BarChart2, Settings2, Trash2 as TrashIcon, Download, Menu, Home, FolderOpen, Rss, Briefcase, PackageOpen, Archive, ScrollText, Highlighter, BookOpen } from 'lucide-react'
 import { supabase } from './lib/supabaseClient.js'
+import { takeGitHubOAuthCode } from './lib/captureOAuthCode.js'
 import { loadManagerData, setNextAction, parkTopic, unparkTopic } from './lib/db/managerState.js'
 import { listTopics, createTopic, getTopicByName, listDeletedTopics, archiveTopic, unarchiveTopic, softDeleteTopic, restoreDeletedTopic, togglePinTopic, updateTopicDoc, listProjects } from './lib/db/topics.js'
 import { listContributions, recordContribution, unrecordContribution } from './lib/db/contributions.js'
@@ -293,9 +294,13 @@ function Workspace() {
     })
     refreshTopics()
     refreshTags()
-    const params = new URLSearchParams(window.location.search)
-    const code = params.get('code')
-    if (code && window.location.pathname.includes('/settings')) {
+    // Read from the stash rather than the URL: by now the query may have been
+    // stripped by supabase-js or lost to an AuthGate -> / -> /app redirect. The
+    // URL is still checked as a fallback for the case where nothing interfered.
+    const stashed = takeGitHubOAuthCode()
+    const urlCode = new URLSearchParams(window.location.search).get('code')
+    const code = stashed || (window.location.pathname.includes('/settings') ? urlCode : null)
+    if (code) {
       handleGitHubCallback(code)
     }
     return () => {
@@ -442,6 +447,8 @@ function Workspace() {
   }
 
   async function handleGitHubCallback(code) {
+    // The redirect chain can land us on /app rather than /settings, so put the
+    // user where the result is visible rather than assuming the path did.
     setView('settings')
     window.history.replaceState({}, document.title, window.location.pathname)
     const { data, error } = await supabase.functions.invoke('github-token', { body: { code } })
