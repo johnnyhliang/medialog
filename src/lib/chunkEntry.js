@@ -92,11 +92,15 @@ async function chunkSource(supabase, entry, userId, { source, text, markdown }) 
 // it fails, that must not turn a successful index into a user-visible error.
 async function markIndex(supabase, entryId, status, error = null) {
   try {
-    await supabase.from('entries').update({
+    const patch = {
       index_status: status,
-      indexed_at: new Date().toISOString(),
       index_error: error ? String(error).slice(0, 300) : null,
-    }).eq('id', entryId)
+    }
+    // `pending` means "started, not finished", so it must NOT stamp indexed_at —
+    // that column answers "when did this last complete", and setting it here
+    // would make an abandoned import look freshly indexed.
+    if (status !== 'pending') patch.indexed_at = new Date().toISOString()
+    await supabase.from('entries').update(patch).eq('id', entryId)
   } catch { /* status is best-effort too */ }
 }
 
@@ -119,6 +123,12 @@ export async function chunkEntryAsync(supabase, entry) {
     if (drop.length) {
       await supabase.from('content_chunks').delete().eq('entry_id', entry.id).in('source', drop)
     }
+    // Claim the entry BEFORE any work happens. Without this, an entry being
+    // indexed when the tab closes keeps index_status = null, which listUnindexed
+    // does not select — so it is unsearchable AND invisible to the retry banner,
+    // the exact silent-unfindability that 0068 exists to prevent. Writing
+    // `pending` first makes the abandoned case the one the retry path catches.
+    if (sources.length) await markIndex(supabase, entry.id, 'pending')
     for (const s of sources) {
       await chunkSource(supabase, entry, user.id, s)
     }

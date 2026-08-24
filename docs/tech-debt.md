@@ -303,7 +303,7 @@ committed (`ca0e8d0`), so a re-index run today gets the cheaper path for free �
 but a re-index run from an older checkout would pay double and produce chunks
 shaped by a config you are no longer using.
 
-### `index_status = 'pending'` is declared everywhere and written nowhere
+### ~~`index_status = 'pending'` is declared everywhere and written nowhere~~ — FIXED 2026-08-24
 Found 2026-07-30 while tracing the indexing paths end to end.
 
 `0068` defines `pending`. `IndexStatus`'s `STATES` map renders it ("Indexing…").
@@ -317,8 +317,24 @@ which `listUnindexed` does **not** select. The notes are unsearchable *and*
 invisible to the retry banner — the exact silent-unfindability failure that `0068`
 was written to eliminate, surviving in the one case where the work never finishes.
 
-**Fix:** write `pending` before the first source is processed. ~5 lines, no schema
-change, and worth doing before the queue exists rather than waiting for it.
+**Fixed 2026-08-24.** `chunkEntryAsync` writes `pending` before the first source
+is processed, so the abandoned-tab case is now the one the retry path catches
+rather than the one it cannot see.
+
+**One thing the original note got wrong:** `markIndex` also stamps `indexed_at`,
+and reusing it unchanged for `pending` would have written a completion timestamp
+onto work that had not completed — an abandoned import would read as freshly
+indexed, which is a worse lie than the null it replaced. `pending` is now the one
+status that skips that column.
+
+Three regression tests in `tests/src/lib/chunkEntry.test.js`; two were verified to
+fail with the claim removed. The third pins the `empty` path, which must go
+straight to `empty` and never through `pending` — an entry with nothing chunkable
+can never succeed, and parking it in the retry queue is the failure `empty` exists
+to prevent.
+
+This does **not** replace the jobs table (below). The work still lives only in
+browser memory; what changed is that its abandonment is now visible.
 
 ### Bulk import fires unbounded parallel indexing
 `src/App.jsx:798` (and 776, 838, 872):

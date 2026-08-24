@@ -42,6 +42,53 @@ describe('source_hash gate', () => {
   })
 })
 
+describe('index_status lifecycle', () => {
+  // The failure this guards: an entry whose indexing is abandoned (tab closed
+  // mid-import) used to keep index_status = null, which listUnindexed does not
+  // select — unsearchable AND invisible to the retry banner.
+  test('claims the entry as pending before doing any work', async () => {
+    const sb = mockSupabase({ data: [], error: null })
+    sb.auth = { getUser: async () => ({ data: { user: { id: 'u1' } } }) }
+    const calls = []
+    sb.functions = {
+      invoke: vi.fn(async () => {
+        // At the moment work is happening, the claim must already be written.
+        calls.push(sb._chain.update.mock.calls.map(([p]) => p.index_status))
+        return { data: { embeddings: [[0]] }, error: null }
+      }),
+    }
+
+    await chunkEntryAsync(sb, { id: 'e1', note: 'short note' })
+
+    expect(calls[0]).toContain('pending')
+    const statuses = sb._chain.update.mock.calls.map(([p]) => p.index_status)
+    expect(statuses).toEqual(['pending', 'ok'])
+  })
+
+  test('pending does not stamp indexed_at — it has not finished', async () => {
+    const sb = mockSupabase({ data: [], error: null })
+    sb.auth = { getUser: async () => ({ data: { user: { id: 'u1' } } }) }
+    sb.functions = { invoke: vi.fn(async () => ({ data: { embeddings: [[0]] }, error: null })) }
+
+    await chunkEntryAsync(sb, { id: 'e1', note: 'short note' })
+
+    const pending = sb._chain.update.mock.calls.map(([p]) => p).find((p) => p.index_status === 'pending')
+    expect(pending).toBeDefined()
+    expect(pending.indexed_at).toBeUndefined()
+  })
+
+  test('an entry with nothing chunkable goes straight to empty, never pending', async () => {
+    const sb = mockSupabase({ data: [], error: null })
+    sb.auth = { getUser: async () => ({ data: { user: { id: 'u1' } } }) }
+    sb.functions = { invoke: vi.fn() }
+
+    await chunkEntryAsync(sb, { id: 'e1' })
+
+    const statuses = sb._chain.update.mock.calls.map(([p]) => p.index_status)
+    expect(statuses).toEqual(['empty'])
+  })
+})
+
 describe('sourcesFor', () => {
   test('a short note is indexed as a single un-split source', () => {
     const out = sourcesFor({ id: 'e1', note: 'short note' })
