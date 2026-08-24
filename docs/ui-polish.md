@@ -174,6 +174,61 @@ changes; verified by linting the file before and after.
 receives the code; Settings keeps showing the Connect button. Three fixes shipped
 during the session, all real bugs, **none of them the blocker.**
 
+### Update 2026-08-24 — two findings, one shipped fix, still UNCONFIRMED
+
+Neither finding came from a browser; both were verified against the built
+output. **The blocker is still not proven** — what changed is that the leading
+structural explanation has been removed, so the next test is cleaner.
+
+**Finding 1 — the import-order guarantee did not survive the build (verified).**
+`main.jsx` carried a load-bearing comment saying `captureOAuthCode.js` must
+evaluate before `supabaseClient.js`, relying on side-effect imports evaluating
+in source order. In the shipped `app-*.js`, Rollup had inlined the capture into
+the app chunk and left `supabaseClient` a **separate static import at offset
+807**, with the capture side-effect at **offset 912** — after it. ESM fully
+evaluates a statically imported module before the importing module's body, so
+`createClient` ran **first**. The guarantee the comment described did not exist
+in the artifact.
+
+Probably not fatal by itself: `detectSessionInUrl` was already off on
+`/settings`, so supabase-js would not have stripped the code there anyway. A
+real latent bug, not a sufficient explanation.
+
+**Finding 2 — all three defences shared one point of failure (the structural one).**
+Every one keyed on the same condition:
+
+- `captureOAuthCode.js` — `pathname.includes('/settings')`
+- `supabaseClient.js` — `pathname.includes('/settings')`
+- `App.jsx` — `pathname.includes('/settings')`
+
+Land anywhere else and all three fail **simultaneously and silently**:
+detection turns back on and eats the code, the capture never fires, the
+fallback returns null. That is precisely the shape of "three correct fixes
+changed nothing" — they were never independent. And the landing path is not
+ours to assume: GitHub redirects to the callback URL registered on the app,
+which need not be the `redirect_uri` we send.
+
+**Shipped: key on `state`, not on the path.** The authorize URL sent
+`client_id`, `scope`, `redirect_uri` and **no `state`** at all. It now mints one
+per handshake (`beginGitHubOAuth`), and the callback recognises its own code by
+the state coming back — on whatever path it lands. This is not a fifth guess at
+the cause: it deletes the shared assumption rather than betting on which path is
+right, and it adds the CSRF protection the flow was missing entirely.
+
+`supabaseClient.js` now **imports** the flag from `captureOAuthCode.js` instead
+of recomputing it, which also fixes finding 1 — the ordering moves into the
+dependency graph, where a bundler has to respect it. Verified in the rebuilt
+output: the capture now sits at offset 8,666 of the `supabaseClient` chunk and
+`detectSessionInUrl` at 355,339, so the code is lifted out of the URL before
+`createClient` runs. Five regression tests, including that a foreign `state`
+on `/app` is left alone so Supabase sign-in is untouched.
+
+**Still required: the observation below.** If the callback was landing on
+`/settings` all along, this changes nothing and the cause is elsewhere —
+most likely hypothesis 1 (stale service worker) or 4 (GitHub App vs OAuth App),
+neither of which `state` touches. Do the service-worker unregister first; it is
+free and still untested.
+
 ### STOP — read this before writing another fix
 
 Four hypotheses were formed, each looked convincing, each was wrong, and each

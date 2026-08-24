@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { GitBranch, Check, RefreshCw, Download, Upload, AlertTriangle, ExternalLink, FileArchive, FileDown } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient.js'
+import { beginGitHubOAuth } from '../../lib/captureOAuthCode.js'
 import { parseFiles, summarize, SYNC_TABLES, EXCLUDED_TABLES, DEFAULT_REPO_NAME } from '../../lib/githubSync.js'
 import { applySnapshot, runBackup } from '../../lib/db/githubBackup.js'
 import { downloadBackupZip, readBackupZip, applyBackupZip } from '../../lib/db/zipBackup.js'
@@ -211,8 +212,13 @@ export default function DataBackupTab({
       return
     }
     const redirectUri = `${window.location.origin}/settings`
+    // The state round-trips through GitHub and is how the callback recognises
+    // its own code no matter which path the browser lands on. Also the CSRF
+    // protection this flow was missing entirely.
+    const state = beginGitHubOAuth()
     window.location.href =
-      `https://github.com/login/oauth/authorize?client_id=${clientId}&scope=repo&redirect_uri=${encodeURIComponent(redirectUri)}`
+      `https://github.com/login/oauth/authorize?client_id=${clientId}&scope=repo` +
+      `&redirect_uri=${encodeURIComponent(redirectUri)}&state=${encodeURIComponent(state)}`
   }
 
   async function call(action, body = {}) {

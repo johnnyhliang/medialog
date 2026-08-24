@@ -2,7 +2,7 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Search, Upload, Inbox, RotateCcw, BarChart2, Settings2, Trash2 as TrashIcon, Download, Menu, Home, FolderOpen, Rss, Briefcase, PackageOpen, Archive, ScrollText, Highlighter, BookOpen } from 'lucide-react'
 import { supabase } from './lib/supabaseClient.js'
-import { takeGitHubOAuthCode } from './lib/captureOAuthCode.js'
+import { takeGitHubOAuthCode, isGitHubBackupCallback } from './lib/captureOAuthCode.js'
 import { loadManagerData, setNextAction, parkTopic, unparkTopic } from './lib/db/managerState.js'
 import { listTopics, createTopic, getTopicByName, listDeletedTopics, archiveTopic, unarchiveTopic, softDeleteTopic, restoreDeletedTopic, togglePinTopic, updateTopicDoc, listProjects } from './lib/db/topics.js'
 import { listContributions, recordContribution, unrecordContribution } from './lib/db/contributions.js'
@@ -299,7 +299,7 @@ function Workspace() {
     // URL is still checked as a fallback for the case where nothing interfered.
     const stashed = takeGitHubOAuthCode()
     const urlCode = new URLSearchParams(window.location.search).get('code')
-    const code = stashed || (window.location.pathname.includes('/settings') ? urlCode : null)
+    const code = stashed || (isGitHubBackupCallback ? urlCode : null)
     if (code) {
       handleGitHubCallback(code)
     }
