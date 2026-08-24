@@ -27,6 +27,7 @@ export default function TopicView({
   onTitleChange, onMove, tagColors,
   allTags = [],
   pendingArchiveIds = new Set(),
+  jumpEntryId = null,
   supabase,
   onCheckDuplicate,
   onEntryUpdate,
@@ -182,10 +183,18 @@ export default function TopicView({
     // Browsing hides done entries (unless pending-archive timer is running).
     // But an active search reaches them too — like `is:archived` on GitHub, you
     // only see archived items when you actually ask for something.
+    //
+    // `jumpEntryId` is the third exemption, and it is not a search: arriving from
+    // an assistant citation or a related-entries link is an explicit request for
+    // ONE entry. Without it an archived target was filtered out before render, so
+    // getElementById found nothing and the optional chain swallowed the failure —
+    // you landed on the topic and nothing happened, with no scroll and no error.
     const isSearching = inputVal.trim().length > 0
-    result = result.filter(e => isSearching || e.status !== 'done' || pendingArchiveIds.has(e.id))
+    result = result.filter(e => (
+      isSearching || e.status !== 'done' || pendingArchiveIds.has(e.id) || e.id === jumpEntryId
+    ))
     return retiredOnly ? result.filter(e => e.retired_at) : result
-  }, [entries, query, inputVal, scope, docEmbedIds, globalSearchResults, filteredByTag, pendingArchiveIds, retiredOnly])
+  }, [entries, query, inputVal, scope, docEmbedIds, globalSearchResults, filteredByTag, pendingArchiveIds, retiredOnly, jumpEntryId])
 
   useEffect(() => {
     onOrderedIds?.(filtered.map((e) => e.id))

@@ -87,16 +87,21 @@ list, both calling `onOpenEntry` → `handleSelectEntry` (`App.jsx:771`), which 
 `pendingEntryScroll`, switches topic, and scrolls to `#entry-<id>`. Three things stop
 that being useful.
 
-**1. Archived entries silently fail to open — a real bug, and the smallest fix.**
-`TopicView.jsx:186` filters browsing with
-`result.filter(e => isSearching || e.status !== 'done' || pendingArchiveIds.has(e.id))`.
-Archived means `status === 'done'`, and arriving from a citation is not "searching", so
-the target is never rendered, `document.getElementById` returns null, and the optional
-chain swallows it. You land on the topic and nothing happens — no scroll, no error.
-The filter is deliberate (its comment cites GitHub's `is:archived`), but a *direct jump*
-is an explicit request for one entry and should override browse filtering. Fix: carry the
-pending id into TopicView and always include it, exactly the exemption `pendingArchiveIds`
-already gets.
+**1. ~~Archived entries silently fail to open~~ — FIXED 2026-08-24.**
+`TopicView` now takes a `jumpEntryId` prop and exempts it from the browse filter,
+the same way `pendingArchiveIds` already was. A direct jump is an explicit request
+for one entry, so it overrides browse hiding; an ordinary search or topic click
+does not.
+
+**What the original diagnosis missed:** the entry id was held in
+`pendingEntryScroll`, a **ref**, consumed inside an effect. A ref never reaches
+render, so simply reading it in `TopicView` would have changed nothing — the fix
+needed parallel state (`jumpEntryId`). This is why the symptom was total silence
+rather than a broken scroll: the element was never in the DOM to find.
+
+It is deliberately **not** cleared after scrolling. Clearing it would re-apply the
+filter and make the entry disappear the instant you arrived. `handleSelectTopic`
+clears it, so browsing the topic normally restores the usual hiding.
 
 **2. Nothing is hotlinkable.** Navigation is React state; no entry is ever written to the
 URL, so there is no link to copy or share. Same gap as *Entry permalinks* above — needs

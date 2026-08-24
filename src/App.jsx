@@ -312,6 +312,10 @@ function Workspace() {
   const autoBackupTimer = useRef(null)
   const pendingBackup = useRef(false)
   const pendingEntryScroll = useRef(null)
+  // The entry a citation/related-link jumped to, held so TopicView can render it
+  // even when browse filtering would hide it (archived). Survives the scroll on
+  // purpose — clearing it would make the entry vanish the moment you arrived.
+  const [jumpEntryId, setJumpEntryId] = useState(null)
   useEffect(() => {
     pendingBackup.current = true
     if (autoBackupTimer.current) return
@@ -776,6 +780,8 @@ function Workspace() {
   }
 
   function handleSelectTopic(topic) {
+    // Browsing a topic normally again — drop the archived exemption.
+    setJumpEntryId(null)
     setSelectedId(topic.id)
     setGlobalSearchResults(null)
     setView('browse')
@@ -783,6 +789,7 @@ function Workspace() {
 
   function handleSelectEntry(entry) {
     pendingEntryScroll.current = entry.id
+    setJumpEntryId(entry.id)
     setSelectedId(entry.topic_id)
     setGlobalSearchResults(null)
     setView('browse')
@@ -1409,6 +1416,7 @@ function Workspace() {
               tagColors={tagColors}
               allTags={allTags}
               pendingArchiveIds={pendingArchiveIds}
+              jumpEntryId={jumpEntryId}
               supabase={supabase}
               onCheckDuplicate={handleCheckDuplicate}
               onRetire={handleToggleRetire}
