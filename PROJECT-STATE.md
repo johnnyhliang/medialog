@@ -34,6 +34,13 @@ ahead/behind, why `git add -A` is dangerous here, what to do when a rebase stops
 and the escape hatches. The codebase was never broken — 696 tests and the build
 passed throughout, and everything is on `origin/master`.
 
+**`origin/main` is a stale duplicate — safe to delete (verified 2026-08-18).** It
+sits 63 commits behind `origin/master` and carries two commits master does not:
+`161f3bb` (adds the commit-hygiene rule to `CLAUDE.md`) and `5b04406` (untracks
+it). The content is **byte-identical** to what is already on master, which made
+the same change in its own commit `3b6d17d`. Nothing unique lives there. Left in
+place only because deleting a remote branch is the owner's call.
+
 **Raw notes moved out 2026-07-31.** A block of untriaged observations sat above the
 first heading here — unsafe, because this file is *overwritten* on each regeneration
 and would have silently deleted them. They now live where they belong: eight
@@ -568,8 +575,8 @@ detail; that file, not this table, is authoritative on *how*.
 | ~~1~~ | ~~Confirm `0070`/`0071` are applied~~ | ops | ✅ **DONE 2026-08-06.** `supabase migration list --linked` shows every migration in both Local and Remote, no drift | — |
 | 2 | **Fix "everything is slow, incl. Metrics"** | bug | The one hurting daily use. *Measure first* — Metrics being slow too suggests one shared cause, not seven | `tech-debt.md` § UX #4 |
 | 3 | Capture 2–3 prose articles, run `check-preservation.js` | bug | Two minutes; retires the last ⚠️ on the extractor | `tech-debt.md` |
-| 4 | **Write `index_status = 'pending'`** | bug | ~5 lines; closes the mid-import blind spot (§4.1b) — notes unsearchable *and* invisible to the retry banner | `indexing-architecture.md` |
-| 5 | Feed sort resets instead of sticking | bug | Small, self-contained | `tech-debt.md` § UX #7 |
+| 4 | **Write `index_status = 'pending'`** | bug | **Located 2026-08-18:** `chunkEntry.js:96` writes a status and `:138` reads `['pending','failed']` for the retry banner, but nothing sets `pending` at *creation* — so an entry mid-import is unsearchable AND invisible to the retry path. The write belongs at insert. |
+| ~~5~~ | ~~Feed sort resets instead of sticking~~ | bug | ⚠️ **Probably already fixed — verify before touching.** `FeedView.jsx:55-65` reads and writes `localStorage.medialog_feed_sort`, so the mode does persist across reloads (checked 2026-08-18). Either this was fixed without updating the backlog, or the real symptom is something else and needs reproducing. Do not "fix" working code | `tech-debt.md` § UX #7 |
 | 6 | AI search runs retrieval on every prompt | bug | Needs a routing decision, not a patch. Cheaper + faster chat | `tech-debt.md` § UX #1 |
 | 7 | Topic-scoped search is implicit | design | Needs design, not a fix | `tech-debt.md` § UX #6 |
 | 8 | **Eval fixture** (~20 query/entry pairs) | infra | Harness exists, fixture doesn't. **Gates the re-index decision** — spend it before this and you never learn whether contextual retrieval helped | `indexing-architecture.md` §2 |

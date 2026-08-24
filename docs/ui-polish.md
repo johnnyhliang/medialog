@@ -94,6 +94,11 @@ Worst single offender: `SettingsView.jsx`, 39 inline font sizes.
 
 ## Phase 4 — fonts
 
+**Smaller than this section implies (checked 2026-08-18).** `index.html` already
+loads Fraunces + Inter + Caveat for the landing page; only `app.html` still loads
+Lora + DM Sans. So the whole change is one `<link>` in `app.html` plus the two
+token lines below — no font-loading work to do.
+
 `tokens.css` ships DM Sans + Lora. BRAND.md specifies **Fraunces 700 opsz:144**
 for display and **Inter 300/400/500** for everything else, with Caveat reserved
 for landing marginalia only. Two token lines plus font loading — trivial to
