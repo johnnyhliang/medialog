@@ -11,6 +11,122 @@ section when you deploy. Detailed design rationale lives in `docs/superpowers/sp
 
 ## Unreleased
 
+> Entries below cover **2026-08-17 → 2026-08-24**, reconstructed from commits on
+> 2026-08-24. This file had not been updated since 2026-08-06 (`22b10ed`), so a
+> week of work existed only in git history. The convention at the top of this
+> file — add a bullet when a feature lands — was not being followed.
+
+### Resurfacing: every decision about an entry is reachable, and the queue no longer skips half of itself
+
+Revisit offered three ways to *reschedule* and no way to *decide*.
+
+- **Skip wrote nothing.** Because `listForRevisit` orders by `last_surfaced_at`
+  nulls-first, a skipped entry was still the first thing you saw next time. It
+  looked like deferral and was actually amnesia. Skip now calls `markSurfaced`.
+- **Archive and trash on the revisit card**, delegating to the same handlers the
+  entry cards use so reviewing and browsing cannot drift apart.
+- **Retire (`retired_at`, migration `0081`)** — a new state meaning "stop
+  resurfacing this", toggleable from any card rather than only during review, and
+  self-undoing. Retired entries deliberately stay in the topic's main list: many
+  are quick-access links, read often and edited rarely, so hiding them would be
+  the wrong trade. A "done with · N" pill narrows to them.
+- **Revisit advanced twice per action** (`7dae8fd`) — pre-existing, and the worst
+  of the set. Every parent handler ends in `applySeen()`, which removes the entry;
+  the list shrinking *is* the advance. The component incremented its own index on
+  top. With `[a, b, c]`, rating `a` showed `c` — **`b` was silently never
+  reviewed.** `current` is now always `entries[0]`, never a cursor. The old test
+  encoded the bug; the new ones were verified to fail against the old component.
+- **Failed writes no longer advance** (`c0e33cb`) — all four handlers report a
+  boolean, so a failed archive holds its card instead of dropping an entry that was
+  never archived out of the session.
+
+### GitHub backup: disconnect, ownership, and failures you can see
+
+Four gaps found while checking whether the data was actually safe.
+
+- **No disconnect existed at all.** Capture tokens have had revoke all along;
+  GitHub backup had nothing. Adds one that clears token, user, `repo_name`,
+  `auto_backup` and the last-backup record together.
+- **`repo_name` survived an account switch**, so linking a second account kept the
+  old bare name — and since the repo is created when absent, that silently starts a
+  new repo under the new account or commits into an unrelated existing one,
+  splitting backup history with nothing on screen saying so.
+- **Failures were invisible and success unprovable.** `last_backup_at` has existed
+  since migration `0003` and was never written, so a broken backup looked exactly
+  like a working one. Now stamped, with a banner surfacing `last_error`.
+- **Backups record which account wrote them** (`953ac9f`). A backup commit replaces
+  `data/*.json` wholesale, and `applySnapshot` re-stamps `user_id` onto every row —
+  so restoring a foreign backup *merges* into your library rather than replacing it,
+  and neither collision was detectable afterwards. `account_id` in the manifest,
+  with guards on both backup and restore. A backup predating the marker reads as
+  null, treated as "cannot tell" rather than "same account".
+
+### GitHub connect — STILL BROKEN, four fixes deep
+
+Nobody can link a backup repo; ranked **1a** in `PROJECT-STATE.md` §6. Fixed along
+the way, each a genuine bug, none the blocker:
+
+- `991b00b` — a *successful* connect looked like a failure: `setView('settings')`
+  was discarded by the reload that followed it. The view now initialises from the
+  pathname. Also: `repo_name` is `NOT NULL`, and the new disconnect and
+  account-switch paths both wrote null to it.
+- `b47e15c` — supabase-js treats any `?code=` as its own PKCE code and strips the
+  query, at import time, before React renders.
+- `2473610` — the code is lifted out of the URL synchronously at module load and
+  stashed in `sessionStorage`, so no redirect in between can lose it.
+- `f19da9b` — **all three defences keyed on `pathname.includes('/settings')`**, so
+  they were never independent: land anywhere else and all three fail at once and in
+  silence. Now keyed on an OAuth `state` we mint, which travels with the request
+  instead of being inferred from where it lands — and adds the CSRF protection the
+  flow never had. Also fixed a verified build-level bug: Rollup did not preserve the
+  side-effect import order `main.jsx` depended on, so `createClient` ran *before*
+  the capture; `supabaseClient` now imports the flag, putting the ordering in the
+  dependency graph.
+
+**Still unconfirmed as the cause.** The cheapest untested check remains
+unregistering the service worker.
+
+### Design system: phases 1–3 of the token pass
+
+- **Corner radii** (`fd7bc6b`, `3d569bc`) — 19 ad-hoc values collapsed onto a
+  four-step scale.
+- **Type scale** (`7723d8c`) — raised so the app has hierarchy; 8 tokens.
+- **Status tints** (`bf4e679`) — `tokens.css` shipped five stock Tailwind pairs:
+  cold, saturated, screen-native hues on a warm paper background, which `BRAND.md`
+  forbids in as many words. Rederived, and the foregrounds now reuse semantics the
+  app already owns, so a "done" chip and a "done" card can no longer disagree about
+  what green is.
+- **Landing stopped being the only screen that scales** (`8a26499`) — `landing.css`
+  was excluded from the codemod, so the login screen honoured a raised browser
+  default and the app behind it ignored it.
+- **Long URLs broke out of the card** (`723400d`) — a title is often one unbreakable
+  word, and flex children default to `min-width: auto`.
+
+### Indexing and retrieval fixes (2026-08-24)
+
+- **`index_status = 'pending'` is now written** (`771298e`). It was declared in
+  `0068`, rendered by `IndexStatus`, and selected by `listUnindexed` — but nothing
+  ever set it. Indexing runs in the browser, so closing a tab mid-import left
+  entries at `null`, which `listUnindexed` does not select: unsearchable *and*
+  invisible to the retry banner. `pending` deliberately does not stamp
+  `indexed_at`.
+- **Citations to archived entries landed on nothing** (`36af358`). `TopicView`
+  hides `status === 'done'` while browsing, and arriving from a citation is not
+  searching — so the target never rendered, `getElementById` returned null, and the
+  optional chain swallowed it. The id also could not simply be read where it lived:
+  `pendingEntryScroll` is a **ref**, and a ref never reaches render.
+
+### Documentation
+
+`BRAND.md` gains naming and positioning (NotebookLM as the right foil, Keep as the
+wrong one; mymind as the real competitor with the inverse thesis). **Inkling was
+ruled out one search short of a real mistake** — Thinking Machines shipped a
+foundation model by that name on 2026-07-15 — so every remaining candidate is now
+explicitly flagged UNRESEARCHED. `IDEAS.md` gains the Today-queue design and the
+citation gaps; `docs/ui-polish.md` records how Revisit actually selects entries
+(`surface_after IS NULL` qualifies, so until you grade anything it is a FIFO over
+the whole library, not a curated set).
+
 ### The app bundle was 64% editor nobody had opened yet
 "Everything is slow to load, including Metrics" was one shared cause, and Metrics
 being slow was the clue that mattered: Metrics is lazily loaded and small, so the
