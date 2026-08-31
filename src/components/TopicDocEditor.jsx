@@ -24,25 +24,57 @@ export default function TopicDocEditor({ topicId, initialDoc, candidates, scopeC
     [scopeCtxRef],
   )
 
+  // The debounced write that hasn't run yet. Kept in a ref (not state) so it can
+  // still be flushed from unmount cleanup, where touching state is illegal.
+  const pending = useRef(null)
+  // `true` once the component is gone — the flush still has to run, but the
+  // status setters it would normally call no longer have anywhere to land.
+  const unmounted = useRef(false)
+
+  // Flushing, not cancelling, is the point. TopicView is keyed on the topic id,
+  // so clicking another topic within the 800 ms debounce unmounts this subtree;
+  // the old cleanup cleared the timer and the save simply never happened. The
+  // parent's in-memory copy still showed the new text, so nothing looked wrong
+  // until a reload revealed the typing was gone.
+  function flush() {
+    const p = pending.current
+    if (!p) return
+    pending.current = null
+    if (saveTimer.current) { clearTimeout(saveTimer.current); saveTimer.current = null }
+    return updateTopicDoc(supabase, p.topicId, p.doc)
+      .then(() => {
+        if (unmounted.current) return
+        setSaveStatus('saved')
+        setTimeout(() => setSaveStatus('idle'), 1500)
+      })
+      .catch(() => { if (!unmounted.current) setSaveStatus('failed') })
+  }
+
   function handleChange(next) {
     setDoc(next)
     onChange(next)
     setSaveStatus('saving')
+    pending.current = { topicId, doc: next }
     if (saveTimer.current) clearTimeout(saveTimer.current)
-    saveTimer.current = setTimeout(() => {
-      updateTopicDoc(supabase, topicId, next)
-        .then(() => { setSaveStatus('saved'); setTimeout(() => setSaveStatus('idle'), 1500) })
-        .catch(() => setSaveStatus('failed'))
-    }, 800)
+    saveTimer.current = setTimeout(flush, 800)
   }
 
-  useEffect(() => () => { if (saveTimer.current) clearTimeout(saveTimer.current) }, [])
+  useEffect(() => {
+    unmounted.current = false
+    // Same failure mode as unmount, one level up: closing the tab mid-debounce
+    // dropped the write too.
+    const onBeforeUnload = () => { flush() }
+    window.addEventListener('beforeunload', onBeforeUnload)
+    return () => {
+      window.removeEventListener('beforeunload', onBeforeUnload)
+      unmounted.current = true
+      if (saveTimer.current) clearTimeout(saveTimer.current)
+      flush()
+    }
+  }, [])
 
   function finishEditing() {
-    if (saveTimer.current) {
-      clearTimeout(saveTimer.current)
-      updateTopicDoc(supabase, topicId, docRef.current).catch(() => {})
-    }
+    flush()
     onDone?.()
   }
 

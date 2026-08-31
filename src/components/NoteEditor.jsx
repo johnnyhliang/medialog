@@ -1,4 +1,5 @@
 import { useMemo, useState, useRef, useEffect } from 'react'
+import { readPref, writePref } from '../lib/localPref.js'
 import { Bold, Italic, Heading, List, ListChecks, Link2, Quote, Code, Paperclip } from 'lucide-react'
 import CodeMirror from '@uiw/react-codemirror'
 import { uploadAttachment, markdownForAttachment, isAllowedAttachment } from '../lib/storage.js'
@@ -143,6 +144,13 @@ export default function NoteEditor({ value, onChange, supabase, extraExtensions 
   )
   const viewRef = useRef(null)
   const fileRef = useRef(null)
+  // An upload takes seconds, and the natural thing to do while waiting is keep
+  // typing. Reading `value` from the render closure inside the upload loop meant
+  // writing a pre-upload snapshot back over everything typed since — silent data
+  // loss. The ref always holds the newest value the parent has given us, so the
+  // attachment markdown lands on current text instead of stale text.
+  const valueRef = useRef(value)
+  useEffect(() => { valueRef.current = value }, [value])
   const [uploading, setUploading] = useState(false)
   // Uploads are founder-only at the Storage RLS layer; the 'uploads' module
   // (minTier 'founder') keeps the UI aligned with that stricter gate. Resolved
@@ -163,11 +171,11 @@ export default function NoteEditor({ value, onChange, supabase, extraExtensions 
   const [mode, setMode] = useState('write')
   const [uploadError, setUploadError] = useState(null)
   const [showTip, setShowTip] = useState(
-    () => !localStorage.getItem('medialog_preview_tip_dismissed')
+    () => readPref('medialog_preview_tip_dismissed', null) === null
   )
 
   function dismissTip() {
-    localStorage.setItem('medialog_preview_tip_dismissed', '1')
+    writePref('medialog_preview_tip_dismissed', '1')
     setShowTip(false)
   }
 
@@ -177,16 +185,19 @@ export default function NoteEditor({ value, onChange, supabase, extraExtensions 
     if (!supabase || !files?.length) return
     setUploadError(null)
     setUploading(true)
-    let next = value
     try {
       for (const file of files) {
         if (!isAllowedAttachment(file)) {
           throw new Error(`${file.name}: images or PDFs only, max 10 MB`)
         }
         const { url, thumbUrl } = await uploadAttachment(supabase, file)
-        next = insertAtCursor(next, markdownForAttachment(url, thumbUrl, file))
+        // Re-read after every await, never before the loop. Also write the
+        // result straight back into the ref so a second file appends to the
+        // first even if the parent hasn't re-rendered us yet.
+        const next = insertAtCursor(valueRef.current, markdownForAttachment(url, thumbUrl, file))
+        valueRef.current = next
+        onChange(next)
       }
-      onChange(next)
     } catch (err) {
       setUploadError(err.message || 'Upload failed')
     } finally {
