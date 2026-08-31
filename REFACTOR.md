@@ -218,11 +218,35 @@ avoid staging *today*. That won't stay true: §12.1 shows how to check, and
 
 ## 3. Phase 1 — Fix the confirmed bugs
 
+> **STATUS 2026-08-24 — this whole section is done.** All six bugs fixed and
+> pushed, each with a regression test that was verified to FAIL against the
+> unfixed code first. Four corrections to what is written below, kept because
+> the reasoning in them outlives the fixes:
+>
+> - **3.1 was right about ExploreView, wrong about why TopicView shares it.**
+>   TopicView's `filtered` was already a `useMemo`; the unstable value was the
+>   default prop `pendingArchiveIds = new Set()` sitting in that memo's dep
+>   list. Same class of bug, different location. It is also latent, not live:
+>   `App` passes a stable Set, so only a caller omitting the prop loops.
+> - **3.5 describes two bugs and only one exists.** The cadence guard already
+>   clears itself — `autoBackupTimer.current = null` is the first line of the
+>   callback. Only the missing unmount cleanup was real.
+> - **3.6 undercounts.** Not three hot paths: eight unguarded writes and three
+>   unguarded reads. All now route through `src/lib/localPref.js`.
+> - **The tests that were supposed to catch 3.6 were vacuous.** `tests/setup.js`
+>   replaces `global.localStorage` with a plain object, so `localPref`'s two
+>   throwing-storage tests spied on `Storage.prototype` and never threw. They
+>   passed against guarded and unguarded code alike.
+>
+> Still open in this file: §4 error handling, §5 lint, §6 dedupe, §7 dead code,
+> §8 structure, and §10 item 5 (the unused-CSS-class sweep).
+
+
 Start here. These are real defects with traced reproduction paths, and several
 cause silent data loss. Nothing else in this document matters if the app is
 eating the user's typing.
 
-### 3.1 Infinite render loop in ExploreView — **do this first**
+### 3.1 Infinite render loop in ExploreView — **do this first**  — **DONE 2026-08-24 (`5a9ffb9`)**
 
 `src/components/ExploreView.jsx:156-164` with `src/App.jsx:1278`.
 
@@ -251,7 +275,7 @@ useEffect(() => { onOrderedIds?.(orderedIds) }, [key])   // eslint-disable order
 Also check `TopicView` — `App.jsx:1323` passes the same `onOrderedIds` prop, and
 if it builds its list the same way it has the same bug.
 
-### 3.2 Search race — the slower request wins
+### 3.2 Search race — the slower request wins  — **DONE 2026-08-24 (`5a9ffb9`)**
 
 `src/components/ExploreView.jsx:123-151`. The cleanup clears the debounce
 *timer*, but a request already in flight is not cancelled. Type `rust`, pause
@@ -273,7 +297,7 @@ useEffect(() => {
 
 Guard `setSearchResults`, `setSearching`, and the catch branch.
 
-### 3.3 Topic doc autosave is cancelled, not flushed
+### 3.3 Topic doc autosave is cancelled, not flushed  — **DONE 2026-08-24 (`4176e48`)**
 
 `src/components/TopicDocEditor.jsx:26-35`. Type, then click another topic within
 800 ms. `TopicView` is keyed on `selectedTopic.id` (`App.jsx:1288`), so the
@@ -299,7 +323,7 @@ useEffect(() => () => { clearTimeout(saveTimer.current); flush() }, [])
 `flush()` works after unmount because it touches no React state. Consider a
 `beforeunload` flush for the tab-close case.
 
-### 3.4 Attachment upload clobbers everything typed during the upload
+### 3.4 Attachment upload clobbers everything typed during the upload  — **DONE 2026-08-24 (`4176e48`)**
 
 `src/components/NoteEditor.jsx:176-189`.
 
@@ -326,7 +350,7 @@ onChange((cur) => insertAtCursor(cur, md))
 If the parent's `onChange` can't take an updater, sync `valueRef.current` in an
 effect and read the ref inside the loop.
 
-### 3.5 Auto-backup timer — two bugs from one omission
+### 3.5 Auto-backup timer — two bugs from one omission  — **DONE 2026-08-24 (`6436a0c`), one of the two bugs was not real**
 
 `src/App.jsx:301-331`. The effect returns no cleanup, and
 `autoBackupTimer.current` is never reset to `null` after firing. So:
@@ -339,7 +363,7 @@ effect and read the ref inside the loop.
 **The lesson:** an effect that schedules anything must return a cleanup, and a
 "is one already scheduled?" ref must be cleared by the thing it scheduled.
 
-### 3.6 Unguarded `localStorage.setItem` in three hot paths
+### 3.6 Unguarded `localStorage.setItem` in three hot paths  — **DONE 2026-08-24 (`6436a0c`), and it was 8 writes + 3 reads, not 3**
 
 `setItem` **throws** — it doesn't return null — in private-mode Safari and when
 the origin's quota is full. `src/lib/localPref.js` says exactly this in its own
@@ -676,7 +700,7 @@ Write tests for a module *when you refactor it*, not as a separate campaign.
 
 ---
 
-## 10. Loose ends from the CSS refactor
+## 10. Loose ends from the CSS refactor  — **items 1–4 DONE 2026-08-24 (`db11d82`); item 5 still open**
 
 Small, known, not yet done.
 
