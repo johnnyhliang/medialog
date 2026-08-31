@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { readPref, writePref } from '../lib/localPref.js'
 import { searchEntries, searchSemantic, listReadingQueue } from '../lib/db/entries.js'
 import { annotateEmbedded } from '../lib/db/retrieval.js'
 import { track } from '../lib/track.js'
@@ -100,7 +101,9 @@ export default function ExploreView({ supabase, topics, onSelectEntry, onOrdered
   const [statusFilter, setStatusFilter] = useState('all')
   const [topicFilter, setTopicFilter] = useState('all')
   const [recentSearches, setRecentSearches] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('medialog_recent_searches') ?? '[]') } catch { return [] }
+    // JSON.parse can still throw on a corrupted value, so the try stays; what it
+    // no longer has to catch is storage itself being unavailable.
+    try { return JSON.parse(readPref('medialog_recent_searches', '[]')) } catch { return [] }
   })
   const [showRecent, setShowRecent] = useState(false)
   const timerRef = useRef(null)
@@ -109,7 +112,7 @@ export default function ExploreView({ supabase, topics, onSelectEntry, onOrdered
   function saveRecentSearch(q) {
     const next = [q, ...recentSearches.filter((s) => s !== q)].slice(0, 5)
     setRecentSearches(next)
-    localStorage.setItem('medialog_recent_searches', JSON.stringify(next))
+    writePref('medialog_recent_searches', JSON.stringify(next))
   }
 
   useEffect(() => {
@@ -121,6 +124,12 @@ export default function ExploreView({ supabase, topics, onSelectEntry, onOrdered
   }, [supabase])
 
   useEffect(() => {
+    // Clearing the timer only cancels a search that hasn't started yet. Once the
+    // request is in flight nothing stops it, and a slow one resolves *after* the
+    // query it was superseded by — `rust` outliving `rust traits`, because more
+    // rows means a bigger annotateEmbedded round trip. So the effect also carries
+    // a cancellation flag, and every writer below is guarded by it.
+    let cancelled = false
     if (timerRef.current) clearTimeout(timerRef.current)
     if (!query.trim()) { setSearchResults(null); setSemanticError(null); return }
     setSearching(true)
@@ -136,32 +145,42 @@ export default function ExploreView({ supabase, topics, onSelectEntry, onOrdered
           ? await searchSemantic(supabase, query.trim())
           : await searchEntries(supabase, query.trim())
         const results = await annotateEmbedded(supabase, raw)
+        if (cancelled) return
         setSearchResults(results)
         saveRecentSearch(query.trim())
       } catch (e) {
+        if (cancelled) return
         if (useSemantic) {
           setSemanticError(e.message || 'semantic search failed')
           setSearchResults([])
         }
       } finally {
-        setSearching(false)
+        if (!cancelled) setSearching(false)
       }
     }, delay)
-    return () => clearTimeout(timerRef.current)
+    return () => { cancelled = true; clearTimeout(timerRef.current) }
   }, [query, supabase, semanticMode])
 
   const displayItems = searchResults ?? queue
   const isSearching = query.trim().length > 0
 
-  const filtered = displayItems.filter((e) => {
+  const filtered = useMemo(() => displayItems.filter((e) => {
     if (statusFilter !== 'all' && e.status !== statusFilter) return false
     if (topicFilter !== 'all' && e.topic_id !== topicFilter) return false
     return true
-  })
+  }), [displayItems, statusFilter, topicFilter])
 
+  const orderedIds = useMemo(() => filtered.map((e) => e.id), [filtered])
+  // Depend on the joined string, not the array. `onOrderedIds` is the parent's
+  // setState, so the effect re-renders us; if the dependency were the array
+  // itself — a fresh literal every render — Object.is would never match and the
+  // effect would fire forever ("Maximum update depth exceeded"). The key changes
+  // only when the ids actually change.
+  const orderedKey = orderedIds.join(',')
   useEffect(() => {
-    onOrderedIds?.(filtered.map((e) => e.id))
-  }, [filtered])
+    onOrderedIds?.(orderedIds)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orderedKey])
 
   const grouped = !isSearching
     ? filtered.reduce((acc, e) => {

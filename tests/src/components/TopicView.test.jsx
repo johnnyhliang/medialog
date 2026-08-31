@@ -1,4 +1,5 @@
 import { render, screen, waitFor } from '@testing-library/react'
+import { useState } from 'react'
 import userEvent from '@testing-library/user-event'
 import { test, expect, vi } from 'vitest'
 import TopicView from '../../../src/components/TopicView.jsx'
@@ -45,4 +46,25 @@ test('view toggle shows/hides the master doc editor', async () => {
   expect(screen.queryByText('doc editor')).not.toBeInTheDocument()
   await userEvent.click(screen.getByRole('button', { name: /^doc$/i }))
   expect(screen.getByText('doc editor')).toBeInTheDocument()
+})
+
+// §3.1's shape, latent here: `filtered` is already a useMemo, but the default
+// `pendingArchiveIds` was a fresh Set per render, so for any caller that omits
+// the prop the memo recomputed every time — and the ordered-ids effect, whose
+// callback is the parent's setState, then re-fired without end.
+test('ordered ids reported to a stateful parent settle without looping', async () => {
+  const seen = vi.fn()
+  function Harness() {
+    const [ids, setIds] = useState([])
+    return (
+      <>
+        <TopicView {...props} onOrderedIds={(next) => { seen(next); setIds(next) }} />
+        <span data-testid="ordered-count">{ids.length}</span>
+      </>
+    )
+  }
+  render(<Harness />)
+  await waitFor(() => expect(screen.getByTestId('ordered-count').textContent).toBe('2'))
+  await new Promise((r) => setTimeout(r, 50))
+  expect(seen.mock.calls.length).toBeLessThan(5)
 })

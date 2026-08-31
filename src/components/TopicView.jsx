@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState, useCallback } from 'react'
+import { readPref, writePref } from '../lib/localPref.js'
 // TopicDocEditor pulls in CodeMirror and its lezer grammars — ~520 KB, 46% of
 // the entry bundle, evaluated on every page load including Metrics. EntryCard
 // already lazy-loads NoteEditor for the same reason; this static import was
@@ -13,6 +14,11 @@ import ConfirmModal from './ConfirmModal.jsx'
 import { extractEmbedIds } from '../lib/embeds.js'
 import { entryMatchesLiteral } from '../lib/searchSnippets.js'
 
+// A shared frozen default: `new Set()` in the parameter list would be a fresh
+// object on every render, which is enough on its own to make the `filtered` memo
+// below recompute forever for any caller that omits the prop.
+const EMPTY_IDS = new Set()
+
 const SCOPES = [
   { value: 'topic', label: 'This topic' },
   { value: 'doc', label: 'This doc' },
@@ -26,7 +32,7 @@ export default function TopicView({
   onSearchAll, globalSearchResults,
   onTitleChange, onMove, tagColors,
   allTags = [],
-  pendingArchiveIds = new Set(),
+  pendingArchiveIds = EMPTY_IDS,
   jumpEntryId = null,
   supabase,
   onCheckDuplicate,
@@ -55,10 +61,8 @@ export default function TopicView({
   }, [menuOpen])
   const storageKey = `medialog_topic_view_${topic.id}`
   const [mode, setMode] = useState(() => {
-    try {
-      const saved = localStorage.getItem(storageKey)
-      if (saved) return saved
-    } catch {}
+    const saved = readPref(storageKey, null)
+    if (saved) return saved
     return topic.master_doc ? 'doc' : 'list'
   })
   const [docEditing, setDocEditing] = useState(() => !((topic.master_doc || '').trim()))
@@ -69,10 +73,10 @@ export default function TopicView({
   const [returnY, setReturnY] = useState(null)
   const [searchFocused, setSearchFocused] = useState(false)
   const [docWidth, setDocWidth] = useState(() => {
-    try { return localStorage.getItem('medialog_doc_width') || 'readable' } catch { return 'readable' }
+    return readPref('medialog_doc_width', null) || 'readable'
   })
   const [cols, setCols] = useState(() => {
-    try { return Number(localStorage.getItem('medialog_card_cols')) || 3 } catch { return 3 }
+    return Number(readPref('medialog_card_cols', null)) || 3
   })
   const gridRef = useRef(null)
   const [containerWidth, setContainerWidth] = useState(0)
@@ -103,7 +107,7 @@ export default function TopicView({
 
   function setDocWidthAndSave(w) {
     setDocWidth(w)
-    try { localStorage.setItem('medialog_doc_width', w) } catch {}
+    writePref('medialog_doc_width', w)
   }
 
   const scopeCtxRef = useRef({ scope: 'topic', currentTopicId: topic.id })
@@ -149,7 +153,7 @@ export default function TopicView({
 
   function setView(next) {
     setMode(next)
-    try { localStorage.setItem(storageKey, next) } catch {}
+    writePref(storageKey, next)
   }
 
   const getEntry = useMemo(() => {
@@ -196,9 +200,17 @@ export default function TopicView({
     return retiredOnly ? result.filter(e => e.retired_at) : result
   }, [entries, query, inputVal, scope, docEmbedIds, globalSearchResults, filteredByTag, pendingArchiveIds, retiredOnly, jumpEntryId])
 
+  const orderedIds = useMemo(() => filtered.map((e) => e.id), [filtered])
+  // Keyed on the joined ids rather than the array. `onOrderedIds` is the parent's
+  // setState, so this effect re-renders us; depending on an array would only be
+  // safe for as long as `filtered`'s memo stays stable, and one unstable dep in
+  // that list (a caller omitting `pendingArchiveIds`, say) would turn a re-render
+  // into an unbounded effect loop. The key can't drift that way.
+  const orderedKey = orderedIds.join(',')
   useEffect(() => {
-    onOrderedIds?.(filtered.map((e) => e.id))
-  }, [filtered])
+    onOrderedIds?.(orderedIds)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orderedKey])
 
   function handleJump(entryId) {
     setReturnY(window.scrollY)
@@ -281,7 +293,7 @@ export default function TopicView({
                 onChange={(e) => {
                   const v = Number(e.target.value)
                   setCols(v)
-                  try { localStorage.setItem('medialog_card_cols', String(v)) } catch {}
+                  writePref('medialog_card_cols', String(v))
                 }}
                 aria-label="Columns"
               />
