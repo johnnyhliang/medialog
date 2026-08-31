@@ -1,5 +1,5 @@
 import { expect, test, beforeEach, vi, afterEach } from 'vitest'
-import { readPref, writePref, readBoolPref } from '../../../src/lib/localPref.js'
+import { readPref, writePref, readBoolPref, clearPref } from '../../../src/lib/localPref.js'
 
 beforeEach(() => localStorage.clear())
 afterEach(() => vi.restoreAllMocks())
@@ -29,12 +29,17 @@ test('an unset boolean takes the caller default, not false', () => {
 // return null. A preference read must never be the thing that stops the app
 // rendering, and a preference write must never fail the action it accompanies.
 test('a throwing localStorage falls back instead of propagating', () => {
-  vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => { throw new Error('denied') })
+  vi.spyOn(localStorage, 'getItem').mockImplementation(() => { throw new Error('denied') })
   expect(readPref('k', 'appearance')).toBe('appearance')
   expect(readBoolPref('k', true)).toBe(true)
 })
 
+test('a throwing remove is swallowed', () => {
+  vi.spyOn(localStorage, 'removeItem').mockImplementation(() => { throw new Error('denied') })
+  expect(() => clearPref('k')).not.toThrow()
+})
+
 test('a throwing write is swallowed', () => {
-  vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('quota') })
+  vi.spyOn(localStorage, 'setItem').mockImplementation(() => { throw new Error('quota') })
   expect(() => writePref('k', 'v')).not.toThrow()
 })

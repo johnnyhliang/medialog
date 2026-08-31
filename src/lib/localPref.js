@@ -31,3 +31,12 @@ export function readBoolPref(key, fallback = true) {
   if (raw === null) return fallback
   return raw !== 'false'
 }
+
+// Removing a preference throws in exactly the same places setting one does, so
+// a reset must be as unfailable as a write — a key that can't be cleared is not
+// a reason to abort the reset the user asked for.
+export function clearPref(key) {
+  try {
+    localStorage.removeItem(key)
+  } catch { /* best-effort, same as writePref */ }
+}

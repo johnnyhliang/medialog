@@ -75,7 +75,7 @@ import { useRevisit } from './hooks/useRevisit.js'
 import { useTags } from './hooks/useTags.js'
 import { useVersions } from './hooks/useVersions.js'
 import { useArchiveToast } from './hooks/useArchiveToast.js'
-import { readBoolPref, writePref } from './lib/localPref.js'
+import { readBoolPref, readPref, writePref, clearPref } from './lib/localPref.js'
 import { useTheme } from './hooks/useTheme.js'
 import { useTimezone } from './hooks/useTimezone.js'
 const FilePreviewModal = lazy(() => import('./components/FilePreviewModal.jsx'))
@@ -208,25 +208,24 @@ function Workspace() {
   }
 
   const [sidebarOpen, setSidebarOpen] = useState(() => {
-    try {
-      // v2: sidebar defaults open; only respect a stored 'false' if user explicitly set it post-fix
-      const stored = localStorage.getItem('medialog_sidebar_open')
-      const migrated = localStorage.getItem('medialog_sidebar_migrated')
-      if (!migrated) {
-        localStorage.removeItem('medialog_sidebar_open')
-        localStorage.setItem('medialog_sidebar_migrated', '1')
-        return true
-      }
-      return stored !== 'false'
-    } catch { return true }
+    // v2: sidebar defaults open; only respect a stored 'false' if user explicitly set it post-fix
+    const stored = readPref('medialog_sidebar_open', null)
+    const migrated = readPref('medialog_sidebar_migrated', null)
+    if (migrated === null) {
+      clearPref('medialog_sidebar_open')
+      writePref('medialog_sidebar_migrated', '1')
+      return true
+    }
+    return stored !== 'false'
   })
 
   function toggleSidebar() {
-    setSidebarOpen((prev) => {
-      const next = !prev
-      try { localStorage.setItem('medialog_sidebar_open', String(next)) } catch (e) {}
-      return next
-    })
+    const next = !sidebarOpen
+    // Persist outside the updater: React may run an updater more than once
+    // (StrictMode does so deliberately), and a storage write is not idempotent
+    // in the way a pure updater has to be.
+    writePref('medialog_sidebar_open', next)
+    setSidebarOpen(next)
   }
 
   useEffect(() => {
@@ -310,6 +309,7 @@ function Workspace() {
   }, [])
 
   const autoBackupTimer = useRef(null)
+  const autoBackupDead = useRef(false)
   const pendingBackup = useRef(false)
   const pendingEntryScroll = useRef(null)
   // The entry a citation/related-link jumped to, held so TopicView can render it
@@ -321,6 +321,7 @@ function Workspace() {
     if (autoBackupTimer.current) return
     autoBackupTimer.current = setTimeout(async () => {
       autoBackupTimer.current = null
+      if (autoBackupDead.current) return
       if (!pendingBackup.current) return
       pendingBackup.current = false
       try {
@@ -330,7 +331,7 @@ function Workspace() {
           .maybeSingle()
         if (config?.auto_backup && config?.github_token) {
           const res = await runBackup(supabase, { message: 'MediaLog auto-backup' })
-          if (!res.unchanged) addToast('Auto-backup complete', 'success')
+          if (!res.unchanged && !autoBackupDead.current) addToast('Auto-backup complete', 'success')
         }
       } catch (e) {
         // Never interrupt the user for a background backup, but record why it
@@ -344,6 +345,21 @@ function Workspace() {
       }
     }, 60000)
   }, [entries, topics])
+
+  // The scheduling effect above deliberately returns no cleanup: it reruns on
+  // every entries/topics change, and cancelling there would cancel and
+  // reschedule the 60 s debounce forever, so a backup would never fire. But an
+  // uncancelled timer also outlives the component — it woke on a dead tree,
+  // queried user_configs with a possibly signed-out client, and called addToast
+  // into nothing. So the cancel lives in its own mount-scoped effect, which
+  // runs exactly once, at unmount.
+  useEffect(() => () => {
+    autoBackupDead.current = true
+    if (autoBackupTimer.current) {
+      clearTimeout(autoBackupTimer.current)
+      autoBackupTimer.current = null
+    }
+  }, [])
 
   useEffect(() => {
     if (selectedId) {
@@ -1562,7 +1578,7 @@ function Workspace() {
               addToast={addToast}
               onOpenTopic={(id) => { setSelectedId(id); setView('browse') }}
               onOpenPatternTopic={(id) => { setSelectedId(id); setView('browse') }}
-              onOpenSettings={(tab) => { setView('settings'); if (tab) try { localStorage.setItem('medialog_settings_tab', tab) } catch {} }}
+              onOpenSettings={(tab) => { setView('settings'); if (tab) writePref('medialog_settings_tab', tab) }}
             />
           )}
           {view === 'archive' && (
@@ -1656,7 +1672,7 @@ function Workspace() {
       {showFounder && assistantEnabled && assistantOpen && (
         <AssistantPanel
           isModuleVisible={isModuleVisible}
-          onOpenSettings={(tab) => { setView('settings'); if (tab) try { localStorage.setItem('medialog_settings_tab', tab) } catch {} }}
+          onOpenSettings={(tab) => { setView('settings'); if (tab) writePref('medialog_settings_tab', tab) }}
           supabase={supabase}
           onOpenEntry={(src) => handleOpenRelated(src.entryId)}
           onClose={() => setAssistantOpen(false)}

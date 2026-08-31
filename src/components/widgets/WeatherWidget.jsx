@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
+import { writePref } from '../../lib/localPref.js'
 import {
   Sun, Cloud, CloudSun, CloudRain, CloudSnow,
   CloudLightning, CloudDrizzle, Wind, MapPin, Thermometer,
@@ -72,7 +73,9 @@ export default function WeatherWidget() {
     setGeocodeErr(false)
     try {
       const loc = await geocode(query.trim())
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(loc))
+      // Guarded: an unguarded setItem throw lands in the catch below and shows
+      // "city not found" for a city that geocoded perfectly well.
+      writePref(STORAGE_KEY, JSON.stringify(loc))
       setLocation(loc)
       setEditing(false)
       setQuery('')

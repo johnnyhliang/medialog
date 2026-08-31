@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useTheme } from '../../../src/hooks/useTheme.js'
 
@@ -59,5 +59,17 @@ describe('useTheme', () => {
     const { result } = renderHook(() => useTheme())
     act(() => result.current.setPalette('invalid'))
     expect(result.current.palette).toBe('warm')
+  })
+  // Private-mode Safari and a full quota make setItem *throw*. writeLocal is
+  // called from inside a setState updater, so an unguarded throw escapes React's
+  // render and takes the theme switch — and the tree — down over a preference
+  // that is allowed to be lost.
+  it('still switches palette when localStorage throws on write', () => {
+    vi.spyOn(localStorage, 'setItem').mockImplementation(() => { throw new Error('quota') })
+    const { result } = renderHook(() => useTheme())
+    expect(() => act(() => result.current.setPalette('nord'))).not.toThrow()
+    expect(result.current.palette).toBe('nord')
+    expect(document.documentElement.dataset.theme).toBe('nord')
+    vi.restoreAllMocks()
   })
 })

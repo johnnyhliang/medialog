@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient.js'
+import { writePref } from '../lib/localPref.js'
 
 const STORAGE_KEY = 'ml_theme'
 const VALID_PALETTES = ['warm', 'catppuccin-mocha', 'tokyo-night', 'nord', 'rose-pine']
@@ -20,8 +21,12 @@ function applyToHtml(palette, style) {
   document.documentElement.dataset.style = style
 }
 
+// setItem *throws* in private-mode Safari and on a full quota, and this is
+// called from inside a setState updater — the worst place for it, since the
+// throw would propagate out of React's render and take the whole theme switch
+// (and the tree) down over a preference that is allowed to be lost.
 function writeLocal(palette, style) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({ palette, style }))
+  writePref(STORAGE_KEY, JSON.stringify({ palette, style }))
 }
 
 async function syncToDb(palette, style) {

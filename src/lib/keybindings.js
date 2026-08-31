@@ -1,23 +1,28 @@
+import { readPref, writePref, clearPref } from './localPref.js'
+
 const LS_KEY = 'medialog_keybinds'
 
 export function loadOverrides() {
-  try { return JSON.parse(localStorage.getItem(LS_KEY) ?? '{}') } catch { return {} }
+  try { return JSON.parse(readPref(LS_KEY, '{}')) } catch { return {} }
 }
 
 export function saveBinding(commandId, key) {
   const overrides = loadOverrides()
   overrides[commandId] = key
-  localStorage.setItem(LS_KEY, JSON.stringify(overrides))
+  // Rebinding a key must not fail because storage is unavailable (private-mode
+  // Safari, full quota): the binding still applies to this session, it just
+  // won't survive a reload.
+  writePref(LS_KEY, JSON.stringify(overrides))
 }
 
 export function resetBinding(commandId) {
   const overrides = loadOverrides()
   delete overrides[commandId]
-  localStorage.setItem(LS_KEY, JSON.stringify(overrides))
+  writePref(LS_KEY, JSON.stringify(overrides))
 }
 
 export function resetAllBindings() {
-  localStorage.removeItem(LS_KEY)
+  clearPref(LS_KEY)
 }
 
 // Returns Map<resolvedKey, command>

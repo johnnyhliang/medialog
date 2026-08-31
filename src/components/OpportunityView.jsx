@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
+import { readPref, writePref } from '../lib/localPref.js'
 
 const SOURCE_COLORS = {
   twitter: 'sky',
@@ -118,14 +119,16 @@ export default function OpportunityView({ supabase, onTrack, onUnreadCount }) {
   const refreshFromSource = useCallback(async (force = false) => {
     if (refreshing) return
     if (!force) {
-      const last = Number(localStorage.getItem(REFRESH_KEY) || 0)
+      const last = Number(readPref(REFRESH_KEY, 0))
       if (Date.now() - last < REFRESH_MS) return
     }
     setRefreshing(true)
     try {
       const { error } = await supabase.functions.invoke('fetch-opportunities')
       if (!error) {
-        localStorage.setItem(REFRESH_KEY, String(Date.now()))
+        // Unguarded, a throw here skipped the load() below, so a successful
+        // scrape rendered no new items at all.
+        writePref(REFRESH_KEY, Date.now())
         await load()
       }
     } catch { /* leave existing items in place */ }
