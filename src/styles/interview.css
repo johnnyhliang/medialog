@@ -319,15 +319,6 @@ a.iv-problem-title:hover { color: var(--accent); }
     flex: 0 0 auto;
     width: 100%;
   }
-  /* Two card columns on phones; the container query above only kicks in below
-     312px, which real phone widths clear. */
-  .topics-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
-  }
-  .topics-grid-card {
-    padding: 14px 12px 12px;
-  }
   .home-right {
     width: 100%;
     position: static;

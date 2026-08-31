@@ -740,13 +740,13 @@
 }
 .icon-btn:hover { color: var(--text); background: var(--surface-3); }
 .icon-btn:active { transform: scale(0.87); opacity: 0.8; }
-.icon-btn.icon-btn-danger:hover { color: var(--danger); background: rgba(192,58,43,0.08); }
+.icon-btn.icon-btn-danger:hover { color: var(--danger); background: color-mix(in srgb, var(--danger) 8%, transparent); }
 
 /* Status select */
 .status-select { padding: 3px 7px; font-size: var(--text-sm); border-radius: var(--radius); }
 .move-select { padding: 3px 7px; font-size: var(--text-sm); border-radius: var(--radius); }
-.status-done { color: var(--done); border-color: var(--done); background: rgba(46,122,82,0.07); }
-.status-active { color: var(--active); border-color: var(--active); background: rgba(184,92,26,0.07); }
+.status-done { color: var(--done); border-color: var(--done); background: color-mix(in srgb, var(--done) 7%, transparent); }
+.status-active { color: var(--active); border-color: var(--active); background: color-mix(in srgb, var(--active) 7%, transparent); }
 .status-backlog { color: var(--backlog); }
 
 /* ── Tags ────────────────────────────────────────────────────────────────────── */
@@ -760,7 +760,7 @@
   border: none;
   font-weight: 500;
 }
-.tag-chip:hover { background: rgba(192,58,43,0.1); color: var(--danger); }
+.tag-chip:hover { background: color-mix(in srgb, var(--danger) 10%, transparent); color: var(--danger); }
 .tag-chip[style*="background"] { padding: 2px 7px; border-radius: var(--radius-sm); }
 .tag-add { width: 110px; padding: 3px 8px; font-size: var(--text-sm); }
 

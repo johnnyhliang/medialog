@@ -271,3 +271,19 @@
   color: var(--text);
 }
 
+/* Moved here from interview.css, where these two rules sat inside an unrelated
+   surface's breakpoint block. No cascade change: nothing between home.css and
+   interview.css in the import order targets .topics-grid or .topics-grid-card,
+   and this block still sits after the container query above, so it keeps
+   winning the two-column result at equal weight. */
+@media (max-width: 640px) {
+  /* Two card columns on phones; the container query above only kicks in below
+     312px, which real phone widths clear. */
+  .topics-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .topics-grid-card {
+    padding: 14px 12px 12px;
+  }
+}

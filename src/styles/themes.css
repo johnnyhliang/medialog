@@ -14,6 +14,7 @@
   --backlog:     #7A7264;
   --danger:      #C03A2B;
   --sidebar-bg:  #EDE8DC;
+  --scrim:       rgba(28, 26, 21, 0.55);
 }
 
 /* ── Palette: Catppuccin Mocha ──────────────────────────────────────────────── */
@@ -97,6 +98,9 @@
 [data-theme="nord"],
 [data-theme="rose-pine"] {
   --on-accent:      #11111B;
+  /* Warm ink reads as a brown haze over an already-dark ground; a neutral,
+     slightly stronger black is what actually separates modal from page. */
+  --scrim:          rgba(0, 0, 0, 0.62);
   --accent-hover:   color-mix(in srgb, var(--accent) 82%, white);
 
   --tint-green-bg:  rgba(74, 222, 128, 0.14);

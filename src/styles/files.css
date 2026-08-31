@@ -2,7 +2,7 @@
 .file-preview-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(28, 26, 21, 0.55);
+  background: var(--scrim);
   display: flex;
   align-items: center;
   justify-content: center;

@@ -15,6 +15,11 @@
   --backlog:     #7A7264;
   --danger:      #C03A2B;
   --sidebar-bg:  #EDE8DC;
+  /* Modal scrim. Not a new colour: ink at 55%. Kept as its own token rather
+     than derived from --text, because --text inverts on the dark palettes and
+     a light scrim would wash a modal out instead of dimming behind it.
+     themes.css overrides it for the dark palettes. */
+  --scrim:       rgba(28, 26, 21, 0.55);
   /* Corner radius — three steps and a pill, nothing else. The sheet used to
      carry 19 distinct values (2,3,4,5,6,7,8,9,10,12,20…), which is what an
      app looks like when nobody chose. Map: small controls and chips to -sm,
