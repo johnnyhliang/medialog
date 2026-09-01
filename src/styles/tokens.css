@@ -32,8 +32,14 @@
   --radius-lg:   12px;
   --radius-pill: 999px;
   --gap:         14px;
-  --font-ui:     'DM Sans', system-ui, sans-serif;
-  --font-serif:  'Lora', Georgia, serif;
+  /* BRAND.md: Inter 300/400/500 for everything, Fraunces 700 for display.
+     --font-serif keeps its name rather than becoming --font-display because
+     every one of its call sites is already a title or heading (card titles,
+     sidebar h1, topic h2, files heading, note h1-h3) - renaming would be churn
+     across five stylesheets for no behavioural gain. Fraunces is display-only
+     per BRAND; nothing here puts it on body text. */
+  --font-ui:     'Inter', system-ui, sans-serif;
+  --font-serif:  'Fraunces', Georgia, serif;
 
   /* Typography scale — eight steps, and nothing outside them.
      The sheet used to carry 33 distinct font-size values (9, 9.5, 10, 10.5,
