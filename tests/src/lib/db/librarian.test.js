@@ -82,3 +82,43 @@ describe('askLibrarian', () => {
     expect(out.sources.length).toBeGreaterThan(0)
   })
 })
+
+// The bug this guards: embedQuery used to map its error to null, searchChunks
+// turned that into [], and this function turned THAT into "I couldn't find
+// anything in your notes" — an outage reported as a fact about the library.
+describe('askLibrarian: retrieval failure is not a no-results answer', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  test('a thrown retrieval error is reported as an outage, not an empty library', async () => {
+    searchChunks.mockRejectedValue(new Error('Edge Function returned a non-2xx status code'))
+    const out = await askLibrarian({}, 'market making')
+
+    expect(out.retrievalFailed).toBe(true)
+    expect(out.error).toBe(true)
+    // must NOT claim anything about the contents of the notes
+    expect(out.answer).not.toMatch(/couldn't find anything in your notes/i)
+    expect(out.answer).toMatch(/search service/i)
+    expect(out.answer).toContain('non-2xx')
+    // and it must not have asked the model to answer from nothing
+    expect(callAI).not.toHaveBeenCalled()
+  })
+
+  test('the genuine miss stays a genuine miss, and the two are distinguishable', async () => {
+    searchChunks.mockResolvedValue([])
+    const miss = await askLibrarian({}, 'quantum gravity')
+
+    searchChunks.mockRejectedValue(new Error('fetch failed'))
+    const down = await askLibrarian({}, 'quantum gravity')
+
+    expect(miss.answer).toMatch(/couldn't find anything in your notes/i)
+    expect(miss.retrievalFailed).toBeUndefined()
+    expect(miss.error).toBeUndefined()
+
+    expect(down.answer).not.toBe(miss.answer)
+    expect(down.retrievalFailed).toBe(true)
+    // both are usedContext:false — that flag alone can't tell them apart, which
+    // is precisely why the failure needs its own marker.
+    expect(miss.usedContext).toBe(false)
+    expect(down.usedContext).toBe(false)
+  })
+})

@@ -114,3 +114,41 @@ test('confirming the prompt deletes the conversation and drops the row', async (
   await waitFor(() => expect(deleteConversation).toHaveBeenCalledWith(expect.anything(), 'c1'))
   await waitFor(() => expect(screen.queryByText('Market making notes')).toBeNull())
 })
+
+test('a rejected askLibrarian surfaces the reason and stops the spinner', async () => {
+  askLibrarian.mockRejectedValue(new Error('Edge Function returned a non-2xx status code'))
+  render(<AssistantPanel supabase={{}} onOpenEntry={vi.fn()} onClose={vi.fn()} />)
+  const box = screen.getByPlaceholderText(/ask your library/i)
+  fireEvent.change(box, { target: { value: 'anything' } })
+  fireEvent.keyDown(box, { key: 'Enter' })
+
+  expect(await screen.findByText(/non-2xx/)).toBeTruthy()
+  // the panel must not claim the library is empty, and must not spin forever
+  expect(screen.queryByText(/couldn.t find anything in your notes/i)).toBeNull()
+  await waitFor(() => expect(screen.queryByText(/searching your notes/i)).toBeNull())
+  expect(screen.getByText(/not a statement about your notes/i)).toBeTruthy()
+})
+
+test('an outage answer is marked, a real no-results answer is not', async () => {
+  askLibrarian.mockResolvedValue({
+    answer: "I couldn't reach the search service, so I haven't looked at your notes at all. (fetch failed)",
+    sources: [], usedContext: false, retrievalFailed: true, error: true,
+  })
+  const { unmount } = render(<AssistantPanel supabase={{}} onOpenEntry={vi.fn()} onClose={vi.fn()} />)
+  let box = screen.getByPlaceholderText(/ask your library/i)
+  fireEvent.change(box, { target: { value: 'q' } })
+  fireEvent.keyDown(box, { key: 'Enter' })
+  expect(await screen.findByText(/not a statement about your notes/i)).toBeTruthy()
+  unmount()
+
+  askLibrarian.mockResolvedValue({
+    answer: "I couldn't find anything in your notes about that.",
+    sources: [], usedContext: false,
+  })
+  render(<AssistantPanel supabase={{}} onOpenEntry={vi.fn()} onClose={vi.fn()} />)
+  box = screen.getByPlaceholderText(/ask your library/i)
+  fireEvent.change(box, { target: { value: 'q' } })
+  fireEvent.keyDown(box, { key: 'Enter' })
+  expect(await screen.findByText(/couldn.t find anything in your notes/i)).toBeTruthy()
+  expect(screen.queryByText(/not a statement about your notes/i)).toBeNull()
+})

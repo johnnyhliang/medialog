@@ -135,15 +135,19 @@ export default function AssistantPanel({ supabase, onOpenEntry, onClose, onOpenS
       // X" is retrieval over notes; "how do I turn off X" is about the app. The
       // router is conservative — anything ambiguous falls through to the library,
       // which is the more common intent.
-      const res = asked === 'app'
-        ? await askAppHelp(supabase, q, { isVisible: isModuleVisible, history })
-        : await askLibrarian(supabase, q, { history })
+      const res = await (asked === 'app'
+        ? askAppHelp(supabase, q, { isVisible: isModuleVisible, history })
+        : askLibrarian(supabase, q, { history })) ?? {}
       setMessages((prev) => [...prev, {
         role: 'assistant',
         content: res.answer,
         sources: res.sources ?? [],
         tabs: res.tabs ?? [],
         mode: asked,
+        // Carried so the bubble can say the machinery failed. Without it a
+        // "couldn't reach the search service" answer looks identical to a
+        // grounded one, which is the same lie one layer up.
+        error: Boolean(res.error),
       }])
       try {
         if (convId) {
@@ -153,9 +157,21 @@ export default function AssistantPanel({ supabase, onOpenEntry, onClose, onOpenS
         }
       } catch { /* best-effort */ }
     } catch (e) {
-      setMessages((prev) => [...prev, { role: 'assistant', content: `Something went wrong: ${e.message}`, sources: [] }])
+      // askLibrarian shapes retrieval outages into a normal result, but the
+      // app-help path, the persistence calls and anything added later can still
+      // reject — so this stays as the last line of defence. DbError.message is
+      // the raw cause (see db/unwrap.js), so it reads as a real reason here.
+      setMessages((prev) => [...prev, {
+        role: 'assistant',
+        content: `Something went wrong: ${e.message}`,
+        sources: [],
+        error: true,
+      }])
+    } finally {
+      // finally, not a trailing statement: a throw from anywhere above used to
+      // be able to leave the spinner running for the rest of the session.
+      setBusy(false)
     }
-    setBusy(false)
   }
 
   function onKeyDown(e) {
@@ -227,7 +243,10 @@ export default function AssistantPanel({ supabase, onOpenEntry, onClose, onOpenS
                 ? renderWithCitations(m.content, m.sources ?? [], onOpenEntry)
                 : m.content}
             </div>
-            {m.role === 'assistant' && m.mode === 'app' && (
+            {m.role === 'assistant' && m.error && (
+              <div className="asst-mode" role="status">couldn’t reach the service — this is not a statement about your notes</div>
+            )}
+            {m.role === 'assistant' && !m.error && m.mode === 'app' && (
               <div className="asst-mode">answered from the app guide, not your notes</div>
             )}
             {m.role === 'assistant' && m.tabs?.length > 0 && onOpenSettings && (

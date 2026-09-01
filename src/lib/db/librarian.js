@@ -47,12 +47,42 @@ export function buildContext(hits, titleByEntry) {
  * Returns { answer, sources[], usedContext } — usedContext:false means nothing
  * relevant was retrieved, so the UI can show "nothing in your notes" instead of
  * a hallucinated answer.
+ *
+ * A retrieval failure additionally sets `error:true` and `retrievalFailed:true`,
+ * which is NOT the same result as a genuine miss. See the catch below.
  */
 export async function askLibrarian(supabase, question, { history = [] } = {}) {
   const q = String(question ?? '').trim()
   if (!q) return { answer: '', sources: [], usedContext: false }
 
-  const hits = await searchChunks(supabase, { query: q, topK: MAX_PASSAGES })
+  // WHY CATCH HERE RATHER THAN LET IT PROPAGATE
+  //
+  // Since retrieval started throwing (unwrap.js), an embedding-service outage
+  // reaches this function as an exception. Propagating is defensible, but this
+  // function already owns one "the machinery is down" answer — the callAI==null
+  // branch below returns a spoken result with error:true instead of throwing.
+  // Two failure modes of the same shape should not be reported two different
+  // ways, so this one is shaped like its sibling.
+  //
+  // The point is the DISTINCTION, not the catch: what must never happen again
+  // is a retrieval failure collapsing into the "I couldn't find anything in
+  // your notes" answer below, which reports an outage as a confident statement
+  // about the contents of the user's library. `retrievalFailed` exists so no
+  // caller can conflate the two even by accident, and the raw cause is kept in
+  // the sentence so the user can report something actionable.
+  let hits
+  try {
+    hits = await searchChunks(supabase, { query: q, topK: MAX_PASSAGES })
+  } catch (e) {
+    return {
+      answer: `I couldn't reach the search service, so I haven't looked at your notes at all — this is not an answer about what you have or haven't written. (${e.message})`,
+      sources: [],
+      usedContext: false,
+      retrievalFailed: true,
+      error: true,
+    }
+  }
+
   if (!hits.length) {
     return {
       answer: "I couldn't find anything in your notes about that. Try rephrasing, or it may be something you haven't captured yet.",
