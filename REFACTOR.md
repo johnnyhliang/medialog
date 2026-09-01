@@ -406,7 +406,65 @@ sites together (same fix, same rationale), one for the hook-cancellation pair.
 
 ---
 
-## 4. Phase 2 — The error-handling sweep
+## 4. Phase 2 — The error-handling sweep  — **DONE 2026-08-24**
+
+> **STATUS 2026-08-24 — done, db layer and callers both.** `d465f09` (helpers),
+> `22448bf` (11 db modules), `d29eeb8` (unguarded callers), `dc735c3` (assistant),
+> `859f677` (four components). 1114 tests pass.
+>
+> **§4.4 is wrong about the cause, and that matters.** It says to decide now
+> whether errors bubble or components render an error state, and that the mess
+> exists "because that decision was never made". It *was* made:
+> `captureTokens`, `contributions`, `conversations` and `entries` already threw
+> and let callers toast. What was missing is consistency, not a decision — so
+> the helpers extend that convention rather than introducing a second error
+> model, which would have left two.
+>
+> **The count corrections** (this document has now been stale four separate
+> times, so verify before trusting a line number here):
+>
+> - `entries.js:99` already threw. The real sites were 150/160/325/341, and two
+>   of those were dead fallbacks sitting *after* an existing throw.
+> - `githubBackup.js`'s line numbers were all stale; the real ones were 21,
+>   38–43, 64, 139–146.
+> - "three hot paths" of unguarded `localStorage` was eleven (that was §3.6).
+>
+> **Six bugs the sweep found that this document does not mention**, none of them
+> a logging gap:
+>
+> - `softDeleteTopic` discarded its `entries` update — topic tombstoned, entries
+>   left live. Orphans, reported as success.
+> - `collectSnapshot` dropped its `user_configs` error, exporting a backup that
+>   *looks complete* while having silently dropped every setting.
+> - `applySnapshot` with no user wrote `user_id: undefined`, which does not
+>   error — a restore landing unowned rows and reporting success.
+> - `searchEntries` discarded the tag half of its `Promise.all`.
+> - `createFeed` discarded its tier-limit count, so a db hiccup let a user past
+>   their plan allowance.
+> - `seedPatterns` read a failed dedupe lookup as "no problems yet" and
+>   re-inserted every problem as a duplicate. Its own comment promises
+>   idempotency and it did not hold.
+>
+> **The part §4 does not anticipate at all:** four components caught the new
+> throw and converted it straight back into an empty list
+> (`.catch(() => setLinks([]))` and friends). Until those were fixed the db
+> sweep was *inert* for those surfaces — the lie moved one layer up rather than
+> going away. Any future sweep of this kind has to budget for the caller pass;
+> it is not optional cleanup, it is where half the value lands.
+>
+> **`runBackup` needed a third answer.** Its record write happens *after* the
+> commit has landed, so throwing tells the user a backup failed when their data
+> is demonstrably in GitHub, and swallowing leaves a stale timestamp beside a
+> green tick. It now throws a `BackupRecordError` whose message states both
+> halves and which carries the successful result.
+>
+> **Second and third instances of tests that certify code they never run.** The
+> topic-lifecycle tests' hand-rolled `makeChain` returns a non-thenable, so
+> `await` yields the chain object, `.error` is undefined, and they pass against
+> any implementation. (The first was `localPref`'s throwing-storage tests in
+> §3.6.) When a test in this repo looks like it covers an error path, check that
+> it can actually reach one.
+
 
 This is the canonical find/replace loop, and the most valuable single change in
 the repo.
