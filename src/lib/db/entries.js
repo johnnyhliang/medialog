@@ -1,6 +1,7 @@
 import { buildSearchFilter } from '../searchFilter.js'
 import { computeTitle } from '../entryTitle.js'
 import { searchChunksAsEntries } from './retrieval.js'
+import { unwrap, unwrapList } from './unwrap.js'
 
 const TAG_SELECT = '*, entry_tags(tags(name))'
 const MAX_NOTE = 10000
@@ -16,7 +17,7 @@ function flattenTags(row) {
 }
 
 export async function listEntriesByTopic(supabase, topicId) {
-  const { data, error } = await supabase
+  const result = await supabase
     .from('entries')
     .select(TAG_SELECT)
     .eq('topic_id', topicId)
@@ -24,8 +25,7 @@ export async function listEntriesByTopic(supabase, topicId) {
     .or('surface_after.is.null,surface_after.lte.now()')
     .order('pinned', { ascending: false })
     .order('created_at', { ascending: false })
-  if (error) throw new Error(error.message)
-  return data.map(flattenTags)
+  return unwrapList(result, 'listEntriesByTopic').map(flattenTags)
 }
 
 export async function createEntry(supabase, { topicId, url = null, title = null, note = '' }) {
@@ -34,7 +34,7 @@ export async function createEntry(supabase, { topicId, url = null, title = null,
   // falls back to the url. Only a title we actually *kept* counts as curated.
   const mirrored = Boolean(noteText.trim()) || !title
   const finalTitle = mirrored ? computeTitle(noteText, url) : title
-  const { data, error } = await supabase
+  const result = await supabase
     .from('entries')
     .insert({
       topic_id: topicId,
@@ -47,8 +47,7 @@ export async function createEntry(supabase, { topicId, url = null, title = null,
     })
     .select()
     .single()
-  if (error) throw new Error(error.message)
-  return data
+  return unwrap(result, 'createEntry')
 }
 
 // `title_edited` means "this title was set on purpose, stop mirroring". It is
@@ -79,35 +78,37 @@ export async function updateEntry(supabase, id, patch, { autoTitle = false } = {
   }
 
   if (tentativeTitle !== null) {
-    const { data: rows, error: autoError } = await supabase
+    const autoResult = await supabase
       .from('entries')
       .update({ ...next, title: tentativeTitle })
       .eq('id', id)
       .eq('title_edited', false)
       .select()
-    if (autoError) throw new Error(autoError.message)
-    if (rows?.length) return rows[0]
+    // Zero rows here is a meaningful, expected outcome (the user owns the
+    // title), which is exactly why the error has to be separated out first —
+    // a failed update also returns no rows, and treating the two the same
+    // would silently drop the whole patch and report success.
+    const rows = unwrapList(autoResult, 'updateEntry(auto-title)')
+    if (rows.length) return rows[0]
     // No match: the user owns this title. Save everything else and leave it.
     delete next.title
     if (Object.keys(next).length === 0) {
-      const { data: current, error: readError } = await supabase
+      const readResult = await supabase
         .from('entries')
         .select('*')
         .eq('id', id)
         .single()
-      if (readError) throw new Error(readError.message)
-      return current
+      return unwrap(readResult, 'updateEntry(read-back)')
     }
   }
 
-  const { data, error } = await supabase
+  const result = await supabase
     .from('entries')
     .update(next)
     .eq('id', id)
     .select()
     .single()
-  if (error) throw new Error(error.message)
-  return data
+  return unwrap(result, 'updateEntry')
 }
 
 export async function bulkCreateEntries(supabase, topicId, items) {
@@ -120,9 +121,8 @@ export async function bulkCreateEntries(supabase, topicId, items) {
     // curated, so the first note edit must not overwrite it.
     title_edited: Boolean(it.title),
   }))
-  const { data, error } = await supabase.from('entries').insert(rows).select()
-  if (error) throw new Error(error.message)
-  return data
+  const result = await supabase.from('entries').insert(rows).select()
+  return unwrap(result, 'bulkCreateEntries')
 }
 
 export async function searchEntries(supabase, query) {
@@ -142,22 +142,27 @@ export async function searchEntries(supabase, query) {
     ? supabase.from('entry_tags').select('entry_id, tags!inner(name)').ilike('tags.name', `%${safe}%`)
     : Promise.resolve({ data: [] })
 
-  const [{ data, error }, { data: tagRows }] = await Promise.all([textQ, tagQ])
-  if (error) throw new Error(error.message)
+  const [textResult, tagResult] = await Promise.all([textQ, tagQ])
+  const rows = unwrapList(textResult, 'searchEntries')
+  // The tag half used to be destructured for `data` only. A failure there made
+  // tag-name search quietly stop working while text search kept succeeding —
+  // the worst kind of half-broken, because the results page still looked
+  // plausible. Search is one operation; if either half fails, the answer is
+  // wrong and the caller has to know.
+  const tagRows = unwrapList(tagResult, 'searchEntries(tags)')
 
-  const rows = data ?? []
   const have = new Set(rows.map((r) => r.id))
-  const extraIds = [...new Set((tagRows ?? []).map((r) => r.entry_id))].filter((id) => !have.has(id))
+  const extraIds = [...new Set(tagRows.map((r) => r.entry_id))].filter((id) => !have.has(id))
 
   let extra = []
   if (extraIds.length) {
-    const { data: ed } = await supabase
+    const extraResult = await supabase
       .from('entries')
       .select(`${TAG_SELECT}, topics(name)`)
       .in('id', extraIds)
       .is('deleted_at', null)
       .or('surface_after.is.null,surface_after.lte.now()')
-    extra = ed ?? []
+    extra = unwrapList(extraResult, 'searchEntries(tag-matched entries)')
   }
 
   const merged = []
@@ -171,7 +176,7 @@ export async function searchEntries(supabase, query) {
 }
 
 export async function listForRevisit(supabase, limit) {
-  const { data, error } = await supabase
+  const result = await supabase
     .from('entries')
     .select(`${TAG_SELECT}, srs_interval, srs_reps, srs_ef`)
     .is('deleted_at', null)
@@ -181,8 +186,7 @@ export async function listForRevisit(supabase, limit) {
     .or('surface_after.is.null,surface_after.lte.now()')
     .order('last_surfaced_at', { ascending: true, nullsFirst: true })
     .limit(limit)
-  if (error) throw new Error(error.message)
-  return data.map(flattenTags)
+  return unwrapList(result, 'listForRevisit').map(flattenTags)
 }
 
 /**
@@ -190,15 +194,15 @@ export async function listForRevisit(supabase, limit) {
  * deletion: the entry stays searchable and can be brought back.
  */
 export async function retireEntry(supabase, id) {
-  const { error } = await supabase
+  const result = await supabase
     .from('entries')
     .update({ retired_at: new Date().toISOString(), surface_after: null })
     .eq('id', id)
-  if (error) throw new Error(error.message)
+  unwrap(result, 'retireEntry')
 }
 
 export async function unretireEntry(supabase, id) {
-  const { error } = await supabase
+  const result = await supabase
     .from('entries')
     // Cleared rather than restored to its old schedule: the SM-2 state
     // (srs_reps/ef/interval) is untouched by retiring, so leaving surface_after
@@ -206,23 +210,23 @@ export async function unretireEntry(supabase, id) {
     // back means.
     .update({ retired_at: null, surface_after: null })
     .eq('id', id)
-  if (error) throw new Error(error.message)
+  unwrap(result, 'unretireEntry')
 }
 
 export async function listRecentActivity(supabase, limit = 30) {
-  const { data, error } = await supabase
+  const result = await supabase
     .from('entries')
     .select(`${TAG_SELECT}, topics(name)`)
     .is('deleted_at', null)
     .or('surface_after.is.null,surface_after.lte.now()')
     .order('updated_at', { ascending: false })
     .limit(limit)
-  if (error) throw new Error(error.message)
-  return data.map((row) => ({ ...flattenTags(row), topicName: row.topics?.name ?? null }))
+  return unwrapList(result, 'listRecentActivity')
+    .map((row) => ({ ...flattenTags(row), topicName: row.topics?.name ?? null }))
 }
 
 export async function listReadingQueue(supabase) {
-  const { data, error } = await supabase
+  const result = await supabase
     .from('entries')
     .select(`${TAG_SELECT}, topics(name)`)
     .is('deleted_at', null)
@@ -230,16 +234,16 @@ export async function listReadingQueue(supabase) {
     .or('surface_after.is.null,surface_after.lte.now()')
     .order('pinned', { ascending: false })
     .order('created_at', { ascending: false })
-  if (error) throw new Error(error.message)
-  return data.map((row) => ({ ...flattenTags(row), topicName: row.topics?.name ?? null }))
+  return unwrapList(result, 'listReadingQueue')
+    .map((row) => ({ ...flattenTags(row), topicName: row.topics?.name ?? null }))
 }
 
 export async function markSurfaced(supabase, id) {
-  const { error } = await supabase
+  const result = await supabase
     .from('entries')
     .update({ last_surfaced_at: new Date().toISOString() })
     .eq('id', id)
-  if (error) throw new Error(error.message)
+  unwrap(result, 'markSurfaced')
 }
 
 // SM-2 grades: 3 = Hard, 4 = Good, 5 = Easy
@@ -259,7 +263,7 @@ export async function rateRevisit(supabase, entry, grade) {
   const { srs_reps = 0, srs_ef = 2.5, srs_interval = 1 } = entry
   const next = sm2(srs_reps, srs_ef, srs_interval, grade)
   const nextDate = new Date(Date.now() + next.srs_interval * 86400000).toISOString()
-  const { error } = await supabase
+  const result = await supabase
     .from('entries')
     .update({
       last_surfaced_at: new Date().toISOString(),
@@ -267,43 +271,42 @@ export async function rateRevisit(supabase, entry, grade) {
       ...next,
     })
     .eq('id', entry.id)
-  if (error) throw new Error(error.message)
+  unwrap(result, 'rateRevisit')
   return { ...next, surface_after: nextDate }
 }
 
 export async function softDeleteEntry(supabase, id) {
-  const { error } = await supabase
+  const result = await supabase
     .from('entries')
     .update({ deleted_at: new Date().toISOString() })
     .eq('id', id)
-  if (error) throw new Error(error.message)
+  unwrap(result, 'softDeleteEntry')
 }
 
 export async function listTrashedEntries(supabase) {
-  const { data, error } = await supabase
+  const result = await supabase
     .from('entries')
     .select(TAG_SELECT)
     .not('deleted_at', 'is', null)
     .order('deleted_at', { ascending: false })
-  if (error) throw new Error(error.message)
-  return data.map(flattenTags)
+  return unwrapList(result, 'listTrashedEntries').map(flattenTags)
 }
 
 export async function restoreEntry(supabase, id, inboxId) {
   const update = inboxId ? { deleted_at: null, topic_id: inboxId } : { deleted_at: null }
-  const { error } = await supabase
+  const result = await supabase
     .from('entries')
     .update(update)
     .eq('id', id)
-  if (error) throw new Error(error.message)
+  unwrap(result, 'restoreEntry')
 }
 
 export async function emptyTrash(supabase) {
-  const { error } = await supabase
+  const result = await supabase
     .from('entries')
     .delete()
     .not('deleted_at', 'is', null)
-  if (error) throw new Error(error.message)
+  unwrap(result, 'emptyTrash')
 }
 
 // Semantic search runs entirely on content_chunks (the whole library is
@@ -315,14 +318,13 @@ export async function searchSemantic(supabase, query) {
 
 // Notes across the whole library, for scanning externally-hotlinked media.
 export async function listNotesForHotlinks(supabase) {
-  const { data, error } = await supabase
+  const result = await supabase
     .from('entries')
     .select('id, title, topic_id, note')
     .is('deleted_at', null)
     .not('note', 'is', null)
     .neq('note', '')
-  if (error) throw new Error(error.message)
-  return data ?? []
+  return unwrapList(result, 'listNotesForHotlinks')
 }
 
 export const ARCHIVE_PAGE_SIZE = 100
@@ -330,47 +332,48 @@ export const ARCHIVE_PAGE_SIZE = 100
 // Paginated so the Archive view can batch-load instead of pulling the whole
 // (potentially huge) done pile at once. Returns { rows, hasMore }.
 export async function listAllArchivedEntries(supabase, { limit = ARCHIVE_PAGE_SIZE, offset = 0 } = {}) {
-  const { data, error } = await supabase
+  const result = await supabase
     .from('entries')
     .select(`${TAG_SELECT}, topics(name)`)
     .eq('status', 'done')
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1)
-  if (error) throw new Error(error.message)
-  const rows = (data ?? []).map((row) => {
+  const rows = unwrapList(result, 'listAllArchivedEntries').map((row) => {
     const { topics, ...rest } = row
     return { ...flattenTags(rest), topicName: topics?.name ?? 'Unknown' }
   })
+  // A short page means the end of the pile. That inference is only safe now
+  // that an error can no longer arrive here as an empty page — it used to be
+  // able to, and a failed request read as "you have reached the end".
   return { rows, hasMore: rows.length === limit }
 }
 
 export async function listArchivedEntriesByTopic(supabase, topicId) {
-  const { data, error } = await supabase
+  const result = await supabase
     .from('entries')
     .select(TAG_SELECT)
     .eq('topic_id', topicId)
     .eq('status', 'done')
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
-  if (error) throw new Error(error.message)
-  return data.map(flattenTags)
+  return unwrapList(result, 'listArchivedEntriesByTopic').map(flattenTags)
 }
 
 export async function snoozeEntry(supabase, id, isoDate) {
-  const { error } = await supabase
+  const result = await supabase
     .from('entries')
     .update({ surface_after: isoDate })
     .eq('id', id)
-  if (error) throw new Error(error.message)
+  unwrap(result, 'snoozeEntry')
 }
 
 export async function unsnoozeEntry(supabase, id) {
-  const { error } = await supabase
+  const result = await supabase
     .from('entries')
     .update({ surface_after: null })
     .eq('id', id)
-  if (error) throw new Error(error.message)
+  unwrap(result, 'unsnoozeEntry')
 }
 
 // --- Reminders (docs/intentional-app-spec.md Part 1) ---------------------
@@ -384,7 +387,7 @@ export async function unsnoozeEntry(supabase, id) {
 // date arithmetic that belongs in `src/lib/agenda.js`, where it can be tested
 // against a fixed clock without a database.
 export async function listAgenda(supabase) {
-  const { data, error } = await supabase
+  const result = await supabase
     .from('entries')
     .select(`${TAG_SELECT}, topics(name)`)
     .is('deleted_at', null)
@@ -401,23 +404,23 @@ export async function listAgenda(supabase) {
     // agenda, which is the point of snoozing it.
     .or('surface_after.is.null,surface_after.lte.now()')
     .order('due_at', { ascending: true })
-  if (error) throw new Error(error.message)
-  return data.map((row) => ({ ...flattenTags(row), topicName: row.topics?.name ?? null }))
+  return unwrapList(result, 'listAgenda')
+    .map((row) => ({ ...flattenTags(row), topicName: row.topics?.name ?? null }))
 }
 
 // Set or move a deadline. `isoDate` of null clears it, which is also how an
 // entry stops being a reminder — there is no separate "delete reminder".
 export async function setDueDate(supabase, id, isoDate) {
-  const { error } = await supabase
+  const result = await supabase
     .from('entries')
     .update({ due_at: isoDate })
     .eq('id', id)
-  if (error) throw new Error(error.message)
+  unwrap(result, 'setDueDate')
 }
 
 // Return at most 'limit' entries that are already past due, soonest first
 export async function listOverdue(supabase, limit = 5) {
-  const { data, error } = await supabase
+  const result = await supabase
     .from('entries')
     .select(`${TAG_SELECT}, topics(name)`)
     .is('deleted_at', null)
@@ -426,6 +429,6 @@ export async function listOverdue(supabase, limit = 5) {
     .or('surface_after.is.null,surface_after.lte.now()')
     .order('due_at', { ascending: true })
     .limit(limit)
-  if (error) throw new Error(error.message)
-  return data.map((row) => ({ ...flattenTags(row), topicName: row.topics?.name ?? null }))
+  return unwrapList(result, 'listOverdue')
+    .map((row) => ({ ...flattenTags(row), topicName: row.topics?.name ?? null }))
 }

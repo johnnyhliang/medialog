@@ -146,3 +146,25 @@ describe('getTopicByName resilience', () => {
     expect(c._chain.is).toHaveBeenCalledWith('deleted_at', null)
   })
 })
+
+describe('topic deletion no longer half-succeeds', () => {
+  // Both halves used to discard the entries-update error, so a failure there
+  // tombstoned the topic anyway and left its entries live — invisible orphans.
+  test('softDeleteTopic throws when the entries update fails', async () => {
+    const c = mockClient({ data: null, error: { message: 'entries boom' } })
+    await expect(softDeleteTopic(c, 't1')).rejects.toThrow('entries boom')
+  })
+
+  test('restoreDeletedTopic throws when the entries update fails', async () => {
+    const c = mockClient({ data: null, error: { message: 'entries boom' } })
+    await expect(restoreDeletedTopic(c, 't1')).rejects.toThrow('entries boom')
+  })
+
+  test('a DbError carries the context that produced it', async () => {
+    const c = mockClient({ data: null, error: { message: 'entries boom' } })
+    await expect(softDeleteTopic(c, 't1')).rejects.toMatchObject({
+      name: 'DbError',
+      context: 'softDeleteTopic:entries',
+    })
+  })
+})

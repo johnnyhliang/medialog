@@ -1,32 +1,34 @@
 // DB helpers for the quick links / tools shelf. Same shape as the other db
-// modules: auth.getUser for user_id, throw on error.
+// modules: requireUser for user_id, unwrap on every result.
+
+import { unwrap, unwrapList } from './unwrap.js'
+import { requireUser } from '../requireUser.js'
 
 export async function listQuickLinks(supabase) {
-  const { data, error } = await supabase
+  return unwrapList(await supabase
     .from('quick_links')
     .select('*')
-    .order('position', { ascending: true })
-  if (error) throw new Error(error.message)
-  return data ?? []
+    .order('position', { ascending: true }), 'listQuickLinks')
 }
 
 export async function createQuickLink(supabase, { label, url, note = null, position = 0 }) {
-  const { data: { user } } = await supabase.auth.getUser()
-  const { data, error } = await supabase
+  // requireUser, not getUserOrNull: this only runs when someone has typed a
+  // label and a URL and pressed add. Being signed out here is not an ordinary
+  // outcome to skip past — it means the thing they just wrote is about to be
+  // dropped, and the old `user.id` on an undefined user reported that as an
+  // unrelated TypeError.
+  const user = await requireUser(supabase)
+  return unwrap(await supabase
     .from('quick_links')
     .insert({ user_id: user.id, label, url, note, position })
     .select()
-    .single()
-  if (error) throw new Error(error.message)
-  return data
+    .single(), 'createQuickLink')
 }
 
 export async function updateQuickLink(supabase, id, patch) {
-  const { error } = await supabase.from('quick_links').update(patch).eq('id', id)
-  if (error) throw new Error(error.message)
+  unwrap(await supabase.from('quick_links').update(patch).eq('id', id), 'updateQuickLink')
 }
 
 export async function deleteQuickLink(supabase, id) {
-  const { error } = await supabase.from('quick_links').delete().eq('id', id)
-  if (error) throw new Error(error.message)
+  unwrap(await supabase.from('quick_links').delete().eq('id', id), 'deleteQuickLink')
 }

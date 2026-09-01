@@ -1,6 +1,7 @@
 import {
   MATCH_COUNT, RRF_K, TRIGRAM_THRESHOLD, TRIGRAM_MAX_QUERY_WORDS, TASK_TYPE_QUERY,
 } from '../chunkConfig.js'
+import { unwrap, unwrapList } from './unwrap.js'
 
 // Trigram rescues short misspelled lookups but is noisy on prose.
 export function shouldUseTrigram(query) {
@@ -29,21 +30,35 @@ export function mmrSelect(candidates, { k = 5, lambda = 0.5 } = {}) {
 }
 
 async function embedQuery(supabase, query) {
-  const { data, error } = await supabase.functions.invoke('embed-entry', {
-    body: { text: query, taskType: TASK_TYPE_QUERY },
-  })
-  if (error || !data?.embedding) return null
-  return data.embedding
+  // A failed embed call used to return null, which searchChunks turned into an
+  // empty result set — so an outage of the embedding function was indistinguish-
+  // able from "your library has nothing on this". That is the exact lie this
+  // sweep exists to remove, so a genuine error now throws. A *successful* call
+  // that returns no embedding still yields null: that is a well-formed "cannot
+  // embed this query", not a failure.
+  const data = unwrap(
+    await supabase.functions.invoke('embed-entry', {
+      body: { text: query, taskType: TASK_TYPE_QUERY },
+    }),
+    'embedQuery'
+  )
+  return data?.embedding ?? null
 }
 
 async function hydrate(supabase, hits) {
   if (!hits.length) return []
   const ids = hits.map((h) => h.chunk_id)
-  const { data } = await supabase
-    .from('content_chunks')
-    .select('id, entry_id, content, heading, anchor, char_start')
-    .in('id', ids)
-  const byId = new Map((data ?? []).map((r) => [r.id, r]))
+  // Failing this read used to drop every hit on the floor (byId empty => every
+  // row filtered out), turning a hydration failure into "no results" after the
+  // ranking had already succeeded.
+  const rows = unwrapList(
+    await supabase
+      .from('content_chunks')
+      .select('id, entry_id, content, heading, anchor, char_start')
+      .in('id', ids),
+    'hydrate:content_chunks'
+  )
+  const byId = new Map(rows.map((r) => [r.id, r]))
   return hits
     .map((h) => {
       const row = byId.get(h.chunk_id)
@@ -68,39 +83,49 @@ export async function searchChunks(supabase, { query, topK = MATCH_COUNT, useTri
   if (!q) return []
   const embedding = await embedQuery(supabase, q)
   if (!embedding) return []
-  const { data, error } = await supabase.rpc('search_chunks', {
-    query_embedding: embedding,
-    query_text: q,
-    match_count: topK,
-    rrf_k: RRF_K,
-    trgm_threshold: TRIGRAM_THRESHOLD,
-    use_trigram: useTrigram ?? shouldUseTrigram(q),
-  })
-  if (error) throw new Error(error.message)
-  return hydrate(supabase, data ?? [])
+  const hits = unwrapList(
+    await supabase.rpc('search_chunks', {
+      query_embedding: embedding,
+      query_text: q,
+      match_count: topK,
+      rrf_k: RRF_K,
+      trgm_threshold: TRIGRAM_THRESHOLD,
+      use_trigram: useTrigram ?? shouldUseTrigram(q),
+    }),
+    'searchChunks:rpc'
+  )
+  return hydrate(supabase, hits)
 }
 
 // Uses the entry's OWN stored vectors as the query — no new embedding call.
 export async function relatedTo(supabase, { entryId, topK = 5 } = {}) {
-  const { data: mine } = await supabase
-    .from('content_chunks')
-    .select('embedding')
-    .eq('entry_id', entryId)
-    .limit(1)
-  const embedding = mine?.[0]?.embedding
+  // An empty result here is meaningful — an entry that was never chunked has no
+  // vectors and genuinely has nothing related — but only once a failed read can
+  // no longer arrive at the same answer.
+  const mine = unwrapList(
+    await supabase
+      .from('content_chunks')
+      .select('embedding')
+      .eq('entry_id', entryId)
+      .limit(1),
+    'relatedTo:ownEmbedding'
+  )
+  const embedding = mine[0]?.embedding
   if (!embedding) return []
 
-  const { data, error } = await supabase.rpc('search_chunks', {
-    query_embedding: embedding,
-    query_text: '',
-    match_count: 50,
-    rrf_k: RRF_K,
-    trgm_threshold: TRIGRAM_THRESHOLD,
-    use_trigram: false,
-  })
-  if (error) throw new Error(error.message)
+  const rows = unwrapList(
+    await supabase.rpc('search_chunks', {
+      query_embedding: embedding,
+      query_text: '',
+      match_count: 50,
+      rrf_k: RRF_K,
+      trgm_threshold: TRIGRAM_THRESHOLD,
+      use_trigram: false,
+    }),
+    'relatedTo:rpc'
+  )
 
-  const hits = (data ?? []).filter((h) => h.entry_id !== entryId)
+  const hits = rows.filter((h) => h.entry_id !== entryId)
   const hydrated = await hydrate(supabase, hits)
 
   // Roll up to one best chunk per entry, then diversify by topic.
@@ -111,11 +136,17 @@ export async function relatedTo(supabase, { entryId, topK = 5 } = {}) {
   }
   const rolled = [...bestByEntry.values()]
 
-  const { data: entries } = await supabase
-    .from('entries')
-    .select('id, topic_id')
-    .in('id', rolled.map((r) => r.entryId))
-  const topicByEntry = new Map((entries ?? []).map((e) => [e.id, e.topic_id]))
+  // Only used to diversify by topic. A failed read here would silently collapse
+  // every topicId to null, which quietly disables MMR's whole purpose while the
+  // results still look plausible.
+  const entries = unwrapList(
+    await supabase
+      .from('entries')
+      .select('id, topic_id')
+      .in('id', rolled.map((r) => r.entryId)),
+    'relatedTo:topics'
+  )
+  const topicByEntry = new Map(entries.map((e) => [e.id, e.topic_id]))
 
   return mmrSelect(
     rolled.map((r) => ({ ...r, id: r.chunkId, topicId: topicByEntry.get(r.entryId) ?? null })),
@@ -130,11 +161,17 @@ export async function relatedTo(supabase, { entryId, topK = 5 } = {}) {
 export async function annotateEmbedded(supabase, entries) {
   if (!entries?.length) return entries ?? []
   try {
-    const { data } = await supabase
-      .from('content_chunks')
-      .select('entry_id')
-      .in('entry_id', entries.map((e) => e.id))
-    const embedded = new Set((data ?? []).map((r) => r.entry_id))
+    // unwrapList inside the existing catch: the best-effort behaviour is
+    // unchanged, but it is now a decision this function makes about a real
+    // error rather than a failure it never saw.
+    const rows = unwrapList(
+      await supabase
+        .from('content_chunks')
+        .select('entry_id')
+        .in('entry_id', entries.map((e) => e.id)),
+      'annotateEmbedded'
+    )
+    const embedded = new Set(rows.map((r) => r.entry_id))
     return entries.map((e) => ({ ...e, embedded: embedded.has(e.id) }))
   } catch {
     return entries
@@ -160,14 +197,16 @@ export async function searchChunksAsEntries(supabase, query, { topK = MATCH_COUN
   const best = bestPerEntry(hits)
   if (!best.length) return []
 
-  const { data, error } = await supabase
-    .from('entries')
-    .select('*, entry_tags(tags(name)), topics(name)')
-    .in('id', best.map((h) => h.entryId))
-    .is('deleted_at', null)
-  if (error) throw new Error(error.message)
+  const rows = unwrapList(
+    await supabase
+      .from('entries')
+      .select('*, entry_tags(tags(name)), topics(name)')
+      .in('id', best.map((h) => h.entryId))
+      .is('deleted_at', null),
+    'searchChunksAsEntries:entries'
+  )
 
-  const byId = new Map((data ?? []).map((e) => [e.id, e]))
+  const byId = new Map(rows.map((e) => [e.id, e]))
   return best
     .map((h) => {
       const e = byId.get(h.entryId)

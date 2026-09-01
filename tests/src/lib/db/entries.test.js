@@ -10,6 +10,7 @@ import {
   retireEntry,
   unretireEntry,
 } from '../../../../src/lib/db/entries.js'
+import { DbError } from '../../../../src/lib/db/unwrap.js'
 import { mockSupabase as mockClient } from '../../../helpers/mockSupabase.js'
 
 describe('entries db', () => {
@@ -249,5 +250,54 @@ describe('entry title persistence', () => {
     expect(supabase._chain.insert).toHaveBeenCalledWith(
       expect.objectContaining({ title: 'From note', title_edited: false }),
     )
+  })
+})
+
+// A bare query chain (no `from`), so a test can hand different tables — or
+// successive reads of the same table — different results.
+const chainReturning = (result) => mockClient(result)._chain
+
+describe('entries db surfaces failures instead of empty results', () => {
+  test('a failed list throws a DbError carrying the raw message', async () => {
+    const client = mockClient({ data: null, error: { message: 'connection reset', code: '08006' } })
+    // The message is deliberately unprefixed: every caller already does
+    // `addToast(e.message)`, and DbError extends Error so those catches are
+    // unaffected by the type change.
+    await expect(listEntriesByTopic(client, 't1')).rejects.toThrow('connection reset')
+    await expect(listEntriesByTopic(client, 't1')).rejects.toBeInstanceOf(DbError)
+  })
+
+  test('searchEntries fails loudly when only the tag half fails', async () => {
+    // Previously the tag query was destructured for `data` alone, so this case
+    // returned a plausible-looking text-only result set and tag-name search
+    // just silently stopped working.
+    const entriesChain = chainReturning({ data: [], error: null })
+    const tagChain = chainReturning({ data: null, error: { message: 'tag join failed' } })
+    const client = { from: vi.fn((table) => (table === 'entry_tags' ? tagChain : entriesChain)) }
+    await expect(searchEntries(client, 'react')).rejects.toThrow('tag join failed')
+  })
+
+  test('searchEntries fails loudly when the tag-matched entry fetch fails', async () => {
+    // The second `entries` read — the by-id fetch for tag-only matches — is the
+    // other site that dropped its error outright.
+    const okChain = chainReturning({ data: [], error: null })
+    const failChain = chainReturning({ data: null, error: { message: 'in() lookup failed' } })
+    let entriesReads = 0
+    const tagChain = chainReturning({ data: [{ entry_id: 'x' }], error: null })
+    const client = {
+      from: vi.fn((table) => {
+        if (table === 'entry_tags') return tagChain
+        entriesReads += 1
+        return entriesReads === 1 ? okChain : failChain
+      }),
+    }
+    await expect(searchEntries(client, 'react')).rejects.toThrow('in() lookup failed')
+  })
+
+  test('updateEntry does not read a failed conditional update as an owned title', async () => {
+    // A failed auto-title update returns no rows, exactly like a title the user
+    // owns. Conflating them would drop the patch and report success.
+    const client = mockClient({ data: null, error: { message: 'update rejected' } })
+    await expect(updateEntry(client, 'e1', { note: '# T\nx' })).rejects.toThrow('update rejected')
   })
 })

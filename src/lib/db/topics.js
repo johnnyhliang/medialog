@@ -1,5 +1,7 @@
+import { unwrap, unwrapList } from './unwrap.js'
+
 export async function listTopics(supabase) {
-  const { data, error } = await supabase
+  const res = await supabase
     .from('topics')
     .select('*, entries!entries_topic_id_fkey(count)')
     .is('entries.deleted_at', null)
@@ -11,8 +13,9 @@ export async function listTopics(supabase) {
     // identically there is what made it unusable. docs/manager-scope.md §2.
     .neq('kind', 'project')
     .order('name', { ascending: true })
-  if (error) throw new Error(error.message)
-  return (data ?? []).map((t) => ({ ...t, entry_count: t.entries?.[0]?.count ?? 0 }))
+  // unwrapList, not `data ?? []`: this list IS the sidebar, and a failed query
+  // rendering as zero topics is indistinguishable from a brand-new account.
+  return unwrapList(res, 'listTopics').map((t) => ({ ...t, entry_count: t.entries?.[0]?.count ?? 0 }))
 }
 
 /**
@@ -23,38 +26,35 @@ export async function listTopics(supabase) {
  * already exists, defaults to 'note', and is indexed by nothing that cares.
  */
 export async function listProjects(supabase) {
-  const { data, error } = await supabase
+  const res = await supabase
     .from('topics')
     .select('*, entries!entries_topic_id_fkey(count)')
     .is('entries.deleted_at', null)
     .is('deleted_at', null)
     .eq('kind', 'project')
     .order('name', { ascending: true })
-  if (error) throw new Error(error.message)
-  return (data ?? []).map((t) => ({ ...t, entry_count: t.entries?.[0]?.count ?? 0 }))
+  return unwrapList(res, 'listProjects').map((t) => ({ ...t, entry_count: t.entries?.[0]?.count ?? 0 }))
 }
 
 /** Promote a topic into a project, or demote it back to an ordinary topic. */
 export async function setTopicKind(supabase, id, kind) {
-  const { data, error } = await supabase
+  const res = await supabase
     .from('topics')
     .update({ kind: kind === 'project' ? 'project' : 'note' })
     .eq('id', id)
     .select()
     .single()
-  if (error) throw new Error(error.message)
-  return data
+  return unwrap(res, 'setTopicKind')
 }
 
 export async function listDeletedTopics(supabase) {
-  const { data, error } = await supabase
+  const res = await supabase
     .from('topics')
     .select('*, entries!entries_topic_id_fkey(count)')
     .is('entries.deleted_at', null)
     .not('deleted_at', 'is', null)
     .order('deleted_at', { ascending: false })
-  if (error) throw new Error(error.message)
-  return (data ?? []).map((t) => ({ ...t, entry_count: t.entries?.[0]?.count ?? 0 }))
+  return unwrapList(res, 'listDeletedTopics').map((t) => ({ ...t, entry_count: t.entries?.[0]?.count ?? 0 }))
 }
 
 /**
@@ -71,7 +71,7 @@ export async function listDeletedTopics(supabase) {
  * not whichever row the planner returned first.
  */
 export async function getTopicByName(supabase, name) {
-  const { data, error } = await supabase
+  const res = await supabase
     .from('topics')
     .select('*')
     .eq('name', name)
@@ -79,98 +79,96 @@ export async function getTopicByName(supabase, name) {
     .order('created_at', { ascending: true })
     .limit(1)
     .maybeSingle()
-  if (error) throw new Error(error.message)
-  return data
+  return unwrap(res, 'getTopicByName')
 }
 
 export async function createTopic(supabase, name) {
-  const { data, error } = await supabase
+  const res = await supabase
     .from('topics')
     .insert({ name: String(name).slice(0, 120) })
     .select()
     .single()
-  if (error) throw new Error(error.message)
-  return data
+  return unwrap(res, 'createTopic')
 }
 
 export async function togglePinTopic(supabase, topicId, pinned) {
-  const { data, error } = await supabase
+  const res = await supabase
     .from('topics')
     .update({ pinned })
     .eq('id', topicId)
     .select()
     .single()
-  if (error) throw new Error(error.message)
-  return data
+  return unwrap(res, 'togglePinTopic')
 }
 
 export async function updateTopicIcon(supabase, topicId, icon) {
-  const { data, error } = await supabase
+  const res = await supabase
     .from('topics')
     .update({ icon: icon || null })
     .eq('id', topicId)
     .select()
     .single()
-  if (error) throw new Error(error.message)
-  return data
+  return unwrap(res, 'updateTopicIcon')
 }
 
 export async function updateTopicDoc(supabase, topicId, masterDoc) {
-  const { data, error } = await supabase
+  const res = await supabase
     .from('topics')
     .update({ master_doc: String(masterDoc ?? '') })
     .eq('id', topicId)
     .select()
     .single()
-  if (error) throw new Error(error.message)
-  return data
+  return unwrap(res, 'updateTopicDoc')
 }
 
 export async function archiveTopic(supabase, id) {
-  const { data, error } = await supabase
+  const res = await supabase
     .from('topics')
     .update({ archived_at: new Date().toISOString() })
     .eq('id', id)
     .select()
     .single()
-  if (error) throw new Error(error.message)
-  return data
+  return unwrap(res, 'archiveTopic')
 }
 
 export async function unarchiveTopic(supabase, id) {
-  const { data, error } = await supabase
+  const res = await supabase
     .from('topics')
     .update({ archived_at: null })
     .eq('id', id)
     .select()
     .single()
-  if (error) throw new Error(error.message)
-  return data
+  return unwrap(res, 'unarchiveTopic')
 }
 
 export async function softDeleteTopic(supabase, id) {
   const now = new Date().toISOString()
-  await supabase
+  // This half was fire-and-forget. If the entries update failed the topic still
+  // got tombstoned, so the topic vanished from the sidebar while its entries
+  // stayed live everywhere else that queries them — orphaned rows nobody could
+  // see the cause of. Unwrapping first means the topic is only deleted when its
+  // entries actually went with it.
+  unwrap(await supabase
     .from('entries')
     .update({ deleted_at: now })
     .eq('topic_id', id)
-    .is('deleted_at', null)
-  const { error } = await supabase
+    .is('deleted_at', null), 'softDeleteTopic:entries')
+  unwrap(await supabase
     .from('topics')
     .update({ deleted_at: now })
-    .eq('id', id)
-  if (error) throw new Error(error.message)
+    .eq('id', id), 'softDeleteTopic')
 }
 
 export async function restoreDeletedTopic(supabase, id) {
-  await supabase
+  // Same discarded error as softDeleteTopic, mirrored: a failure here restored
+  // the topic with none of its entries and reported success.
+  unwrap(await supabase
     .from('entries')
     .update({ deleted_at: null })
     .eq('topic_id', id)
-    .not('deleted_at', 'is', null)
-  const { error } = await supabase
+    .not('deleted_at', 'is', null), 'restoreDeletedTopic:entries')
+  unwrap(await supabase
     .from('topics')
     .update({ deleted_at: null })
-    .eq('id', id)
-  if (error) throw new Error(error.message)
+    .eq('id', id), 'restoreDeletedTopic')
 }

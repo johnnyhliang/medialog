@@ -1,18 +1,20 @@
 // Interview tracker: pattern-topics + problem-entries + readiness math.
 
+import { unwrap, unwrapList } from './unwrap.js'
+import { requireUser } from '../requireUser.js'
+
 // Fetch every pattern-topic and the problems inside them in two round-trips.
 export async function listInterview(supabase) {
-  const { data: patterns, error } = await supabase
+  const patterns = unwrapList(await supabase
     .from('topics')
     .select('id, name, master_doc, tracks, pattern_target')
     .not('pattern_target', 'is', null)
     .is('archived_at', null)
-    .order('name')
-  if (error) throw new Error(error.message)
+    .order('name'), 'listInterview.patterns')
   if (!patterns.length) return { patterns: [], problemsByTopic: {} }
 
   const ids = patterns.map((p) => p.id)
-  const { data: problems, error: pErr } = await supabase
+  const problems = unwrapList(await supabase
     .from('entries')
     // srs_interval + surface_after are needed for review scheduling and the
     // staleness/pace math in interviewPlan.js; updated_at feeds the actual-rate
@@ -20,11 +22,12 @@ export async function listInterview(supabase) {
     // that migration for why this select was crashing every call.
     .select('id, topic_id, title, url, status, difficulty, confidence, srs_ef, srs_reps, srs_interval, surface_after, updated_at')
     .in('topic_id', ids)
-    .is('deleted_at', null)
-  if (pErr) throw new Error(pErr.message)
+    .is('deleted_at', null), 'listInterview.problems')
 
   const problemsByTopic = {}
-  for (const row of problems ?? []) {
+  // No `?? []` guard: unwrapList already guarantees an array, and here an empty
+  // one can only mean "no problems", never "the query failed".
+  for (const row of problems) {
     (problemsByTopic[row.topic_id] ??= []).push(row)
   }
   return { patterns, problemsByTopic }
@@ -69,12 +72,17 @@ export function trackReadiness(patterns, problemsByTopic) {
 // name: an existing pattern-topic keeps its problems, new problems are appended
 // (deduped by title within the topic).
 export async function seedPatterns(supabase, patterns) {
-  const { data: { user } } = await supabase.auth.getUser()
-  const { data: existing } = await supabase
+  // requireUser: seeding is an explicit import action, and every topic/entry it
+  // writes is stamped with user.id. Under the old destructure a signed-out call
+  // read the existing-topics list as empty and then re-seeded the whole
+  // curriculum with user_id undefined — the idempotency guarantee in the
+  // comment above silently did not hold.
+  const user = await requireUser(supabase)
+  const existing = unwrapList(await supabase
     .from('topics')
     .select('id, name, pattern_target')
-    .eq('user_id', user.id)
-  const byName = new Map((existing ?? []).map((t) => [t.name.toLowerCase(), t]))
+    .eq('user_id', user.id), 'seedPatterns.existingTopics')
+  const byName = new Map(existing.map((t) => [t.name.toLowerCase(), t]))
 
   let topicsAdded = 0
   let problemsAdded = 0
@@ -82,7 +90,7 @@ export async function seedPatterns(supabase, patterns) {
   for (const pat of patterns) {
     let topic = byName.get(pat.name.toLowerCase())
     if (!topic) {
-      const { data, error } = await supabase
+      topic = unwrap(await supabase
         .from('topics')
         .insert({
           user_id: user.id,
@@ -92,22 +100,24 @@ export async function seedPatterns(supabase, patterns) {
           pattern_target: pat.target ?? Math.max(1, pat.problems?.length ?? 1),
         })
         .select()
-        .single()
-      if (error) throw new Error(error.message)
-      topic = data
+        .single(), 'seedPatterns.insertTopic')
       byName.set(pat.name.toLowerCase(), topic)
       topicsAdded++
     } else if (topic.pattern_target == null) {
       // promote an existing plain topic into a pattern
-      await supabase.from('topics')
+      unwrap(await supabase.from('topics')
         .update({ tracks: pat.tracks ?? [], pattern_target: pat.target ?? 1, master_doc: pat.primer ?? '' })
-        .eq('id', topic.id)
+        .eq('id', topic.id), 'seedPatterns.promoteTopic')
     }
 
     if (!pat.problems?.length) continue
-    const { data: have } = await supabase
-      .from('entries').select('title').eq('topic_id', topic.id).is('deleted_at', null)
-    const haveTitles = new Set((have ?? []).map((e) => (e.title ?? '').toLowerCase()))
+    // Dropping this error was the worst one in the file: a failed lookup read as
+    // "this topic has no problems yet", so the next line re-inserted every
+    // problem in the pattern as a duplicate.
+    const have = unwrapList(await supabase
+      .from('entries').select('title').eq('topic_id', topic.id).is('deleted_at', null),
+    'seedPatterns.existingProblems')
+    const haveTitles = new Set(have.map((e) => (e.title ?? '').toLowerCase()))
 
     const rows = pat.problems
       .filter((pr) => !haveTitles.has(pr.title.toLowerCase()))
@@ -121,8 +131,7 @@ export async function seedPatterns(supabase, patterns) {
         difficulty: pr.difficulty ?? null,
       }))
     if (rows.length) {
-      const { error } = await supabase.from('entries').insert(rows)
-      if (error) throw new Error(error.message)
+      unwrap(await supabase.from('entries').insert(rows), 'seedPatterns.insertProblems')
       problemsAdded += rows.length
     }
   }
@@ -130,8 +139,7 @@ export async function seedPatterns(supabase, patterns) {
 }
 
 export async function setProblem(supabase, id, patch) {
-  const { error } = await supabase.from('entries').update(patch).eq('id', id)
-  if (error) throw new Error(error.message)
+  unwrap(await supabase.from('entries').update(patch).eq('id', id), 'setProblem')
 }
 
 // Maps a 1-5 self-rating to an SM-2 grade. Below 3 in SM-2 means "failed recall"
@@ -161,24 +169,23 @@ export async function scheduleReview(supabase, problem, confidence) {
 
 // Manually add a problem (with optional link) to a pattern topic.
 export async function addProblem(supabase, topicId, { title, url = null, difficulty = null }) {
-  const { data: { user } } = await supabase.auth.getUser()
-  const { data, error } = await supabase
+  // requireUser: driven by the "add problem" form, so signed-out is not an
+  // ordinary outcome to absorb.
+  const user = await requireUser(supabase)
+  return unwrap(await supabase
     .from('entries')
     // The problem name is the whole point of the row, so it is a deliberate
     // title — writing notes on the problem must not rename it to the note's
     // first line.
     .insert({ user_id: user.id, topic_id: topicId, title, url, note: '', status: 'backlog', difficulty, title_edited: true })
     .select()
-    .single()
-  if (error) throw new Error(error.message)
-  return data
+    .single(), 'addProblem')
 }
 
 // Soft-delete (goes to trash, recoverable) — mirrors the rest of the app.
 export async function deleteProblem(supabase, id) {
-  const { error } = await supabase
+  unwrap(await supabase
     .from('entries')
     .update({ deleted_at: new Date().toISOString() })
-    .eq('id', id)
-  if (error) throw new Error(error.message)
+    .eq('id', id), 'deleteProblem')
 }
