@@ -37,6 +37,11 @@ export default function FeedView({ supabase, topics, allTags = [], onSaveItem, a
   const [loadingItems, setLoadingItems] = useState(false)
   const [refreshing, setRefreshing] = useState(false) // server poll in flight
   const [error, setError] = useState(null)
+  // The feed list and the item list fail independently, so they get separate
+  // error state. Folding them together would let a broken count query blank the
+  // sidebar, or a broken item query claim the user has no feeds.
+  const [loadingFeeds, setLoadingFeeds] = useState(true)
+  const [feedsError, setFeedsError] = useState(null)
   const [savingItem, setSavingItem] = useState(null) // item id being saved
   const [saveTopicId, setSaveTopicId] = useState('')
   const [showAddFeed, setShowAddFeed] = useState(false)
@@ -122,13 +127,26 @@ export default function FeedView({ supabase, topics, allTags = [], onSaveItem, a
     if (anyStale) { polledRef.current = true; serverRefresh() }
   }, [feeds])
 
+  // Mirrors loadItems: loading | error | data, never a bare await. This is
+  // called straight from the mount effect, so anything it throws would
+  // otherwise be an unhandled rejection with no trace of it on screen.
   async function loadFeeds() {
-    const [f, c] = await Promise.all([
-      listFeeds(supabase),
-      getFeedItemCounts(supabase),
-    ])
-    setFeeds(f)
-    setCounts(c)
+    setLoadingFeeds(true)
+    setFeedsError(null)
+    try {
+      const [f, c] = await Promise.all([
+        listFeeds(supabase),
+        getFeedItemCounts(supabase),
+      ])
+      setFeeds(f)
+      setCounts(c)
+    } catch (err) {
+      // Deliberately does NOT clear `feeds`. "Your feeds failed to load" and
+      // "you have no feeds" are different answers, and getFeedItemCounts used
+      // to give the second one for both.
+      setFeedsError(err.message)
+    }
+    setLoadingFeeds(false)
   }
 
   async function loadItems(feedId) {
@@ -155,11 +173,17 @@ export default function FeedView({ supabase, topics, allTags = [], onSaveItem, a
     } catch {
       setError('Could not refresh feeds right now. Try again in a moment.')
     }
-    await loadItems(selectedFeedId)
-    const [f, c] = await Promise.all([listFeeds(supabase), getFeedItemCounts(supabase)])
-    setFeeds(f)
-    setCounts(c)
-    setRefreshing(false)
+    // The reload used to sit outside the try/catch above, so a throw here
+    // escaped the function entirely and left `refreshing` true forever — the
+    // refresh button stayed disabled and "fetching latest…" never went away.
+    // loadItems/loadFeeds each own their error state; the finally guarantees the
+    // spinner is released whatever they do.
+    try {
+      await loadItems(selectedFeedId)
+      await loadFeeds()
+    } finally {
+      setRefreshing(false)
+    }
   }
 
   async function handleRefresh() {
@@ -249,7 +273,15 @@ export default function FeedView({ supabase, topics, allTags = [], onSaveItem, a
 
   async function handleDeleteFeed(feed) {
     if (!confirm(`Remove "${feed.name}" and all its unread items?`)) return
-    await deleteFeed(supabase, feed.id)
+    try {
+      await deleteFeed(supabase, feed.id)
+    } catch (err) {
+      // Bail before the optimistic removal below: dropping the feed from the
+      // sidebar when the delete failed would show a feed as gone that is still
+      // there on the next load.
+      addToast?.(`Could not remove that feed: ${err.message}`, 'error')
+      return
+    }
     setFeeds((prev) => prev.filter((f) => f.id !== feed.id))
     if (selectedFeedId === feed.id) setSelectedFeedId(null)
     await loadItems(null)
@@ -357,6 +389,13 @@ export default function FeedView({ supabase, topics, allTags = [], onSaveItem, a
         )}
 
         <div className="feed-nav">
+          {/* Third state. Without this the sidebar renders identically whether
+              the query failed or the user genuinely follows nothing. */}
+          {feedsError && (
+            <p className="feed-category-label" style={{ color: 'var(--danger)' }} role="alert">
+              couldn’t load your feeds — {feedsError}
+            </p>
+          )}
           <button
             className={`feed-nav-item ${selectedFeedId === null ? 'active' : ''}`}
             onClick={() => setSelectedFeedId(null)}
@@ -450,7 +489,10 @@ export default function FeedView({ supabase, topics, allTags = [], onSaveItem, a
           <p className="muted" style={{ padding: '24px 32px', fontSize: 'var(--text-sm)' }}>fetching latest…</p>
         )}
 
-        {!error && !loadingItems && !refreshing && items.length === 0 && (
+        {/* `feeds.length === 0` below is only a truthful "no feeds yet" if the
+            feed query actually succeeded — hence the feedsError/loadingFeeds
+            guards. An error must never render as the empty state. */}
+        {!error && !feedsError && !loadingFeeds && !loadingItems && !refreshing && items.length === 0 && (
           <div className="feed-empty">
             <p className="muted">
               {feeds.length === 0

@@ -14,21 +14,37 @@ export default function FeedWidget({ supabase, onSave, onGoToFeed }) {
   const [items, setItems] = useState([])
   const [hasFeeds, setHasFeeds] = useState(null) // null = loading
   const [refreshing, setRefreshing] = useState(false)
+  // The widget hides itself when the user has no feeds, so a thrown query with
+  // no error state would be invisible twice over: nothing rendered, nothing
+  // logged, and no way to tell it apart from "not subscribed to anything".
+  const [error, setError] = useState(null)
 
   const load = useCallback(async () => {
-    const feeds = await listFeeds(supabase)
-    if (!feeds.length) { setHasFeeds(false); return }
-    setHasFeeds(true)
-    const all = await listFeedItems(supabase, null)
-    setItems(all.slice(0, 8))
+    try {
+      const feeds = await listFeeds(supabase)
+      setError(null)
+      if (!feeds.length) { setHasFeeds(false); return }
+      setHasFeeds(true)
+      const all = await listFeedItems(supabase, null)
+      setItems(all.slice(0, 8))
+    } catch (err) {
+      // Note: `hasFeeds` is left alone. Flipping it to false here would be the
+      // exact silent-empty bug this sweep removes.
+      setError(err.message)
+    }
   }, [supabase])
 
   useEffect(() => { load() }, [load])
 
   async function refresh() {
     setRefreshing(true)
-    await load()
-    setRefreshing(false)
+    // load() swallows its own failures, but the finally is the invariant that
+    // matters: the spinner has to stop even if that ever stops being true.
+    try {
+      await load()
+    } finally {
+      setRefreshing(false)
+    }
   }
 
   async function dismiss(item) {
@@ -50,10 +66,14 @@ export default function FeedWidget({ supabase, onSave, onGoToFeed }) {
     }
   }
 
-  // Still loading
-  if (hasFeeds === null) return null
-  // User has no feeds — don't render the widget at all
-  if (!hasFeeds) return null
+  // loading | error | (empty ⇒ hidden). The error check comes first because
+  // both bail-outs below render nothing, which would swallow the failure.
+  if (!error) {
+    // Still loading
+    if (hasFeeds === null) return null
+    // User has no feeds — don't render the widget at all
+    if (!hasFeeds) return null
+  }
 
   return (
     <div className="fw-widget">
@@ -64,7 +84,9 @@ export default function FeedWidget({ supabase, onSave, onGoToFeed }) {
         </button>
       </div>
 
-      {items.length === 0 ? (
+      {error ? (
+        <p className="kw-empty" role="alert">couldn’t load your feed — {error}</p>
+      ) : items.length === 0 ? (
         <p className="kw-empty">
           No new items{onGoToFeed && (
             <> · <button className="fw-see-all" onClick={onGoToFeed}>open feed ↗</button></>

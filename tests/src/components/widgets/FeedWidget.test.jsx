@@ -21,15 +21,21 @@ function makeItem(overrides = {}) {
   }
 }
 
-function mockSupabase({ feeds = [{ id: 'f1' }], items = [] } = {}) {
+// `feedsError` / `itemsError` go through the real feeds.js, so the throw under
+// test is the one unwrap() actually produces rather than a hand-rolled stand-in.
+function mockSupabase({ feeds = [{ id: 'f1' }], items = [], feedsError = null, itemsError = null } = {}) {
   const updateFn = vi.fn(() => ({ eq: vi.fn(() => Promise.resolve({ error: null })) }))
+  const feedsResult = () => Promise.resolve(
+    feedsError ? { data: null, error: { message: feedsError } } : { data: feeds, error: null })
+  const itemsResult = () => Promise.resolve(
+    itemsError ? { data: null, error: { message: itemsError } } : { data: items, error: null })
   return {
     from: vi.fn((table) => {
       if (table === 'feeds') {
         return {
           select: vi.fn(() => ({
             order: vi.fn(() => ({
-              order: vi.fn(() => Promise.resolve({ data: feeds, error: null })),
+              order: vi.fn(() => feedsResult()),
             })),
           })),
         }
@@ -41,7 +47,7 @@ function mockSupabase({ feeds = [{ id: 'f1' }], items = [] } = {}) {
             is: vi.fn(() => ({
               gt: vi.fn(() => ({
                 order: vi.fn(() => ({
-                  limit: vi.fn(() => Promise.resolve({ data: items, error: null })),
+                  limit: vi.fn(() => itemsResult()),
                 })),
               })),
             })),
@@ -90,4 +96,36 @@ test('shows empty state when feeds exist but no items', async () => {
   const sb = mockSupabase({ feeds: [{ id: 'f1' }], items: [] })
   render(<FeedWidget supabase={sb} onSave={vi.fn()} />)
   expect(await screen.findByText(/no new items/i)).toBeInTheDocument()
+})
+
+// ── §4.3 sweep: listFeeds/listFeedItems throw now instead of returning [] ──
+// The widget hides itself when the user has no feeds, so an uncaught throw here
+// is invisible: it looks exactly like "not subscribed to anything".
+
+test('renders an error instead of hiding when listFeeds throws', async () => {
+  const sb = mockSupabase({ feedsError: 'feeds exploded' })
+  const { container } = render(<FeedWidget supabase={sb} onSave={vi.fn()} />)
+  expect(await screen.findByText(/couldn’t load your feed/)).toBeInTheDocument()
+  expect(screen.getByText(/feeds exploded/)).toBeInTheDocument()
+  // Distinct from the no-feeds state, which renders nothing at all.
+  expect(container.firstChild).not.toBeNull()
+})
+
+test('an item-query throw shows the error, not the empty state', async () => {
+  const sb = mockSupabase({ feeds: [{ id: 'f1' }], itemsError: 'items exploded' })
+  render(<FeedWidget supabase={sb} onSave={vi.fn()} />)
+  expect(await screen.findByText(/items exploded/)).toBeInTheDocument()
+  expect(screen.queryByText(/no new items/i)).not.toBeInTheDocument()
+})
+
+test('refreshing does not get stuck when the reload throws', async () => {
+  const sb = mockSupabase({ feeds: [{ id: 'f1' }], items: [makeItem()] })
+  render(<FeedWidget supabase={sb} onSave={vi.fn()} />)
+  await screen.findByText('Test Article')
+
+  // Break the item query, then refresh: the button must return to '↻'.
+  sb.from = mockSupabase({ feeds: [{ id: 'f1' }], itemsError: 'items exploded' }).from
+  await userEvent.click(screen.getByTitle('Refresh'))
+  await waitFor(() => expect(screen.getByTitle('Refresh')).toHaveTextContent('↻'))
+  expect(await screen.findByText(/items exploded/)).toBeInTheDocument()
 })

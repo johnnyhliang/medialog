@@ -29,7 +29,8 @@ import { fetchTitle, fetchLinkPreview } from './lib/enrich.js'
 import { preservationPatch } from './lib/preservation.js'
 import { chunkEntryAsync } from './lib/chunkEntry.js'
 import { track } from './lib/track.js'
-import { runBackup } from './lib/db/githubBackup.js'
+import { runBackup, BackupRecordError } from './lib/db/githubBackup.js'
+import { getUserOrNull } from './lib/requireUser.js'
 import { isDev } from './lib/account.js'
 import { DEFAULT_FEATURE_FLAGS, loadFeatureFlags } from './lib/featureFlags.js'
 import { isModuleVisible as checkModuleVisible } from './lib/modules.js'
@@ -336,11 +337,35 @@ function Workspace() {
       } catch (e) {
         // Never interrupt the user for a background backup, but record why it
         // failed — this path silently did nothing at all for months.
-        const { data: { user } } = await supabase.auth.getUser()
-        if (user) {
-          await supabase.from('user_configs')
-            .update({ last_error: String(e.message ?? e) })
-            .eq('user_id', user.id)
+        //
+        // Two things this handler must not do. It must not throw: it used to
+        // destructure `data.user` inline, so if auth was the thing that broke,
+        // the error handler died of a TypeError while handling the error and
+        // the real cause was never recorded. `getUserOrNull` returns null when
+        // signed out and still surfaces a genuine auth error, and the whole
+        // body is wrapped so nothing here can escape as an unhandled rejection
+        // from a background timer.
+        //
+        // And it must not lie about the data. `BackupRecordError` means the
+        // commit REACHED GitHub and only the bookkeeping row failed — writing
+        // that to `last_error` would tell the user their backup failed when
+        // their data is in fact safe.
+        try {
+          if (e instanceof BackupRecordError) {
+            if (!autoBackupDead.current) addToast(e.message, 'info')
+            return
+          }
+          const user = await getUserOrNull(supabase)
+          if (user) {
+            await supabase.from('user_configs')
+              .update({ last_error: String(e.message ?? e) })
+              .eq('user_id', user.id)
+          }
+        } catch {
+          // Nothing left to fall back on — the backup failed and so did
+          // recording why. Swallowing here is deliberate: an unhandled
+          // rejection from a detached timer is not something the user can act
+          // on, and it must not take the app down.
         }
       }
     }, 60000)
@@ -495,8 +520,17 @@ function Workspace() {
   async function handleSearchAll(q) {
     if (!q.trim()) { setGlobalSearchResults(null); return }
     track(supabase, 'search_run', { mode: 'keyword' })
-    const results = await searchEntries(supabase, q.trim())
-    setGlobalSearchResults(results)
+    try {
+      const results = await searchEntries(supabase, q.trim())
+      setGlobalSearchResults(results)
+    } catch (e) {
+      // `searchEntries` runs a text query and a tag query; it now throws if
+      // either half fails rather than quietly returning the half that worked.
+      // Leaving the previous results on screen under a new query would be the
+      // same lie, so clear them and say so.
+      setGlobalSearchResults([])
+      addToast(e.message || 'Search failed', 'error')
+    }
   }
 
   async function handleCheckDuplicate(url) {
@@ -978,17 +1012,34 @@ function Workspace() {
     applyUnarchiveTopic(id, updated)
   }
 
+  // Both of these write first and only then touch local state. The ordering is
+  // the point: the old code removed the topic from `topics` and toasted
+  // success regardless of whether the database agreed, so a failed write left
+  // the UI insisting the topic was in the trash while the row was untouched —
+  // a wrong answer presented with confidence, and one that survives until the
+  // next reload puts the topic back with no explanation.
   async function handleDeleteTopic(id) {
-    await softDeleteTopic(supabase, id)
+    try {
+      await softDeleteTopic(supabase, id)
+    } catch (e) {
+      addToast(e.message || 'Could not move that topic to trash', 'error')
+      return
+    }
     applyDeleteTopic(id)
     if (selectedId === id) { setSelectedId(inboxTopic?.id ?? null); setView('browse') }
     addToast('Topic moved to trash', 'info')
   }
 
   async function handleRestoreTopic(id) {
-    await restoreDeletedTopic(supabase, id)
-    const allTopics = await listTopics(supabase)
-    const restored = allTopics.find(t => t.id === id)
+    let restored
+    try {
+      await restoreDeletedTopic(supabase, id)
+      const allTopics = await listTopics(supabase)
+      restored = allTopics.find(t => t.id === id)
+    } catch (e) {
+      addToast(e.message || 'Could not restore that topic', 'error')
+      return
+    }
     if (restored) applyRestoreDeletedTopic(restored)
     setDeletedTopics(prev => prev.filter(t => t.id !== id))
     addToast('Topic restored to Inbox', 'success')
