@@ -530,7 +530,59 @@ exists because that decision was never made once.
 
 ---
 
-## 5. Phase 3 — The 62 lint problems
+## 5. Phase 3 — The 62 lint problems  — **DONE 2026-09-01, except `exhaustive-deps` (deferred on purpose)**
+
+> **STATUS 2026-09-01 — phases 3, 4, 5 and §10 item 5 are done.** `ac821af`
+> (time formatters), `c2acf25` (dedupe, dead code, CSS sweep), `9bcaab6` (the
+> last lint errors). **Lint: 62 → 21, and errors → 0.** 1178 tests pass.
+>
+> **The 21 remaining `exhaustive-deps` warnings are deliberately NOT fixed.**
+> §5.5 is right that each is a real stale-closure signal needing a per-file
+> decision, and adding deps blindly is what caused the infinite render loop
+> fixed in `5a9ffb9`. This is the one category where a bulk sweep is actively
+> dangerous, so it was left rather than done badly.
+>
+> **The real bug this phase found, hiding inside a dedupe:**
+> `OpportunitiesWidget`'s `markRead`/`toggleSaved` wrote `is_read`/`is_saved`
+> onto the shared `opportunities` row, and its `load` never read
+> `opportunity_state`. Migration `0044` moved that state to a per-user side
+> table *because* one user marking an item read marked it read for everyone,
+> and made `opportunities` read-only in the same pass — so those writes had
+> silently become no-ops. `OpportunityView` had been migrated; the widget never
+> was. **Its existing test asserted the dead write**, the fourth time in this
+> effort a test here certified behaviour that does not happen.
+>
+> **§6.2 is wrong that the Escape handlers are byte-identical.** `CatchOverlay`
+> bound to `document` (the others to `window`) and guarded on `open`, because it
+> stays mounted while closed. Collapsing all three to a bare
+> `useEscapeKey(onClose)` would have let a hidden overlay swallow an Escape
+> meant for the visible screen. The hook takes an `enabled` argument for that
+> reason. A fourth copy still lives in `ReaderModal.jsx`.
+>
+> **§7 corrections.** `studyPlan.js` is orphaned but was KEPT — it is the sole
+> read/write path for `prep_target_date`/`prep_focus`, which `0061` creates,
+> `githubSync` backs up, and two coverage tests assert by name; deleting it
+> would orphan shipped, backed-up columns. `medialog_settings_tab` **is** read
+> (`SettingsView` restores the tab on mount), so nothing was removed. The dead
+> export count is **41**, not 22 and not 116. `public/landing.html` was
+> genuinely dead but not for the stated reason — `public/` IS served verbatim;
+> what killed it is that `_redirects` never routes to it.
+>
+> **§10 item 5 was left undone for a good reason, and the numbers show it:**
+> 1057 class selectors, 94 with no literal hit, **76 ruled back in** as
+> dynamically constructed or CodeMirror-generated, 18 actually deleted
+> (app CSS 148,313 → 145,639 bytes). `opp-chip-sky`, `is-pending`,
+> `dot-backlog` and the reader colour variants all look dead by name and are
+> built as template literals. A grep-and-delete pass would have broken them.
+>
+> **Two flaky tests fixed rather than shipped.** Both held the node
+> `findByText` resolves to and then asserted on that reference, which races a
+> re-render replacing it — passing in isolation, failing only under full-suite
+> parallel load. `waitFor` re-queries each attempt.
+>
+> **Still open in this file: §8 (structural).** Deliberately excluded — a
+> router, Context and the `App.jsx` split are a redesign, not cleanup.
+
 
 Now, and not before — several of these lines get rewritten by §3 anyway.
 
@@ -611,7 +663,7 @@ it into CI — it will never stay at zero otherwise.
 
 ---
 
-## 6. Phase 4 — Deduplication
+## 6. Phase 4 — Deduplication  — **DONE 2026-09-01**
 
 10 byte-identical helper pairs plus several near-forks. **Order matters here:**
 one group must be reconciled behaviourally before any sweep.
@@ -653,7 +705,7 @@ engines.
 
 ---
 
-## 7. Phase 5 — Dead code
+## 7. Phase 5 — Dead code  — **DONE 2026-09-01**
 
 Small, satisfying, low risk. One commit.
 
