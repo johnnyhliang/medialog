@@ -125,27 +125,6 @@ a.iv-problem-title:hover { color: var(--accent); }
   text-overflow: ellipsis;
 }
 
-/* Career sidebar item */
-.career-sidebar-item { padding: 0 8px; }
-.career-sidebar-btn {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 6px 8px;
-  border: none;
-  background: none;
-  border-radius: var(--radius);
-  font-size: var(--text-sm);
-  color: var(--text-secondary);
-  cursor: pointer;
-  text-align: left;
-  transition: background 0.15s;
-}
-.career-sidebar-btn:hover { background: var(--border); color: var(--text); }
-.career-sidebar-btn.selected { background: var(--accent-subtle); color: var(--accent); font-weight: 500; }
-.career-sidebar-icon { flex-shrink: 0; }
-
 /* Career view tabs */
 .career-view { display: flex; flex-direction: column; height: 100%; }
 .career-tabs {

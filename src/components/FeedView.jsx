@@ -10,19 +10,9 @@ import { buildInterestProfile, sortByRelevance } from '../lib/feedRelevance.js'
 import { listRecentActivity } from '../lib/db/entries.js'
 import { STARTER_PACK } from '../lib/feedStarterPack.js'
 import GainsCard from './GainsCard.jsx'
+import { shortAge } from '../lib/timeFormat.js'
 
 const STALE_MS = 60 * 60 * 1000 // re-fetch if older than 1 hour
-
-function timeAgo(str) {
-  if (!str) return null
-  const diff = Date.now() - new Date(str).getTime()
-  const m = Math.floor(diff / 60000)
-  if (m < 1) return 'just now'
-  if (m < 60) return `${m}m`
-  const h = Math.floor(m / 60)
-  if (h < 24) return `${h}h`
-  return `${Math.floor(h / 24)}d`
-}
 
 function domain(url) {
   try { return new URL(url).hostname.replace(/^www\./, '') } catch { return url }
@@ -67,12 +57,14 @@ export default function FeedView({ supabase, topics, allTags = [], onSaveItem, a
 
   function chooseSort(mode) {
     setSortMode(mode)
-    try { localStorage.setItem('medialog_feed_sort', mode) } catch {}
+    // Private mode / blocked storage: the sort still applies this session,
+    // it just won't be remembered. Nothing to tell the user about.
+    try { localStorage.setItem('medialog_feed_sort', mode) } catch { /* storage unavailable */ }
   }
   function toggleHideLowSignal() {
     setHideLowSignal((v) => {
       const next = !v
-      try { localStorage.setItem('medialog_feed_hide_lowsignal', String(next)) } catch {}
+      try { localStorage.setItem('medialog_feed_hide_lowsignal', String(next)) } catch { /* storage unavailable */ }
       return next
     })
   }
@@ -520,7 +512,9 @@ export default function FeedView({ supabase, topics, allTags = [], onSaveItem, a
             <div className="feed-item-meta">
               <span className="feed-item-source">{item.feeds?.name || domain(item.url)}</span>
               <span className="feed-item-sep">·</span>
-              <span className="feed-item-age">{timeAgo(item.published_at) || '—'}</span>
+              {/* shortAge returns null for a missing or unparseable date, and the
+                  row still wants something in the slot — hence the em dash. */}
+              <span className="feed-item-age">{shortAge(item.published_at) ?? '—'}</span>
               {sortMode === 'relevant' && item._relevance > 0 && (
                 <span className="feed-item-relevance" title="matches your topics">★ {item._relevance}</span>
               )}

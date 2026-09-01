@@ -129,3 +129,34 @@ test('refreshing does not get stuck when the reload throws', async () => {
   await waitFor(() => expect(screen.getByTitle('Refresh')).toHaveTextContent('↻'))
   expect(await screen.findByText(/items exploded/)).toBeInTheDocument()
 })
+
+// §6.1: the age chip now comes from src/lib/timeFormat.js `shortAge`. The old
+// local `formatAge` returned '' for a dateless item; shortAge returns null,
+// which React renders as the same empty chip — pinned below so that stays true.
+test('age chip uses the shared compact formatter', async () => {
+  const { container } = render(
+    <FeedWidget supabase={mockSupabase({ items: [makeItem()] })} />)
+  await screen.findByText('Test Article')
+  expect(container.querySelector('.fw-age').textContent).toBe('2h')
+})
+
+test('under a minute reads "just now", not "0m"', async () => {
+  const item = makeItem({ published_at: new Date(Date.now() - 30000).toISOString() })
+  const { container } = render(<FeedWidget supabase={mockSupabase({ items: [item] })} />)
+  await screen.findByText('Test Article')
+  expect(container.querySelector('.fw-age').textContent).toBe('just now')
+})
+
+test('past a year reads "1y", not a three-digit day count', async () => {
+  const item = makeItem({ published_at: new Date(Date.now() - 400 * 86400000).toISOString() })
+  const { container } = render(<FeedWidget supabase={mockSupabase({ items: [item] })} />)
+  await screen.findByText('Test Article')
+  expect(container.querySelector('.fw-age').textContent).toBe('1y')
+})
+
+test('an item with no date at all renders an empty chip, not "null"', async () => {
+  const item = makeItem({ published_at: null, fetched_at: null })
+  const { container } = render(<FeedWidget supabase={mockSupabase({ items: [item] })} />)
+  await screen.findByText('Test Article')
+  expect(container.querySelector('.fw-age').textContent).toBe('')
+})

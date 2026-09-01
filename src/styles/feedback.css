@@ -103,19 +103,6 @@
 }
 .toast-action-btn:hover { background: rgba(255,255,255,0.35); }
 
-/* ── Backup note ────────────────────────────────────────────────────────────── */
-.backup-note {
-  font-size: var(--text-sm);
-  color: var(--muted);
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 10px 12px;
-  margin-top: 8px;
-  line-height: 1.5;
-}
-.backup-note strong { color: var(--text); }
-
 /* ── Revisit ──────────────────────────────────────────────────────────────── */
 .revisit-view { display: flex; flex-direction: column; gap: 28px; max-width: 680px; }
 .revisit-section { display: flex; flex-direction: column; gap: 10px; }

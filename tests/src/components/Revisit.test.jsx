@@ -105,3 +105,25 @@ test('a failed archive does not advance past the entry', async () => {
   expect(onArchive).toHaveBeenCalledWith(entries[0])
   expect(screen.getByText('note a')).toBeInTheDocument()
 })
+
+// §6.1: the recent-activity age now comes from src/lib/timeFormat.js `timeAgo`.
+// Revisit's own prose wording was the one the shared module adopted, so these
+// should be unchanged behaviour — they exist to catch a regression if the
+// shared formatter's wording ever drifts.
+test('recent activity renders the prose age, and omits it when there is no date', () => {
+  const ago = (ms) => new Date(Date.now() - ms).toISOString()
+  const { container } = render(
+    <Revisit
+      entries={[]}
+      onSeen={vi.fn()}
+      recentActivity={[
+        { id: 'r1', title: 'Fresh', updated_at: ago(30 * 1000), tags: [] },
+        { id: 'r2', title: 'Old', updated_at: ago(400 * 86400000), tags: [] },
+        { id: 'r3', title: 'Weeks', updated_at: ago(10 * 86400000), tags: [] },
+        { id: 'r4', title: 'Undated', updated_at: null, tags: [] },
+      ]}
+    />,
+  )
+  expect([...container.querySelectorAll('.activity-age')].map((n) => n.textContent))
+    .toEqual(['just now', '1y ago', '1w ago'])
+})

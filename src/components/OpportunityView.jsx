@@ -1,76 +1,15 @@
 import { useEffect, useState, useCallback } from 'react'
 import { readPref, writePref } from '../lib/localPref.js'
-
-const SOURCE_COLORS = {
-  twitter: 'sky',
-  hn: 'orange',
-  github: 'purple',
-  manual: 'slate',
-  'program-alert': 'amber',
-}
+import useCurrentTime, { minutesSince } from '../hooks/useCurrentTime.js'
+import {
+  OppRow,
+  fetchOpportunities,
+  interleaved,
+  matchesFilter,
+  opportunityMutations,
+} from '../lib/opportunities.jsx'
 
 const FILTERS = ['All', 'SWE', 'Quant', 'PM', 'Fellowship', 'Saved', 'Unread']
-
-const SOURCE_PRIORITY = { 'program-alert': 0, twitter: 1, hn: 2, manual: 3, github: 4 }
-
-function interleaved(items) {
-  const buckets = {}
-  for (const item of items) {
-    const src = item.source
-    if (!buckets[src]) buckets[src] = []
-    buckets[src].push(item)
-  }
-  const sources = Object.keys(buckets).sort((a, b) => (SOURCE_PRIORITY[a] ?? 9) - (SOURCE_PRIORITY[b] ?? 9))
-  const result = []
-  let added = true
-  while (added) {
-    added = false
-    for (const src of sources) {
-      if (buckets[src].length) { result.push(buckets[src].shift()); added = true }
-    }
-  }
-  return result
-}
-
-function formatAge(date) {
-  const diff = Date.now() - date.getTime()
-  const h = Math.floor(diff / 3600000)
-  if (h < 1) return `${Math.floor(diff / 60000)}m`
-  if (h < 24) return `${h}h`
-  return `${Math.floor(h / 24)}d`
-}
-
-function OppRow({ item, onRead, onSave, onTrack }) {
-  const chipColor = SOURCE_COLORS[item.source] ?? 'slate'
-  const age = item.posted_at ? formatAge(new Date(item.posted_at)) : ''
-  const label = item.company ? `${item.company} — ${item.title}` : item.title
-
-  return (
-    <div className={`opp-row ${item.is_read ? 'read' : ''}`}>
-      {!item.is_read && <span className="opp-dot" />}
-      <span className={`opp-chip opp-chip-${chipColor}`}>{item.source}</span>
-      <a
-        className="opp-title"
-        href={item.url}
-        target="_blank"
-        rel="noreferrer"
-        onClick={() => onRead(item.id)}
-      >
-        {label}
-      </a>
-      {item.body && <span className="opp-location">{item.body}</span>}
-      <span className="opp-age">{age}</span>
-      <button
-        className={`opp-save-btn ${item.is_saved ? 'saved' : ''}`}
-        onClick={() => onSave(item.id, item.is_saved)}
-        title="Save"
-      >★</button>
-      {onTrack && (
-        <button className="opp-track-btn" onClick={() => onTrack(item)} title="Track in Applications">→</button>
-      )}
-    </div>
-  )
-}
 
 export default function OpportunityView({ supabase, onTrack, onUnreadCount }) {
   const [items, setItems] = useState([])
@@ -84,27 +23,14 @@ export default function OpportunityView({ supabase, onTrack, onUnreadCount }) {
   const [refreshing, setRefreshing] = useState(false)
   const [lastChecked, setLastChecked] = useState(null)
 
+  const now = useCurrentTime()
+
   const load = useCallback(async () => {
     setLoading(true)
-    const { data } = await supabase
-      .from('opportunities')
-      .select('*')
-      .order('posted_at', { ascending: false })
-      .limit(300)
-    if (data) {
-      // read/saved is per-user state; `opportunities` rows are shared by everyone.
-      const { data: state } = await supabase
-        .from('opportunity_state')
-        .select('opportunity_id, is_read, is_saved')
-      const byId = new Map((state ?? []).map((s) => [s.opportunity_id, s]))
-      const merged = data.map((i) => ({
-        ...i,
-        is_read: byId.get(i.id)?.is_read ?? false,
-        is_saved: byId.get(i.id)?.is_saved ?? false,
-      }))
+    const merged = await fetchOpportunities(supabase, 300)
+    if (merged) {
       setItems(merged)
-      const unreadCount = merged.filter(i => !i.is_read).length
-      onUnreadCount?.(unreadCount)
+      onUnreadCount?.(merged.filter((i) => !i.is_read).length)
     }
     setLastChecked(new Date())
     setLoading(false)
@@ -137,42 +63,7 @@ export default function OpportunityView({ supabase, onTrack, onUnreadCount }) {
 
   useEffect(() => { load().then(() => refreshFromSource(false)) }, [load])
 
-  // opportunity_state.user_id defaults to auth.uid(); the primary key makes these upserts.
-  async function saveState(rows) {
-    if (!rows.length) return
-    await supabase.from('opportunity_state').upsert(rows, { onConflict: 'user_id,opportunity_id' })
-  }
-
-  function stateRow(id, patch) {
-    const cur = items.find((i) => i.id === id)
-    return {
-      opportunity_id: id,
-      is_read: cur?.is_read ?? false,
-      is_saved: cur?.is_saved ?? false,
-      ...patch,
-      updated_at: new Date().toISOString(),
-    }
-  }
-
-  async function markRead(id) {
-    const row = stateRow(id, { is_read: true })
-    setItems((prev) => prev.map((i) => i.id === id ? { ...i, is_read: true } : i))
-    await saveState([row])
-  }
-
-  async function markAllRead() {
-    const ids = filtered.filter(i => !i.is_read).map(i => i.id)
-    if (!ids.length) return
-    const rows = ids.map((id) => stateRow(id, { is_read: true }))
-    setItems((prev) => prev.map((i) => ids.includes(i.id) ? { ...i, is_read: true } : i))
-    await saveState(rows)
-  }
-
-  async function toggleSaved(id, current) {
-    const row = stateRow(id, { is_saved: !current })
-    setItems((prev) => prev.map((i) => i.id === id ? { ...i, is_saved: !current } : i))
-    await saveState([row])
-  }
+  const { markRead, markAllRead, toggleSaved } = opportunityMutations(supabase, items, setItems)
 
   async function handleManualAdd(e) {
     e.preventDefault()
@@ -194,21 +85,11 @@ export default function OpportunityView({ supabase, onTrack, onUnreadCount }) {
     setAddUrl(''); setAddNote(''); setShowAdd(false)
   }
 
-  const filtered = items.filter((i) => {
-    if (filter === 'Saved') return i.is_saved
-    if (filter === 'Unread') return !i.is_read
-    if (filter === 'Twitter') return i.source === 'twitter'
-    if (filter === 'HN') return i.source === 'hn'
-    if (filter === 'SWE') return i.tags?.some((t) => ['swe', 'startup', 'big-tech', 'internship'].includes(t))
-    if (filter === 'Quant') return i.tags?.includes('quant')
-    if (filter === 'PM') return i.tags?.includes('pm')
-    if (filter === 'Fellowship') return i.tags?.some((t) => ['fellowship', 'program', 'program-alert'].includes(t))
-    return true
-  })
+  const filtered = items.filter((i) => matchesFilter(i, filter))
 
   const unread = filtered.filter((i) => !i.is_read)
   const read = filtered.filter((i) => i.is_read)
-  const minutesAgo = lastChecked ? Math.floor((Date.now() - lastChecked.getTime()) / 60000) : null
+  const minutesAgo = minutesSince(lastChecked, now)
 
   const visibleUnread = interleaved(unread)
   const visibleRead = showRead ? read : []
@@ -226,7 +107,7 @@ export default function OpportunityView({ supabase, onTrack, onUnreadCount }) {
               <span className="opp-last-checked">checked {minutesAgo}m ago</span>
             )}
             {unread.length > 0 && (
-              <button className="opp-mark-all-btn" onClick={markAllRead}>
+              <button className="opp-mark-all-btn" onClick={() => markAllRead(filtered)}>
                 Mark all read
               </button>
             )}

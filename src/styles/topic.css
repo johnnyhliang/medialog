@@ -40,20 +40,6 @@
 .topic-more-danger { color: var(--danger) !important; }
 .topic-more-danger:hover { background: var(--tint-red-bg) !important; }
 
-/* ── Topic action buttons (archive / delete in topic header) ────────────────── */
-.topic-action-btn {
-  font-size: var(--text-sm);
-  padding: 3px 10px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
-  background: transparent;
-  color: var(--muted);
-  cursor: pointer;
-}
-.topic-action-btn:hover { background: var(--surface-2); color: var(--text); }
-.topic-action-btn--danger { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 30%, transparent); }
-.topic-action-btn--danger:hover { background: var(--tint-red-bg); color: var(--danger); }
-
 /* ── Topic view layout ───────────────────────────────────────────────────────── */
 .topic-header {
   display: flex;

@@ -1,19 +1,6 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabaseClient.js'
-
-function passwordStrength(pw) {
-  if (!pw) return { score: 0, label: '', color: 'transparent' }
-  let score = 0
-  if (pw.length >= 8) score++
-  if (pw.length >= 12) score++
-  if (/[A-Z]/.test(pw)) score++
-  if (/[0-9]/.test(pw)) score++
-  if (/[^A-Za-z0-9]/.test(pw)) score++
-  if (score <= 1) return { score, label: 'weak', color: 'var(--pw-weak)' }
-  if (score <= 2) return { score, label: 'fair', color: 'var(--pw-fair)' }
-  if (score <= 3) return { score, label: 'good', color: 'var(--pw-good)' }
-  return { score, label: 'strong', color: 'var(--pw-strong)' }
-}
+import { passwordStrength } from '../lib/passwordStrength.js'
 
 export default function SetPasswordModal({ onDone }) {
   const [password, setPassword] = useState('')

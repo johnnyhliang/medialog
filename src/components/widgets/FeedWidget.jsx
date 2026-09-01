@@ -1,14 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { listFeeds, listFeedItems, dismissFeedItem, markFeedItemSaved } from '../../lib/db/feeds.js'
-
-function formatAge(dateStr) {
-  if (!dateStr) return ''
-  const diff = Math.max(0, Date.now() - new Date(dateStr).getTime())
-  const h = Math.floor(diff / 3600000)
-  if (h < 1) return `${Math.floor(diff / 60000)}m`
-  if (h < 24) return `${h}h`
-  return `${Math.floor(h / 24)}d`
-}
+import { shortAge } from '../../lib/timeFormat.js'
 
 export default function FeedWidget({ supabase, onSave, onGoToFeed }) {
   const [items, setItems] = useState([])
@@ -107,7 +99,9 @@ export default function FeedWidget({ supabase, onSave, onGoToFeed }) {
                 >
                   {item.title}
                 </a>
-                <span className="fw-age">{formatAge(item.published_at || item.fetched_at)}</span>
+                {/* The old local copy returned '' for a dateless item; shortAge returns
+                    null, which React renders as nothing — the same empty chip. */}
+                <span className="fw-age">{shortAge(item.published_at || item.fetched_at)}</span>
                 <button className="fw-save-btn" onClick={() => save(item)} title="Save to MediaLog">★</button>
                 <button className="fw-dismiss-btn" onClick={() => dismiss(item)} title="Dismiss">×</button>
               </div>

@@ -25,7 +25,7 @@ import CommandPalette from './components/CommandPalette.jsx'
 import AssistantPanel from './components/AssistantPanel.jsx'
 import { Sparkles } from 'lucide-react'
 import { listVersions, createVersion } from './lib/db/versions.js'
-import { fetchTitle, fetchLinkPreview } from './lib/enrich.js'
+import { fetchLinkPreview } from './lib/enrich.js'
 import { preservationPatch } from './lib/preservation.js'
 import { chunkEntryAsync } from './lib/chunkEntry.js'
 import { track } from './lib/track.js'
@@ -496,7 +496,7 @@ function Workspace() {
     // user where the result is visible rather than assuming the path did.
     setView('settings')
     window.history.replaceState({}, document.title, window.location.pathname)
-    const { data, error } = await supabase.functions.invoke('github-token', { body: { code } })
+    const { error } = await supabase.functions.invoke('github-token', { body: { code } })
     if (error) alert(`GitHub Connection Failed: ${error.message}`)
     else window.location.reload()
   }
@@ -914,7 +914,7 @@ function Workspace() {
     return created.length
   }
 
-  async function handleMigrationImport(entries, raw) {
+  async function handleMigrationImport(entries, _raw) {
     // Group by suggestedTopic; topics without a match go to Inbox
     const inbox = inboxTopic || (await getTopicByName(supabase, 'Inbox'))
     const byTopic = {}

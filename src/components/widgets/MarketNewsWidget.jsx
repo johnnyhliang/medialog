@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import useCurrentTime, { minutesSince } from '../../hooks/useCurrentTime.js'
 
 const TICKERS = ['VOO', 'NVDA', 'AMZN', 'AVGO', 'MA', 'V', 'SPGI']
 const POLL_MS = 300_000
@@ -8,6 +9,7 @@ export default function MarketNewsWidget({ supabase }) {
   const [error, setError] = useState(false)
   const [updatedAt, setUpdatedAt] = useState(null)
   const intervalRef = useRef(null)
+  const now = useCurrentTime()
 
   async function load() {
     const { data: result, error: err } = await supabase.functions.invoke('market', {
@@ -28,7 +30,7 @@ export default function MarketNewsWidget({ supabase }) {
   if (error) return <p className="kw-empty">market data unavailable</p>
   if (!data)  return <p className="kw-empty">loading…</p>
 
-  const minutesAgo = updatedAt ? Math.floor((Date.now() - updatedAt.getTime()) / 60000) : 0
+  const minutesAgo = minutesSince(updatedAt, now) ?? 0
 
   return (
     <div className="kw-market">

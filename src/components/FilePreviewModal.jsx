@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { ExternalLink, X } from 'lucide-react'
 import { classifyUrl } from '../lib/classifyUrl.js'
+import { useEscapeKey } from '../hooks/useEscapeKey.js'
 import MarkdownView from './MarkdownView.jsx'
 
 const PdfViewer = lazy(() => import('./PdfViewer.jsx'))
@@ -66,14 +67,7 @@ export default function FilePreviewModal({ url, onClose }) {
   const name = fileName(url)
   const icon = FILE_ICONS[type] || '📎'
 
-  // Escape key handler
-  useEffect(() => {
-    function onKey(e) {
-      if (e.key === 'Escape') onClose()
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [onClose])
+  useEscapeKey(onClose)
 
   // Focus management: focus close button on open, restore on close
   useEffect(() => {

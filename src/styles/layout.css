@@ -55,9 +55,7 @@
 .app.sidebar-collapsed .brand-row .signout,
 .app.sidebar-collapsed .account-indicator,
 .app.sidebar-collapsed .nav button span,
-.app.sidebar-collapsed .topic-list-label,
-.app.sidebar-collapsed .topic-add,
-.app.sidebar-collapsed .topic-name-text {
+.app.sidebar-collapsed .topic-add {
   opacity: 0;
   pointer-events: none;
   width: 0;
@@ -70,14 +68,6 @@
   padding: 8px 0;
   border-radius: var(--radius);
 }
-.app.sidebar-collapsed .topic-item button {
-  width: 44px;
-  justify-content: center;
-  padding: 6px 0;
-  font-size: var(--text-xs);
-  font-weight: 600;
-}
-
 /* Nav items + topics scroll together as one region, so the topic list uses the
    full remaining sidebar height instead of a cramped nested scrollbox. The
    toggle button stays pinned below this container. */

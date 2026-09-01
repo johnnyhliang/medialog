@@ -1,20 +1,7 @@
 import { useState, useEffect, useLayoutEffect } from 'react'
 import anime from 'animejs'
 import { supabase } from '../lib/supabaseClient.js'
-
-function passwordStrength(pw) {
-  if (!pw) return { score: 0, label: '', color: 'transparent' }
-  let score = 0
-  if (pw.length >= 8) score++
-  if (pw.length >= 12) score++
-  if (/[A-Z]/.test(pw)) score++
-  if (/[0-9]/.test(pw)) score++
-  if (/[^A-Za-z0-9]/.test(pw)) score++
-  if (score <= 1) return { score, label: 'weak', color: 'var(--pw-weak)' }
-  if (score <= 2) return { score, label: 'fair', color: 'var(--pw-fair)' }
-  if (score <= 3) return { score, label: 'good', color: 'var(--pw-good)' }
-  return { score, label: 'strong', color: 'var(--pw-strong)' }
-}
+import { passwordStrength } from '../lib/passwordStrength.js'
 
 // Scroll reveals: elements with [data-reveal] fade/rise in once; sketches
 // ([data-reveal] .sketch paths) draw themselves via pathLength/dashoffset.

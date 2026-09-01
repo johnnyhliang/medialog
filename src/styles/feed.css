@@ -101,16 +101,6 @@
   padding: 1px 6px;
   flex-shrink: 0;
 }
-.feed-spinner {
-  width: 10px; height: 10px;
-  border: 1.5px solid var(--border);
-  border-top-color: var(--accent);
-  border-radius: 50%;
-  animation: spin .7s linear infinite;
-  display: inline-block;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
-
 /* items panel */
 .feed-items {
   overflow-y: auto;

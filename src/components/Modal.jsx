@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { useEscapeKey } from '../hooks/useEscapeKey.js'
 
 export default function Modal({ children, onClose, maxWidth = '420px', label }) {
   const overlayRef = useRef(null)
@@ -11,12 +12,7 @@ export default function Modal({ children, onClose, maxWidth = '420px', label }) 
     }
   }, [])
 
-  // Re-register keydown listener when onClose changes
-  useEffect(() => {
-    function onKey(e) { if (e.key === 'Escape') onClose() }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [onClose])
+  useEscapeKey(onClose)
 
   return (
     <div

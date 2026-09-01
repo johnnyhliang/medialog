@@ -133,11 +133,6 @@
 .trash-topic-name { font-weight: 500; font-size: var(--text-sm); }
 .trash-topic-meta { font-size: var(--text-xs); color: var(--muted); margin-top: 2px; }
 
-/* Always show three-dot menus on touch devices (no hover available) */
-@media (hover: none) {
-  .topic-menu-btn { display: flex; align-items: center; }
-}
-
 /* ── Nav dot badge ──────────────────────────────────────────────────────────── */
 .nav-dot {
   position: absolute;

@@ -185,11 +185,6 @@
   line-height: 1.5;
 }
 
-.card-og-desc {
-  -webkit-line-clamp: 2;
-  font-style: italic;
-}
-
 /* ── Notion-style bookmark card (link-only entries) ─────────────────────────── */
 .card-bookmark-wrap {
   display: flex;

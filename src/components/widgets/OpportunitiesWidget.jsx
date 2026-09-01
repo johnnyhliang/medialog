@@ -1,77 +1,14 @@
 import { useEffect, useState, useCallback } from 'react'
-
-const SOURCE_COLORS = {
-  twitter: 'sky',
-  greenhouse: 'green',
-  lever: 'green',
-  ashby: 'green',
-  hn: 'orange',
-  github: 'purple',
-  manual: 'slate',
-  'program-alert': 'amber',
-}
+import useCurrentTime, { minutesSince } from '../../hooks/useCurrentTime.js'
+import {
+  OppRow,
+  fetchOpportunities,
+  interleaved,
+  matchesFilter,
+  opportunityMutations,
+} from '../../lib/opportunities.jsx'
 
 const FILTERS = ['All', 'SWE', 'Quant', 'Fellowship', 'HN', 'Twitter', 'Saved']
-
-const SOURCE_PRIORITY = { 'program-alert': 0, twitter: 1, hn: 2, manual: 3, lever: 4, ashby: 4, greenhouse: 4, github: 5 }
-
-function interleaved(items) {
-  const buckets = {}
-  for (const item of items) {
-    const src = item.source
-    if (!buckets[src]) buckets[src] = []
-    buckets[src].push(item)
-  }
-  const sources = Object.keys(buckets).sort((a, b) => (SOURCE_PRIORITY[a] ?? 9) - (SOURCE_PRIORITY[b] ?? 9))
-  const result = []
-  let added = true
-  while (added) {
-    added = false
-    for (const src of sources) {
-      if (buckets[src].length) { result.push(buckets[src].shift()); added = true }
-    }
-  }
-  return result
-}
-
-function formatAge(date) {
-  const diff = Date.now() - date.getTime()
-  const h = Math.floor(diff / 3600000)
-  if (h < 1) return `${Math.floor(diff / 60000)}m`
-  if (h < 24) return `${h}h`
-  return `${Math.floor(h / 24)}d`
-}
-
-function OppRow({ item, onRead, onSave, onTrack }) {
-  const chipColor = SOURCE_COLORS[item.source] ?? 'slate'
-  const age = item.posted_at ? formatAge(new Date(item.posted_at)) : ''
-  const label = item.company ? `${item.company} — ${item.title}` : item.title
-
-  return (
-    <div className={`opp-row ${item.is_read ? 'read' : ''}`}>
-      {!item.is_read && <span className="opp-dot" />}
-      <span className={`opp-chip opp-chip-${chipColor}`}>{item.source}</span>
-      <a
-        className="opp-title"
-        href={item.url}
-        target="_blank"
-        rel="noreferrer"
-        onClick={() => onRead(item.id)}
-      >
-        {label}
-      </a>
-      <span className="opp-age">{age}</span>
-      <button
-        className={`opp-save-btn ${item.is_saved ? 'saved' : ''}`}
-        onClick={() => onSave(item.id, item.is_saved)}
-        title="Save"
-      >★</button>
-      {onTrack && (
-        <button className="opp-track-btn" onClick={() => onTrack(item)} title="Track">→</button>
-      )}
-    </div>
-  )
-}
 
 export default function OpportunitiesWidget({ supabase, onTrack }) {
   const [items, setItems] = useState([])
@@ -84,28 +21,18 @@ export default function OpportunitiesWidget({ supabase, onTrack }) {
   const [lastChecked, setLastChecked] = useState(null)
   const [loading, setLoading] = useState(true)
 
+  const now = useCurrentTime()
+
   const load = useCallback(async () => {
-    const { data } = await supabase
-      .from('opportunities')
-      .select('*')
-      .order('posted_at', { ascending: false })
-      .limit(100)
-    if (data) setItems(data)
+    const merged = await fetchOpportunities(supabase, 100)
+    if (merged) setItems(merged)
     setLastChecked(new Date())
     setLoading(false)
   }, [supabase])
 
   useEffect(() => { load() }, [load])
 
-  async function markRead(id) {
-    setItems((prev) => prev.map((i) => i.id === id ? { ...i, is_read: true } : i))
-    await supabase.from('opportunities').update({ is_read: true }).eq('id', id)
-  }
-
-  async function toggleSaved(id, current) {
-    setItems((prev) => prev.map((i) => i.id === id ? { ...i, is_saved: !current } : i))
-    await supabase.from('opportunities').update({ is_saved: !current }).eq('id', id)
-  }
+  const { markRead, toggleSaved } = opportunityMutations(supabase, items, setItems)
 
   async function handleManualAdd(e) {
     e.preventDefault()
@@ -127,20 +54,12 @@ export default function OpportunitiesWidget({ supabase, onTrack }) {
     setAddUrl(''); setAddNote(''); setShowAdd(false)
   }
 
-  const filtered = items.filter((i) => {
-    if (filter === 'Saved') return i.is_saved
-    if (filter === 'Twitter') return i.source === 'twitter'
-    if (filter === 'HN') return i.source === 'hn'
-    if (filter === 'SWE') return i.tags?.some((t) => ['swe', 'startup', 'big-tech'].includes(t))
-    if (filter === 'Quant') return i.tags?.includes('quant')
-    if (filter === 'Fellowship') return i.tags?.some((t) => ['fellowship', 'program', 'program-alert'].includes(t))
-    return true
-  })
+  const filtered = items.filter((i) => matchesFilter(i, filter))
 
   const unread = filtered.filter((i) => !i.is_read)
   const read = filtered.filter((i) => i.is_read && !i.is_saved)
   const visible = showMore ? filtered : (filter === 'All' ? interleaved(unread).slice(0, 20) : unread.slice(0, 20))
-  const minutesAgo = lastChecked ? Math.floor((Date.now() - lastChecked.getTime()) / 60000) : null
+  const minutesAgo = minutesSince(lastChecked, now)
 
   return (
     <div className="opp-widget">

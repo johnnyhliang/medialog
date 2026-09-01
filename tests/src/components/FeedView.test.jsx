@@ -101,12 +101,13 @@ describe('FeedView serverRefresh', () => {
     renderView()
 
     // Generous timeouts: this path is two awaited reloads deep and the default
-    // 1s window is flaky when the whole suite runs in parallel.
-    expect(await screen.findByText(/reload exploded/, {}, { timeout: 5000 })).toBeInTheDocument()
-    // Button label is '…' while refreshing and '↻' once it settles.
-    const btn = screen.getByTitle('Refresh all feeds')
-    await waitFor(() => expect(btn).toHaveTextContent('↻'), { timeout: 5000 })
-    expect(btn).not.toBeDisabled()
+    // 1s window is flaky when the whole suite runs in parallel. waitFor rather
+    // than holding the node findByText resolves to — see the sibling test.
+    await waitFor(() => expect(screen.getByText(/reload exploded/)).toBeInTheDocument(), { timeout: 5000 })
+    // Button label is '…' while refreshing and '↻' once it settles. Re-queried
+    // inside each attempt so a re-render swapping the node cannot fail this.
+    await waitFor(() => expect(screen.getByTitle('Refresh all feeds')).toHaveTextContent('↻'), { timeout: 5000 })
+    expect(screen.getByTitle('Refresh all feeds')).not.toBeDisabled()
   })
 
   test('does not leave refreshing stuck when listFeedItems throws', async () => {
@@ -115,7 +116,12 @@ describe('FeedView serverRefresh', () => {
 
     renderView()
 
-    expect(await screen.findByText(/items exploded/, {}, { timeout: 5000 })).toBeInTheDocument()
+    // waitFor, not findByText-into-an-assertion: findByText resolves a NODE, and
+    // asserting on that held reference races a re-render that replaces it. Passed
+    // in isolation and failed only under full-suite parallel load, which is the
+    // signature of a held-reference race rather than a slow query. waitFor
+    // re-queries on every attempt, so a swapped node is not a failure.
+    await waitFor(() => expect(screen.getByText(/items exploded/)).toBeInTheDocument(), { timeout: 5000 })
     await waitFor(() => expect(screen.getByTitle('Refresh all feeds')).toHaveTextContent('↻'), { timeout: 5000 })
   })
 })
@@ -137,5 +143,49 @@ describe('FeedView handleDeleteFeed', () => {
       expect.stringContaining('delete exploded'), 'error',
     ))
     expect(screen.getByText('Keeper')).toBeInTheDocument()
+  })
+})
+
+// §6.1: the item age chip now comes from src/lib/timeFormat.js `shortAge`, not
+// a local copy that stopped at days. These pin the two boundaries where the
+// visible output actually changed, plus the missing-date fallback that the
+// `?? '—'` at the call site depends on.
+describe('FeedView item age', () => {
+  const ago = (ms) => new Date(Date.now() - ms).toISOString()
+
+  function itemWith(published_at) {
+    return [{
+      id: 'i1', feed_id: 'f1', title: 'An Article', url: 'https://example.com/a',
+      summary: null, published_at, feeds: { name: 'Blog' },
+    }]
+  }
+
+  async function ageText(published_at) {
+    listFeedItems.mockResolvedValue(itemWith(published_at))
+    // Scoped to this render's own container: some tests render twice, and a
+    // global query would match the first render's row.
+    const { container } = renderView()
+    await waitFor(() => expect(container.querySelector('.feed-item-age')).not.toBeNull())
+    return [...container.querySelectorAll('.feed-item-age')].at(-1).textContent
+  }
+
+  test('under a minute reads "just now", not "0m"', async () => {
+    expect(await ageText(ago(30 * 1000))).toBe('just now')
+  })
+
+  test('past a year reads "1y", not a three-digit day count', async () => {
+    expect(await ageText(ago(400 * 86400000))).toBe('1y')
+  })
+
+  test('weeks, which the old local copy rendered as days', async () => {
+    expect(await ageText(ago(10 * 86400000))).toBe('1w')
+  })
+
+  test('months, which the old local copy rendered as days', async () => {
+    expect(await ageText(ago(60 * 86400000))).toBe('2mo')
+  })
+
+  test('a missing published_at falls back to the em dash', async () => {
+    expect(await ageText(null)).toBe('—')
   })
 })

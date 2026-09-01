@@ -148,20 +148,16 @@
 }
 /* Primary buttons get the signature press-down interaction */
 [data-style="brutalist"] .btn-primary,
-[data-style="brutalist"] .nav-btn,
-[data-style="brutalist"] .quick-add-btn,
 [data-style="brutalist"] button.primary {
   box-shadow: 3px 3px 0 var(--text);
   font-weight: 700;
 }
 [data-style="brutalist"] .btn-primary:hover,
-[data-style="brutalist"] .quick-add-btn:hover,
 [data-style="brutalist"] button.primary:hover {
   transform: translate(-1px, -1px);
   box-shadow: 4px 4px 0 var(--text);
 }
 [data-style="brutalist"] .btn-primary:active,
-[data-style="brutalist"] .quick-add-btn:active,
 [data-style="brutalist"] button.primary:active {
   transform: translate(2px, 2px);
   box-shadow: 1px 1px 0 var(--text);

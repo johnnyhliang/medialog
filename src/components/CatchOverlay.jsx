@@ -1,17 +1,12 @@
-import { useEffect } from 'react'
 import QuickAdd from './QuickAdd.jsx'
+import { useEscapeKey } from '../hooks/useEscapeKey.js'
 
 // Catch mode: park a thought from anywhere in the app without navigating.
 // Always saves to Inbox — classification is triage's job, not capture's.
 export default function CatchOverlay({ open, onClose, onAdd, onCheckDuplicate, supabase }) {
-  useEffect(() => {
-    if (!open) return
-    function onKey(e) {
-      if (e.key === 'Escape') onClose()
-    }
-    document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
-  }, [open, onClose])
+  // Only listens while open — a closed overlay stays mounted, and must not
+  // eat an Escape aimed at whatever is actually on screen.
+  useEscapeKey(onClose, open)
 
   if (!open) return null
 
