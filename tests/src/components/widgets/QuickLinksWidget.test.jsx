@@ -80,3 +80,58 @@ test('shows an empty state when there are no links', async () => {
   render(<QuickLinksWidget supabase={sb} />)
   expect(await screen.findByText(/no tools yet/)).toBeTruthy()
 })
+
+const { updateQuickLink } = await import('../../../../src/lib/db/quickLinks.js')
+
+// Paired with 'shows an empty state when there are no links' above: the shelf
+// must be able to say "the load failed" and "you have no links" differently.
+test('a failed load says so instead of showing an empty shelf', async () => {
+  listQuickLinks.mockRejectedValue(new Error('network down'))
+  render(<QuickLinksWidget supabase={sb} />)
+  expect(await screen.findByText(/network down/)).toBeTruthy()
+  // "no tools yet — hit edit to add one" would invite re-adding links that exist
+  expect(screen.queryByText(/no tools yet/)).toBeNull()
+})
+
+test('a failed add keeps the draft and does not show the link as saved', async () => {
+  createQuickLink.mockRejectedValue(new Error('insert rejected'))
+  render(<QuickLinksWidget supabase={sb} />)
+  await screen.findByText('gmail')
+  await userEvent.click(screen.getByText('edit'))
+  await userEvent.type(screen.getByLabelText('new link name'), 'regex101')
+  await userEvent.type(screen.getByLabelText('new link url'), 'regex101.com')
+  await userEvent.click(screen.getByText('add'))
+
+  expect(await screen.findByText(/insert rejected/)).toBeTruthy()
+  // the row must not appear as an edit row — that would be a lie about the db
+  expect(screen.queryByLabelText('label for regex101')).toBeNull()
+  // and what was typed is still there to retry with
+  expect(screen.getByLabelText('new link name').value).toBe('regex101')
+})
+
+test('a failed delete leaves the link on screen and re-reads the server', async () => {
+  deleteQuickLink.mockRejectedValue(new Error('delete rejected'))
+  render(<QuickLinksWidget supabase={sb} />)
+  await screen.findByText('gmail')
+  await userEvent.click(screen.getByText('edit'))
+  await userEvent.click(screen.getByLabelText('remove gmail'))
+
+  expect(await screen.findByText(/delete rejected/)).toBeTruthy()
+  // still present, because the row was never removed optimistically
+  expect(screen.getByLabelText('label for gmail')).toBeTruthy()
+})
+
+test('a failed edit re-reads the server rather than rolling back a keystroke', async () => {
+  updateQuickLink.mockRejectedValue(new Error('update rejected'))
+  render(<QuickLinksWidget supabase={sb} />)
+  await screen.findByText('gmail')
+  await userEvent.click(screen.getByText('edit'))
+  // Two keystrokes: a remembered-previous-value rollback would restore 'gmailx'
+  // (the last optimistic value) rather than the persisted 'gmail'. See
+  // docs/tech-debt.md #5 — re-reading is the only thing that works.
+  await userEvent.type(screen.getByLabelText('label for gmail'), 'xy')
+
+  await waitFor(() => expect(screen.getByText(/update rejected/)).toBeTruthy())
+  await waitFor(() => expect(screen.getByLabelText('label for gmail').value).toBe('gmail'))
+  expect(listQuickLinks.mock.calls.length).toBeGreaterThan(1)
+})

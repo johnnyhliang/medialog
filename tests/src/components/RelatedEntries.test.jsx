@@ -42,3 +42,28 @@ test('reports when there is nothing related', async () => {
   fireEvent.click(screen.getByRole('button', { name: /related/i }))
   expect(await screen.findByText(/nothing related/i)).toBeTruthy()
 })
+
+// The whole point of commit 22448bf: a failed lookup must not be able to
+// masquerade as "this entry has no neighbours". These two tests are a pair —
+// each one is only meaningful because the other exists.
+test('a failed lookup reports the failure instead of claiming nothing is related', async () => {
+  const { relatedTo } = await import('../../../src/lib/db/retrieval.js')
+  relatedTo.mockRejectedValueOnce(new Error('connection refused'))
+  render(<RelatedEntries supabase={{}} entryId="e1" onOpen={vi.fn()} />)
+  fireEvent.click(screen.getByRole('button', { name: /related/i }))
+  expect(await screen.findByText(/couldn’t load related entries/i)).toBeTruthy()
+  expect(screen.getByText(/connection refused/)).toBeTruthy()
+  // the empty copy is the wrong answer here, not merely a less good one
+  expect(screen.queryByText(/nothing related/i)).toBeNull()
+  // and the retry affordance comes back, which the empty state does not offer
+  expect(screen.getByRole('button', { name: /try again/i })).toBeTruthy()
+})
+
+test('a genuine empty result does not render as an error', async () => {
+  const { relatedTo } = await import('../../../src/lib/db/retrieval.js')
+  relatedTo.mockResolvedValueOnce([])
+  render(<RelatedEntries supabase={{}} entryId="e1" onOpen={vi.fn()} />)
+  fireEvent.click(screen.getByRole('button', { name: /related/i }))
+  expect(await screen.findByText(/nothing related/i)).toBeTruthy()
+  expect(screen.queryByText(/couldn’t load/i)).toBeNull()
+})

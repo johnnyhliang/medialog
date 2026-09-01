@@ -97,7 +97,7 @@ export default function ExploreView({ supabase, topics, onSelectEntry, onOrdered
   const [queueLoading, setQueueLoading] = useState(true)
   const [searching, setSearching] = useState(false)
   const [semanticMode, setSemanticMode] = useState(false)
-  const [semanticError, setSemanticError] = useState(null)
+  const [searchError, setSearchError] = useState(null)
   const [statusFilter, setStatusFilter] = useState('all')
   const [topicFilter, setTopicFilter] = useState('all')
   const [recentSearches, setRecentSearches] = useState(() => {
@@ -131,9 +131,9 @@ export default function ExploreView({ supabase, topics, onSelectEntry, onOrdered
     // a cancellation flag, and every writer below is guarded by it.
     let cancelled = false
     if (timerRef.current) clearTimeout(timerRef.current)
-    if (!query.trim()) { setSearchResults(null); setSemanticError(null); return }
+    if (!query.trim()) { setSearchResults(null); setSearchError(null); return }
     setSearching(true)
-    setSemanticError(null)
+    setSearchError(null)
     const useSemantic = semanticMode && SEMANTIC_SEARCH_ENABLED
     const delay = useSemantic ? 600 : 300
     timerRef.current = setTimeout(async () => {
@@ -150,10 +150,17 @@ export default function ExploreView({ supabase, topics, onSelectEntry, onOrdered
         saveRecentSearch(query.trim())
       } catch (e) {
         if (cancelled) return
-        if (useSemantic) {
-          setSemanticError(e.message || 'semantic search failed')
-          setSearchResults([])
-        }
+        // Not `if (useSemantic)`. Keyword search throws too now that the db layer
+        // stops flattening failures to `[]`, and the old branch dropped that
+        // throw on the floor: no results, no error, the spinner just stopped and
+        // the list kept showing whatever the previous query returned. A failed
+        // search reports itself whichever engine ran it.
+        setSearchError(e.message || `${useSemantic ? 'semantic' : 'keyword'} search failed`)
+        // `[]` rather than leaving the stale results up, so the count and the
+        // list agree with the error message instead of contradicting it. The
+        // empty list is never read as "no matches" here — the error renders
+        // above it and suppresses the empty copy.
+        setSearchResults([])
       } finally {
         if (!cancelled) setSearching(false)
       }
@@ -272,15 +279,19 @@ export default function ExploreView({ supabase, topics, onSelectEntry, onOrdered
       </div>
 
       <div className="explore-results">
-        {semanticError && (
-          <p className="explore-semantic-error">{semanticError}</p>
+        {searchError && (
+          <p className="explore-semantic-error">{searchError}</p>
         )}
         {queueLoading && !isSearching ? (
           <p className="muted" style={{ padding: '24px 0' }}>loading…</p>
         ) : filtered.length === 0 ? (
-          <p className="muted" style={{ padding: '24px 0' }}>
-            {isSearching ? 'no results' : 'nothing in queue — nice.'}
-          </p>
+          // Suppressed when the search errored: "no results" is an answer about
+          // the library, and we do not have one to give.
+          searchError ? null : (
+            <p className="muted" style={{ padding: '24px 0' }}>
+              {isSearching ? 'no results' : 'nothing in queue — nice.'}
+            </p>
+          )
         ) : isSearching ? (
           filtered.map((e) => (
             <EntryRow key={e.id} entry={e} onSelect={onSelectEntry} query={semanticMode ? '' : query.trim()} />

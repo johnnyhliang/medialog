@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { listQuickLinks, createQuickLink, updateQuickLink, deleteQuickLink } from '../../lib/db/quickLinks.js'
 
 const normalizeUrl = (u) => (/^https?:\/\//i.test(u) ? u : `https://${u}`)
@@ -8,11 +8,24 @@ export default function QuickLinksWidget({ supabase }) {
   const [editing, setEditing] = useState(false)
   const [query, setQuery] = useState('')
   const [draft, setDraft] = useState({ label: '', url: '', note: '' })
+  // Three states, not two (REFACTOR.md §4.4): a shelf that failed to load must
+  // never render as "no tools yet — hit edit to add one", which is an invitation
+  // to re-add links that already exist.
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
-  useEffect(() => {
+  const load = useCallback(async () => {
     if (!supabase) return
-    listQuickLinks(supabase).then(setLinks).catch(() => setLinks([]))
+    setError(null)
+    try {
+      setLinks(await listQuickLinks(supabase))
+    } catch (e) {
+      setError(e.message || 'could not load your links')
+    }
+    setLoading(false)
   }, [supabase])
+
+  useEffect(() => { load() }, [load])
 
   // Matches note as well as label — the point of the shelf is finding a tool by
   // what it does when its name has slipped your mind.
@@ -21,27 +34,60 @@ export default function QuickLinksWidget({ supabase }) {
     ? links.filter((l) => `${l.label} ${l.note ?? ''}`.toLowerCase().includes(q))
     : links
 
+  // Reload rather than restore a remembered value — the same reason CompaniesTab
+  // and ProgramsTab do (docs/tech-debt.md #5): the label/url/note inputs fire a
+  // write per keystroke, so each call's "previous value" is the *previous
+  // optimistic* one and rolling back to it undoes exactly one character. Only
+  // re-reading makes the shelf match the database.
+  async function revert(e, verb = 'save') {
+    // Reload first, then set the message: `load` clears `error` on the way in,
+    // so setting it beforehand would have it wiped by the reload it triggers.
+    await load()
+    setError(`couldn’t ${verb} that link: ${e.message}`)
+  }
+
   async function handleAdd(e) {
     e.preventDefault()
     if (!draft.label.trim() || !draft.url.trim()) return
-    const row = await createQuickLink(supabase, {
-      label: draft.label.trim(),
-      url: normalizeUrl(draft.url.trim()),
-      note: draft.note.trim() || null,
-      position: links.length,
-    })
-    setLinks([...links, row])
-    setDraft({ label: '', url: '', note: '' })
+    setError(null)
+    try {
+      // Await before touching state: an add is one deliberate click, so there is
+      // no typing latency to hide and nothing is gained by guessing.
+      const row = await createQuickLink(supabase, {
+        label: draft.label.trim(),
+        url: normalizeUrl(draft.url.trim()),
+        note: draft.note.trim() || null,
+        position: links.length,
+      })
+      setLinks((prev) => [...prev, row])
+      // The draft is only cleared on success, so a failed add leaves what you
+      // typed in the form to retry instead of making you type it again.
+      setDraft({ label: '', url: '', note: '' })
+    } catch (err) {
+      setError(`couldn’t add that link: ${err.message}`)
+    }
   }
 
   async function handleEdit(id, patch) {
-    setLinks(links.map((l) => (l.id === id ? { ...l, ...patch } : l)))
-    await updateQuickLink(supabase, id, patch)
+    // This one stays optimistic: it runs on every keystroke, and awaiting the
+    // round trip before updating state would make the input drop characters.
+    setError(null)
+    setLinks((prev) => prev.map((l) => (l.id === id ? { ...l, ...patch } : l)))
+    try {
+      await updateQuickLink(supabase, id, patch)
+    } catch (e) {
+      await revert(e)
+    }
   }
 
   async function handleDelete(id) {
-    setLinks(links.filter((l) => l.id !== id))
-    await deleteQuickLink(supabase, id)
+    setError(null)
+    try {
+      await deleteQuickLink(supabase, id)
+      setLinks((prev) => prev.filter((l) => l.id !== id))
+    } catch (e) {
+      await revert(e, 'remove')
+    }
   }
 
   return (
@@ -52,6 +98,11 @@ export default function QuickLinksWidget({ supabase }) {
           {editing ? 'done' : 'edit'}
         </button>
       </div>
+
+      {/* `explore-semantic-error` rather than a new class: FilesView already
+          reuses it for its archive failures, so it is the app's existing
+          inline-error style and not an ExploreView-private one. */}
+      {error && <p className="explore-semantic-error">{error}</p>}
 
       {links.length > 4 && !editing && (
         <input
@@ -119,9 +170,9 @@ export default function QuickLinksWidget({ supabase }) {
               </span>
             </a>
           ))}
-          {shown.length === 0 && (
+          {shown.length === 0 && !error && (
             <p className="kw-links-empty">
-              {links.length === 0 ? 'no tools yet — hit edit to add one' : 'nothing matches'}
+              {loading ? 'loading…' : links.length === 0 ? 'no tools yet — hit edit to add one' : 'nothing matches'}
             </p>
           )}
         </div>

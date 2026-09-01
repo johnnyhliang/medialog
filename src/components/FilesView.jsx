@@ -32,11 +32,16 @@ function HotlinkedFiles({ supabase, onSelectEntry }) {
   const [archived, setArchived] = useState({}) // url -> snapshot row
   const [busyUrl, setBusyUrl] = useState(null)
   const [archiveError, setArchiveError] = useState(null)
+  // The scan failing and the scan finding nothing are opposite answers, and this
+  // tab exists to tell you which files are at risk — reporting "none found"
+  // because the query died is the one wrong answer that actively costs the user
+  // something. So: loading (`rows === null`) | error | empty, three states.
+  const [scanError, setScanError] = useState(null)
 
   useEffect(() => {
     listNotesForHotlinks(supabase)
-      .then((entries) => setRows(collectHotlinks(entries)))
-      .catch(() => setRows([]))
+      .then((entries) => { setRows(collectHotlinks(entries)); setScanError(null) })
+      .catch((e) => setScanError(e.message || 'could not scan your notes'))
     listSnapshots(supabase)
       .then((snaps) => setArchived(Object.fromEntries(snaps.map((s) => [s.url, s]))))
       .catch(() => {})
@@ -59,6 +64,13 @@ function HotlinkedFiles({ supabase, onSelectEntry }) {
     if (signed) window.open(signed, '_blank', 'noopener')
   }
 
+  if (scanError) {
+    return (
+      <p className="explore-semantic-error">
+        Couldn’t scan your notes for hotlinked files: {scanError}
+      </p>
+    )
+  }
   if (rows === null) return <p className="muted">Scanning notes…</p>
 
   const q = query.trim().toLowerCase()
