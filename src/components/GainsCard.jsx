@@ -123,7 +123,13 @@ export default function GainsCard({ supabase, onOpenTopic, onOpenPatternTopic, f
 
   async function handlePullAnother() {
     if (pick?.track === 'quant') {
-      try { await markMenuItemPulled(supabase, pick.item.id) } catch {}
+      try {
+        await markMenuItemPulled(supabase, pick.item.id)
+      } catch {
+        // Best-effort bookkeeping: this only records that a suggestion was
+        // shown. Failing it must not stop the card rendering the suggestion,
+        // which is the thing the user actually asked for.
+      }
     }
     await load()
   }

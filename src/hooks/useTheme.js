@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient.js'
-import { writePref } from '../lib/localPref.js'
+import { readPref, writePref } from '../lib/localPref.js'
 
 const STORAGE_KEY = 'ml_theme'
 const VALID_PALETTES = ['warm', 'catppuccin-mocha', 'tokyo-night', 'nord', 'rose-pine']
@@ -8,11 +8,13 @@ const VALID_STYLES = ['default', 'brutalist', 'glass']
 const DEFAULT = { palette: 'warm', style: 'default' }
 
 function readLocal() {
+  // The try stays for JSON.parse, which throws on a corrupted value. What it no
+  // longer has to cover is storage being unavailable — readPref owns that.
   try {
-    const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY))
+    const parsed = JSON.parse(readPref(STORAGE_KEY, 'null'))
     if (VALID_PALETTES.includes(parsed?.palette) && VALID_STYLES.includes(parsed?.style))
       return parsed
-  } catch {}
+  } catch { /* corrupted value — fall through to the default theme */ }
   return null
 }
 
@@ -37,7 +39,12 @@ async function syncToDb(palette, style) {
       .from('user_configs')
       .update({ theme: { palette, style } })
       .eq('user_id', user.id)
-  } catch {}
+  } catch {
+    // Best-effort on purpose: the palette is already applied to the DOM and
+    // persisted locally, so a failed sync costs a preference on other devices,
+    // not this one. Surfacing it would interrupt a theme click to report
+    // something the user cannot act on.
+  }
 }
 
 export function useTheme() {

@@ -156,7 +156,6 @@ Return ONLY the JSON array, no explanation.`
 
   const selectedCount = parsed ? [...selected].length : 0
   const fmt = FORMATS.find((f) => f.id === format)
-  const needsTextInput = format === 'tabs' || (format === 'notes' && !parsed) || (format === 'keep' && !parsed)
   const needsFileInput = format === 'obsidian' || format === 'notes' || format === 'keep'
 
   return (

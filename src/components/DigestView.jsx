@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { writePref } from '../lib/localPref.js'
 import { supabase } from '../lib/supabaseClient.js'
 import { computeDigest } from '../lib/db/digest.js'
 
@@ -11,13 +12,13 @@ function shortDate(str) {
   return new Date(str).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
 }
 
-export default function DigestView({ topics, inboxTopicId, onSortInbox, onGoToView, onOpenEntry, onStatusChange, onDelete }) {
+export default function DigestView({ inboxTopicId, onSortInbox, onGoToView, onOpenEntry, onStatusChange, onDelete }) {
   const [timeWindow, setTimeWindow] = useState('7d')
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    try { localStorage.setItem('medialog_digest_last_viewed', String(Date.now())) } catch {}
+    writePref('medialog_digest_last_viewed', String(Date.now()))
   }, [])
 
   useEffect(() => {

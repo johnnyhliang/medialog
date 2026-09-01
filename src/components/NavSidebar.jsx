@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { writePref } from '../lib/localPref.js'
 import {
   Home, Search, Upload, Archive, Inbox, Briefcase, Highlighter,
   RotateCcw, BarChart2, BookOpen, Settings2, Trash2 as TrashIcon, FolderOpen,
@@ -76,7 +77,7 @@ export default function NavSidebar({ view, navigateTo, sideEffects = {}, isModul
   function toggleMore() {
     const next = !moreOpen
     setMoreOpen(next)
-    try { localStorage.setItem(MORE_OPEN_KEY, next) } catch {}
+    writePref(MORE_OPEN_KEY, next)
   }
 
   function renderItem(item) {

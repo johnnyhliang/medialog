@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { writePref } from '../../lib/localPref.js'
 
 const ENGINES = [
   { label: 'google',      key: 'G',   url: (q) => `https://www.google.com/search?q=${encodeURIComponent(q)}&udm=14` },
@@ -53,7 +54,7 @@ export default function SearchWidget() {
 
   function selectEngine(key) {
     setEngine(key)
-    try { localStorage.setItem('medialog_search_engine', key) } catch {}
+    writePref('medialog_search_engine', key)
   }
 
   return (

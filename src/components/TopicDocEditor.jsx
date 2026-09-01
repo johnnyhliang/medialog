@@ -8,19 +8,39 @@ export default function TopicDocEditor({ topicId, initialDoc, candidates, scopeC
   const [doc, setDoc] = useState(initialDoc || '')
   const [saveStatus, setSaveStatus] = useState('idle')
   const saveTimer = useRef(null)
+  // Mirrors of the latest props/state, read by the completion getters below.
+  //
+  // Assigned in an effect rather than in the render body. The render body must be
+  // pure: React can render with props it never commits (StrictMode double-renders,
+  // and concurrent rendering discards work routinely), and a ref written during
+  // one of those renders keeps the value from a render that never happened.
+  //
+  // Safe to write after paint because nothing reads these during render. The
+  // getters passed to makeEntryCompletion are only *defined* here; CodeMirror
+  // calls them while the user is typing, which is always after the effect has
+  // run.
   const candidatesRef = useRef(candidates)
-  candidatesRef.current = candidates
   const docRef = useRef(doc)
-  docRef.current = doc
+  useEffect(() => {
+    candidatesRef.current = candidates
+    docRef.current = doc
+  }, [candidates, doc])
 
   useEffect(() => { setDoc(initialDoc || '') }, [topicId, initialDoc])
 
+  // The getters below are STORED, not called: makeEntryCompletion keeps them and
+  // invokes them inside its `source(context)`, which CodeMirror runs on
+  // keystroke — never during render. Verified in src/lib/entryAutocomplete.js
+  // rather than assumed. Lazy access is the entire point: reading these eagerly
+  // would capture whatever was current when the editor mounted and never update.
   const completion = useMemo(
+    /* eslint-disable react-hooks/refs -- see above; read at keystroke, not render */
     () => makeEntryCompletion(
       () => candidatesRef.current,
       () => scopeCtxRef.current,
       () => docRef.current,
     ),
+    /* eslint-enable react-hooks/refs */
     [scopeCtxRef],
   )
 

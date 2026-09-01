@@ -91,7 +91,6 @@ export default function LandingPage() {
   const [confirmed, setConfirmed] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const [isNewUser, setIsNewUser] = useState(false)
 
   useEffect(() => {
     const { data: sub } = supabase.auth.onAuthStateChange((_, session) => {
@@ -122,7 +121,10 @@ export default function LandingPage() {
         password,
         options: { emailRedirectTo: window.location.origin + '/app' },
       })
-      if (!signUpErr) { setIsNewUser(true); setConfirmed(true) }
+      // isNewUser state removed: it was set here and never read anywhere, so
+      // nothing rendered differently for a first-time user. Restore it with a
+      // reader if a welcome path is ever wanted.
+      if (!signUpErr) setConfirmed(true)
       else if (signUpErr.message.toLowerCase().includes('already registered')) {
         setError('Wrong password.')
       } else {

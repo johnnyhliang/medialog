@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { writePref } from '../../lib/localPref.js'
 import { X } from 'lucide-react'
 import { listDeadlines } from '../../lib/db/deadlines.js'
 import { urgencyOf, HORIZON_DAYS } from '../../lib/deadlines.js'
@@ -44,7 +45,7 @@ export default function DeadlineAlertBanner({ supabase, timezone, onOpenCareer }
   function dismiss(key) {
     const next = [...dismissed, key]
     setDismissed(next)
-    try { localStorage.setItem(DISMISS_KEY, JSON.stringify(next)) } catch {}
+    writePref(DISMISS_KEY, JSON.stringify(next))
   }
 
   const visible = items.filter((i) => !dismissed.includes(i.key))

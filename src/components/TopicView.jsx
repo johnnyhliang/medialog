@@ -124,12 +124,15 @@ export default function TopicView({
   const isTagSearch = inputVal.toLowerCase().startsWith('tag:')
   const tagSearchTerm = isTagSearch ? inputVal.slice(4).toLowerCase().trim() : ''
 
+  // Declared BEFORE the effect that calls its setter. It worked previously only
+  // through hoisting of the surrounding function scope, which is an accident
+  // rather than a guarantee.
+  const [tagSuggestLimit, setTagSuggestLimit] = useState(20)
+
   // Reset tag suggestion limit when leaving tag search
   useEffect(() => {
     if (!isTagSearch) setTagSuggestLimit(20)
   }, [isTagSearch])
-
-  const [tagSuggestLimit, setTagSuggestLimit] = useState(20)
 
   const tagSuggestions = useMemo(() => {
     if (!isTagSearch) return []

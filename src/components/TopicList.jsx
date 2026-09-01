@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { writePref } from '../lib/localPref.js'
 import { Inbox, ChevronDown, ChevronRight, Pin, PinOff } from 'lucide-react'
 
 export default function TopicList({
@@ -27,7 +28,7 @@ export default function TopicList({
   function toggleArchiveSection() {
     const next = !archiveSectionOpen
     setArchiveSectionOpen(next)
-    try { localStorage.setItem('medialog_archive_section_open', next) } catch {}
+    writePref('medialog_archive_section_open', next)
   }
 
   function handleAdd(e) {

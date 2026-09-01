@@ -25,7 +25,7 @@ function applyHighlights(text, highlights) {
   return parts
 }
 
-function HighlightedText({ text, highlights, onHighlight }) {
+function HighlightedText({ text, highlights }) {
   const parts = applyHighlights(text, highlights)
   return (
     <>
@@ -79,7 +79,7 @@ export default function ReaderModal({ entry, onClose }) {
     if (e.target === overlayRef.current) onClose()
   }
 
-  const handleMouseUp = useCallback((e) => {
+  const handleMouseUp = useCallback(() => {
     const sel = window.getSelection()
     const text = sel?.toString().trim()
     if (!text || text.length < 3) return
