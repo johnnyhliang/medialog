@@ -459,18 +459,45 @@ where every column is a support question, a backup column and a thing the RLS
 audit has to reason about. Before that point, a migration should drop the list above
 in one pass. Not before — there is no cost to carrying it for one user.
 
-**One item needs a decision, not just a drop: `entries.takeaway`.** It is the
-only orphan that is still *read*: `chunkEntry.js:35` feeds it to the search
-index and `githubSync.js:169` renders a `## Takeaway` section into backups.
-`DeepTopicView` was its only writer and it is gone, so this is a live read path
-against a column nothing can fill — the inverse of the dead-wire pattern in
-`PROJECT-STATE.md`'s 2026-08-07 synthesis. Either give it a writer or remove
-both readers; leaving it is the option that quietly rots.
+**`entries.takeaway` — DECIDED 2026-09-01: change nothing, and here is why.**
+
+The framing above said "either give it a writer or remove both readers; leaving
+it is the option that quietly rots." Having actually traced it, both options are
+worse than leaving it, so the third answer is the right one.
+
+**The takeaway feature is not writer-less — it was looking in the wrong place.**
+`EntryCard` has a live "Any final takeaway to add?" prompt
+(`handleTakeawaySave`). It fires when an entry is marked done, and it writes
+through `onNoteSave` into `entries.note`, not into `entries.takeaway`. So the
+capability ships and works; only the column is unused.
+
+**Why not point the writer at the column.** `entry.takeaway` is never rendered
+anywhere in `EntryCard` — the card displays `note`. Redirecting the prompt to
+the column would take text the user just typed and make it invisible, which is a
+straight regression in exchange for tidiness.
+
+**Why not remove the two readers.** Both are already conditional
+(`if (entry?.takeaway?.trim())`, `if (entry.takeaway)`), so they cost nothing
+when the column is empty — and if any legacy row still holds a value, they are
+what keeps it searchable and rendered into the backup markdown. Removing them
+would trade zero savings for a small chance of losing something.
+
+**One thing checked and found NOT to be a bug.** The prompt writing to `note`
+looks like it should clobber an existing note, since `handleNoteSave` replaces
+the column outright. It cannot: `handleStatusSelect` only raises the prompt when
+`!entry.note`. Worth recording because the read of that code is alarming and the
+conclusion is not.
+
+So: the column is vestigial and stays with the rest of the retained schema, the
+readers stay because they are free, and the feature keeps working as it does. If
+takeaways ever want to be a first-class field — separately indexed, separately
+rendered — the work is a card UI for them, not a column swap.
 
 **Effort, if triggered today (estimated 2026-08-11, not yet spent):** the drop
 migration itself is trivial — six `DROP COLUMN`/`DROP TABLE` statements,
 ~15 min, no data-migration logic needed since every object is pre-verified at
-0 rows / 0 references. `entries.takeaway` is the only real decision: delete
+0 rows / 0 references. `entries.takeaway` is resolved above (decided 2026-09-01: no change). The
+superseded options were: delete
 its two read sites and drop it with the rest (~30 min), or give it a writer
 (~1 hr, e.g. TidyView captures one line on "done reading"). **Under 2 hours
 total**, entirely mechanical except that one decision.

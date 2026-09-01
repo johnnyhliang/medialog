@@ -92,7 +92,19 @@ Worst single offender: `SettingsView.jsx`, 39 inline font sizes.
 `SetPasswordModal.jsx` reimplements the token system inline (`18px`/`13px`/
 `14px`/`11px` plus its own box-shadow) and is a good canary.
 
-## Phase 4 — fonts
+## Phase 4 — fonts  — **DONE 2026-09-01 (`86d462c`)**
+
+> One correction to what follows: this section says the whole change is the
+> `index.html` link tag copied into `app.html`. It is not. BRAND.md is more
+> specific — the app inherits the palette and type but **not** Caveat or the
+> hand-drawn strokes, which stay on the landing page. Copying the link verbatim
+> would have pulled a marginalia face into an app that has no marginalia, so
+> `app.html` loads Fraunces + Inter only.
+>
+> `--font-serif` kept its name rather than becoming `--font-display`: all five of
+> its call sites are already titles or headings, so Fraunces lands only on
+> display text as BRAND requires, and a rename would churn five stylesheets for
+> no behavioural gain.
 
 **Smaller than this section implies (checked 2026-08-18).** `index.html` already
 loads Fraunces + Inter + Caveat for the landing page; only `app.html` still loads
