@@ -7,6 +7,7 @@ import {
   matchesFilter,
   opportunityMutations,
 } from '../../lib/opportunities.jsx'
+import { createManualOpportunity } from '../../lib/db/opportunities.js'
 
 const FILTERS = ['All', 'SWE', 'Quant', 'Fellowship', 'HN', 'Twitter', 'Saved']
 
@@ -37,20 +38,10 @@ export default function OpportunitiesWidget({ supabase, onTrack }) {
   async function handleManualAdd(e) {
     e.preventDefault()
     if (!addUrl.trim()) return
-    const hostname = (() => { try { return new URL(addUrl).hostname } catch { return addUrl } })()
-    const { data } = await supabase
-      .from('opportunities')
-      .insert({
-        source: 'manual',
-        title: hostname,
-        body: addNote || null,
-        url: addUrl.trim(),
-        tags: [addTag],
-        posted_at: new Date().toISOString(),
-      })
-      .select()
-      .single()
-    if (data) setItems((prev) => [data, ...prev])
+    try {
+      const row = await createManualOpportunity(supabase, { url: addUrl, note: addNote, tag: addTag })
+      setItems((prev) => [row, ...prev])
+    } catch { /* the box keeps what was typed so it can be retried */ return }
     setAddUrl(''); setAddNote(''); setShowAdd(false)
   }
 

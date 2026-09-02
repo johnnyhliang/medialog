@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { updateEntry, softDeleteEntry, snoozeEntry } from '../lib/db/entries.js'
+import { listTidyQueue } from '../lib/db/tidy.js'
 import { Sparkles } from 'lucide-react'
 
 // Drift-mode maintenance: a finite, one-card-at-a-time queue of entries that
@@ -16,47 +17,10 @@ function daysAgo(dateStr) {
 
 // Fresh captures now enter the queue, and "in inbox 0d" reads like a bug rather
 // than a fact. Anything under a day gets words instead of a number.
-function reason(verb, dateStr) {
-  const d = daysAgo(dateStr)
-  if (d < 1) return verb === 'inbox' ? 'just captured' : 'untouched today'
-  return verb === 'inbox' ? `in inbox ${d}d` : `untouched ${d}d`
-}
-
-async function fetchTidyQueue(supabase, inboxTopicId) {
-  const staleCutoff = new Date(Date.now() - THIRTY_DAYS).toISOString()
-
-  const [oldInboxRes, staleRes] = await Promise.all([
-    inboxTopicId
-      ? supabase
-          .from('entries')
-          .select('*, topics(name)')
-          .eq('topic_id', inboxTopicId)
-          .neq('status', 'done')
-          .is('deleted_at', null)
-          .order('created_at', { ascending: true })
-          .limit(30)
-      : Promise.resolve({ data: [] }),
-    supabase
-      .from('entries')
-      .select('*, topics(name)')
-      .eq('status', 'backlog')
-      .lt('updated_at', staleCutoff)
-      .is('deleted_at', null)
-      .order('updated_at', { ascending: true })
-      .limit(30),
-  ])
-
-  const seen = new Set()
-  const queue = []
-  for (const e of oldInboxRes.data ?? []) {
-    seen.add(e.id)
-    queue.push({ ...e, tidyReason: reason('inbox', e.created_at) })
-  }
-  for (const e of staleRes.data ?? []) {
-    if (seen.has(e.id) || e.topic_id === inboxTopicId) continue
-    queue.push({ ...e, tidyReason: reason('stale', e.updated_at) })
-  }
-  return queue
+export function reason({ tidySource, tidySince }) {
+  const d = daysAgo(tidySince)
+  if (d < 1) return tidySource === 'inbox' ? 'just captured' : 'untouched today'
+  return tidySource === 'inbox' ? `in inbox ${d}d` : `untouched ${d}d`
 }
 
 export default function TidyView({ supabase, topics, inboxTopicId, onOpenEntry, onTriaged, addToast }) {
@@ -71,8 +35,20 @@ export default function TidyView({ supabase, topics, inboxTopicId, onOpenEntry, 
   )
 
   useEffect(() => {
-    fetchTidyQueue(supabase, inboxTopicId).then(setQueue).catch(() => setQueue([]))
-  }, [supabase, inboxTopicId])
+    let cancelled = false
+    listTidyQueue(supabase, inboxTopicId)
+      .then((rows) => { if (!cancelled) setQueue(rows) })
+      .catch((e) => {
+        // The queue failing is not the same as the queue being empty, and this
+        // used to render the "all tidy" reward screen either way. Toast it and
+        // still land on an empty queue — there is nothing to triage without
+        // rows, but the user now knows why.
+        if (cancelled) return
+        addToast?.(e.message, 'error')
+        setQueue([])
+      })
+    return () => { cancelled = true }
+  }, [supabase, inboxTopicId, addToast])
 
   const current = queue?.[index] ?? null
   const total = queue?.length ?? 0
@@ -140,7 +116,7 @@ export default function TidyView({ supabase, topics, inboxTopicId, onOpenEntry, 
       </div>
 
       <div className="tidy-card">
-        <span className="tidy-reason">{current.tidyReason}</span>
+        <span className="tidy-reason">{reason(current)}</span>
         <button
           className="tidy-card-title"
           onClick={() => onOpenEntry?.(current)}

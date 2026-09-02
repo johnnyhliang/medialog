@@ -6,6 +6,8 @@ import ConfirmModal from './ConfirmModal.jsx'
 import { listNotesForHotlinks } from '../lib/db/entries.js'
 import { collectHotlinks } from '../lib/hotlinks.js'
 import { listSnapshots, archiveFile, snapshotUrl } from '../lib/db/snapshots.js'
+import { listAttachments, signAttachmentUrl, deleteAttachment } from '../lib/db/files.js'
+import { getUserOrNull } from '../lib/requireUser.js'
 
 const CAP_BYTES = 500 * 1024 * 1024
 const PAGE_SIZE = 30
@@ -149,29 +151,37 @@ export default function FilesView({ supabase, onSelectEntry }) {
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [userId, setUserId] = useState(null)
   const [fileUrls, setFileUrls] = useState({})
+  const [loadError, setLoadError] = useState(null)
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (data?.user) setUserId(data.user.id)
-    })
+    // `getUserOrNull`, not `requireUser`: this runs on mount, before the
+    // session has necessarily settled, and signed-out is an ordinary outcome
+    // here rather than a failure — the effect below simply doesn't load. A
+    // genuine auth error still throws, which is the case the old inline
+    // `if (data?.user)` destructure couldn't express.
+    getUserOrNull(supabase)
+      .then((user) => { if (user) setUserId(user.id) })
+      .catch((e) => setLoadError(e.message || 'could not confirm who you are'))
   }, [supabase])
-
-  async function signUrl(fileName) {
-    const { data } = await supabase.storage
-      .from('attachments')
-      .createSignedUrl(`${userId}/${fileName}`, 60 * 60) // 1-hour for file browser
-    return data?.signedUrl ?? null
-  }
 
   const loadFiles = useCallback(async () => {
     setLoading(true)
-    const { data } = await supabase.storage.from('attachments').list(userId)
-    setFiles(data || [])
-    const urls = {}
-    for (const f of data || []) {
-      urls[f.name] = await signUrl(f.name)
+    try {
+      const rows = await listAttachments(supabase, userId)
+      setFiles(rows)
+      const urls = {}
+      for (const f of rows) {
+        urls[f.name] = await signAttachmentUrl(supabase, userId, f.name)
+      }
+      setFileUrls(urls)
+      setLoadError(null)
+    } catch (e) {
+      // An empty file list is a specific, reassuring claim ("nothing to back
+      // up, nothing using your quota"). A failed listing must not be allowed
+      // to make it — same reasoning as the hotlink scan's error state.
+      setFiles([])
+      setLoadError(e.message || 'could not load your files')
     }
-    setFileUrls(urls)
     setLoading(false)
   }, [supabase, userId])
 
@@ -181,10 +191,19 @@ export default function FilesView({ supabase, onSelectEntry }) {
   }, [userId, loadFiles])
 
   async function handleDeleteConfirm() {
-    const path = `${userId}/${deleteTarget.file.name}`
-    await supabase.storage.from('attachments').remove([path])
+    const name = deleteTarget.file.name
     setDeleteTarget(null)
+    let deleteError = null
+    try {
+      await deleteAttachment(supabase, userId, name)
+    } catch (e) {
+      deleteError = `Couldn’t delete that file: ${e.message}`
+    }
+    // Reload either way: a failed delete should leave the row visible, and the
+    // reload is what proves it is still there. The message is set afterwards
+    // because a successful reload clears loadError.
     await loadFiles()
+    if (deleteError) setLoadError(deleteError)
   }
 
   // Match against the human-readable name (UUID prefix stripped) so a search
@@ -224,6 +243,7 @@ export default function FilesView({ supabase, onSelectEntry }) {
   return (
     <div className="files-view">
       {header}
+      {loadError && <p className="explore-semantic-error">{loadError}</p>}
       <StorageBar totalBytes={totalBytes} capBytes={CAP_BYTES} />
 
       <input
@@ -250,7 +270,9 @@ export default function FilesView({ supabase, onSelectEntry }) {
       </div>
 
       {files.length === 0 ? (
-        <p className="muted files-empty">No files uploaded yet.</p>
+        // Only claim "nothing here" when we actually know that; the error
+        // above already says what happened otherwise.
+        loadError ? null : <p className="muted files-empty">No files uploaded yet.</p>
       ) : matched.length === 0 ? (
         <p className="muted files-empty">No files matching “{nameQuery}”.</p>
       ) : (

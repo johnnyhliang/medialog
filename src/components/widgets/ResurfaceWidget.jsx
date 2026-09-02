@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react'
+import { listResurfaceHighlights } from '../../lib/db/review.js'
 
 // Surfaces highlights saved 30+ days ago so past reading pays interest.
 // Rotation is seeded by the date: the picks stay stable all day, then
 // change tomorrow — a reason to come back, not a slot machine.
-
-const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000
 
 function dailyPicks(rows, n) {
   if (rows.length <= n) return rows
@@ -27,14 +26,13 @@ export default function ResurfaceWidget({ supabase, onOpenEntry }) {
   const [picks, setPicks] = useState(null)
 
   useEffect(() => {
-    const cutoff = new Date(Date.now() - THIRTY_DAYS).toISOString()
-    supabase
-      .from('highlights')
-      .select('id, text, created_at, entries(id, title, url)')
-      .lt('created_at', cutoff)
-      .order('created_at', { ascending: true })
-      .limit(200)
-      .then(({ data }) => setPicks(dailyPicks(data ?? [], 2)))
+    // A failure lands on an empty pool, which renders nothing at all — the
+    // same as having no old highlights. That is the right outcome for an
+    // optional widget, but it is now a decision made here rather than the
+    // silent `data ?? []` that made it indistinguishable from success.
+    listResurfaceHighlights(supabase)
+      .then((rows) => setPicks(dailyPicks(rows, 2)))
+      .catch(() => setPicks([]))
   }, [supabase])
 
   if (!picks || picks.length === 0) return null

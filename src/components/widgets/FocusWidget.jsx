@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
+import { getFocusEntry } from '../../lib/db/review.js'
 
 // Pull the first "Next: …" line out of a topic's master doc.
 export function parseNext(doc) {
@@ -16,16 +17,12 @@ export default function FocusWidget({ supabase, onOpenEntry }) {
 
   const load = useCallback(async () => {
     try {
-      const { data } = await supabase
-        .from('entries')
-        .select('id, title, url, topic_id, topics(name, master_doc)')
-        .eq('status', 'active')
-        .is('deleted_at', null)
-        .order('pinned', { ascending: false })
-        .order('created_at', { ascending: false })
-        .limit(1)
-      setEntry(data && data.length ? data[0] : null)
+      setEntry(await getFocusEntry(supabase))
     } catch {
+      // Unchanged on purpose: the widget's empty state already says "nothing
+      // active", and a home-screen widget is not the place to interrupt with a
+      // toast. What changed is upstream — the query itself no longer reports a
+      // failure as an empty result, so this catch now only sees real throws.
       setEntry(null)
     } finally {
       setLoading(false)

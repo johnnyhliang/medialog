@@ -1,66 +1,6 @@
 // src/components/HomeReviewSummary.jsx
 import { useEffect, useState } from 'react'
-
-async function fetchSummaryCounts(supabase) {
-  const now = new Date()
-  const fourteenDaysAgo = new Date(now - 14 * 24 * 60 * 60 * 1000).toISOString()
-  const thirtyDaysAgo = new Date(now - 30 * 24 * 60 * 60 * 1000).toISOString()
-
-  const [
-    inboxTopicRes,
-    staleBacklogRes,
-    activeRes,
-    recentTopicIdsRes,
-    allTopicsRes,
-  ] = await Promise.all([
-    supabase.from('topics').select('id').eq('name', 'Inbox').maybeSingle(),
-    supabase
-      .from('entries')
-      .select('id', { count: 'exact', head: true })
-      .eq('status', 'backlog')
-      .lt('updated_at', thirtyDaysAgo)
-      .is('deleted_at', null),
-    supabase
-      .from('entries')
-      .select('id', { count: 'exact', head: true })
-      .eq('status', 'active')
-      .is('deleted_at', null),
-    supabase.from('entries').select('topic_id').gte('updated_at', thirtyDaysAgo).is('deleted_at', null),
-    supabase.from('topics').select('id').is('archived_at', null),
-  ])
-
-  const inboxTopicId = inboxTopicRes.data?.id ?? null
-
-  const [inboxRes, oldInboxRes] = await Promise.all([
-    inboxTopicId
-      ? supabase
-          .from('entries')
-          .select('id', { count: 'exact', head: true })
-          .eq('topic_id', inboxTopicId)
-          .is('deleted_at', null)
-      : Promise.resolve({ count: 0 }),
-    inboxTopicId
-      ? supabase
-          .from('entries')
-          .select('id', { count: 'exact', head: true })
-          .eq('topic_id', inboxTopicId)
-          .lt('created_at', fourteenDaysAgo)
-          .neq('status', 'done')
-          .is('deleted_at', null)
-      : Promise.resolve({ count: 0 }),
-  ])
-
-  const recentTopicIds = new Set((recentTopicIdsRes.data || []).map((r) => r.topic_id))
-  const dormantCount = (allTopicsRes.data || []).filter((t) => !recentTopicIds.has(t.id)).length
-
-  return {
-    inbox: inboxRes.count ?? 0,
-    oldInbox: oldInboxRes.count ?? 0,
-    staleBacklog: staleBacklogRes.count ?? 0,
-    active: activeRes.count ?? 0,
-    dormant: dormantCount,
-  }
-}
+import { getReviewCounts } from '../lib/db/review.js'
 
 function recommendedAction({ inbox, oldInbox, staleBacklog, active }) {
   if (oldInbox > 0) return `Sort your inbox — ${oldInbox} item${oldInbox === 1 ? '' : 's'} are more than 2 weeks old`
@@ -74,7 +14,11 @@ export default function HomeReviewSummary({ supabase, onSortInbox, onGoToDigest 
   const [counts, setCounts] = useState(null)
 
   useEffect(() => {
-    fetchSummaryCounts(supabase).then(setCounts).catch(() => {})
+    // Swallowing the error keeps the badges off the screen entirely rather
+    // than showing five zeroes, which is the one thing this component must not
+    // do: "all clear" and "the database is down" are opposite messages. There
+    // is no toast because Home mounts this before anything the user asked for.
+    getReviewCounts(supabase).then(setCounts).catch(() => {})
   }, [supabase])
 
   if (!counts) return null

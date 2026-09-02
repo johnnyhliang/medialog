@@ -1,20 +1,32 @@
 import { useEffect, useState, useCallback } from 'react'
+import { listCompanies, setCompanyEnabled, deleteCompany, createCompany, parseCompanyTags } from '../../lib/db/companies.js'
 
 const ATS_OPTIONS = ['greenhouse', 'lever', 'ashby']
 
 const EMPTY_FORM = { slug: '', name: '', ats: 'greenhouse', tags: 'startup' }
 
 // Saves on change, not behind a Save button. Every write reverts its own
-// optimistic update on failure — see ProgramsTab for why.
+// optimistic update on failure — see ProgramsTab for why. The queries live in
+// src/lib/db/companies.js and throw, so the revert hangs off a catch rather than
+// off remembering to read `error`.
 export default function CompaniesTab({ supabase, addToast = () => {} }) {
   const [rows, setRows] = useState([])
   const [form, setForm] = useState(EMPTY_FORM)
   const [loading, setLoading] = useState(true)
 
   const load = useCallback(async () => {
-    const { data } = await supabase.from('companies').select('*').order('name')
-    if (data) setRows(data)
+    try {
+      setRows(await listCompanies(supabase))
+    } catch (e) {
+      // Caught, not rethrown: load is also the revert path.
+      addToast(`Couldn’t load companies: ${e.message}`, 'error')
+    }
     setLoading(false)
+    // addToast is deliberately not a dependency: it is only read on the failure
+    // path, and listing it would re-run the load on every render where the
+    // parent hands down a fresh closure — a query storm in exchange for a
+    // dependency that can never change what the load does.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supabase])
 
   useEffect(() => { load() }, [load])
@@ -27,30 +39,37 @@ export default function CompaniesTab({ supabase, addToast = () => {} }) {
 
   async function toggleEnabled(id, current) {
     setRows((prev) => prev.map((r) => r.id === id ? { ...r, enabled: !current } : r))
-    const { error } = await supabase.from('companies').update({ enabled: !current }).eq('id', id)
-    if (error) await revert(error)
+    try {
+      await setCompanyEnabled(supabase, id, !current)
+    } catch (e) {
+      await revert(e)
+    }
   }
 
   async function deleteRow(id) {
     setRows((prev) => prev.filter((r) => r.id !== id))
-    const { error } = await supabase.from('companies').delete().eq('id', id)
-    if (error) await revert(error, 'delete')
+    try {
+      await deleteCompany(supabase, id)
+    } catch (e) {
+      await revert(e, 'delete')
+    }
   }
 
   async function handleAdd(e) {
     e.preventDefault()
     if (!form.slug.trim() || !form.name.trim()) return
-    const tags = form.tags.split(',').map((t) => t.trim()).filter(Boolean)
-    const { data, error } = await supabase
-      .from('companies')
-      .insert({ slug: form.slug.trim(), name: form.name.trim(), ats: form.ats, tags, enabled: true })
-      .select()
-      .single()
-    if (error || !data) {
-      addToast(`Couldn’t add company: ${error?.message ?? 'unknown error'}`, 'error')
+    let created
+    try {
+      created = await createCompany(supabase, { ...form, tags: parseCompanyTags(form.tags) })
+    } catch (err) {
+      addToast(`Couldn’t add company: ${err.message}`, 'error')
       return
     }
-    setRows((prev) => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)))
+    if (!created) {
+      addToast('Couldn’t add company: unknown error', 'error')
+      return
+    }
+    setRows((prev) => [...prev, created].sort((a, b) => a.name.localeCompare(b.name)))
     setForm(EMPTY_FORM)
   }
 

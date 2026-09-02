@@ -1,5 +1,10 @@
 import { useEffect, useState, useCallback } from 'react'
 import { Plus, X } from 'lucide-react'
+import {
+  listWatchlistPrograms as listPrograms,
+  createWatchlistProgram as createProgram,
+  deleteProgram,
+} from '../lib/db/programs.js'
 
 function formatOpensAt(dateStr) {
   if (!dateStr) return null
@@ -23,14 +28,19 @@ export default function WatchlistTab({ supabase }) {
   const [showAdd, setShowAdd] = useState(false)
   const [form, setForm] = useState({ name: '', url: '', notes: '', opens_at: '' })
   const [loading, setLoading] = useState(true)
+  // Rendered inline rather than toasted: CareerView does not pass this tab an
+  // addToast, and a failure that shows as an empty watchlist is the exact lie
+  // the db layer exists to stop.
+  const [error, setError] = useState(null)
 
   const load = useCallback(async () => {
     setLoading(true)
-    const { data } = await supabase
-      .from('programs')
-      .select('*')
-      .order('opens_at', { ascending: true, nullsFirst: false })
-    if (data) setPrograms(data)
+    try {
+      setPrograms(await listPrograms(supabase))
+      setError(null)
+    } catch (e) {
+      setError(e.message)
+    }
     setLoading(false)
   }, [supabase])
 
@@ -39,24 +49,31 @@ export default function WatchlistTab({ supabase }) {
   async function handleAdd(e) {
     e.preventDefault()
     if (!form.name.trim() || !form.url.trim()) return
-    const { data } = await supabase
-      .from('programs')
-      .insert({
-        name: form.name.trim(),
-        url: form.url.trim(),
-        notes: form.notes.trim() || null,
-        opens_at: form.opens_at || null,
-      })
-      .select()
-      .single()
-    if (data) setPrograms((prev) => [...prev, data])
+    try {
+      const row = await createProgram(supabase, form)
+      setPrograms((prev) => [...prev, row])
+    } catch (e) {
+      setError(e.message)
+      return
+    }
     setForm({ name: '', url: '', notes: '', opens_at: '' })
     setShowAdd(false)
   }
 
   async function handleDelete(id) {
-    await supabase.from('programs').delete().eq('id', id)
-    setPrograms((prev) => prev.filter((p) => p.id !== id))
+    // The row is dropped locally only if the database says it actually went.
+    // `programs` still has no DELETE policy (see deleteProgram), so a blocked
+    // delete returns success with zero rows — the old code removed the row
+    // regardless and it came back on the next reload, with nothing in between
+    // to suggest the removal had not happened.
+    try {
+      const deleted = await deleteProgram(supabase, id)
+      if (!deleted.length) { setError('Could not remove that program.'); return }
+      setPrograms((prev) => prev.filter((p) => p.id !== id))
+      setError(null)
+    } catch (e) {
+      setError(e.message)
+    }
   }
 
   const filtered = programs.filter((p) => {
@@ -123,6 +140,8 @@ export default function WatchlistTab({ supabase }) {
           </div>
         </form>
       )}
+
+      {error && <p className="muted" style={{ fontSize: 'var(--text-sm)', color: 'var(--danger)' }}>{error}</p>}
 
       {loading && <p className="muted" style={{ fontSize: 'var(--text-sm)' }}>Loading…</p>}
 

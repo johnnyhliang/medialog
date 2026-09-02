@@ -30,6 +30,9 @@ function mockSupabase(items = [], state = []) {
     select: () => ({ single: () => Promise.resolve({ data: makeItem({ id: 'new', source: 'manual', title: 'example.com' }), error: null }) })
   }))
   return {
+    // The manual-add path now goes through `createManualOpportunity`, which asks
+    // who is signed in so it can stamp `created_by` for the RLS insert check.
+    auth: { getUser: vi.fn(async () => ({ data: { user: { id: 'u1' } }, error: null })) },
     from: vi.fn((table) => {
       if (table === 'opportunity_state') {
         return {

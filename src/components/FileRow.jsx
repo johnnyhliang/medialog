@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { FileText, Trash2 } from 'lucide-react'
+import { listEntriesReferencingFile } from '../lib/db/files.js'
 
 function formatSize(bytes) {
   if (!bytes) return '0 KB'
@@ -18,18 +19,20 @@ function displayName(filename) {
 
 export default function FileRow({ file, publicUrl, supabase, onDeleteClick, onSelectEntry }) {
   const [refs, setRefs] = useState(null)
+  // Same three states as the hotlink scan: loading | failed | answered. "Used
+  // in: —" is a claim that nothing references this file, and it is the claim
+  // the delete confirmation leans on — so a failed lookup must not be able to
+  // render as it.
+  const [refsError, setRefsError] = useState(false)
 
   const size = file.metadata?.size || 0
   const mime = file.metadata?.mimetype || ''
   const isImage = mime.startsWith('image/')
 
   useEffect(() => {
-    supabase
-      .from('entries')
-      .select('id, title, topic_id')
-      .like('note', `%${publicUrl}%`)
-      .is('deleted_at', null)
-      .then(({ data }) => setRefs(data || []))
+    listEntriesReferencingFile(supabase, publicUrl)
+      .then((rows) => { setRefs(rows); setRefsError(false) })
+      .catch(() => { setRefs([]); setRefsError(true) })
   }, [publicUrl, supabase])
 
   return (
@@ -46,6 +49,8 @@ export default function FileRow({ file, publicUrl, supabase, onDeleteClick, onSe
         <div className="file-refs">
           {refs === null
             ? <span className="muted">Loading…</span>
+            : refsError
+            ? <span className="muted">Couldn’t check which entries use this file.</span>
             : refs.length === 0
             ? <span className="muted">Used in: —</span>
             : (

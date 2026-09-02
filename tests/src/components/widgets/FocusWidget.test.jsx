@@ -2,16 +2,19 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { vi, test, expect } from 'vitest'
 import FocusWidget, { parseNext } from '../../../../src/components/widgets/FocusWidget.jsx'
+import { getFocusEntry } from '../../../../src/lib/db/review.js'
 
+// The query moved to `src/lib/db/review.js`, where its filters are asserted
+// against a fake client. Mocking the db function keeps these tests about what
+// the widget renders, and — unlike the chain mock it replaces — lets a failure
+// be expressed at all: the old one could only ever resolve.
+vi.mock('../../../../src/lib/db/review.js', () => ({ getFocusEntry: vi.fn() }))
+
+// Kept as a factory so the test bodies read unchanged; the argument is now the
+// row the db layer resolves with rather than a raw Supabase result.
 function mockSupabase(rows = []) {
-  const chain = {
-    select: vi.fn(() => chain),
-    eq: vi.fn(() => chain),
-    is: vi.fn(() => chain),
-    order: vi.fn(() => chain),
-    limit: vi.fn(() => Promise.resolve({ data: rows, error: null })),
-  }
-  return { from: vi.fn(() => chain) }
+  getFocusEntry.mockResolvedValue(rows[0] ?? null)
+  return {}
 }
 
 function makeEntry(overrides = {}) {
@@ -55,4 +58,14 @@ test('clicking the card opens the entry in its topic', async () => {
   await screen.findByText('CSAPP — lab-first')
   await userEvent.click(screen.getByRole('button'))
   expect(onOpenEntry).toHaveBeenCalledWith({ id: 'e1', topic_id: 't1' })
+})
+
+test('falls back to the empty state when the query fails', async () => {
+  // Previously indistinguishable from success: the widget read `data` only, so
+  // a failed request rendered "Nothing active" with no way to tell. The db
+  // layer now throws; this is the widget deciding, deliberately, that a home
+  // widget stays quiet about it.
+  getFocusEntry.mockRejectedValue(new Error('down'))
+  render(<FocusWidget supabase={{}} onOpenEntry={vi.fn()} />)
+  expect(await screen.findByText(/Nothing active/)).toBeInTheDocument()
 })

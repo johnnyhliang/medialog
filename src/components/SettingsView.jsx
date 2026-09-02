@@ -12,6 +12,7 @@ import CaptureTokensTab from './settings/CaptureTokensTab.jsx'
 import TimezoneTab from './settings/TimezoneTab.jsx'
 import { searchSettings, SETTINGS_TABS, SETTINGS_GROUPS } from '../lib/settingsIndex.js'
 import { getMyUsage, getMyStorage, getMyWindowUsage } from '../lib/db/adminMetrics.js'
+import { getUserConfig, setTwitterAuthToken, listCaptureLog } from '../lib/db/userConfig.js'
 import { formatBytes, describeLimit, AI_WINDOW_HOURS } from '../lib/limits.js'
 import UsageMeter from './UsageMeter.jsx'
 import { loadEntitlement } from '../lib/entitlements.js'
@@ -54,46 +55,52 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
 
   useEffect(() => {
     if (tab !== 'mobile') return
-    supabase
-      .from('capture_log')
-      .select('id, url, ok, message, created_at')
-      .order('created_at', { ascending: false })
-      .limit(8)
-      .then(({ data }) => setCaptureLog(data ?? []))
+    // An empty log is left in place on failure rather than toasted: this panel is
+    // a diagnostic aid on a tab you opened for something else, and a red banner
+    // for a read nobody asked for is noise. The failure is no longer *invisible*
+    // though — listCaptureLog throws, so it reaches the console with a context.
+    listCaptureLog(supabase).then(setCaptureLog).catch(() => setCaptureLog([]))
   }, [tab])
 
   // Declared before it is used, rather than relying on hoisting: the effect
   // below closes over this binding, and eslint's immutability rule flags an
   // access that cannot see later reassignments.
   async function loadConfig() {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { setLoading(false); return }
-    const { data } = await supabase
-      .from('user_configs')
-      .select('*')
-      .eq('user_id', user.id)
-      .maybeSingle()
-    if (data) {
-      setConfig(data)
-      setTwitterToken(data.twitter_auth_token ?? '')
+    try {
+      const data = await getUserConfig(supabase)
+      if (data) {
+        setConfig(data)
+        setTwitterToken(data.twitter_auth_token ?? '')
+      }
+    } catch (e) {
+      // Settings still renders without a config row — most tabs do not need one —
+      // so this surfaces the failure and carries on rather than blanking the page.
+      addToast(`Couldn’t load settings: ${e.message}`, 'error')
     }
     setLoading(false)
   }
 
   useEffect(() => {
     loadConfig()
+    // loadConfig became "reactive" to eslint only because it now reports a
+    // failed read through addToast. This must still run once on mount —
+    // depending on it would reload settings on every parent re-render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
 
 
   async function handleSaveTwitterToken() {
     setTwitterSaving(true)
-    const { data: { user } } = await supabase.auth.getUser()
-    const { error } = await supabase
-      .from('user_configs')
-      .upsert({ user_id: user.id, twitter_auth_token: twitterToken || null }, { onConflict: 'user_id' })
-    if (error) addToast(`Error: ${error.message}`, 'error')
-    else addToast('Twitter token saved', 'success')
+    try {
+      await setTwitterAuthToken(supabase, twitterToken)
+      addToast('Twitter token saved', 'success')
+    } catch (e) {
+      // Also catches NotSignedInError now. The old code read `user.id` with no
+      // guard, so a lapsed session threw a TypeError out of a click handler and
+      // the button just stopped working with nothing on screen.
+      addToast(`Error: ${e.message}`, 'error')
+    }
     setTwitterSaving(false)
   }
 
@@ -340,9 +347,15 @@ export default function SettingsView({ topics, onRefreshData, addToast, allTags 
               {twitterToken && (
                 <button onClick={async () => {
                   setTwitterToken('')
-                  const { data: { user } } = await supabase.auth.getUser()
-                  await supabase.from('user_configs').upsert({ user_id: user.id, twitter_auth_token: null }, { onConflict: 'user_id' })
-                  addToast('Twitter token cleared', 'success')
+                  try {
+                    await setTwitterAuthToken(supabase, null)
+                    addToast('Twitter token cleared', 'success')
+                  } catch (e) {
+                    // Clearing a credential silently failing is the worst version
+                    // of this bug: you would believe the token was gone when the
+                    // scraper still had it.
+                    addToast(`Couldn’t clear token: ${e.message}`, 'error')
+                  }
                 }}>Clear</button>
               )}
             </div>

@@ -1,4 +1,11 @@
 import { useEffect, useState, useCallback } from 'react'
+import {
+  listApplications,
+  createApplication,
+  updateApplicationStatus,
+  updateApplicationNotes,
+  deleteApplication,
+} from '../lib/db/applications.js'
 
 const STATUSES = ['saved', 'applied', 'screen', 'interview', 'offer', 'rejected', 'ghosted']
 const STATUS_NEXT = {
@@ -31,12 +38,12 @@ export default function ApplicationsView({ supabase, prefill, onClearPrefill, ad
   const [confirmDelete, setConfirmDelete] = useState(null)
 
   const load = useCallback(async () => {
-    const { data } = await supabase
-      .from('applications')
-      .select('*')
-      .order('updated_at', { ascending: false })
-    if (data) setApps(data)
-  }, [supabase])
+    try {
+      setApps(await listApplications(supabase))
+    } catch (e) {
+      addToast?.(e.message, 'error')
+    }
+  }, [supabase, addToast])
 
   useEffect(() => { load() }, [load])
 
@@ -55,13 +62,11 @@ export default function ApplicationsView({ supabase, prefill, onClearPrefill, ad
 
   async function handleAdd(e) {
     e.preventDefault()
-    const { data, error } = await supabase
-      .from('applications')
-      .insert({ ...form, applied_at: form.applied_at || null, deadline: form.deadline || null })
-      .select()
-      .single()
-    if (error) { addToast?.('Failed to save application', 'error'); return }
-    if (data) { setApps((prev) => [data, ...prev]); setShowAdd(false); onClearPrefill?.() }
+    let data
+    try {
+      data = await createApplication(supabase, form)
+    } catch { addToast?.('Failed to save application', 'error'); return }
+    setApps((prev) => [data, ...prev]); setShowAdd(false); onClearPrefill?.()
   }
 
   async function cycleStatus(id, current) {
@@ -70,8 +75,9 @@ export default function ApplicationsView({ supabase, prefill, onClearPrefill, ad
     const now = new Date().toISOString()
     const prev = apps.find((a) => a.id === id)
     setApps((apps) => apps.map((a) => a.id === id ? { ...a, status: next, updated_at: now } : a))
-    const { error } = await supabase.from('applications').update({ status: next, updated_at: now }).eq('id', id)
-    if (error) {
+    try {
+      await updateApplicationStatus(supabase, id, next, now)
+    } catch {
       addToast?.('Failed to update status', 'error')
       setApps((apps) => apps.map((a) => a.id === id ? { ...a, status: prev?.status ?? current, updated_at: prev?.updated_at } : a))
     }
@@ -79,14 +85,18 @@ export default function ApplicationsView({ supabase, prefill, onClearPrefill, ad
 
   async function updateNotes(id, notes) {
     setApps((prev) => prev.map((a) => a.id === id ? { ...a, notes } : a))
-    const { error } = await supabase.from('applications').update({ notes, updated_at: new Date().toISOString() }).eq('id', id)
-    if (error) addToast?.('Failed to save notes', 'error')
+    try {
+      await updateApplicationNotes(supabase, id, notes)
+    } catch {
+      addToast?.('Failed to save notes', 'error')
+    }
   }
 
   async function deleteApp(id) {
     setApps((prev) => prev.filter((a) => a.id !== id))
-    const { error } = await supabase.from('applications').delete().eq('id', id)
-    if (error) {
+    try {
+      await deleteApplication(supabase, id)
+    } catch {
       addToast?.('Failed to delete application', 'error')
       load()
     }

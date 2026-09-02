@@ -1,5 +1,11 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { supabase } from '../lib/supabaseClient.js'
+import {
+  listHighlightsForEntry,
+  createHighlight,
+  deleteHighlight as deleteHighlightRow,
+} from '../lib/db/highlights.js'
+import { NotSignedInError } from '../lib/requireUser.js'
 
 const COLORS = ['yellow', 'green', 'blue', 'pink']
 
@@ -54,14 +60,15 @@ export default function ReaderModal({ entry, onClose }) {
   const [pendingNote, setPendingNote] = useState('')
   const [pendingColor, setPendingColor] = useState('yellow')
   const pickerRef = useRef(null)
+  // The modal must never disappear because a query failed — the article is
+  // already on screen and readable without highlights. So db errors land here
+  // and are shown next to the thing that failed, rather than propagating.
+  const [error, setError] = useState(null)
 
   useEffect(() => {
-    supabase
-      .from('highlights')
-      .select('*')
-      .eq('entry_id', entry.id)
-      .order('created_at')
-      .then(({ data }) => setHighlights(data ?? []))
+    listHighlightsForEntry(supabase, entry.id)
+      .then((rows) => { setHighlights(rows); setError(null) })
+      .catch((e) => setError(`Couldn’t load highlights for this article: ${e.message}`))
   }, [entry.id])
 
   useEffect(() => {
@@ -93,25 +100,41 @@ export default function ReaderModal({ entry, onClose }) {
 
   async function saveHighlight() {
     if (!pendingSelection) return
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-    const { data, error } = await supabase.from('highlights').insert({
-      user_id: user.id,
-      entry_id: entry.id,
-      text: pendingSelection,
-      color: pendingColor,
-      note: pendingNote.trim() || null,
-    }).select().single()
-    if (!error && data) {
-      setHighlights((prev) => [...prev, data])
+    let saved
+    try {
+      saved = await createHighlight(supabase, {
+        entryId: entry.id,
+        text: pendingSelection,
+        color: pendingColor,
+        note: pendingNote,
+      })
+    } catch (e) {
+      // `createHighlight` now throws where the old code silently returned on a
+      // missing user. Keep the picker OPEN on failure: the selection is the
+      // user's work, and closing it discards a quote they can no longer
+      // recover from the page without re-selecting it.
+      setError(e instanceof NotSignedInError
+        ? 'You’re signed out — sign back in to save this highlight.'
+        : `Couldn’t save that highlight: ${e.message}`)
+      return
     }
+    setError(null)
+    setHighlights((prev) => [...prev, saved])
     setPendingSelection(null)
     setPickerPos(null)
     window.getSelection()?.removeAllRanges()
   }
 
   async function deleteHighlight(id) {
-    await supabase.from('highlights').delete().eq('id', id)
+    try {
+      await deleteHighlightRow(supabase, id)
+    } catch (e) {
+      // Do NOT drop it from the list — it is still in the database, and
+      // pretending otherwise means it reappears on the next open with no
+      // explanation.
+      setError(`Couldn’t remove that highlight: ${e.message}`)
+      return
+    }
     setHighlights((prev) => prev.filter((h) => h.id !== id))
   }
 
@@ -131,6 +154,8 @@ export default function ReaderModal({ entry, onClose }) {
             <button className="reader-close" onClick={onClose} aria-label="Close reader">✕</button>
           </div>
         </div>
+
+        {error && <p className="explore-semantic-error">{error}</p>}
 
         <div className="reader-body" onMouseUp={handleMouseUp}>
           {paragraphs.map((p, i) => (

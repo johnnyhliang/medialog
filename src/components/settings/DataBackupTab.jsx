@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabaseClient.js'
 import { beginGitHubOAuth } from '../../lib/captureOAuthCode.js'
 import { parseFiles, summarize, SYNC_TABLES, EXCLUDED_TABLES, DEFAULT_REPO_NAME } from '../../lib/githubSync.js'
 import { applySnapshot, runBackup } from '../../lib/db/githubBackup.js'
+import { disconnectGitHub, clearBackupError, updateBackupSettings, DISCONNECTED_GITHUB_FIELDS } from '../../lib/db/userConfig.js'
 import { downloadBackupZip, readBackupZip, applyBackupZip } from '../../lib/db/zipBackup.js'
 import MigrationView from '../MigrationView.jsx'
 
@@ -246,44 +247,41 @@ export default function DataBackupTab({
   // leaving repo_name behind is what causes the split-brain on the next link.
   async function handleDisconnect() {
     setBusy('disconnect')
-    const { error } = await supabase
-      .from('user_configs')
-      .update({
-        github_token: null,
-        github_user: null,
-        repo_name: DEFAULT_REPO_NAME,
-        auto_backup: false,
-        last_backup_sha: null,
-        last_backup_summary: null,
-        last_backup_at: null,
-        last_error: null,
-      })
-      .eq('user_id', config.user_id)
+    try {
+      await disconnectGitHub(supabase, config.user_id, DEFAULT_REPO_NAME)
+    } catch (e) {
+      setBusy(null)
+      addToast(`Could not disconnect: ${e.message}`, 'error')
+      return
+    }
     setBusy(null)
-    if (error) { addToast(`Could not disconnect: ${error.message}`, 'error'); return }
-    setConfig({ ...config, github_token: null, github_user: null, repo_name: DEFAULT_REPO_NAME, auto_backup: false, last_backup_sha: null, last_backup_summary: null, last_backup_at: null, last_error: null })
+    // The same field set the write used, so the local row and the database
+    // cannot disagree about what "disconnected" means.
+    setConfig({ ...config, ...DISCONNECTED_GITHUB_FIELDS(DEFAULT_REPO_NAME) })
     setRepos(null)
     addToast('GitHub disconnected. Revoke the app on GitHub too, to be thorough.', 'success')
   }
 
   async function clearLastError() {
-    await supabase.from('user_configs').update({ last_error: null }).eq('user_id', config.user_id)
-    setConfig({ ...config, last_error: null })
+    try {
+      await clearBackupError(supabase, config.user_id)
+      setConfig({ ...config, last_error: null })
+    } catch (e) {
+      // Dismissing a stale error banner is not worth a toast of its own, but the
+      // banner must stay up if the clear did not land — hiding it locally would
+      // make it reappear on the next reload with no explanation.
+      addToast(`Could not clear the error: ${e.message}`, 'error')
+    }
   }
 
   async function saveConfig(patch) {
     const next = { ...config, ...patch }
     setConfig(next)
-    const { error } = await supabase
-      .from('user_configs')
-      .update({
-        repo_name: next.repo_name,
-        repo_branch: next.repo_branch || 'main',
-        is_private: next.is_private,
-        auto_backup: next.auto_backup,
-      })
-      .eq('user_id', config.user_id)
-    if (error) addToast(`Could not save: ${error.message}`, 'error')
+    try {
+      await updateBackupSettings(supabase, config.user_id, next)
+    } catch (e) {
+      addToast(`Could not save: ${e.message}`, 'error')
+    }
   }
 
   async function handleBackup({ force = false } = {}) {

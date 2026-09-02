@@ -1,21 +1,22 @@
 import { useEffect, useState, useMemo } from 'react'
 import ReaderModal from './ReaderModal.jsx'
+import { listAllHighlights } from '../lib/db/highlights.js'
 
 export default function HighlightsView({ supabase }) {
   const [highlights, setHighlights] = useState([])
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState('')
   const [readerEntry, setReaderEntry] = useState(null)
+  // "No highlights yet" is advice about how to make one. Telling a user with
+  // hundreds of highlights to go make their first is worse than saying nothing,
+  // so a failed load gets its own state rather than falling into empty.
+  const [error, setError] = useState(null)
 
   useEffect(() => {
-    supabase
-      .from('highlights')
-      .select('*, entries(id, title, url, full_text)')
-      .order('created_at', { ascending: false })
-      .then(({ data }) => {
-        setHighlights(data ?? [])
-        setLoading(false)
-      })
+    listAllHighlights(supabase)
+      .then((rows) => { setHighlights(rows); setError(null) })
+      .catch((e) => setError(e.message || 'could not load your highlights'))
+      .finally(() => setLoading(false))
   }, [supabase])
 
   const filtered = useMemo(() => {
@@ -48,7 +49,13 @@ export default function HighlightsView({ supabase }) {
       <div className="highlights-list">
         {loading && <p className="muted" style={{ padding: '16px' }}>Loading…</p>}
 
-        {!loading && filtered.length === 0 && (
+        {!loading && error && (
+          <p className="explore-semantic-error" style={{ padding: '16px' }}>
+            Couldn’t load your highlights: {error}
+          </p>
+        )}
+
+        {!loading && !error && filtered.length === 0 && (
           <p className="muted" style={{ padding: '16px' }}>
             {query ? 'No highlights match.' : 'No highlights yet — open an article in reader mode and select text to highlight.'}
           </p>

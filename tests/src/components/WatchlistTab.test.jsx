@@ -21,8 +21,16 @@ function makeSupabase(programs = []) {
   }
 }
 
+// Dated relative to now. This was hardcoded to '2026-09-01', which stopped
+// being a future date on 2026-09-01 — from then on StatusBadge rendered
+// "closed" rather than "Opens Sep 2026" and the assertion below failed for
+// reasons that had nothing to do with the component.
+const OPENS_AT = new Date(Date.now() + 365 * 86400000).toISOString().split('T')[0]
+const OPENS_LABEL = new Date(OPENS_AT + 'T00:00:00')
+  .toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+
 const samplePrograms = [
-  { id: '1', name: 'Google STEP', url: 'https://step.google', notes: 'good program', opens_at: '2026-09-01', window_open: false },
+  { id: '1', name: 'Google STEP', url: 'https://step.google', notes: 'good program', opens_at: OPENS_AT, window_open: false },
   { id: '2', name: 'MLH Fellowship', url: 'https://mlh.io', notes: '', opens_at: null, window_open: true },
 ]
 
@@ -53,7 +61,7 @@ test('shows opens_at date when present', async () => {
   const sb = makeSupabase(samplePrograms)
   render(<WatchlistTab supabase={sb} />)
   await waitFor(() => screen.getByText('Google STEP'))
-  expect(screen.getByText(/Sep 2026/i)).toBeInTheDocument()
+  expect(screen.getByText(new RegExp(OPENS_LABEL, 'i'))).toBeInTheDocument()
 })
 
 test('add form inserts new program', async () => {

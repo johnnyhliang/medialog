@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
+import { listPrograms, setProgramWindowOpen, setProgramDeadline, createProgram } from '../../lib/db/programs.js'
 
 const CATEGORIES = ['fellowship', 'program', 'cohort', 'internship', 'research']
 const EMPTY_FORM = { name: '', url: '', category: 'fellowship', deadline: '', notes: '' }
@@ -8,6 +9,11 @@ const EMPTY_FORM = { name: '', url: '', category: 'fellowship', deadline: '', no
 // updated local state optimistically and never checked the write: a rejected
 // update left the row looking saved until a reload silently reverted it. Every
 // write now reverts its own optimistic change and says so.
+//
+// The queries live in src/lib/db/programs.js and THROW on failure, so the
+// revert is driven by a catch rather than by remembering to check `error` —
+// forgetting a catch fails loudly, forgetting an `if (error)` fails silently,
+// and silent is the bug this tab had.
 export default function ProgramsTab({ supabase, addToast = () => {} }) {
   const [programs, setPrograms] = useState([])
   const [showAdd, setShowAdd] = useState(false)
@@ -15,9 +21,20 @@ export default function ProgramsTab({ supabase, addToast = () => {} }) {
   const [loading, setLoading] = useState(true)
 
   const load = useCallback(async () => {
-    const { data } = await supabase.from('programs').select('*').order('name')
-    if (data) setPrograms(data)
+    try {
+      setPrograms(await listPrograms(supabase))
+    } catch (e) {
+      // Swallowed here rather than rethrown: `load` is also the revert path, and
+      // an unhandled rejection inside a revert would replace a visible failure
+      // with an invisible one.
+      addToast(`Couldn’t load programs: ${e.message}`, 'error')
+    }
     setLoading(false)
+    // addToast is deliberately not a dependency: it is only read on the failure
+    // path, and listing it would re-run the load on every render where the
+    // parent hands down a fresh closure — a query storm in exchange for a
+    // dependency that can never change what the load does.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supabase])
 
   useEffect(() => { load() }, [load])
@@ -33,37 +50,38 @@ export default function ProgramsTab({ supabase, addToast = () => {} }) {
 
   async function toggleWindow(id, current) {
     setPrograms((prev) => prev.map((p) => p.id === id ? { ...p, window_open: !current } : p))
-    const { error } = await supabase.from('programs').update({ window_open: !current }).eq('id', id)
-    if (error) await revert(error)
+    try {
+      await setProgramWindowOpen(supabase, id, !current)
+    } catch (e) {
+      await revert(e)
+    }
   }
 
   async function updateDeadline(id, deadline) {
     setPrograms((prev) => prev.map((p) => p.id === id ? { ...p, deadline: deadline || null } : p))
-    const { error } = await supabase.from('programs').update({ deadline: deadline || null }).eq('id', id)
-    if (error) await revert(error)
+    try {
+      await setProgramDeadline(supabase, id, deadline)
+    } catch (e) {
+      await revert(e)
+    }
   }
 
   async function handleAdd(e) {
     e.preventDefault()
-    const { data, error } = await supabase
-      .from('programs')
-      .insert({
-        name: form.name.trim(),
-        url: form.url.trim(),
-        category: form.category,
-        deadline: form.deadline || null,
-        notes: form.notes.trim() || null,
-        window_open: false,
-      })
-      .select()
-      .single()
-    // Keep the form open and populated on failure — clearing it discards what the
-    // user typed for a program that was never actually created.
-    if (error || !data) {
-      addToast(`Couldn’t add program: ${error?.message ?? 'unknown error'}`, 'error')
+    let created
+    try {
+      created = await createProgram(supabase, form)
+    } catch (err) {
+      // Keep the form open and populated on failure — clearing it discards what
+      // the user typed for a program that was never actually created.
+      addToast(`Couldn’t add program: ${err.message}`, 'error')
       return
     }
-    setPrograms((prev) => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)))
+    if (!created) {
+      addToast('Couldn’t add program: unknown error', 'error')
+      return
+    }
+    setPrograms((prev) => [...prev, created].sort((a, b) => a.name.localeCompare(b.name)))
     setForm(EMPTY_FORM)
     setShowAdd(false)
   }

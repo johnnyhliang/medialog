@@ -1,7 +1,13 @@
 import { useEffect, useState, useCallback } from 'react'
+import { getRadarKeywords, updateRadarKeywords } from '../../lib/db/userConfig.js'
 
 // Saves on change, not behind a Save button. The write reverts its own optimistic
 // update on failure — see ProgramsTab for why.
+//
+// The read goes through getRadarKeywords, which selects that column ALONE. This
+// tab used to read the row it needed via a query it wrote itself; the same row
+// holds github_token and twitter_auth_token, and a keyword-chip list has no
+// reason to hold a credential in component state.
 export default function KeywordsTab({ supabase, addToast = () => {} }) {
   const [keywords, setKeywords] = useState([])
   const [userId, setUserId] = useState(null)
@@ -9,29 +15,38 @@ export default function KeywordsTab({ supabase, addToast = () => {} }) {
   const [loading, setLoading] = useState(true)
 
   const load = useCallback(async () => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { setLoading(false); return }
-    setUserId(user.id)
-    const { data } = await supabase
-      .from('user_configs')
-      .select('radar_keywords')
-      .eq('user_id', user.id)
-      .maybeSingle()
-    if (data) setKeywords(data.radar_keywords ?? [])
+    try {
+      const config = await getRadarKeywords(supabase)
+      // null means signed out, which is a state and not a failure — render the
+      // empty list rather than an error.
+      if (config) {
+        setUserId(config.userId)
+        setKeywords(config.keywords)
+      }
+    } catch (e) {
+      // Caught, not rethrown: load is also the revert path below.
+      addToast(`Couldn’t load keywords: ${e.message}`, 'error')
+    }
     setLoading(false)
+    // addToast is deliberately not a dependency: it is only read on the failure
+    // path, and listing it would re-run the load on every render where the
+    // parent hands down a fresh closure — a query storm in exchange for a
+    // dependency that can never change what the load does.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supabase])
 
   useEffect(() => { load() }, [load])
 
   async function save(next) {
     setKeywords(next)
-    const { error } = await supabase.from('user_configs').update({ radar_keywords: next }).eq('user_id', userId)
-    if (error) {
-      addToast(`Couldn’t save: ${error.message}`, 'error')
+    try {
+      await updateRadarKeywords(supabase, userId, next)
+      return true
+    } catch (e) {
+      addToast(`Couldn’t save: ${e.message}`, 'error')
       await load()
       return false
     }
-    return true
   }
 
   async function add(e) {
