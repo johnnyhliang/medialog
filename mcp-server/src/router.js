@@ -3,7 +3,7 @@ import { agendaView, dashboardOverview, reviewWeekView, whatsNextView, listEntri
 import { normalizeLimit } from './helpers.js'
 import { tools } from './tools.js'
 
-export function createRouter(supabase) {
+export function createRouter(supabase, { userId = null } = {}) {
   return {
     tools,
     async call(name, args) {
@@ -37,13 +37,13 @@ export function createRouter(supabase) {
         case 'set_due_date':
           return { content: payload(await setDueDateAction(supabase, args)) }
         case 'capture_task':
-          return { content: payload(await captureTaskAction(supabase, args)) }
+          return { content: payload(await captureTaskAction(supabase, args, { userId })) }
         case 'create_topic':
-          return { content: payload(await createTopicAction(supabase, args)) }
+          return { content: payload(await createTopicAction(supabase, args, { userId })) }
         case 'create_entry':
-          return { content: payload(await createEntryAction(supabase, args)) }
+          return { content: payload(await createEntryAction(supabase, args, { userId })) }
         case 'bulk_create_entries':
-          return { content: payload(await bulkCreateEntriesAction(supabase, args)) }
+          return { content: payload(await bulkCreateEntriesAction(supabase, args, { userId })) }
         case 'move_entry':
           return { content: payload(await moveEntryAction(supabase, args)) }
         case 'bulk_move_entries':

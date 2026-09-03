@@ -17,7 +17,15 @@ export function loadConfig(env = process.env) {
   return {
     supabaseUrl,
     supabaseKey,
+    // Writes need an explicit owner. A service-role key has no auth.uid(), so
+    // the column defaults that fill user_id in the browser produce null here
+    // and every insert fails the NOT NULL constraint. Reads do not need it.
+    userId: env.MCP_USER_ID || null,
   }
+}
+
+export function loadUserId(env = process.env) {
+  return loadConfig(env).userId
 }
 
 export function createSupabaseClient(env = process.env) {

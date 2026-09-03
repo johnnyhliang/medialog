@@ -27,26 +27,27 @@ async function resolveTargetTopic(supabase, params) {
   return getTopicByName(supabase, name)
 }
 
-export async function createTopicAction(supabase, params) {
+export async function createTopicAction(supabase, params, { userId = null } = {}) {
   const name = normalizeName(params.name)
   if (!name) throw new Error('Topic name is required.')
-  return { topic: await createTopic(supabase, name) }
+  return { topic: await createTopic(supabase, name, { userId }) }
 }
 
-export async function createEntryAction(supabase, params) {
+export async function createEntryAction(supabase, params, { userId = null } = {}) {
   const topic = await resolveTopic(supabase, params)
   const entry = await createEntry(supabase, {
     topicId: topic.id,
     url: params.url ?? null,
     title: params.title ?? null,
     note: params.note ?? '',
+    userId,
   })
   return { entry }
 }
 
-export async function bulkCreateEntriesAction(supabase, params) {
+export async function bulkCreateEntriesAction(supabase, params, { userId = null } = {}) {
   const topic = await resolveTopic(supabase, params)
-  const entries = await bulkCreateEntries(supabase, topic.id, params.entries)
+  const entries = await bulkCreateEntries(supabase, topic.id, params.entries, { userId })
   return { topic: { id: topic.id, name: topic.name }, created: entries, count: entries.length }
 }
 
@@ -108,7 +109,7 @@ export async function setDueDateAction(supabase, params) {
 // fixed time — a job application, an assignment, a recruiter follow-up — lands
 // here in one call rather than create-then-update. Defaults to Inbox so a
 // capture never blocks on choosing a topic.
-export async function captureTaskAction(supabase, params) {
+export async function captureTaskAction(supabase, params, { userId = null } = {}) {
   const title = normalizeName(params.title)
   if (!title) throw new Error('title is required.')
 
@@ -116,12 +117,19 @@ export async function captureTaskAction(supabase, params) {
     ? await resolveTopic(supabase, params)
     : await getInboxTopic(supabase)
 
+  // Two steps on purpose. createEntry mirrors the title from the note whenever
+  // a note is present, so passing both here would silently discard the caller's
+  // title and name the task after its own provenance note. Creating with the
+  // title alone marks it curated (title_edited), and the note is attached
+  // afterwards — updateEntry then leaves a curated title alone.
   const entry = await createEntry(supabase, {
     topicId: topic.id,
     url: params.url ?? null,
     title,
-    note: params.note ?? '',
+    userId,
   })
+  const note = params.note ?? ''
+  if (note) await updateEntry(supabase, entry.id, { note })
 
   const due = params.due_at ? normalizeDue(params.due_at) : null
   if (due) await setDueDate(supabase, entry.id, due)

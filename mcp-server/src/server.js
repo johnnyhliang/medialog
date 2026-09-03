@@ -1,4 +1,4 @@
-import { createSupabaseClient } from './config.js'
+import { createSupabaseClient, loadUserId } from './config.js'
 import { createRouter } from './router.js'
 import { decodeMessage, encodeMessage, makeError, makeResponse } from './jsonrpc.js'
 
@@ -7,7 +7,7 @@ const VERSION = '0.2.0'
 
 export function createMcpServer(env = process.env) {
   const supabase = createSupabaseClient(env)
-  const router = createRouter(supabase)
+  const router = createRouter(supabase, { userId: loadUserId(env) })
 
   let inputBuffer = Buffer.alloc(0)
 

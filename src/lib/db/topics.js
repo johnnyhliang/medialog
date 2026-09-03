@@ -82,10 +82,17 @@ export async function getTopicByName(supabase, name) {
   return unwrap(res, 'getTopicByName')
 }
 
-export async function createTopic(supabase, name) {
+// `userId` is optional and normally omitted: in the browser the column's
+// default fills it from auth.uid(). A service-role caller has no auth.uid(),
+// so it must say who it is writing as — and the key is only added when a value
+// is present, because `user_id: undefined` serialises to null and RLS rejects
+// it (same trap documented in feeds.js).
+export async function createTopic(supabase, name, { userId = null } = {}) {
+  const row = { name: String(name).slice(0, 120) }
+  if (userId) row.user_id = userId
   const res = await supabase
     .from('topics')
-    .insert({ name: String(name).slice(0, 120) })
+    .insert(row)
     .select()
     .single()
   return unwrap(res, 'createTopic')

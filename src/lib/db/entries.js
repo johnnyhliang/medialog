@@ -28,7 +28,7 @@ export async function listEntriesByTopic(supabase, topicId) {
   return unwrapList(result, 'listEntriesByTopic').map(flattenTags)
 }
 
-export async function createEntry(supabase, { topicId, url = null, title = null, note = '' }) {
+export async function createEntry(supabase, { topicId, url = null, title = null, note = '', userId = null }) {
   const noteText = clampNote(note)
   // A note to mirror wins over a passed-in title; with neither, computeTitle
   // falls back to the url. Only a title we actually *kept* counts as curated.
@@ -44,6 +44,8 @@ export async function createEntry(supabase, { topicId, url = null, title = null,
       // A title handed to us that we actually kept is a curated title, not a
       // mirror of the note — protect it from the first note edit onward.
       title_edited: !mirrored,
+      // See createTopic: only stamped when a caller without auth.uid() says so.
+      ...(userId ? { user_id: userId } : {}),
     })
     .select()
     .single()
@@ -111,7 +113,7 @@ export async function updateEntry(supabase, id, patch, { autoTitle = false } = {
   return unwrap(result, 'updateEntry')
 }
 
-export async function bulkCreateEntries(supabase, topicId, items) {
+export async function bulkCreateEntries(supabase, topicId, items, { userId = null } = {}) {
   const rows = items.map((it) => ({
     topic_id: topicId,
     url: clampUrl(it.url),
@@ -120,6 +122,7 @@ export async function bulkCreateEntries(supabase, topicId, items) {
     // Same rule as createEntry: a title that came in with the import is
     // curated, so the first note edit must not overwrite it.
     title_edited: Boolean(it.title),
+    ...(userId ? { user_id: userId } : {}),
   }))
   const result = await supabase.from('entries').insert(rows).select()
   return unwrap(result, 'bulkCreateEntries')
