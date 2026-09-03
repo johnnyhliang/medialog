@@ -24,3 +24,8 @@ distilled/
 # Agent worktrees (own git repos + node_modules)
 .claude/worktrees/
 CLAUDE.md
+
+# Personal operating doc: a live weekly schedule with physical locations,
+# church/gym times, and recruiting status. This repo is public — keep it local.
+# Paste it into a Claude Desktop Project instead of committing it.
+docs/operating-system.md
