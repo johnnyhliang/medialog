@@ -1,3 +1,15 @@
+// MCP stdio framing: newline-delimited JSON.
+//
+// This previously used LSP's `Content-Length:` header framing, which is a
+// different protocol. The server answered correctly to anything speaking that
+// dialect and was silent to every real MCP client — Claude Desktop would
+// connect, send a newline-delimited `initialize`, and wait forever.
+//
+// Per the MCP spec (basic/transports/stdio): each message is a single JSON-RPC
+// request, notification or response, delimited by newlines, with no embedded
+// newlines. JSON.stringify never emits a raw newline inside a string (it
+// escapes them as \n), so a plain append is safe.
+
 export function makeResponse(id, result) {
   return { jsonrpc: '2.0', id, result }
 }
@@ -9,27 +21,28 @@ export function makeError(id, code, message, data) {
 }
 
 export function encodeMessage(message) {
-  const payload = JSON.stringify(message)
-  return `Content-Length: ${Buffer.byteLength(payload, 'utf8')}\r\n\r\n${payload}`
+  return `${JSON.stringify(message)}\n`
 }
 
+/**
+ * Pull one complete message off the front of `buffer`.
+ *
+ * Returns null when no full line has arrived yet — stdin delivers arbitrary
+ * chunks, so a message can straddle two reads and the caller must keep the
+ * remainder. Blank lines are skipped rather than treated as parse errors:
+ * a stray \r\n or a trailing newline is not a malformed message.
+ */
 export function decodeMessage(buffer) {
-  const marker = buffer.indexOf('\r\n\r\n')
-  if (marker === -1) return null
+  let rest = buffer
+  while (true) {
+    const newline = rest.indexOf('\n')
+    if (newline === -1) return null
 
-  const headerText = buffer.subarray(0, marker).toString('utf8')
-  const match = headerText.match(/Content-Length:\s*(\d+)/i)
-  if (!match) {
-    throw new Error(`Missing Content-Length header: ${headerText}`)
-  }
+    const line = rest.subarray(0, newline).toString('utf8').trim()
+    rest = rest.subarray(newline + 1)
 
-  const length = Number(match[1])
-  const bodyStart = marker + 4
-  if (buffer.length < bodyStart + length) return null
+    if (!line) continue // blank line between messages — not an error
 
-  const body = buffer.subarray(bodyStart, bodyStart + length).toString('utf8')
-  return {
-    message: JSON.parse(body),
-    rest: buffer.subarray(bodyStart + length),
+    return { message: JSON.parse(line), rest }
   }
 }
