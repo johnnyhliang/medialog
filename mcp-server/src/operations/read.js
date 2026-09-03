@@ -2,7 +2,7 @@ import { listAgenda, listEntriesByTopic, listForRevisit, listOverdue, listRecent
 import { getTopicByName, listTopics } from '../../../src/lib/db/topics.js'
 import { groupAgenda } from '../../../src/lib/agenda.js'
 import { assessWeek, rankTasks } from '../../../src/lib/priority.js'
-import { normalizeLimit, normalizeName } from '../helpers.js'
+import { normalizeLimit, normalizeName, summarizeEntries, summarizeEntry } from '../helpers.js'
 
 // The server has no browser to read a timezone from, and an agenda bucketed in
 // UTC would call something due tonight "overdue" from 8pm onward. Everything
@@ -24,11 +24,34 @@ export async function listTopicsView(supabase, params = {}) {
 
 export async function listEntriesForTopic(supabase, params) {
   const topic = await resolveTopic(supabase, params)
-  const entries = await listEntriesByTopic(supabase, topic.id)
+  const all = await listEntriesByTopic(supabase, topic.id)
+  // A topic can hold hundreds of entries with 10k-character notes each. An
+  // unbounded, unsummarized response here was ~7MB on the largest topic.
+  const limit = normalizeLimit(params.limit, 50, 200)
+  const offset = Math.max(0, Number(params.offset) || 0)
+  const page = all.slice(offset, offset + limit)
   return {
     topic: { id: topic.id, name: topic.name, entry_count: topic.entry_count },
-    entries,
+    total: all.length,
+    offset,
+    returned: page.length,
+    has_more: offset + page.length < all.length,
+    entries: summarizeEntries(page),
   }
+}
+
+// Full content for exactly one entry — the escape hatch from the previews that
+// every list view returns.
+export async function getEntry(supabase, params) {
+  if (!params.entry_id) throw new Error('entry_id is required.')
+  const result = await supabase
+    .from('entries')
+    .select('*, topics(name)')
+    .eq('id', params.entry_id)
+    .single()
+  if (result.error) throw new Error(result.error.message)
+  const row = result.data
+  return { entry: { ...row, topic: row.topics?.name ?? null, topics: undefined } }
 }
 
 export async function searchGlobal(supabase, params) {
@@ -36,7 +59,12 @@ export async function searchGlobal(supabase, params) {
   if (!query) throw new Error('Query is required.')
   const limit = normalizeLimit(params.limit, 20, 100)
   const results = await searchEntries(supabase, query)
-  return { query, results: results.slice(0, limit) }
+  return {
+    query,
+    total: results.length,
+    returned: Math.min(limit, results.length),
+    results: summarizeEntries(results.slice(0, limit)),
+  }
 }
 
 export async function listInbox(supabase, limit) {
@@ -48,7 +76,7 @@ export async function listInbox(supabase, limit) {
       name: inbox.name,
       total: entries.length,
     },
-    entries: entries.slice(0, limit),
+    entries: summarizeEntries(entries.slice(0, limit)),
   }
 }
 
@@ -66,8 +94,8 @@ export async function dashboardOverview(supabase, params = {}) {
       name: topic.name,
       entry_count: topic.entry_count,
     })),
-    revisit_queue: revisit,
-    recent_activity: activity,
+    revisit_queue: summarizeEntries(revisit),
+    recent_activity: summarizeEntries(activity),
   }
 }
 
@@ -95,15 +123,15 @@ export async function topicProgress(supabase, params) {
 }
 
 export async function recentActivity(supabase, limit) {
-  return { entries: await listRecentActivity(supabase, limit) }
+  return { entries: summarizeEntries(await listRecentActivity(supabase, limit)) }
 }
 
 export async function listForRevisitView(supabase, limit) {
-  return { entries: await listForRevisit(supabase, limit) }
+  return { entries: summarizeEntries(await listForRevisit(supabase, limit)) }
 }
 
 export async function trashList(supabase, limit) {
-  return { entries: (await listTrashedEntries(supabase)).slice(0, limit) }
+  return { entries: summarizeEntries((await listTrashedEntries(supabase)).slice(0, limit)) }
 }
 
 async function resolveTopic(supabase, { topic_id, topic_name }) {

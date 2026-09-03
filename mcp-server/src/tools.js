@@ -12,14 +12,26 @@ export const tools = [
   },
   {
     name: 'list_entries_by_topic',
-    description: 'List non-deleted entries for a topic, ordered the same way the app shows them.',
+    description: 'List entries for a topic, newest first, as summaries with a note preview. Paginated — a large topic holds hundreds of entries. Use get_entry for the full note of one.',
     inputSchema: {
       type: 'object',
       properties: {
         topic_id: { type: 'string' },
         topic_name: { type: 'string' },
+        limit: { type: 'integer', minimum: 1, maximum: 200, default: 50 },
+        offset: { type: 'integer', minimum: 0, default: 0 },
       },
       anyOf: [{ required: ['topic_id'] }, { required: ['topic_name'] }],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'get_entry',
+    description: 'Full content of a single entry, including the complete note. Every list view returns truncated previews; this is how to read the rest.',
+    inputSchema: {
+      type: 'object',
+      properties: { entry_id: { type: 'string' } },
+      required: ['entry_id'],
       additionalProperties: false,
     },
   },
