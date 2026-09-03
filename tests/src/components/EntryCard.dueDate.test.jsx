@@ -52,7 +52,9 @@ test('clears a due date from the badge itself', async () => {
   const dated = { ...base, due_at: '2026-09-11T23:59:59.999Z' }
   const { container } = render(<EntryCard entry={dated} {...handlers} onDueDateChange={onDueDateChange} />)
   await expandCard(container)
-  await userEvent.click(container.querySelector('.due-badge'))
+  // Scoped to the expanded title row: the badge now also renders on the
+  // collapsed face, where it is deliberately read-only.
+  await userEvent.click(container.querySelector('.card-title-display .due-badge'))
   await userEvent.click(screen.getByRole('button', { name: 'Clear' }))
   expect(onDueDateChange).toHaveBeenCalledWith('x', null)
 })
@@ -61,7 +63,7 @@ test('the badge stays a plain label with no handler to call', async () => {
   const dated = { ...base, due_at: '2026-09-11T23:59:59.999Z' }
   const { container } = render(<EntryCard entry={dated} {...handlers} />)
   await expandCard(container)
-  const badge = container.querySelector('.due-badge')
+  const badge = container.querySelector('.card-title-display .due-badge')
   expect(badge).not.toBeNull()
   expect(badge.tagName).toBe('SPAN')
 })

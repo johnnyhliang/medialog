@@ -14,6 +14,11 @@
 .toggle-btn { background: var(--surface-alt); color: var(--text); border: 1px solid var(--border); padding: 8px 12px; border-radius: var(--radius-sm); cursor: pointer; font-size: var(--text-sm); transition: all 0.2s; }
 .toggle-btn:hover { background: var(--surface); }
 .toggle-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
+/* The due date is optional and rarely used, so it does not get an equal third
+   of the row like the two buttons do — it sits at its natural width and stays
+   out of the way of the two controls that matter on every save. */
+.quickadd-due { flex: 0 0 auto; color: var(--muted); font-size: var(--text-sm); padding: 8px; }
+.quickadd-due:not(:placeholder-shown), .quickadd-due:focus { color: var(--text); }
 .quickadd textarea { min-height: 48px; font-size: var(--text-sm); }
 .quickadd-dup-warning {
   font-size: var(--text-xs);

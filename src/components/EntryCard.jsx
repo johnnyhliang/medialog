@@ -17,8 +17,16 @@ import { fetchTitle } from '../lib/enrich.js'
 import { getYouTubeThumbnail } from '../lib/youtube.js'
 import { classifyUrl } from '../lib/classifyUrl.js'
 import { buildSearchPreview, splitHighlightParts } from '../lib/searchSnippets.js'
+import { resolveTimezone, startOfLocalDay } from '../lib/timezone.js'
+import { readPref } from '../lib/localPref.js'
 
 const NoteEditor = lazy(() => import('./NoteEditor.jsx'))
+
+// The cached preference, not `useTimezone`: the hook does a database round trip
+// and this component renders once per row in lists of hundreds. Same value.
+function cardTimezone() {
+  return resolveTimezone(readPref('medialog_timezone', null))
+}
 
 function faviconUrl(url) {
   try {
@@ -202,10 +210,17 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
     onMove?.(entry.id, topicId)
   }
 
+  // `dateStr + 'T00:00:00Z'` was UTC midnight, which is the previous local day
+  // for every user west of Greenwich: an entry snoozed to tomorrow came back
+  // at 8pm tonight in Detroit, so the snooze did nothing for the last four
+  // hours of every day. The date the input hands back is a wall-clock day and
+  // has to be resolved in the user's zone.
   async function handleSnooze(dateStr) {
     const client = supabaseClient || supabase
-    await snoozeEntry(client, entry.id, dateStr + 'T00:00:00Z')
-    onEntryUpdate?.({ ...entry, surface_after: dateStr + 'T00:00:00Z' })
+    const until = startOfLocalDay(dateStr, cardTimezone())
+    if (!until) return
+    await snoozeEntry(client, entry.id, until)
+    onEntryUpdate?.({ ...entry, surface_after: until })
     setShowSnoozePicker(false)
     setShowSecondaryActions(false)
   }
@@ -603,6 +618,15 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
         >#{t}</span>
       ))}
       {age && <span style={{ marginLeft: 'auto' }}>{age}</span>}
+      {/* The badge lived only in the expanded card, so a dated entry looked
+          exactly like an undated one until you opened it — which defeats the
+          point of having a deadline at all. This row already renders on both
+          collapsed faces (compact and bookmark), and DueBadge returns null
+          without a date, so the ~1,300 undated entries add no element and the
+          flex `gap` has nothing to space: the collapsed layout is unchanged.
+          Read-only here on purpose — editing a date stays in the expanded card,
+          where there is room to show what changed. */}
+      <DueBadge dueAt={entry.due_at} />
       {entry.surface_after && (
         <button
           className="snooze-indicator"

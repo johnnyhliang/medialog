@@ -8,6 +8,7 @@ import {
   endOfDayIn,
   endOfDayAheadIn,
   isSameDayIn,
+  startOfLocalDay,
 } from '../../../src/lib/timezone.js'
 
 const HOUR = 3600000
@@ -122,5 +123,26 @@ describe('isSameDayIn', () => {
     const b = new Date('2026-01-16T04:00:00Z')
     expect(isSameDayIn(a, b, 'America/New_York')).toBe(true)
     expect(isSameDayIn(a, b, 'UTC')).toBe(false)
+  })
+})
+
+describe('startOfLocalDay', () => {
+  test('lands on the picked day, not the one before it', () => {
+    // UTC midnight ('2026-09-11T00:00:00Z') is still Sep 10 in Detroit. That
+    // was the shipped snooze bug: a snooze to tomorrow resurfaced tonight.
+    const iso = startOfLocalDay('2026-09-11', 'America/Detroit')
+    expect(iso).toBe('2026-09-11T04:00:00.000Z')
+    expect(new Date(iso).toLocaleDateString('en-CA', { timeZone: 'America/Detroit' })).toBe('2026-09-11')
+  })
+
+  test('uses the offset in effect on the target day, not today', () => {
+    // Winter date resolved from a summer `near`: the answer must use EST.
+    const iso = startOfLocalDay('2026-12-15', 'America/Detroit', new Date('2026-07-01T12:00:00Z'))
+    expect(iso).toBe('2026-12-15T05:00:00.000Z')
+  })
+
+  test('rejects anything that is not a bare date', () => {
+    expect(startOfLocalDay('', 'UTC')).toBeNull()
+    expect(startOfLocalDay('tomorrow', 'UTC')).toBeNull()
   })
 })

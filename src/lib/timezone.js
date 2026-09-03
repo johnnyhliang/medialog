@@ -160,6 +160,27 @@ export function endOfLocalDay(dateStr, tz, near = new Date()) {
   ).toISOString()
 }
 
+// 'YYYY-MM-DD' → the instant that local day BEGINS, as an ISO string.
+//
+// The counterpart to `endOfLocalDay`, for the other thing a bare date can mean.
+// A deadline means "any time that day" and so ends the day; a SNOOZE means
+// "come back on that day" and so starts it — resurfacing an entry at 11:59pm on
+// the day it was snoozed to would be the same as not resurfacing it at all.
+//
+// Same trap being closed either way: `dateStr + 'T00:00:00Z'` is UTC midnight,
+// which for anyone west of Greenwich is still the PREVIOUS local day. An entry
+// snoozed to tomorrow evening in Detroit came straight back at 8pm tonight, so
+// for the last four hours of every day the snooze button silently did nothing.
+export function startOfLocalDay(dateStr, tz, near = new Date()) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dateStr || ''))
+  if (!m) return null
+  return instantFromWallClock(
+    { year: +m[1], month: +m[2], day: +m[3], hour: 0, minute: 0, second: 0, ms: 0 },
+    tz,
+    near,
+  ).toISOString()
+}
+
 // An instant → the 'YYYY-MM-DD' the date input needs, read in `tz`.
 //
 // `toISOString().slice(0, 10)` is the tempting one-liner and is the same bug in

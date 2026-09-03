@@ -79,6 +79,7 @@ import { useArchiveToast } from './hooks/useArchiveToast.js'
 import { readBoolPref, readPref, writePref, clearPref } from './lib/localPref.js'
 import { useTheme } from './hooks/useTheme.js'
 import { useTimezone } from './hooks/useTimezone.js'
+import { startOfLocalDay } from './lib/timezone.js'
 const FilePreviewModal = lazy(() => import('./components/FilePreviewModal.jsx'))
 
 function Workspace() {
@@ -552,7 +553,7 @@ function Workspace() {
     applyAddTopic(t)
   }
 
-  async function handleAddEntry({ url, note, title: prefetchedTitle, tags = [], onTitleStatus, onEmbedStatus }) {
+  async function handleAddEntry({ url, note, title: prefetchedTitle, tags = [], dueAt = null, onTitleStatus, onEmbedStatus }) {
     let e
     try {
       e = await createEntry(supabase, { topicId: selectedId, url, note })
@@ -560,6 +561,14 @@ function Workspace() {
       return { ok: false, error: err }
     }
     track(supabase, 'entry_created', { source: 'paste' })
+    // Written after the insert rather than through createEntry: that function
+    // owns the title-mirroring / `title_edited` invariant and nothing about a
+    // deadline should have to be threaded through it. A failed date must not
+    // lose the entry the user just typed, so it only costs a toast.
+    if (dueAt) {
+      try { await setDueDate(supabase, e.id, dueAt); e = { ...e, due_at: dueAt } }
+      catch { addToast('Entry saved, but the due date did not stick', 'error') }
+    }
     setEntries((prev) => [{ ...e, tags: [] }, ...prev])
     if (tags.length > 0) {
       await setEntryTags(supabase, e.id, tags)
@@ -600,7 +609,7 @@ function Workspace() {
   }
 
   // Catch mode: like handleAddEntry but always lands in Inbox, from anywhere.
-  async function handleCatchEntry({ url, note, title: prefetchedTitle, onTitleStatus, onEmbedStatus }) {
+  async function handleCatchEntry({ url, note, title: prefetchedTitle, dueAt = null, onTitleStatus, onEmbedStatus }) {
     if (!inboxTopic) return { ok: false, error: new Error('no inbox') }
     let e
     try {
@@ -609,6 +618,10 @@ function Workspace() {
       return { ok: false, error: err }
     }
     track(supabase, 'entry_created', { source: 'capture' })
+    if (dueAt) {
+      try { await setDueDate(supabase, e.id, dueAt); e = { ...e, due_at: dueAt } }
+      catch { addToast('Entry saved, but the due date did not stick', 'error') }
+    }
     setInboxCount((c) => c + 1)
     if (selectedId === inboxTopic.id) setEntries((prev) => [{ ...e, tags: [] }, ...prev])
     ;(async () => {
@@ -1734,7 +1747,11 @@ function Workspace() {
               autoFocus
               style={{ fontSize: 'var(--text-base)', padding: '4px 8px' }}
               onChange={(e) => {
-                if (e.target.value) handleSnoozeFromPalette(snoozeTarget, e.target.value + 'T00:00:00Z')
+                // Not `+ 'T00:00:00Z'`: that is UTC midnight, which is still the
+                // previous day locally west of Greenwich, so the entry
+                // resurfaced hours before the day it was snoozed to.
+                const until = startOfLocalDay(e.target.value, timezone)
+                if (until) handleSnoozeFromPalette(snoozeTarget, until)
               }}
             />
           </div>

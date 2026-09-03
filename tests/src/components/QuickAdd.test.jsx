@@ -154,3 +154,31 @@ test('shows title-not-fetched message on title failure without blocking save', a
 
   expect(screen.queryByText(/save failed/i)).not.toBeInTheDocument()
 })
+
+// --- a task can be created in one step -------------------------------------
+// Before this, a dated entry meant create-then-edit. The date is optional and
+// most entries are not tasks, so it stays a bare field with no prompting.
+test('an optional due date rides along with the entry', async () => {
+  localStorage.setItem('medialog_timezone', 'America/Detroit')
+  const onAdd = vi.fn(() => Promise.resolve({ ok: true }))
+  render(<QuickAdd onAdd={onAdd} />)
+  await userEvent.type(screen.getByPlaceholderText(/what's worth remembering/i), 'finish the essay')
+  await userEvent.type(screen.getByLabelText(/due date/i), '2026-09-11')
+  await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+  expect(onAdd).toHaveBeenCalledTimes(1)
+  const iso = onAdd.mock.calls[0][0].dueAt
+  // End of the picked LOCAL day. `new Date('2026-09-11')` is UTC midnight,
+  // which in Detroit is the 10th — the off-by-one this routing exists to avoid.
+  expect(iso).toBe('2026-09-12T03:59:59.999Z')
+  expect(new Date(iso).toLocaleDateString('en-CA', { timeZone: 'America/Detroit' })).toBe('2026-09-11')
+  localStorage.removeItem('medialog_timezone')
+})
+
+test('an entry with no due date sends none', async () => {
+  const onAdd = vi.fn(() => Promise.resolve({ ok: true }))
+  render(<QuickAdd onAdd={onAdd} />)
+  await userEvent.type(screen.getByPlaceholderText(/what's worth remembering/i), 'just a thought')
+  await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+  expect(onAdd.mock.calls[0][0].dueAt).toBeNull()
+})

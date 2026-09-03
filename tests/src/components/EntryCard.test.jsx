@@ -2,6 +2,12 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { vi, test, expect } from 'vitest'
 import EntryCard from '../../../src/components/EntryCard.jsx'
+import { snoozeEntry } from '../../../src/lib/db/entries.js'
+
+vi.mock('../../../src/lib/db/entries.js', () => ({
+  snoozeEntry: vi.fn(() => Promise.resolve()),
+  unsnoozeEntry: vi.fn(() => Promise.resolve()),
+}))
 
 // Mock the CodeMirror wrapper with a plain textarea.
 vi.mock('../../../src/components/NoteEditor.jsx', () => ({
@@ -289,4 +295,50 @@ test('Done button retries save when status is failed and keeps editor open on fa
   // editor still open because save failed
   expect(screen.getByLabelText('note editor')).toBeInTheDocument()
   vi.useRealTimers()
+})
+
+// --- snooze lands on the day the user picked -------------------------------
+// `dateStr + 'T00:00:00Z'` was UTC midnight: in Detroit that instant is still
+// the previous evening, so an entry snoozed to tomorrow came back at 8pm
+// tonight. Pinning the zone here rather than trusting the runner's is the
+// point — under UTC the old bug is invisible.
+test('snooze stores the start of the picked day in the user timezone', async () => {
+  localStorage.setItem('medialog_timezone', 'America/Detroit')
+  const { container } = render(<EntryCard entry={base} {...handlers} supabase={{}} />)
+  await expandCard(container)
+  await userEvent.click(screen.getByRole('button', { name: 'snooze' }))
+  await userEvent.type(container.querySelector('.snooze-picker input'), '2026-09-11')
+
+  expect(snoozeEntry).toHaveBeenCalledTimes(1)
+  const iso = snoozeEntry.mock.calls[0][2]
+  // Detroit is UTC-4 in September, so local midnight is 04:00Z — and, crucially,
+  // reads as the 11th in Detroit rather than the 10th.
+  expect(iso).toBe('2026-09-11T04:00:00.000Z')
+  expect(new Date(iso).toLocaleDateString('en-CA', { timeZone: 'America/Detroit' })).toBe('2026-09-11')
+  localStorage.removeItem('medialog_timezone')
+})
+
+// --- a due date has to be visible without opening the card -----------------
+test('a collapsed card shows its due date', () => {
+  const dated = { ...base, due_at: '2026-09-11T23:59:59.999Z' }
+  const { container } = render(<EntryCard entry={dated} {...handlers} />)
+  expect(container.querySelector('.card-collapsed')).not.toBeNull()
+  const badge = container.querySelector('.due-badge')
+  expect(badge).not.toBeNull()
+  // Read-only on the collapsed face: editing stays in the expanded card.
+  expect(badge.tagName).toBe('SPAN')
+})
+
+test('a collapsed bookmark card shows its due date too', () => {
+  const dated = { id: 'b', url: 'http://a.com', title: 'A Site', note: '', og_description: 'desc', tags: [], due_at: '2026-09-11T23:59:59.999Z' }
+  const { container } = render(<EntryCard entry={dated} {...handlers} />)
+  expect(container.querySelector('.card-bookmark')).not.toBeNull()
+  expect(container.querySelector('.due-badge')).not.toBeNull()
+})
+
+test('an undated collapsed card adds no badge element at all', () => {
+  // The layout must not shift for the ~1,300 entries with no due date: the
+  // meta row's flex gap only spaces elements that exist.
+  const { container } = render(<EntryCard entry={base} {...handlers} />)
+  expect(container.querySelector('.due-badge')).toBeNull()
 })

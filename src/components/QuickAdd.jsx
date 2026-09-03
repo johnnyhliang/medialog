@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { fetchTitle } from '../lib/enrich.js'
+import { endOfLocalDay, resolveTimezone } from '../lib/timezone.js'
+import { readPref } from '../lib/localPref.js'
 
 function formatDate(dateStr) {
   return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
@@ -16,6 +18,10 @@ export default function QuickAdd({ onAdd, disabled, onCheckDuplicate, supabase }
   const [fetchedTitle, setFetchedTitle] = useState(null)
   const [fetchingTitle, setFetchingTitle] = useState(false)
   const [conversationMode, setConversationMode] = useState(false)
+  // Optional, like the url above it: most entries are not tasks, so this is a
+  // bare field with no prompting. It exists so a task can be captured in one
+  // step — before this, every dated entry had to be created and then edited.
+  const [dueDate, setDueDate] = useState('')
   const [saveStatus, setSaveStatus] = useState('idle') // 'idle' | 'saving' | 'saved' | 'failed'
   const [enrichStatus, setEnrichStatus] = useState(null) // null | 'fetching-title' | 'indexing' | 'title-failed' | 'embed-failed'
   const textareaRef = useRef(null)
@@ -92,9 +98,14 @@ export default function QuickAdd({ onAdd, disabled, onCheckDuplicate, supabase }
     clearTimeout(enrichTimerRef.current)
 
     const tags = conversationMode ? ['ai-chat'] : []
+    // `new Date(dueDate)` would read the bare 'YYYY-MM-DD' as UTC midnight and
+    // land the deadline on the previous day for anyone west of Greenwich. Same
+    // resolution DueDatePicker uses. See lib/timezone.js.
+    const tz = resolveTimezone(readPref('medialog_timezone', null))
     const result = await onAdd({
       url: u || null,
       note: n,
+      dueAt: dueDate ? endOfLocalDay(dueDate, tz) : null,
       title: fetchedTitle || undefined,
       tags,
       onTitleStatus: u ? handleTitleStatus : undefined,
@@ -112,6 +123,7 @@ export default function QuickAdd({ onAdd, disabled, onCheckDuplicate, supabase }
     setUrl('')
     setNote('')
     setFetchedTitle(null)
+    setDueDate('')
     setConversationMode(false)
     savedTimerRef.current = setTimeout(() => setSaveStatus('idle'), 1500)
   }
@@ -164,6 +176,14 @@ export default function QuickAdd({ onAdd, disabled, onCheckDuplicate, supabase }
         <p className="quickadd-nudge">No notes yet — why does this matter?</p>
       )}
       <div className="quickadd-row">
+        <input
+          type="date"
+          className="quickadd-due"
+          aria-label="due date (optional)"
+          title="Due date (optional)"
+          value={dueDate}
+          onChange={(e) => setDueDate(e.target.value)}
+        />
         <button type="button" className={`toggle-btn${conversationMode ? ' active' : ''}`} onClick={() => setConversationMode(!conversationMode)}>Conversation</button>
         <button type="submit" disabled={disabled || isSaving}>{buttonLabel}</button>
       </div>
