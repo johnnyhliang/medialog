@@ -1769,6 +1769,11 @@ function Workspace() {
           onOpenSettings={(tab) => { setView('settings'); if (tab) writePref('medialog_settings_tab', tab) }}
           supabase={supabase}
           onOpenEntry={(src) => handleOpenRelated(src.entryId)}
+          inboxTopicId={inboxTopic?.id ?? null}
+          onCaptured={(entry) => {
+            setInboxCount((c) => c + 1)
+            if (selectedId === inboxTopic?.id) setEntries((prev) => [{ ...entry, tags: [] }, ...prev])
+          }}
           onClose={() => setAssistantOpen(false)}
         />
       )}

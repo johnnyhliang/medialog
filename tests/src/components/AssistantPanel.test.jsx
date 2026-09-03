@@ -16,9 +16,24 @@ vi.mock('../../../src/lib/db/conversations.js', () => ({
 }))
 import { listConversations, deleteConversation } from '../../../src/lib/db/conversations.js'
 
+vi.mock('../../../src/lib/ai.js', () => ({ classify: vi.fn() }))
+import { classify } from '../../../src/lib/ai.js'
+
+vi.mock('../../../src/lib/db/entries.js', () => ({
+  createEntry: vi.fn(),
+  setDueDate: vi.fn(),
+}))
+import { createEntry, setDueDate } from '../../../src/lib/db/entries.js'
+
 beforeEach(() => {
   vi.clearAllMocks()
   listConversations.mockResolvedValue([])
+  // No AI provider configured is the likely common case, and it is the default
+  // here: the router answers "ask" and the panel behaves exactly as it did
+  // before capture existed.
+  classify.mockResolvedValue(null)
+  createEntry.mockResolvedValue({ id: 'e-new' })
+  setDueDate.mockResolvedValue()
 })
 
 test('shows starter suggestions before any question', () => {
@@ -151,4 +166,141 @@ test('an outage answer is marked, a real no-results answer is not', async () => 
   fireEvent.keyDown(box, { key: 'Enter' })
   expect(await screen.findByText(/couldn.t find anything in your notes/i)).toBeTruthy()
   expect(screen.queryByText(/not a statement about your notes/i)).toBeNull()
+})
+
+// --- one box, two intents ---------------------------------------------------
+// The same textarea takes "what did I conclude about X" and "email the 370
+// staff by Friday". Getting the fork wrong in the capture direction writes a
+// row the user has to hunt down and delete, so everything uncertain asks.
+
+function ask(text) {
+  const box = screen.getByPlaceholderText(/ask your library/i)
+  fireEvent.change(box, { target: { value: text } })
+  fireEvent.keyDown(box, { key: 'Enter' })
+}
+
+function panel(props = {}) {
+  return render(
+    <AssistantPanel supabase={{}} onOpenEntry={vi.fn()} onClose={vi.fn()} inboxTopicId="t-inbox" {...props} />
+  )
+}
+
+test('a question is answered and creates no entry', async () => {
+  classify.mockResolvedValue({ intent: 'ask', title: null, due_at: null })
+  askLibrarian.mockResolvedValue({ answer: 'You concluded X.', sources: [], usedContext: true })
+  panel()
+  ask('what did I conclude about market making?')
+  expect(await screen.findByText(/You concluded X/)).toBeTruthy()
+  expect(createEntry).not.toHaveBeenCalled()
+})
+
+test('a task is shown for confirmation and only written when confirmed', async () => {
+  localStorage.setItem('medialog_timezone', 'America/Detroit')
+  classify.mockResolvedValue({
+    intent: 'capture',
+    title: 'Email the 370 staff about office hours',
+    due_at: '2026-09-11',
+    estimate_minutes: 30,
+  })
+  const onCaptured = vi.fn()
+  panel({ onCaptured })
+  ask('email the 370 staff about office hours by friday')
+
+  const title = await screen.findByLabelText('task title')
+  expect(title.value).toBe('Email the 370 staff about office hours')
+  expect(screen.getByLabelText('due date').value).toBe('2026-09-11')
+  // Nothing is written until the user has looked at it.
+  expect(createEntry).not.toHaveBeenCalled()
+  expect(askLibrarian).not.toHaveBeenCalled()
+
+  fireEvent.click(screen.getByRole('button', { name: /save to inbox/i }))
+  await waitFor(() => expect(createEntry).toHaveBeenCalled())
+
+  // The task rides in as the NOTE so the title stays mirrored — passing a title
+  // would set title_edited and freeze it against every later note edit.
+  expect(createEntry).toHaveBeenCalledWith({}, { topicId: 't-inbox', note: 'Email the 370 staff about office hours' })
+  const [, entryId, iso] = setDueDate.mock.calls[0]
+  expect(entryId).toBe('e-new')
+  // End of the picked LOCAL day. `new Date('2026-09-11')` is UTC midnight,
+  // which in Detroit is still the 10th.
+  expect(iso).toBe('2026-09-12T03:59:59.999Z')
+  expect(new Date(iso).toLocaleDateString('en-CA', { timeZone: 'America/Detroit' })).toBe('2026-09-11')
+  expect(onCaptured).toHaveBeenCalled()
+  expect(await screen.findByText(/Saved to Inbox/)).toBeTruthy()
+  localStorage.removeItem('medialog_timezone')
+})
+
+test('the user can correct the date before it is written', async () => {
+  localStorage.setItem('medialog_timezone', 'America/Detroit')
+  classify.mockResolvedValue({ intent: 'capture', title: 'Submit the 489 PS', due_at: '2026-09-11' })
+  panel()
+  ask('remind me to submit the 489 PS monday')
+  await screen.findByLabelText('task title')
+  fireEvent.change(screen.getByLabelText('due date'), { target: { value: '2026-09-14' } })
+  fireEvent.click(screen.getByRole('button', { name: /save to inbox/i }))
+  await waitFor(() => expect(setDueDate).toHaveBeenCalled())
+  expect(setDueDate.mock.calls[0][2]).toBe('2026-09-15T03:59:59.999Z')
+  localStorage.removeItem('medialog_timezone')
+})
+
+test('discarding a proposed capture writes nothing', async () => {
+  classify.mockResolvedValue({ intent: 'capture', title: 'Do the thing', due_at: null })
+  panel()
+  ask('do the thing')
+  await screen.findByLabelText('task title')
+  fireEvent.click(screen.getByRole('button', { name: /discard/i }))
+  await waitFor(() => expect(screen.queryByLabelText('task title')).toBeNull())
+  expect(createEntry).not.toHaveBeenCalled()
+})
+
+test('a misrouted capture can be answered instead, without retyping', async () => {
+  classify.mockResolvedValue({ intent: 'capture', title: 'Read the RAG notes', due_at: null })
+  askLibrarian.mockResolvedValue({ answer: 'Here is what you wrote.', sources: [] })
+  panel()
+  ask('read my RAG notes')
+  await screen.findByLabelText('task title')
+  fireEvent.click(screen.getByRole('button', { name: /answer it instead/i }))
+  expect(await screen.findByText(/Here is what you wrote/)).toBeTruthy()
+  expect(askLibrarian).toHaveBeenCalledWith({}, 'read my RAG notes', expect.anything())
+  expect(createEntry).not.toHaveBeenCalled()
+})
+
+test('an ambiguous or unroutable message falls through to asking', async () => {
+  // classify returns null for a provider error, a timeout, malformed JSON, and
+  // an `ai` function with no provider configured at all. None of those may turn
+  // into a written task, and none of them may lose the message.
+  classify.mockResolvedValue(null)
+  askLibrarian.mockResolvedValue({ answer: 'Nothing found.', sources: [] })
+  panel()
+  ask('office hours friday')
+  expect(await screen.findByText('Nothing found.')).toBeTruthy()
+  expect(screen.getByText('office hours friday')).toBeTruthy()
+  expect(createEntry).not.toHaveBeenCalled()
+})
+
+test('an intent the model invented is treated as a question', async () => {
+  classify.mockResolvedValue({ intent: 'reminder', title: 'Do it', due_at: '2030-01-01' })
+  askLibrarian.mockResolvedValue({ answer: 'Nothing found.', sources: [] })
+  panel()
+  ask('do it')
+  expect(await screen.findByText('Nothing found.')).toBeTruthy()
+  expect(createEntry).not.toHaveBeenCalled()
+})
+
+test('a failed write leaves the card up and says so', async () => {
+  classify.mockResolvedValue({ intent: 'capture', title: 'Do the thing', due_at: null })
+  createEntry.mockRejectedValue(new Error('row level security'))
+  panel()
+  ask('do the thing')
+  await screen.findByLabelText('task title')
+  fireEvent.click(screen.getByRole('button', { name: /save to inbox/i }))
+  expect(await screen.findByText(/row level security/)).toBeTruthy()
+  expect(screen.getByLabelText('task title')).toBeTruthy()
+})
+
+test('the mic control is absent when the browser has no Speech API', () => {
+  // jsdom defines neither constructor. A button that silently does nothing when
+  // tapped is worse than no button.
+  panel()
+  expect(screen.queryByRole('button', { name: /dictate/i })).toBeNull()
 })

@@ -7,6 +7,11 @@ import {
   touchConversation, deleteConversation, titleFromQuestion,
 } from '../lib/db/conversations.js'
 import ConfirmModal from './ConfirmModal.jsx'
+import VoiceInput from './VoiceInput.jsx'
+import { routeMessage } from '../lib/parseTask.js'
+import { createEntry, setDueDate, updateEntry } from '../lib/db/entries.js'
+import { endOfLocalDay, resolveTimezone } from '../lib/timezone.js'
+import { readPref } from '../lib/localPref.js'
 
 // Cursor-style docked assistant. Collapsed to a thin edge tab; expands to a
 // right-hand panel that answers questions from the user's own notes with
@@ -40,7 +45,7 @@ function renderWithCitations(text, sources, onOpen) {
   })
 }
 
-export default function AssistantPanel({ supabase, onOpenEntry, onClose, onOpenSettings, isModuleVisible = () => true }) {
+export default function AssistantPanel({ supabase, onOpenEntry, onClose, onOpenSettings, isModuleVisible = () => true, inboxTopicId = null, onCaptured }) {
   const [messages, setMessages] = useState([]) // {role, content, sources?}
   const [conversationId, setConversationId] = useState(null)
   const [conversations, setConversations] = useState([])
@@ -51,6 +56,11 @@ export default function AssistantPanel({ supabase, onOpenEntry, onClose, onOpenS
   // Which path the in-flight question took, so the spinner tells the truth. Since
   // the app-help router landed, 'searching your notes' was wrong for app questions.
   const [mode, setMode] = useState('library')
+  // A capture the router extracted but has NOT written yet: { title, dueDate,
+  // question, convId }. It sits in the stream as an editable card because a
+  // wrong date committed silently is worse than no date — it surfaces on the
+  // agenda as truth and nobody re-reads it.
+  const [pendingCapture, setPendingCapture] = useState(null)
   const scrollRef = useRef(null)
   const inputRef = useRef(null)
 
@@ -108,17 +118,9 @@ export default function AssistantPanel({ supabase, onOpenEntry, onClose, onOpenS
     })
   }
 
-  async function send() {
-    const q = input.trim()
-    if (!q || busy) return
-    const history = messages.map((m) => ({ role: m.role, content: m.content }))
-    const asked = looksLikeAppQuestion(q) ? 'app' : 'library'
-    setMode(asked)
-    setMessages((prev) => [...prev, { role: 'user', content: q }])
-    setInput('')
-    setBusy(true)
-
-    // Ensure a persisted conversation exists, then save the question.
+  // Persist the thread and the user's turn. Best-effort, as everywhere else in
+  // this panel: a failed write must not swallow the message.
+  async function ensureConversation(q) {
     let convId = conversationId
     try {
       if (!convId && supabase?.from) {
@@ -129,7 +131,55 @@ export default function AssistantPanel({ supabase, onOpenEntry, onClose, onOpenS
       }
       if (convId) await addMessage(supabase, convId, { role: 'user', content: q })
     } catch { /* persistence is best-effort */ }
+    return convId
+  }
 
+  // Append an assistant turn to the visible thread AND the stored one, so a
+  // capture reads back the same as an answer when the conversation is reopened.
+  async function recordAssistant(convId, msg) {
+    setMessages((prev) => [...prev, msg])
+    try {
+      if (convId) {
+        await addMessage(supabase, convId, { role: 'assistant', content: msg.content, sources: msg.sources ?? [] })
+        await touchConversation(supabase, convId)
+        bumpConversation(convId)
+      }
+    } catch { /* best-effort */ }
+  }
+
+  async function send() {
+    const q = input.trim()
+    if (!q || busy || pendingCapture) return
+    const history = messages.map((m) => ({ role: m.role, content: m.content }))
+    const asked = looksLikeAppQuestion(q) ? 'app' : 'library'
+    setMode(asked)
+    setMessages((prev) => [...prev, { role: 'user', content: q }])
+    setInput('')
+    setBusy(true)
+
+    const convId = await ensureConversation(q)
+
+    // One call decides the fork AND extracts the fields — routing separately
+    // would double the latency and cost of every message typed here.
+    //
+    // `routeMessage` answers 'ask' for everything it is not sure about,
+    // including an AI provider that is not configured at all. That asymmetry is
+    // the point: a misrouted question costs a retry, a misrouted capture writes
+    // a row the user has to hunt down and delete.
+    const tz = resolveTimezone(readPref('medialog_timezone', null))
+    const routed = await routeMessage(supabase, q, { tz })
+    if (routed?.intent === 'capture' && inboxTopicId) {
+      setPendingCapture({ title: routed.title, dueDate: routed.dueDate || '', question: q, history, convId })
+      setBusy(false)
+      return
+    }
+
+    await runAsk(q, history, asked, convId)
+  }
+
+  async function runAsk(q, history, asked, convId) {
+    setMode(asked)
+    setBusy(true)
     try {
       // Two different questions wear the same input box: "what did I save about
       // X" is retrieval over notes; "how do I turn off X" is about the app. The
@@ -172,6 +222,67 @@ export default function AssistantPanel({ supabase, onOpenEntry, onClose, onOpenS
       // be able to leave the spinner running for the rest of the session.
       setBusy(false)
     }
+  }
+
+  // The user has looked at the title and the date and said yes.
+  //
+  // `createEntry` is given the task as the NOTE, not as a title: a note-derived
+  // title is a mirrored one, and passing a title instead would set
+  // `title_edited` and freeze it against every later edit. See db/entries.js.
+  //
+  // The date goes through `endOfLocalDay`, never `new Date(str)` — the latter
+  // reads a bare 'YYYY-MM-DD' as UTC midnight and lands the deadline on the
+  // previous day for everyone west of Greenwich.
+  async function confirmCapture() {
+    const cap = pendingCapture
+    if (!cap || busy) return
+    setBusy(true)
+    const tz = resolveTimezone(readPref('medialog_timezone', null))
+    const dueAt = cap.dueDate ? endOfLocalDay(cap.dueDate, tz) : null
+    try {
+      const entry = await createEntry(supabase, { topicId: inboxTopicId, note: cap.title })
+      // An estimate is what makes the task countable at the weekly review:
+      // review_week sums estimates against available hours, and anything without
+      // one falls back to a flat hour. Captured tasks would otherwise all weigh
+      // the same, which is exactly the case feasibility is meant to catch.
+      // Column added in migration 0083; best-effort, since losing an estimate
+      // must not cost the user the task.
+      if (cap.estimateMinutes) {
+        try { await updateEntry(supabase, entry.id, { estimate_minutes: cap.estimateMinutes }) } catch { /* the task matters more */ }
+      }
+      if (dueAt) {
+        // A failed date must not lose the task the user just confirmed, so it
+        // only costs a line in the reply.
+        try { await setDueDate(supabase, entry.id, dueAt) }
+        catch { await recordAssistant(cap.convId, { role: 'assistant', content: 'Saved to Inbox, but the due date did not stick.', sources: [], error: true }) }
+      }
+      setPendingCapture(null)
+      onCaptured?.(entry)
+      await recordAssistant(cap.convId, {
+        role: 'assistant',
+        content: cap.dueDate ? `Saved to Inbox: ${cap.title} — due ${cap.dueDate}.` : `Saved to Inbox: ${cap.title}.`,
+        sources: [],
+      })
+    } catch (e) {
+      // The card stays on screen with the text intact so the user can retry.
+      await recordAssistant(cap.convId, {
+        role: 'assistant',
+        content: `Couldn't save that: ${e.message}`,
+        sources: [],
+        error: true,
+      })
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  // "That was a question" — the escape hatch from a misroute. It runs the
+  // original words down the normal path rather than making the user retype.
+  async function captureToQuestion() {
+    const cap = pendingCapture
+    if (!cap) return
+    setPendingCapture(null)
+    await runAsk(cap.question, cap.history, looksLikeAppQuestion(cap.question) ? 'app' : 'library', cap.convId)
   }
 
   function onKeyDown(e) {
@@ -267,7 +378,34 @@ export default function AssistantPanel({ supabase, onOpenEntry, onClose, onOpenS
             )}
           </div>
         ))}
-        {busy && (
+        {pendingCapture && (
+          <div className="asst-msg asst-msg--assistant">
+            <div className="asst-bubble">
+              <p style={{ margin: '0 0 6px' }}>That reads like a task. Check it, then save:</p>
+              <input
+                aria-label="task title"
+                value={pendingCapture.title}
+                maxLength={200}
+                style={{ width: '100%', marginBottom: 6 }}
+                onChange={(e) => setPendingCapture((p) => ({ ...p, title: e.target.value }))}
+              />
+              <input
+                type="date"
+                aria-label="due date"
+                value={pendingCapture.dueDate}
+                onChange={(e) => setPendingCapture((p) => ({ ...p, dueDate: e.target.value }))}
+              />
+              <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+                <button className="btn-small" disabled={busy || !pendingCapture.title.trim()} onClick={confirmCapture}>
+                  Save to Inbox
+                </button>
+                <button className="btn-small btn-ghost" onClick={captureToQuestion}>Answer it instead</button>
+                <button className="btn-small btn-ghost" onClick={() => setPendingCapture(null)}>Discard</button>
+              </div>
+            </div>
+          </div>
+        )}
+        {busy && !pendingCapture && (
           <div className="asst-msg asst-msg--assistant">
             <div className="asst-bubble asst-thinking">
               <Loader2 size={14} className="asst-spin" />
@@ -281,11 +419,12 @@ export default function AssistantPanel({ supabase, onOpenEntry, onClose, onOpenS
         <textarea
           ref={inputRef}
           rows={1}
-          placeholder="Ask your library…"
+          placeholder="Ask your library, or say what you need to do…"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={onKeyDown}
         />
+        <VoiceInput onTranscript={(t) => setInput((prev) => (prev ? `${prev} ${t}` : t))} disabled={busy} />
         <button className="asst-send" onClick={send} disabled={busy || !input.trim()} aria-label="Send">
           <CornerDownLeft size={15} />
         </button>
