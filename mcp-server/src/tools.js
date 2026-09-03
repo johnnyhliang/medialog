@@ -106,6 +106,65 @@ export const tools = [
     },
   },
   {
+    name: 'list_agenda',
+    description: 'List every dated, unfinished entry grouped into overdue / today / week / later. This is the backlog view — run it at the weekly review to see what is due across all commitments.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        bucket: {
+          type: 'string',
+          enum: ['overdue', 'today', 'week', 'later'],
+          description: 'Return only one bucket instead of all four.',
+        },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'list_overdue',
+    description: 'List entries already past their due date, soonest first.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        limit: { type: 'integer', minimum: 1, maximum: 50, default: 5 },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'set_due_date',
+    description: 'Set, move, or clear an entry deadline. Pass due_at as null to clear it — that is how an entry stops being a reminder.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        entry_id: { type: 'string' },
+        due_at: {
+          type: ['string', 'null'],
+          description: 'ISO 8601 timestamp, or null to clear the deadline.',
+        },
+      },
+      required: ['entry_id', 'due_at'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'capture_task',
+    description: 'Capture something with a deadline but no fixed time — a job application, an assignment, a follow-up — in one call. Defaults to the Inbox so capture never blocks on choosing a topic. For anything that has an actual time, use a calendar instead.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        title: { type: 'string' },
+        due_at: { type: 'string', description: 'ISO 8601 timestamp. Optional.' },
+        topic_id: { type: 'string' },
+        topic_name: { type: 'string' },
+        url: { type: 'string' },
+        note: { type: 'string' },
+      },
+      required: ['title'],
+      additionalProperties: false,
+    },
+  },
+  {
     name: 'create_topic',
     description: 'Create a new topic.',
     inputSchema: {

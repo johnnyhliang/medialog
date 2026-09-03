@@ -1,6 +1,12 @@
-import { listEntriesByTopic, listForRevisit, listRecentActivity, listTrashedEntries, searchEntries } from '../../../src/lib/db/entries.js'
+import { listAgenda, listEntriesByTopic, listForRevisit, listOverdue, listRecentActivity, listTrashedEntries, searchEntries } from '../../../src/lib/db/entries.js'
 import { getTopicByName, listTopics } from '../../../src/lib/db/topics.js'
+import { groupAgenda } from '../../../src/lib/agenda.js'
 import { normalizeLimit, normalizeName } from '../helpers.js'
+
+// The server has no browser to read a timezone from, and an agenda bucketed in
+// UTC would call something due tonight "overdue" from 8pm onward. Everything
+// this log schedules happens in Ann Arbor.
+const AGENDA_TZ = 'America/Detroit'
 
 export async function listTopicsView(supabase, params = {}) {
   const topics = await listTopics(supabase)
@@ -109,4 +115,52 @@ async function resolveTopic(supabase, { topic_id, topic_name }) {
   const name = normalizeName(topic_name)
   if (!name) throw new Error('Topic name is required.')
   return getTopicByName(supabase, name)
+}
+
+// --- Agenda -------------------------------------------------------------
+//
+// A reminder is an entry with `due_at` (migration 0072), so the backlog is not
+// a separate store — it is a query. These two views are what the Sunday review
+// runs on.
+
+export async function agendaView(supabase, params = {}) {
+  const entries = await listAgenda(supabase)
+  const groups = groupAgenda(entries, new Date(), AGENDA_TZ)
+  const shape = (list) => list.map((entry) => ({
+    id: entry.id,
+    title: entry.title,
+    due_at: entry.due_at,
+    topic: entry.topicName,
+    status: entry.status ?? null,
+  }))
+
+  if (params.bucket) {
+    const bucket = normalizeName(params.bucket)
+    if (!(bucket in groups)) {
+      throw new Error(`Unknown bucket: ${bucket}. Expected overdue, today, week, or later.`)
+    }
+    return { bucket, entries: shape(groups[bucket]), count: groups[bucket].length }
+  }
+
+  return {
+    timezone: AGENDA_TZ,
+    total: entries.length,
+    overdue: shape(groups.overdue),
+    today: shape(groups.today),
+    week: shape(groups.week),
+    later: shape(groups.later),
+  }
+}
+
+export async function overdueView(supabase, limit) {
+  const entries = await listOverdue(supabase, limit)
+  return {
+    count: entries.length,
+    entries: entries.map((entry) => ({
+      id: entry.id,
+      title: entry.title,
+      due_at: entry.due_at,
+      topic: entry.topicName,
+    })),
+  }
 }

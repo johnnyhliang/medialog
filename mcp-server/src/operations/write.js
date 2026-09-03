@@ -1,4 +1,4 @@
-import { bulkCreateEntries, createEntry, updateEntry } from '../../../src/lib/db/entries.js'
+import { bulkCreateEntries, createEntry, setDueDate, updateEntry } from '../../../src/lib/db/entries.js'
 import { createTopic, getTopicByName, listTopics } from '../../../src/lib/db/topics.js'
 import { normalizeName } from '../helpers.js'
 import { listEntriesByTopic } from '../../../src/lib/db/entries.js'
@@ -82,4 +82,52 @@ export async function getInboxTopic(supabase) {
 
 export async function getTopicEntries(supabase, topicId) {
   return listEntriesByTopic(supabase, topicId)
+}
+
+// --- Deadlines ----------------------------------------------------------
+
+function normalizeDue(value) {
+  if (value === null) return null
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) {
+    throw new Error(`Invalid due date: ${value}. Expected an ISO 8601 timestamp, or null to clear.`)
+  }
+  return date.toISOString()
+}
+
+export async function setDueDateAction(supabase, params) {
+  if (!params.entry_id) throw new Error('entry_id is required.')
+  // `due_at` is intentionally allowed to be null: clearing the date is how an
+  // entry stops being a reminder. There is no separate delete.
+  const due = normalizeDue(params.due_at ?? null)
+  await setDueDate(supabase, params.entry_id, due)
+  return { entry_id: params.entry_id, due_at: due, cleared: due === null }
+}
+
+// The intake primitive. Everything that arrives mid-week with a deadline but no
+// fixed time — a job application, an assignment, a recruiter follow-up — lands
+// here in one call rather than create-then-update. Defaults to Inbox so a
+// capture never blocks on choosing a topic.
+export async function captureTaskAction(supabase, params) {
+  const title = normalizeName(params.title)
+  if (!title) throw new Error('title is required.')
+
+  const topic = params.topic_id || params.topic_name
+    ? await resolveTopic(supabase, params)
+    : await getInboxTopic(supabase)
+
+  const entry = await createEntry(supabase, {
+    topicId: topic.id,
+    url: params.url ?? null,
+    title,
+    note: params.note ?? '',
+  })
+
+  const due = params.due_at ? normalizeDue(params.due_at) : null
+  if (due) await setDueDate(supabase, entry.id, due)
+
+  return {
+    entry: { ...entry, due_at: due },
+    topic: { id: topic.id, name: topic.name },
+  }
 }
