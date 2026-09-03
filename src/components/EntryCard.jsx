@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import IndexStatus from './IndexStatus.jsx'
+import DueBadge from './DueBadge.jsx'
 import { ChevronUp, Clock, History, MoreVertical, Pencil, Pin, PinOff, Plus, Trash2, Archive, BookOpen, Share2, Check, CheckCheck } from 'lucide-react'
 import ReaderModal from './ReaderModal.jsx'
 import TagInput from './TagInput.jsx'
@@ -314,6 +315,8 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
                 'failed' and 'not yet indexed' earn a mark, because those are the
                 states you can act on. */}
             <IndexStatus status={entry.index_status} />
+            {/* A dated entry is a task; without this the card cannot say so. */}
+            <DueBadge dueAt={entry.due_at} />
             <button
               className="icon-btn card-title-edit-btn"
               aria-label="edit title"

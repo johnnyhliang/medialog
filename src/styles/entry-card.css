@@ -817,3 +817,32 @@
   border-color: var(--accent);
   color: var(--accent);
 }
+
+/* Due badge — marks an entry that is also a task.
+   Quiet by default: only what is overdue or due today earns colour, on the same
+   principle as the index-status mark. A badge that shouts on every row stops
+   being read, and the whole value of a date is being noticed when it matters. */
+.due-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+  padding: 1px 6px;
+  border-radius: var(--radius-pill, 999px);
+  border: 1px solid var(--border, #d8d4cc);
+  background: var(--surface-2, #f3f0ea);
+  color: var(--text-muted, #6b6660);
+  font-size: 11px;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+.due-badge-overdue {
+  border-color: var(--danger-border, #e0b4ac);
+  background: var(--danger-bg, #fbeeea);
+  color: var(--danger-text, #a2412c);
+}
+.due-badge-today {
+  border-color: var(--accent-border, #d8c49a);
+  background: var(--accent-bg, #fbf3e2);
+  color: var(--accent-text, #8a6a1f);
+}
