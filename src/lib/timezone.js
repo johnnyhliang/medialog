@@ -133,3 +133,42 @@ export function isSameDayIn(a, b, tz) {
   const pb = zonedParts(b, tz)
   return pa.year === pb.year && pa.month === pb.month && pa.day === pb.day
 }
+
+// ---------------------------------------------------------------------------
+// Bridging a native <input type="date"> to a stored timestamp.
+//
+// The trap these two functions exist to close: `new Date('2026-09-11')` parses
+// a bare date as UTC midnight. For anyone west of Greenwich that instant is
+// still the 10th locally, so a date picked as "Sep 11" comes back out of the
+// database labelled "Sep 10" — the deadline silently moves a day earlier, and
+// only for the users whose day it would ruin.
+// ---------------------------------------------------------------------------
+
+// 'YYYY-MM-DD' → the instant that local day ENDS, as an ISO string.
+//
+// End of day, not start: a deadline with no time on it means "any time that
+// day". Storing local midnight would be technically the same calendar day but
+// reads as already-elapsed to anything that compares instants, and would make
+// `Due 11:59 PM` the honest tooltip instead of a misleading `12:00 AM`.
+export function endOfLocalDay(dateStr, tz, near = new Date()) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dateStr || ''))
+  if (!m) return null
+  return instantFromWallClock(
+    { year: +m[1], month: +m[2], day: +m[3], hour: 23, minute: 59, second: 59, ms: 999 },
+    tz,
+    near,
+  ).toISOString()
+}
+
+// An instant → the 'YYYY-MM-DD' the date input needs, read in `tz`.
+//
+// `toISOString().slice(0, 10)` is the tempting one-liner and is the same bug in
+// reverse: it names the UTC day, so a deadline stored as 11:59pm local shows up
+// in the picker as the following day for anyone east of Greenwich.
+export function localDateString(instant, tz) {
+  if (!instant) return ''
+  const date = new Date(instant)
+  if (Number.isNaN(date.getTime())) return ''
+  const p = zonedParts(date, tz)
+  return `${String(p.year).padStart(4, '0')}-${String(p.month).padStart(2, '0')}-${String(p.day).padStart(2, '0')}`
+}

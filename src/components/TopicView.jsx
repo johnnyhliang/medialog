@@ -30,7 +30,7 @@ export default function TopicView({
   onAddEntry, onDelete, onStatusChange, onTagsChange, onTogglePin, onNoteSave, onPreview, onOpenRelated, onDocChange,
   onNoteVersion, onShowHistory,
   onSearchAll, globalSearchResults,
-  onTitleChange, onMove, tagColors,
+  onTitleChange, onDueDateChange, onMove, tagColors,
   allTags = [],
   pendingArchiveIds = EMPTY_IDS,
   jumpEntryId = null,
@@ -424,6 +424,7 @@ export default function TopicView({
           onNoteVersion={onNoteVersion}
           onShowHistory={onShowHistory}
           onTitleChange={onTitleChange}
+          onDueDateChange={onDueDateChange}
           moveTargets={moveTargets}
           onMove={onMove}
           tagColors={tagColors}

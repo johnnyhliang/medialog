@@ -15,7 +15,7 @@ import {
   listEntriesByTopic, createEntry, updateEntry, searchEntries,
   bulkCreateEntries, listForRevisit, markSurfaced, listRecentActivity,
   softDeleteEntry, listTrashedEntries, restoreEntry, emptyTrash, snoozeEntry, rateRevisit, retireEntry, unretireEntry,
-  listAgenda,
+  listAgenda, setDueDate,
 } from './lib/db/entries.js'
 import { setEntryTags, listTags, updateTagColor } from './lib/db/tags.js'
 import { seedStarterTopic } from './lib/starterTopic.js'
@@ -795,6 +795,31 @@ function Workspace() {
     }
   }
 
+  // Until this existed `due_at` was writable only by the MCP server, so the
+  // Agenda was a permanently empty view for anyone not running Claude. `null`
+  // clears the date — there is no separate delete; an entry stops being a task
+  // by losing its deadline.
+  //
+  // The agenda list is patched here too: it is fetched separately from
+  // `entries`, so updating only the card would leave a just-dated entry missing
+  // from Agenda (or a just-cleared one still sitting in a bucket) until reload.
+  async function handleDueDateChange(entryId, isoDate) {
+    try {
+      await setDueDate(supabase, entryId, isoDate)
+    } catch {
+      addToast('Failed to save due date', 'error')
+      return
+    }
+    setEntries((prev) => prev.map((e) => e.id === entryId ? { ...e, due_at: isoDate } : e))
+    setAgendaEntries((prev) => {
+      const existing = prev.find((e) => e.id === entryId)
+      if (!isoDate) return prev.filter((e) => e.id !== entryId)
+      if (existing) return prev.map((e) => e.id === entryId ? { ...e, due_at: isoDate } : e)
+      const source = entries.find((e) => e.id === entryId)
+      return source ? [...prev, { ...source, due_at: isoDate }] : prev
+    })
+  }
+
   async function handleMove(entryId, newTopicId) {
     try {
       await updateEntry(supabase, entryId, { topic_id: newTopicId })
@@ -1479,6 +1504,7 @@ function Workspace() {
               onSearchAll={handleSearchAll}
               globalSearchResults={globalSearchResults}
               onTitleChange={handleTitleChange}
+              onDueDateChange={handleDueDateChange}
               onMove={handleMove}
               tagColors={tagColors}
               allTags={allTags}

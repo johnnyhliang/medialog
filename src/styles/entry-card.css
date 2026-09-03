@@ -846,3 +846,50 @@
   background: var(--accent-bg, #fbf3e2);
   color: var(--accent-text, #8a6a1f);
 }
+
+/* Editable due badge. Same face as the read-only one — a click target should
+   not look like a different thing than the label it replaces — with only a
+   pointer and a hover lift to say it can be pressed. */
+.due-badge--editable {
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color 0.1s, color 0.1s;
+}
+.due-badge--editable:hover { border-color: var(--accent); color: var(--accent); }
+
+/* The undated-entry affordance. Nearly invisible until the card is hovered:
+   ~1,300 of ~1,400 entries have no due date, and putting a visible button on
+   every one of them would be a worse card in exchange for a rare action. */
+.card-add-due-btn {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  padding: 1px 3px;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+  opacity: 0;
+  cursor: pointer;
+  transition: opacity 0.1s, color 0.1s;
+}
+.card:hover .card-add-due-btn,
+.card-add-due-btn:focus-visible { opacity: 0.65; }
+.card-add-due-btn:hover { opacity: 1; color: var(--accent); }
+
+.due-picker {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 6px 0 2px;
+}
+.due-picker-input {
+  font-family: inherit;
+  font-size: var(--text-sm);
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 4px 8px;
+}

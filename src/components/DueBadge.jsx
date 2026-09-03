@@ -35,7 +35,7 @@ function cachedTimezone() {
   return resolveTimezone(readPref('medialog_timezone', null))
 }
 
-export default function DueBadge({ dueAt, timezone, now }) {
+export default function DueBadge({ dueAt, timezone, now, onEdit }) {
   if (!dueAt) return null
   const when = new Date(dueAt)
   if (Number.isNaN(when.getTime())) return null
@@ -44,13 +44,30 @@ export default function DueBadge({ dueAt, timezone, now }) {
   const bucket = bucketFor(dueAt, now ?? new Date(), tz)
   const text = LABEL[bucket] ?? (bucket === 'week' ? weekday(dueAt, tz) : shortDate(dueAt, tz))
 
-  return (
-    <span
-      className={`due-badge due-badge-${bucket}`}
-      title={`Due ${when.toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short', timeZone: tz })}`}
-    >
+  const label = `Due ${when.toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short', timeZone: tz })}`
+  const body = (
+    <>
       <CalendarClock size={11} aria-hidden="true" />
       {text}
-    </span>
+    </>
+  )
+
+  // Stays a plain <span> unless someone can actually act on the click. A badge
+  // that looks pressable and does nothing is worse than one that never did —
+  // and this same component renders in read-only surfaces (shared pages, the
+  // Manager grid) where there is no owner to save the change.
+  if (!onEdit) {
+    return <span className={`due-badge due-badge-${bucket}`} title={label}>{body}</span>
+  }
+
+  return (
+    <button
+      type="button"
+      className={`due-badge due-badge-${bucket} due-badge--editable`}
+      title={`${label} — click to change`}
+      onClick={(e) => { e.stopPropagation(); onEdit() }}
+    >
+      {body}
+    </button>
   )
 }

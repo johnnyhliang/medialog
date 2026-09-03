@@ -1,9 +1,10 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import IndexStatus from './IndexStatus.jsx'
 import DueBadge from './DueBadge.jsx'
-import { ChevronUp, Clock, History, MoreVertical, Pencil, Pin, PinOff, Plus, Trash2, Archive, BookOpen, Share2, Check, CheckCheck } from 'lucide-react'
+import { CalendarPlus, ChevronUp, Clock, History, MoreVertical, Pencil, Pin, PinOff, Plus, Trash2, Archive, BookOpen, Share2, Check, CheckCheck } from 'lucide-react'
 import ReaderModal from './ReaderModal.jsx'
 import TagInput from './TagInput.jsx'
+import DueDatePicker from './DueDatePicker.jsx'
 import MarkdownView from './MarkdownView.jsx'
 import MarkdownOutline from './MarkdownOutline.jsx'
 import RelatedEntries from './RelatedEntries.jsx'
@@ -54,7 +55,7 @@ function daysOld(dateStr) {
   return Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000)
 }
 
-export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChange, onTogglePin, onNoteSave, onPreview, onOpenRelated, onNoteVersion, onShowHistory, onTitleChange, moveTargets, onMove, tagColors, onEntryUpdate, onRetire, supabase: supabaseClient, focused, forceExpand, onForceExpandDone, searchQuery = '' }) {
+export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChange, onTogglePin, onNoteSave, onPreview, onOpenRelated, onNoteVersion, onShowHistory, onTitleChange, onDueDateChange, moveTargets, onMove, tagColors, onEntryUpdate, onRetire, supabase: supabaseClient, focused, forceExpand, onForceExpandDone, searchQuery = '' }) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(entry.note || '')
   const [editingTitle, setEditingTitle] = useState(false)
@@ -76,6 +77,7 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
   const [takeaway, setTakeaway] = useState('')
   const [fetchingTitle, setFetchingTitle] = useState(false)
   const [showSnoozePicker, setShowSnoozePicker] = useState(false)
+  const [showDuePicker, setShowDuePicker] = useState(false)
   const [showReader, setShowReader] = useState(false)
   const [shareCopied, setShareCopied] = useState(false)
 
@@ -208,6 +210,14 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
     setShowSecondaryActions(false)
   }
 
+  // The write itself belongs to the owner, same as title and tag edits: the
+  // card does not hold the Supabase client for its own mutations, so a failure
+  // can be surfaced once instead of silently inside a row.
+  async function handleDueDateSave(isoOrNull) {
+    setShowDuePicker(false)
+    await onDueDateChange?.(entry.id, isoOrNull)
+  }
+
   async function handleUnsnooze() {
     const client = supabaseClient || supabase
     await unsnoozeEntry(client, entry.id)
@@ -315,8 +325,27 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
                 'failed' and 'not yet indexed' earn a mark, because those are the
                 states you can act on. */}
             <IndexStatus status={entry.index_status} />
-            {/* A dated entry is a task; without this the card cannot say so. */}
-            <DueBadge dueAt={entry.due_at} />
+            {/* A dated entry is a task; without this the card cannot say so.
+                Clickable only when an owner supplied a save handler — the badge
+                stays purely presentational everywhere else. */}
+            <DueBadge
+              dueAt={entry.due_at}
+              onEdit={onDueDateChange ? () => setShowDuePicker(true) : undefined}
+            />
+            {/* The affordance for the ~1,300 entries that have no date. Kept
+                deliberately faint (it only gains colour on hover) so adding a
+                control does not visually disturb every undated card, the same
+                bargain the "Add a note" button makes. */}
+            {onDueDateChange && !entry.due_at && !showDuePicker && (
+              <button
+                className="card-add-due-btn"
+                aria-label="add due date"
+                title="Add a due date"
+                onClick={(e) => { e.stopPropagation(); setShowDuePicker(true) }}
+              >
+                <CalendarPlus size={12} />
+              </button>
+            )}
             <button
               className="icon-btn card-title-edit-btn"
               aria-label="edit title"
@@ -333,6 +362,14 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
           </div>
         )}
       </div>
+
+      {showDuePicker && (
+        <DueDatePicker
+          dueAt={entry.due_at}
+          onSave={handleDueDateSave}
+          onCancel={() => setShowDuePicker(false)}
+        />
+      )}
 
       {searchPreview?.snippets?.length > 0 && (
         <div className="entry-search-snippets">
