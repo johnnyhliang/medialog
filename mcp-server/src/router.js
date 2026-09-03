@@ -1,5 +1,5 @@
 import { bulkCreateEntriesAction, bulkMoveEntriesAction, captureTaskAction, createEntryAction, createTopicAction, moveEntryAction, setDueDateAction } from './operations/write.js'
-import { agendaView, dashboardOverview, listEntriesForTopic, listInbox, listForRevisitView, listTopicsView, overdueView, recentActivity, searchGlobal, topicProgress, trashList } from './operations/read.js'
+import { agendaView, dashboardOverview, reviewWeekView, whatsNextView, listEntriesForTopic, listInbox, listForRevisitView, listTopicsView, overdueView, recentActivity, searchGlobal, topicProgress, trashList } from './operations/read.js'
 import { normalizeLimit } from './helpers.js'
 import { tools } from './tools.js'
 
@@ -28,6 +28,10 @@ export function createRouter(supabase) {
           return { content: payload(await trashList(supabase, normalizeLimit(args.limit, 200, 500))) }
         case 'list_agenda':
           return { content: payload(await agendaView(supabase, args)) }
+        case 'whats_next':
+          return { content: payload(await whatsNextView(supabase, args)) }
+        case 'review_week':
+          return { content: payload(await reviewWeekView(supabase, args)) }
         case 'list_overdue':
           return { content: payload(await overdueView(supabase, normalizeLimit(args.limit, 5, 50))) }
         case 'set_due_date':

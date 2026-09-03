@@ -121,6 +121,38 @@ export const tools = [
     },
   },
   {
+    name: 'whats_next',
+    description: 'The morning call: at most 3 things to do now, each carrying the rule that selected it. Use this instead of reasoning over the whole backlog. Ordering is a fixed ladder — imminent (48h) > gating > someone is blocked on you > hardest course > by deadline > self-paced.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        limit: { type: 'integer', minimum: 1, maximum: 5, default: 3 },
+        hardest_course: {
+          type: 'string',
+          description: "Topic substring for the course to prioritise, e.g. '470'.",
+        },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'review_week',
+    description: 'The weekly-review question: does this week fit? Compares estimated hours for everything due in the horizon against the slack actually available, and returns a concrete cut list when it does not. Never proposes cutting an imminent deadline or a gating item.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        available_hours: {
+          type: 'number',
+          description: 'Unreserved hours genuinely available this week, counted off the calendar.',
+        },
+        horizon_days: { type: 'integer', minimum: 1, maximum: 31, default: 7 },
+        hardest_course: { type: 'string' },
+      },
+      required: ['available_hours'],
+      additionalProperties: false,
+    },
+  },
+  {
     name: 'list_overdue',
     description: 'List entries already past their due date, soonest first.',
     inputSchema: {
@@ -155,6 +187,11 @@ export const tools = [
       properties: {
         title: { type: 'string' },
         due_at: { type: 'string', description: 'ISO 8601 timestamp. Optional.' },
+        estimate_minutes: {
+          type: 'integer',
+          minimum: 1,
+          description: 'Rough size in minutes. Optional, but review_week can only check feasibility against entries that have one.',
+        },
         topic_id: { type: 'string' },
         topic_name: { type: 'string' },
         url: { type: 'string' },

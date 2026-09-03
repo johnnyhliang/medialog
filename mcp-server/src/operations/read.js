@@ -1,6 +1,7 @@
 import { listAgenda, listEntriesByTopic, listForRevisit, listOverdue, listRecentActivity, listTrashedEntries, searchEntries } from '../../../src/lib/db/entries.js'
 import { getTopicByName, listTopics } from '../../../src/lib/db/topics.js'
 import { groupAgenda } from '../../../src/lib/agenda.js'
+import { assessWeek, rankTasks } from '../../../src/lib/priority.js'
 import { normalizeLimit, normalizeName } from '../helpers.js'
 
 // The server has no browser to read a timezone from, and an agenda bucketed in
@@ -163,4 +164,31 @@ export async function overdueView(supabase, limit) {
       topic: entry.topicName,
     })),
   }
+}
+
+// --- Planning -----------------------------------------------------------
+//
+// Ranking and feasibility live in src/lib/priority.js, tested against a fixed
+// clock. These wrappers only fetch and shape.
+
+export async function whatsNextView(supabase, params = {}) {
+  const entries = await listAgenda(supabase)
+  const limit = normalizeLimit(params.limit, 3, 5)
+  const ranked = rankTasks(entries, new Date(), {
+    limit,
+    hardestCourse: params.hardest_course ?? null,
+    timezone: AGENDA_TZ,
+  })
+  return { timezone: AGENDA_TZ, ...ranked }
+}
+
+export async function reviewWeekView(supabase, params = {}) {
+  if (params.available_hours === undefined || params.available_hours === null) {
+    throw new Error('available_hours is required — feasibility is meaningless without the slack to measure against.')
+  }
+  const entries = await listAgenda(supabase)
+  return assessWeek(entries, params.available_hours, new Date(), {
+    hardestCourse: params.hardest_course ?? null,
+    horizonDays: normalizeLimit(params.horizon_days, 7, 31),
+  })
 }

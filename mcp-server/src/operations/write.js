@@ -126,8 +126,19 @@ export async function captureTaskAction(supabase, params) {
   const due = params.due_at ? normalizeDue(params.due_at) : null
   if (due) await setDueDate(supabase, entry.id, due)
 
+  // An estimate is what makes the entry countable at the weekly review. It stays
+  // optional: demanding one at capture time puts a decision in front of the
+  // capture, which is the friction this is meant to remove.
+  const estimate = params.estimate_minutes ?? null
+  if (estimate !== null) {
+    if (!Number.isFinite(Number(estimate)) || Number(estimate) <= 0) {
+      throw new Error(`Invalid estimate_minutes: ${estimate}. Expected a positive number of minutes.`)
+    }
+    await updateEntry(supabase, entry.id, { estimate_minutes: Math.round(Number(estimate)) })
+  }
+
   return {
-    entry: { ...entry, due_at: due },
+    entry: { ...entry, due_at: due, estimate_minutes: estimate },
     topic: { id: topic.id, name: topic.name },
   }
 }
