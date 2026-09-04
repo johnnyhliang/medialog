@@ -101,19 +101,56 @@ describe('VoiceInput', () => {
   it('replaces interim text rather than appending it', async () => {
     // An interim phrase is a re-guess of the same words. Appending them turned
     // "email the team" into "em email email the team".
+    //
+    // Live text is reported UP to the caller rather than rendered here: the
+    // words belong in the input the user is looking at. Rendering them beside
+    // the mic left the prompt box empty while text piled up next to the button.
     install()
     const onTranscript = vi.fn()
-    render(<VoiceInput onTranscript={onTranscript} />)
+    const onInterim = vi.fn()
+    render(<VoiceInput onTranscript={onTranscript} onInterim={onInterim} />)
     await userEvent.click(screen.getByRole('button', { name: /dictate/i }))
     const rec = latest()
     await act(async () => { rec.onresult(resultEvent(0, [['em', false]])) })
-    expect(await screen.findByText('em')).toBeInTheDocument()
+    expect(onInterim).toHaveBeenLastCalledWith('em')
     await act(async () => { rec.onresult(resultEvent(0, [['email the team', false]])) })
-    expect(await screen.findByText('email the team')).toBeInTheDocument()
-    expect(screen.queryByText('em email the team')).not.toBeInTheDocument()
+    expect(onInterim).toHaveBeenLastCalledWith('email the team')
+    expect(onInterim).not.toHaveBeenCalledWith('em email the team')
+    // Nothing is rendered beside the button — that was the bug.
+    expect(screen.queryByText('email the team')).not.toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: /stop dictation/i }))
     await fireEnd(rec)
     await waitFor(() => expect(onTranscript).toHaveBeenCalledWith('email the team'))
+  })
+
+  it('reports the base input moment via onStart so live text can replace, not append', async () => {
+    install()
+    const onStart = vi.fn()
+    render(<VoiceInput onTranscript={vi.fn()} onStart={onStart} />)
+    await userEvent.click(screen.getByRole('button', { name: /dictate/i }))
+    expect(onStart).toHaveBeenCalledTimes(1)
+  })
+
+  it('stops on its own after a long silence, so a forgotten mic does not stay open', async () => {
+    vi.useFakeTimers()
+    try {
+      install()
+      const onTranscript = vi.fn()
+      render(<VoiceInput onTranscript={onTranscript} onInterim={vi.fn()} />)
+      const btn = screen.getByRole('button', { name: /dictate/i })
+      await act(async () => { btn.click() })
+      const rec = latest()
+      await act(async () => { rec.onresult(resultEvent(0, [['hello', true]])) })
+      expect(screen.getByRole('button', { name: /stop dictation/i })).toBeInTheDocument()
+      // Four seconds is longer than a thinking pause but shorter than walking
+      // away, which is the case this exists for.
+      await act(async () => { vi.advanceTimersByTime(4100) })
+      await act(async () => { rec.onend?.() })
+      // Back to the idle label: the session ended without anyone pressing stop.
+      expect(screen.getByRole('button', { name: /dictate/i })).toBeInTheDocument()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('restarts when the engine ends a session the user did not stop', async () => {

@@ -62,6 +62,7 @@ export default function AssistantPanel({ supabase, onOpenEntry, onClose, onOpenS
   // agenda as truth and nobody re-reads it.
   const [pendingCapture, setPendingCapture] = useState(null)
   const scrollRef = useRef(null)
+  const dictationBaseRef = useRef('')
   const inputRef = useRef(null)
 
   useEffect(() => { inputRef.current?.focus() }, [])
@@ -430,7 +431,13 @@ export default function AssistantPanel({ supabase, onOpenEntry, onClose, onOpenS
             pass — that runs inside VoiceInput and must not freeze typing. */}
         <VoiceInput
           supabase={supabase}
-          onTranscript={(t) => setInput((prev) => (prev ? `${prev} ${t}` : t))}
+          // Whatever was already typed before the mic opened. Live text is
+          // rebuilt from this each time rather than appended, because an
+          // interim phrase is a re-guess of the same words — appending would
+          // stutter the box as the engine changed its mind.
+          onStart={() => { dictationBaseRef.current = input ? `${input} ` : '' }}
+          onInterim={(live) => setInput(dictationBaseRef.current + live)}
+          onTranscript={(t) => setInput(dictationBaseRef.current + t)}
           disabled={busy}
         />
         <button className="asst-send" onClick={send} disabled={busy || !input.trim()} aria-label="Send">

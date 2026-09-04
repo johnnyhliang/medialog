@@ -19,10 +19,20 @@ export function speechRecognitionCtor() {
 // re-prompts for permission and keeps the button lit while nothing is heard.
 const MAX_EMPTY_RESTARTS = 3
 
+// How long a silence ends the dictation on its own.
+//
+// Deliberately far longer than the engine's own patience, which is roughly a
+// second and was the reason dictation used to stop mid-sentence. Four seconds
+// is longer than any pause taken while thinking of the next word, so this ends
+// a dictation the user has finished rather than interrupting one in progress.
+// The stop button remains the reliable way out; this only saves the user who
+// walks away without pressing it.
+const SILENCE_MS = 4000
+
 // Renders NOTHING when the API is missing — notably Firefox, and unevenly on
 // mobile browsers. A mic button that silently does nothing when tapped is worse
 // than no mic button: the user assumes it heard them and moves on.
-export default function VoiceInput({ onTranscript, disabled, supabase }) {
+export default function VoiceInput({ onTranscript, onInterim, onStart, disabled, supabase }) {
   const Ctor = speechRecognitionCtor()
   const [listening, setListening] = useState(false)
   const [error, setError] = useState(null)
@@ -43,6 +53,7 @@ export default function VoiceInput({ onTranscript, disabled, supabase }) {
   const stoppingRef = useRef(false)
   const emptyRestartsRef = useRef(0)
   const finalizedRef = useRef(false)
+  const silenceRef = useRef(null)
 
   // Stopping on unmount is a privacy fix, not tidiness: a recogniser left
   // running holds the microphone open, and on a PWA that survives navigating
@@ -55,12 +66,30 @@ export default function VoiceInput({ onTranscript, disabled, supabase }) {
       // microphone from inside its own `onend`.
       stoppingRef.current = true
       finalizedRef.current = true
+      if (silenceRef.current) clearTimeout(silenceRef.current)
       if (!rec) return
       try { rec.abort() } catch { /* already dead; nothing to release */ }
     }
   }, [])
 
   if (!Ctor) return null
+
+  function clearSilence() {
+    if (silenceRef.current) {
+      clearTimeout(silenceRef.current)
+      silenceRef.current = null
+    }
+  }
+
+  // Restarted on every result, so the clock measures silence since the last
+  // word rather than time since the mic opened.
+  function armSilence() {
+    clearSilence()
+    silenceRef.current = setTimeout(() => {
+      silenceRef.current = null
+      if (!stoppingRef.current) stop()
+    }, SILENCE_MS)
+  }
 
   // Hand the words up, cleaned if the AI is reachable and raw if it is not.
   // Never awaited by the caller and never gated on `disabled`: cleanup is a
@@ -94,6 +123,7 @@ export default function VoiceInput({ onTranscript, disabled, supabase }) {
     const rec = recRef.current
     recRef.current = null
     stoppingRef.current = true
+    clearSilence()
     setListening(false)
     if (!rec) { finalize(); return }
     try {
@@ -115,6 +145,8 @@ export default function VoiceInput({ onTranscript, disabled, supabase }) {
     stoppingRef.current = false
     finalizedRef.current = false
     emptyRestartsRef.current = 0
+    onStart?.()
+    armSilence()
 
     const rec = build()
     if (!rec) return
@@ -163,7 +195,12 @@ export default function VoiceInput({ onTranscript, disabled, supabase }) {
       } catch { /* shape varies across engines; a partial transcript still helps */ }
       interimRef.current = freshInterim
       setInterim(freshInterim)
+      // Live text belongs in the input the user is looking at, not beside the
+      // button. Rendering it here made the words appear next to the mic while
+      // the box they were destined for stayed empty, which reads as broken.
+      onInterim?.(`${committedRef.current} ${freshInterim}`.replace(/\s+/g, ' ').trim())
       if (committedRef.current || freshInterim) emptyRestartsRef.current = 0
+      armSilence()
     }
 
     rec.onerror = (event) => {
@@ -234,15 +271,16 @@ export default function VoiceInput({ onTranscript, disabled, supabase }) {
         type="button"
         className={`toggle-btn${listening ? ' active' : ''}`}
         aria-label={listening ? 'stop dictation' : 'dictate'}
+        title={listening ? 'Tap to stop and tidy up' : 'Dictate'}
         aria-pressed={listening}
         disabled={disabled}
         onClick={() => (listening ? stop() : start())}
       >
-        {listening ? '● Listening' : '🎤'}
+        {/* Continuous recognition only ends when asked, so the control has to
+            read as the way to end it. '● Listening' looked like a status that
+            was stuck. */}
+        {listening ? '■ Stop' : '🎤'}
       </button>
-      {interim && (
-        <span aria-live="polite" style={{ fontSize: 'var(--text-xs)', color: 'var(--muted)' }}>{interim}</span>
-      )}
       {cleaning && (
         <span role="status" style={{ fontSize: 'var(--text-xs)', color: 'var(--muted)' }}>tidying up…</span>
       )}
