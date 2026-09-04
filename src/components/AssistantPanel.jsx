@@ -424,7 +424,15 @@ export default function AssistantPanel({ supabase, onOpenEntry, onClose, onOpenS
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={onKeyDown}
         />
-        <VoiceInput onTranscript={(t) => setInput((prev) => (prev ? `${prev} ${t}` : t))} disabled={busy} />
+        {/* Lands in the box, never sent. Cleanup is a model pass over the
+            user's words and a wrong guess must be visible and editable before
+            it becomes a captured task. `disabled` is not tied to the cleanup
+            pass — that runs inside VoiceInput and must not freeze typing. */}
+        <VoiceInput
+          supabase={supabase}
+          onTranscript={(t) => setInput((prev) => (prev ? `${prev} ${t}` : t))}
+          disabled={busy}
+        />
         <button className="asst-send" onClick={send} disabled={busy || !input.trim()} aria-label="Send">
           <CornerDownLeft size={15} />
         </button>
