@@ -1,6 +1,6 @@
 import { bulkCreateEntries, createEntry, setDueDate, updateEntry } from '../../../src/lib/db/entries.js'
 import { createTopic, getTopicByName, listTopics } from '../../../src/lib/db/topics.js'
-import { normalizeName } from '../helpers.js'
+import { confirmEntries, normalizeName, summarizeEntry } from '../helpers.js'
 import { listEntriesByTopic } from '../../../src/lib/db/entries.js'
 
 async function resolveTopic(supabase, { topic_id, topic_name }) {
@@ -42,13 +42,17 @@ export async function createEntryAction(supabase, params, { userId = null } = {}
     note: params.note ?? '',
     userId,
   })
-  return { entry }
+  return { entry: summarizeEntry(entry) }
 }
 
 export async function bulkCreateEntriesAction(supabase, params, { userId = null } = {}) {
   const topic = await resolveTopic(supabase, params)
   const entries = await bulkCreateEntries(supabase, topic.id, params.entries, { userId })
-  return { topic: { id: topic.id, name: topic.name }, created: entries, count: entries.length }
+  // Summaries, not rows. Echoing all 35 columns of every created entry — the
+  // full note included, which the caller just sent us — made a 60-tab import a
+  // ~98KB reply, and a real tab dump large enough to time the call out before
+  // it could report the rows it had already written.
+  return { topic: { id: topic.id, name: topic.name }, count: entries.length, created: confirmEntries(entries) }
 }
 
 export async function moveEntryAction(supabase, params) {
@@ -58,7 +62,7 @@ export async function moveEntryAction(supabase, params) {
     moved: {
       entry_id: params.entry_id,
       target_topic: { id: target.id, name: target.name },
-      entry,
+      entry: summarizeEntry(entry),
     },
   }
 }
@@ -68,7 +72,7 @@ export async function bulkMoveEntriesAction(supabase, params) {
   const moved = []
   for (const entryId of params.entry_ids) {
     const entry = await updateEntry(supabase, entryId, { topic_id: target.id })
-    moved.push({ entry_id: entryId, entry })
+    moved.push({ entry_id: entryId, entry: summarizeEntry(entry) })
   }
   return {
     target_topic: { id: target.id, name: target.name },
@@ -146,7 +150,7 @@ export async function captureTaskAction(supabase, params, { userId = null } = {}
   }
 
   return {
-    entry: { ...entry, due_at: due, estimate_minutes: estimate },
+    entry: summarizeEntry({ ...entry, due_at: due, estimate_minutes: estimate }),
     topic: { id: topic.id, name: topic.name },
   }
 }

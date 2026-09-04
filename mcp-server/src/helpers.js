@@ -46,3 +46,21 @@ export function summarizeEntry(entry, { noteChars = NOTE_PREVIEW_CHARS } = {}) {
 export function summarizeEntries(entries, options) {
   return (entries || []).map((e) => summarizeEntry(e, options))
 }
+
+// The confirmation shape for a write. A caller that just sent 150 notes does not
+// need them read back — it needs to know which rows exist now and what they are
+// called. Echoing even a preview of each note made a large import's REPLY the
+// expensive part of the call.
+export function confirmEntry(entry) {
+  if (!entry) return entry
+  return {
+    id: entry.id,
+    title: entry.title ?? null,
+    url: entry.url ?? null,
+    due_at: entry.due_at ?? null,
+  }
+}
+
+export function confirmEntries(entries) {
+  return (entries || []).map(confirmEntry)
+}
