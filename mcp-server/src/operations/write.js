@@ -154,3 +154,26 @@ export async function captureTaskAction(supabase, params, { userId = null } = {}
     topic: { id: topic.id, name: topic.name },
   }
 }
+
+// --- Completion ---------------------------------------------------------
+//
+// listAgenda already filters `status = 'done'` out, so closing a task is what
+// removes it from the agenda. Without this the backlog only ever grew: the
+// assistant could capture and schedule work but never record that it was
+// finished, which is exactly the ever-growing guilt list the agenda is designed
+// against.
+
+export async function completeTaskAction(supabase, params) {
+  if (!params.entry_id) throw new Error('entry_id is required.')
+  const entry = await updateEntry(supabase, params.entry_id, { status: 'done' })
+  return { completed: summarizeEntry(entry) }
+}
+
+// Undo, and the reason it exists: 'done' is the only status the agenda treats
+// as terminal, so a mistaken completion silently disappears from every view.
+// Clearing it back to null returns the entry to the agenda in its old bucket.
+export async function reopenTaskAction(supabase, params) {
+  if (!params.entry_id) throw new Error('entry_id is required.')
+  const entry = await updateEntry(supabase, params.entry_id, { status: null })
+  return { reopened: summarizeEntry(entry) }
+}

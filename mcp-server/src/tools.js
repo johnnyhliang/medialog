@@ -176,6 +176,26 @@ export const tools = [
     },
   },
   {
+    name: 'complete_task',
+    description: "Mark a task done. This is what removes it from the agenda — a dated entry stays on the list until it is completed, so close things as they finish rather than letting the backlog only grow.",
+    inputSchema: {
+      type: 'object',
+      properties: { entry_id: { type: 'string' } },
+      required: ['entry_id'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'reopen_task',
+    description: 'Undo a completion, returning the task to the agenda in its original bucket.',
+    inputSchema: {
+      type: 'object',
+      properties: { entry_id: { type: 'string' } },
+      required: ['entry_id'],
+      additionalProperties: false,
+    },
+  },
+  {
     name: 'set_due_date',
     description: 'Set, move, or clear an entry deadline. Pass due_at as null to clear it — that is how an entry stops being a reminder.',
     inputSchema: {

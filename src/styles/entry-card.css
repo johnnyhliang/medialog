@@ -898,3 +898,31 @@
   border-radius: var(--radius-sm);
   padding: 4px 8px;
 }
+
+/* Mark-done, shown only on dated entries. Quiet until hovered, because it sits
+   next to the due badge on every task and a loud control there would compete
+   with the date itself for attention. */
+.due-done-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+  padding: 1px 7px;
+  border-radius: var(--radius-pill, 999px);
+  border: 1px solid var(--border, #d8d4cc);
+  background: transparent;
+  color: var(--text-muted, #6b6660);
+  font-size: 11px;
+  line-height: 1.5;
+  cursor: pointer;
+}
+.due-done-btn:hover {
+  border-color: var(--success-border, #a8c4a2);
+  background: var(--success-bg, #eef5ec);
+  color: var(--success-text, #3f6b39);
+}
+.due-done-btn.is-done {
+  border-color: var(--success-border, #a8c4a2);
+  background: var(--success-bg, #eef5ec);
+  color: var(--success-text, #3f6b39);
+}

@@ -182,13 +182,23 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
     }
   }
 
+  // A dated entry is a task, and a task has no takeaway. "What did you learn?"
+  // is the right friction for a saved article — it is the whole point of a
+  // reading log — and the wrong friction for "email the 370 staff", which is
+  // simply done. Asking anyway is why marking a task done did not stick.
+  const isTask = Boolean(entry.due_at)
+
   function handleStatusSelect(e) {
     const status = e.target.value || null
-    if (status === 'done' && !entry.note) {
+    if (status === 'done' && !entry.note && !isTask) {
       setTakeawayPrompt(true)
     } else {
       onStatusChange(entry.id, status)
     }
+  }
+
+  function completeTask() {
+    onStatusChange(entry.id, entry.status === 'done' ? null : 'done')
   }
 
   function handleTakeawaySave() {
@@ -347,6 +357,22 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
               dueAt={entry.due_at}
               onEdit={onDueDateChange ? () => setShowDuePicker(true) : undefined}
             />
+            {/* Completing is what removes a task from the agenda, so it belongs
+                where the task is rather than three clicks into a status
+                dropdown. Dated entries only — the other ~1,300 are not tasks
+                and gain nothing from a done button. */}
+            {isTask && onStatusChange && (
+              <button
+                type="button"
+                className={`due-done-btn${entry.status === 'done' ? ' is-done' : ''}`}
+                aria-label={entry.status === 'done' ? 'reopen task' : 'mark task done'}
+                aria-pressed={entry.status === 'done'}
+                title={entry.status === 'done' ? 'Reopen' : 'Mark done'}
+                onClick={(ev) => { ev.stopPropagation(); completeTask() }}
+              >
+                {entry.status === 'done' ? '✓ done' : '✓'}
+              </button>
+            )}
             {/* The affordance for the ~1,300 entries that have no date. Kept
                 deliberately faint (it only gains colour on hover) so adding a
                 control does not visually disturb every undated card, the same
@@ -627,6 +653,22 @@ export default function EntryCard({ entry, onDelete, onStatusChange, onTagsChang
           Read-only here on purpose — editing a date stays in the expanded card,
           where there is room to show what changed. */}
       <DueBadge dueAt={entry.due_at} />
+      {/* Done belongs on the collapsed face too. Requiring the card to be
+          opened first is the same mistake the badge made: closing a task is the
+          most frequent thing done to it, and it is what removes it from the
+          agenda. */}
+      {isTask && onStatusChange && (
+        <button
+          type="button"
+          className={`due-done-btn${entry.status === 'done' ? ' is-done' : ''}`}
+          aria-label={entry.status === 'done' ? 'reopen task' : 'mark task done'}
+          aria-pressed={entry.status === 'done'}
+          title={entry.status === 'done' ? 'Reopen' : 'Mark done'}
+          onClick={(e) => { e.stopPropagation(); completeTask() }}
+        >
+          {entry.status === 'done' ? '✓ done' : '✓'}
+        </button>
+      )}
       {entry.surface_after && (
         <button
           className="snooze-indicator"
