@@ -125,9 +125,31 @@ export function createMcpServer(env = process.env) {
       exitIfFinished()
     })
 
+    // Staying alive is the whole point of these two handlers.
+    //
+    // Exiting here killed the server for the rest of the session: the client
+    // spawns it once and talks over pipes, so a single unhandled error in one
+    // tool call took every later call down with it and the user saw an
+    // assistant that had silently lost its tools. Nothing here holds
+    // per-request state worth abandoning — a Supabase client and an input
+    // buffer — so failing the request and continuing to serve is both safe and
+    // what the caller needs.
+    //
+    // stderr, never stdout: stdout carries the JSON-RPC stream and anything
+    // else written there corrupts the message framing.
     process.on('uncaughtException', (error) => {
-      send(makeError(null, -32603, error.message))
-      process.exit(1)
+      process.stderr.write(`[medialog-mcp] uncaught: ${error?.stack || error}
+`)
+      send(makeError(null, -32603, `internal error: ${error?.message ?? String(error)}`))
+    })
+
+    // Node terminates on an unhandled rejection by default, which is the same
+    // session-ending failure by another route — and every tool here is async,
+    // so this is the likelier of the two.
+    process.on('unhandledRejection', (reason) => {
+      process.stderr.write(`[medialog-mcp] unhandled rejection: ${reason?.stack || reason}
+`)
+      send(makeError(null, -32603, `internal error: ${reason?.message ?? String(reason)}`))
     })
   }
 
